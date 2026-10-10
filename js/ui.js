@@ -796,6 +796,16 @@ function fxDown(el) {
   el.classList.add('down');
 }
 
+// 그림 이펙트 길이 — 전투 빠르기에 맞춥니다 (빠르게면 짧게, 보통이면 0.4초 남짓)
+function fxMs() { return Math.max(220, Math.min(480, ((battle && battle.step) || 260) * 1.6)); }
+
+// 그림 이펙트 (fx.js) — 내 공격은 상대 초상 가운데, 상대 공격은 내 초상 위.
+// 기기에서 「움직임 줄이기」를 켰으면 띄우지 않습니다.
+function fxSprite(sheet, anim, el, scale) {
+  if (calmMotion() || typeof FX === 'undefined') return;
+  FX.play(sheet, anim, el, { ms: fxMs(), scale });
+}
+
 // 기록 한 줄 → 연출
 function battleFx(e) {
   if (!e) return;
@@ -805,11 +815,17 @@ function battleFx(e) {
     switch (e.k) {
       case 'hit':
         fxLunge(heroEl, -1);
+        // 보통은 베기, 치명타는 초승달, 일격은 별빛 폭발, 이중타격의 두 번째는 세로 번개
+        fxSprite('hero', e.harm ? 'star' : e.crit ? 'crescent' : e.second ? 'bolt' : 'slash', foeEl,
+          e.harm ? 1.5 : e.crit ? 1.35 : 1.15);
         fxHit(foeEl, e.harm || e.crit);
         fxFloat(foeEl, e.harm ? `일격 ${v}` : e.crit ? `${v}!` : v, e.harm ? 'harm' : e.crit ? 'crit' : '');
         if (e.harm) fxAnim(box, FX_SHAKE, 360, 'steps(6, end)');
         break;
-      case 'reflect': fxHit(foeEl, false); fxFloat(foeEl, `반사 ${v}`, 'reflect'); break;
+      case 'reflect':
+        fxSprite('hero', 'ring', foeEl, 1.2);
+        fxHit(foeEl, false); fxFloat(foeEl, `반사 ${v}`, 'reflect');
+        break;
       case 'miss':    fxLunge(heroEl, -1); fxFloat(foeEl, '빗나감', 'miss'); break;
       case 'regen':
       case 'steal':   fxFloat(heroEl, `+${v}`, 'heal'); break;
@@ -820,6 +836,9 @@ function battleFx(e) {
     switch (e.k) {
       case 'hit':
         fxLunge(foeEl, 1);
+        // 상대의 성격에 따라 할퀴기 · 타격 · 바위 · 흙먼지 · 반짝임 · 수정 가시 (fx.js 의 FOE_BY_ARCH)
+        // 내 초상은 작아서 이펙트를 초상보다 크게 (폭의 2.4배, 치명타면 2.8배) 띄웁니다
+        fxSprite('foe', typeof FX === 'undefined' ? '' : FX.foeAnimFor(battle && battle.r.enemy), heroEl, e.crit ? 2.8 : 2.4);
         fxHit(heroEl, e.crit);
         fxFloat(heroEl, e.crit ? `${v}!` : v, e.crit ? 'crit hurt' : 'hurt');
         if (e.crit) fxAnim(box, FX_SHAKE, 300, 'steps(5, end)');

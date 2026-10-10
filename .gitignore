@@ -10,3 +10,7 @@ __pycache__/
 Thumbs.db
 desktop.ini
 .DS_Store
+
+# 작업용 원본 (저장소에 안 올림)
+.work/
+.serena/

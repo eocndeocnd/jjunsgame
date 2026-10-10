@@ -48,10 +48,26 @@ html = re.sub(
     r'<link[^>]*rel=["\']stylesheet["\'][^>]*href=["\']([^"\']+)["\'][^>]*>',
     inline_css, html)
 
+# 스크립트 안에서 'assets/….webp' 처럼 그림을 가리키는 글자는 그림 자체(data: 주소)로 바꿉니다.
+# 한 파일로 열면 상대 경로를 못 불러오는 건 그림도 마찬가지라서요 (전투 이펙트 — js/fx.js).
+import base64
+MIME = {".webp": "image/webp", ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".gif": "image/gif"}
+n_assets = 0
+def inline_asset(m):
+    global n_assets
+    q, path = m.group(1), m.group(2)
+    f = ROOT / path
+    if not f.exists():
+        raise SystemExit(f"그림이 없습니다 — {path}")
+    n_assets += 1
+    data = base64.b64encode(f.read_bytes()).decode("ascii")
+    return f"{q}data:{MIME[f.suffix.lower()]};base64,{data}{q}"
+
 # <script src="..."></script> → <script>...</script>
 def inline_js(m):
     src = m.group(1)
     code = read(src)
+    code = re.sub(r'([\'"])(assets/[^\'"]+\.(?:webp|png|jpe?g|gif))\1', inline_asset, code)
     # 혹시 코드 안에 </script> 문자열이 있으면 파서가 거기서 끊깁니다
     code = code.replace("</script>", "<\\/script>")
     return "<script>\n" + code + "\n</script>"
@@ -76,14 +92,14 @@ assert "--bg:" in html, "치명적: 색 변수가 사라졌습니다"
 import shutil, subprocess
 _node = shutil.which("node")
 if _node:
-    for f in ("js/backdrop.js", "js/sound.js", "js/data.js", "js/game.js", "js/ui.js"):
+    for f in ("js/backdrop.js", "js/sound.js", "js/fx.js", "js/data.js", "js/game.js", "js/ui.js"):
         r = subprocess.run([_node, "--check", str(ROOT / f)], capture_output=True, text=True)
         if r.returncode != 0:
             raise SystemExit(f"문법 오류 — {f}\n{r.stderr.strip()}")
     print("  문법 검사 통과")
 else:
     # node 가 없으면 최소한 괄호 짝이라도 셉니다
-    for f in ("js/backdrop.js", "js/sound.js", "js/data.js", "js/game.js", "js/ui.js"):
+    for f in ("js/backdrop.js", "js/sound.js", "js/fx.js", "js/data.js", "js/game.js", "js/ui.js"):
         src = read(f)
         for open_c, close_c in (("{", "}"), ("(", ")"), ("[", "]")):
             if src.count(open_c) != src.count(close_c):
@@ -92,4 +108,4 @@ else:
 size = OUT.stat().st_size
 warn = f"  (BOM {stray}개 제거)" if stray else ""
 kept = f" · 바깥 링크 {n_kept}개 유지" if n_kept else ""
-print(f"jjunsgame.html  —  CSS {n_css}개 · JS {n_js}개 합침{kept}, {size/1024:.0f}KB{warn}")
+print(f"jjunsgame.html  —  CSS {n_css}개 · JS {n_js}개 · 그림 {n_assets}개 합침{kept}, {size/1024:.0f}KB{warn}")

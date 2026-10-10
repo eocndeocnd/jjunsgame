@@ -898,6 +898,17 @@ kbd {
 .bt-hero { width: min(21%, 78px); --pf-in: #5f8f3e; }
 .bt-hero .portrait-ic { font-size: clamp(28px, 9vw, 42px); }
 
+/* 그림 이펙트 (fx.js) — 초상 가운데에 겹쳐 그립니다. 절반 해상도로 그려 늘려서 도트처럼 보입니다 */
+.fx-sprite {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 2;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  image-rendering: pixelated;
+}
+
 /* 떠오르는 숫자 · 글자 — 크림색 테두리를 두른 도트 글씨 */
 .bt-float {
   position: absolute;
