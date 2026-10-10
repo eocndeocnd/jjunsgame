@@ -385,10 +385,11 @@ function renderJourney() {
   const max = startEnergy();
   const low = run.energy <= 5;
 
-  // 창 셋 — 지역 · 에너지와 차림 · 무대. 창 사이로 맨 뒤의 지도가 보입니다.
+  // 창 둘 — 지역 · 에너지 · 차림을 한 창에, 그 아래 무대. 창 사이로 맨 뒤의 지도가 보입니다.
+  // (예전엔 지역과 에너지가 따로 창이었는데, 폰에서 무대가 한 화면에 안 들어와 합쳤습니다)
   // 지역 소개글(zone.flavor)은 data.js 에만 남겨두고 화면에는 안 씁니다 — 이름이면 충분합니다.
   let html = `
-    <div class="frame zone-card">
+    <div class="frame zone-card ${low ? 'low' : ''}">
       <div class="zone-head">
         <span class="rank-chip r${rank.n}">제${rank.n}격 · ${rank.name}<span class="hanja">${rank.hanja}</span></span>
         <span class="zone-name">${zone.name}</span>
@@ -396,9 +397,6 @@ function renderJourney() {
           <span class="zc-k">도감</span>${run.zoneIndex + 1} / ${ZONES.length}
         </button>
       </div>
-    </div>
-
-    <div class="frame meter ${low ? 'low' : ''}">
       <div class="journey-energy ${low ? 'low' : ''}">
         <span class="je-k">에너지</span>
         <span class="je-v">${run.energy}<span class="je-max">/${max}</span></span>
@@ -582,8 +580,8 @@ function scheduleAutoContinue() {
 //  전투 화면 — 싸우는 과정을 한 방씩 다시 틀어줍니다
 // ============================================================
 // 승패와 전리품은 「맞선다」를 누르는 순간 이미 정해져 있습니다 (engage).
-// 여기서는 그 전투의 기록(lastResult.replay)을 보고 체력 바와 글로 다시 보여줄 뿐입니다.
-// 나중에 그림과 효과가 들어올 자리입니다.
+// 여기서는 그 전투의 기록(lastResult.replay)을 보고 초상 · 체력 바 · 글로 다시 보여줄 뿐입니다.
+// 초상은 지금은 이모지입니다 — 나중에 그림이 들어올 자리.
 //
 // 한 줄마다 화면 전체를 다시 그리지 않습니다 — 도감까지 다시 그리면 승률을 수백 번 다시 잽니다.
 // 체력 바와 기록 줄만 바꿉니다.
@@ -591,7 +589,8 @@ function scheduleAutoContinue() {
 let battle = null;                       // { r: 그 결과, i: 지금까지 보여준 줄 수, step: 줄 간격(ms), timer }
 const BATTLE_PACE = { 1: 90, 2: 260 };   // 빠르게 · 보통 — 한 줄에 몇 ms
 const BATTLE_MAX_MS = 6000;              // 긴 전투도 이 안에 끝나게 줄 간격을 줄입니다
-const BATTLE_LINES = 7;                  // 기록은 최근 일곱 줄만
+// 기록은 최근 여섯 줄만 — 위에 초상이 들어와서 줄였습니다. 폰은 한 화면에 들어오게 다섯 줄.
+const battleLines = () => (window.innerWidth <= 860 ? 5 : 6);
 
 function startBattle(r) {
   stopBattle();
@@ -616,10 +615,13 @@ function tickBattle() {
   const n = battle.r.replay.log.length;
   battle.i = Math.min(n, battle.i + 1);
   paintBattle();
-  // 방금 보여준 줄의 소리. 마지막 줄 뒤에는 승패를 알리는 소리
-  const s = battleSound(battle.r.replay.log[battle.i - 1]);
+  // 방금 보여준 줄의 연출과 소리. 마지막 줄 뒤에는 쓰러진 쪽이 바래고 승패를 알리는 소리
+  const e = battle.r.replay.log[battle.i - 1];
+  battleFx(e);
+  const s = battleSound(e);
   if (s) Sound.play(s);
   if (battle.i >= n) {
+    fxDown(battle.r.win ? $('btFoe') : $('btHero'));
     Sound.play(battle.r.win ? 'win' : 'lose', { delay: 0.15 });
     jingled.add(battle.r);
   }
@@ -692,16 +694,24 @@ function battleLine(e, foeName) {
 
 function hpPct(hp, max) { return `${Math.max(0, Math.min(100, (hp / Math.max(1, max)) * 100))}%`; }
 
+// 내 모습 — 지금은 이모지. 나중에 그림이 들어올 자리
+const HERO_ICON = '🧍';
+
 // 전투 카드 — 처음 그릴 때. 그다음부터는 paintBattle 이 바 · 숫자 · 줄만 바꿉니다.
+// 위에서부터 상대 체력 · 상대 초상(크게) · 내 초상(작게) · 내 체력 · 기록.
 function battleCard(b) {
   const { r } = b;
   const foe = r.enemy;
   return `
-    <div class="battle" id="battle">
+    <div class="battle k-${foe.kind}" id="battle">
       <div class="bt-side foe">
-        <div class="bt-top"><span class="bt-name">${foe.icon} ${foe.name}<span class="lv">Lv.${fmtLevel(foe.level)}</span></span>
+        <div class="bt-top"><span class="bt-name">${foe.kind !== 'normal' ? `<span class="grade-tag ${foe.kind}">${KINDS[foe.kind].name}</span>` : ''}${foe.name}<span class="lv">Lv.${fmtLevel(foe.level)}</span></span>
           <span class="bt-hp" id="btFoeHp"></span></div>
         <div class="bt-bar"><div class="bt-fill foe" id="btFoeFill"></div></div>
+      </div>
+      <div class="bt-arena" id="btArena">
+        <div class="portrait bt-foe" id="btFoe"><span class="portrait-ic">${foe.icon}</span></div>
+        <div class="portrait bt-hero" id="btHero"><span class="portrait-ic">${HERO_ICON}</span></div>
       </div>
       <div class="bt-side hero">
         <div class="bt-top"><span class="bt-name">나<span class="lv">Lv.${fmtLevel(r.levelBefore || State.run.level)}</span></span>
@@ -710,6 +720,114 @@ function battleCard(b) {
       </div>
       <div class="bt-log" id="btLog"></div>
     </div>`;
+}
+
+// ---------- 전투 연출 ----------
+// 기록 한 줄마다 — 때리는 쪽이 앞으로 튀어나가고, 맞는 쪽이 하얗게 번쩍이며 흔들리고, 그 위로 숫자가 떠오릅니다.
+// 치명타 · 일격은 숫자가 커지고, 일격과 아픈 치명타는 화면째 흔들립니다. 끝나면 쓰러진 쪽이 깜빡이며 바랩니다.
+// 기기에서 「움직임 줄이기」를 켰으면 흔들림 · 튀어나감은 빼고 숫자만 띄웁니다.
+const calmMotion = () => !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+const FX_SHAKE = [
+  { transform: 'translateX(0)' }, { transform: 'translateX(-5px)' }, { transform: 'translateX(5px)' },
+  { transform: 'translateX(-3px)' }, { transform: 'translateX(2px)' }, { transform: 'translateX(0)' }
+];
+
+function fxAnim(el, frames, ms, easing) {
+  if (!el || !el.animate || calmMotion()) return;
+  el.animate(frames, { duration: ms, easing: easing || 'ease-out' });
+}
+
+// 맞음 — 흔들리며 하얗게 번쩍
+function fxHit(el, hard) {
+  if (!el) return;
+  fxAnim(el, FX_SHAKE, hard ? 320 : 240, 'steps(5, end)');
+  fxAnim(el.querySelector('.portrait-ic'), [{ filter: 'brightness(2.4) saturate(0)' }, { filter: 'none' }], 220, 'steps(2, end)');
+}
+
+// 때림 — 상대 쪽으로 한 번 튀어나갔다 돌아옴 (dir: 위로 -1, 아래로 1)
+function fxLunge(el, dir) {
+  fxAnim(el, [{ transform: 'translateY(0)' }, { transform: `translateY(${dir * 14}px)` }, { transform: 'translateY(0)' }], 220);
+}
+
+// 초상 위로 떠오르는 숫자 · 글자.
+// 내 초상은 작고 바로 위에 상대 그림이 있어서, 위로 띄우면 상대가 맞은 것처럼 보입니다 — 오른쪽 옆에 띄웁니다.
+function fxFloat(el, text, cls) {
+  if (!el) return;
+  const side = el.classList.contains('bt-hero');
+  const f = document.createElement('span');
+  f.className = `bt-float ${side ? 'side' : ''} ${cls || ''}`;
+  f.textContent = text;
+  // 연달아 떠도 겹치지 않게 조금씩 비껴서
+  if (side) f.style.top = `${8 + Math.random() * 34}%`;
+  else f.style.left = `${50 + Math.random() * 24 - 12}%`;
+  el.appendChild(f);
+  if (!f.animate) { setTimeout(() => f.remove(), 800); return; }
+  const x = side ? '0' : '-50%';
+  const rise = side ? 18 : 38;
+  f.animate([
+    { transform: `translate(${x}, 0) scale(0.8)`, opacity: 0 },
+    { transform: `translate(${x}, ${-rise * 0.26}px) scale(1.1)`, opacity: 1, offset: 0.2 },
+    { transform: `translate(${x}, ${-rise * 0.74}px) scale(1)`, opacity: 1, offset: 0.7 },
+    { transform: `translate(${x}, ${-rise}px) scale(1)`, opacity: 0 }
+  ], { duration: 800, easing: 'ease-out' }).onfinish = () => f.remove();
+}
+
+// 두 초상 사이에 잠깐 뜨는 띠 — 연속 턴 · 생존 같은 특수 능력치
+function fxBanner(text) {
+  const arena = $('btArena');
+  if (!arena) return;
+  const b = document.createElement('span');
+  b.className = 'bt-banner';
+  b.textContent = text;
+  arena.appendChild(b);
+  if (!b.animate) { setTimeout(() => b.remove(), 900); return; }
+  b.animate([
+    { transform: 'translate(-50%, -50%) scale(0.8)', opacity: 0 },
+    { transform: 'translate(-50%, -50%) scale(1.05)', opacity: 1, offset: 0.2 },
+    { transform: 'translate(-50%, -50%) scale(1)', opacity: 1, offset: 0.75 },
+    { transform: 'translate(-50%, -50%) scale(1)', opacity: 0 }
+  ], { duration: 900, easing: 'ease-out' }).onfinish = () => b.remove();
+}
+
+// 쓰러짐 — 깜빡이다 바랜 채로 남습니다
+function fxDown(el) {
+  if (!el) return;
+  fxAnim(el, [{ opacity: 1 }, { opacity: 0.2 }, { opacity: 1 }, { opacity: 0.2 }, { opacity: 1 }, { opacity: 0.3 }], 600, 'steps(6, end)');
+  el.classList.add('down');
+}
+
+// 기록 한 줄 → 연출
+function battleFx(e) {
+  if (!e) return;
+  const foeEl = $('btFoe'), heroEl = $('btHero'), box = $('battle');
+  const v = fmt(e.v);
+  if (e.who === 'hero') {
+    switch (e.k) {
+      case 'hit':
+        fxLunge(heroEl, -1);
+        fxHit(foeEl, e.harm || e.crit);
+        fxFloat(foeEl, e.harm ? `일격 ${v}` : e.crit ? `${v}!` : v, e.harm ? 'harm' : e.crit ? 'crit' : '');
+        if (e.harm) fxAnim(box, FX_SHAKE, 360, 'steps(6, end)');
+        break;
+      case 'reflect': fxHit(foeEl, false); fxFloat(foeEl, `반사 ${v}`, 'reflect'); break;
+      case 'miss':    fxLunge(heroEl, -1); fxFloat(foeEl, '빗나감', 'miss'); break;
+      case 'regen':
+      case 'steal':   fxFloat(heroEl, `+${v}`, 'heal'); break;
+      case 'extra':   fxBanner('연속 턴!'); break;
+      case 'survive': fxHit(heroEl, false); fxBanner('버텼다!'); break;
+    }
+  } else {
+    switch (e.k) {
+      case 'hit':
+        fxLunge(foeEl, 1);
+        fxHit(heroEl, e.crit);
+        fxFloat(heroEl, e.crit ? `${v}!` : v, e.crit ? 'crit hurt' : 'hurt');
+        if (e.crit) fxAnim(box, FX_SHAKE, 300, 'steps(5, end)');
+        break;
+      case 'miss':  fxLunge(foeEl, 1); fxFloat(heroEl, '빗나감', 'miss'); break;
+      case 'block': fxLunge(foeEl, 1); fxFloat(heroEl, '막음', 'block'); break;
+    }
+  }
 }
 
 function paintBattle() {
@@ -728,7 +846,7 @@ function paintBattle() {
   $('btHeroHp').textContent = `${fmt(Math.max(0, heroHp))} / ${fmt(r.replay.heroMax)}`;
 
   // 최근 몇 줄. 턴이 바뀌는 줄 앞에는 턴 번호를 붙입니다.
-  const from = Math.max(0, i - BATTLE_LINES);
+  const from = Math.max(0, i - battleLines());
   let html = '';
   for (let k = from; k < i; k++) {
     const e = log[k];
@@ -862,7 +980,8 @@ function dropStrip(foe) {
     </div>`;
 }
 
-// 마주한 적 카드
+// 마주한 적 카드 — 위에서부터 설명 · 초상(큰 그림) · 남은 전리품 · 맞선다 / 물러선다.
+// 초상은 지금은 이모지입니다. 나중에 그림이 들어올 자리.
 function encounterCard(foe, isBoss, hero, aura) {
   const chance = winChance(hero, foe);
   const gap = underlevelBonus(State.run.level, foe.level);
@@ -874,9 +993,8 @@ function encounterCard(foe, isBoss, hero, aura) {
 
   return `
     ${aura ? `<div class="aura-banner" ${style}>✦ ${aura.name} 기운 — ${aura.desc} ✦</div>` : ''}
-    <div class="encounter ${isBoss ? 'boss' : ''} ${aura ? 'auraed' : ''}" ${style}>
-      <div class="enc-icon">${foe.icon}</div>
-      <div class="enc-body">
+    <div class="encounter k-${foe.kind} ${aura ? 'auraed' : ''}" ${style}>
+      <div class="enc-desc">
         <div class="enc-name">
           ${aura ? `<span class="aura-tag">${aura.name}</span>` : ''}${foe.kind !== 'normal' ? `<span class="grade-tag ${foe.kind}">${KINDS[foe.kind].name}</span>` : ''}${foe.name}<span class="lv">Lv.${fmtLevel(foe.level)}</span>
         </div>
@@ -885,16 +1003,17 @@ function encounterCard(foe, isBoss, hero, aura) {
           <span class="foe-xp">+${fmt(xp)} EXP${gap > 1.01 ? ` ×${gap.toFixed(2)}` : ''}</span>
           <span class="foe-drop">전리품 ${left > 0 ? `${left}종 ` : ''}각 ${Math.round(dropChanceFor(foe, aura ? aura.dropMult : 1) * 100)}%</span>
         </div>
+        <div class="enc-chance chance-value ${winFeelClass(chance)}">${winFeel(chance)}</div>
+        <div class="enc-warn">지면 에너지 −${penalty}</div>
       </div>
-      <div class="enc-chance">
-        <span class="chance-value ${winFeelClass(chance)}">${winFeel(chance)}</span>
-      </div>
+      <div class="portrait enc-portrait"><span class="portrait-ic">${foe.icon}</span></div>
       ${dropStrip(foe)}
     </div>
-    <div class="enc-actions">
-      <button id="engageBtn" class="btn primary big thumb"><span class="btn-line">맞선다${KEY_HINT}</span></button>
+    <!-- 넓은 화면에서는 맞선다 위 · 물러선다 아래로 쌓고,
+         폰에서는 화면 아래 붙박인 띠에 물러선다(왼쪽 작게) · 맞선다(오른쪽 크게)를 나란히 둡니다 -->
+    <div class="enc-actions thumb-bar ${isBoss ? 'solo' : ''}">
+      <button id="engageBtn" class="btn primary big"><span class="btn-line">맞선다${KEY_HINT}</span></button>
       ${isBoss ? '' : '<button id="retreatBtn" class="btn">물러선다</button>'}
-      <p class="enc-warn">지면 에너지 −${penalty}</p>
     </div>`;
 }
 
