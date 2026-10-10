@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>글씨체 고르기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&family=IBM+Plex+Sans+KR:wght@400;700&family=Nanum+Myeongjo:wght@400;700&family=Gowun+Batang:wght@400;700&family=Song+Myung&family=Do+Hyeon&family=Black+Han+Sans&family=Jua&family=Gaegu:wght@400;700&family=East+Sea+Dokdo&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2107@1.1/Galmuri11.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.1/DungGeunMo.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_11-01@1.1/NeoDunggeunmoPro-Regular.css" rel="stylesheet">
+<style>
+  :root{
+    --bg:#14161d; --bg-sunken:#191c24; --line:#2a2d3a; --line-soft:#22242f;
+    --text:#e6e8ef; --text-dim:#9aa0b0; --text-faint:#666c7e;
+    --accent:#f0b429; --energy:#48d17a; --danger:#e5484d; --r5:#b16cf0;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);padding:20px 16px 60px;
+       font-family:'Consolas','Malgun Gothic',monospace;font-size:15px;line-height:1.5}
+  h1{font-size:19px;color:var(--accent);margin-bottom:4px}
+  .lead{font-size:12px;color:var(--text-faint);margin-bottom:22px;line-height:1.6}
+  .card{background:var(--bg-sunken);border:1px solid var(--line-soft);
+        border-radius:6px;padding:14px 16px;margin-bottom:12px}
+  .hd{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;
+      padding-bottom:9px;margin-bottom:11px;border-bottom:1px solid var(--line-soft)}
+  .no{font-size:11px;color:var(--accent);font-weight:700;
+      font-family:'Consolas',monospace;min-width:20px}
+  .nm{font-size:14px;font-weight:700;font-family:'Consolas','Malgun Gothic',monospace}
+  .ds{font-size:11px;color:var(--text-faint);font-family:'Consolas','Malgun Gothic',monospace}
+  .tag{font-size:9px;letter-spacing:.08em;padding:2px 7px;border-radius:999px;
+       border:1px solid currentColor;font-family:'Consolas',monospace}
+  .tag.web{color:var(--r5)} .tag.sys{color:var(--energy)}
+  .chip{display:inline-block;font-size:11px;font-weight:700;padding:3px 9px;
+        border:1px solid var(--r5);color:var(--r5);border-radius:3px;margin-bottom:9px}
+  .zone{font-size:17px;font-weight:700;margin-bottom:3px}
+  .flav{font-size:12px;color:var(--text-dim);font-style:italic;margin-bottom:11px}
+  .foe{font-size:15px;font-weight:700;margin-bottom:2px}
+  .foe .lv{font-size:11px;color:var(--text-faint);font-weight:400;margin-left:6px}
+  .ttl{font-size:11px;color:var(--text-dim);font-style:italic;margin-bottom:7px}
+  .st{font-size:12px;color:var(--text-dim);margin-bottom:5px}
+  .win{font-size:24px;font-weight:700;color:var(--energy);letter-spacing:-.02em}
+  .win small{font-size:11px;color:var(--text-faint);font-weight:400;margin-left:5px}
+  .btn{display:block;width:100%;background:var(--accent);color:#14161d;
+       border:none;border-radius:5px;padding:10px;font-size:14px;font-weight:700;
+       margin:10px 0 7px;font-family:inherit}
+  .num{font-size:12px;color:var(--text-dim)}
+  .num b{color:var(--accent);font-size:14px}
+  @media(min-width:900px){.wrap{max-width:860px;margin:0 auto}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>글씨체 고르기</h1>
+<p class="lead">
+  게임에 실제로 나오는 문구로 그렸습니다. 번호로 말씀해주시면 적용하겠습니다.<br>
+  <span style="color:var(--r5)">웹폰트</span>는 인터넷이 있어야 제대로 나오고(끊기면 기본 글씨로 보임),
+  <span style="color:var(--energy)">시스템</span>은 늘 됩니다.
+</p>
+<div id="list"></div>
+</div>
+<script>
+const FONTS = [
+  ["현재 — Consolas + 맑은 고딕", "'Consolas','Malgun Gothic',monospace", "지금 쓰는 것 · 터미널 느낌", "sys"],
+  ["Galmuri11",        "'Galmuri11',monospace",            "한글 픽셀 · 도트 RPG",        "web"],
+  ["DungGeunMo",       "'DungGeunMo',monospace",           "둥근모꼴 픽셀 · 옛 PC통신",    "web"],
+  ["네오둥근모",        "'NeoDunggeunmo',monospace",        "둥근 픽셀 · 조금 더 굵음",     "web"],
+  ["Pretendard",       "'Pretendard',sans-serif",          "현대적 산세리프 · 가독성 최상", "web"],
+  ["Noto Sans KR",     "'Noto Sans KR',sans-serif",        "표준 산세리프 · 무난",        "web"],
+  ["IBM Plex Sans KR", "'IBM Plex Sans KR',sans-serif",    "기술적 · 약간 각짐",          "web"],
+  ["나눔명조",          "'Nanum Myeongjo',serif",           "명조 · 신화와 고전 분위기",    "web"],
+  ["고운바탕",          "'Gowun Batang',serif",             "우아한 명조 · 부드러움",       "web"],
+  ["송명",             "'Song Myung',serif",               "가는 명조 · 서늘함",          "web"],
+  ["도현",             "'Do Hyeon',sans-serif",            "굵은 제목체 · 게임다움",       "web"],
+  ["검은고딕",          "'Black Han Sans',sans-serif",      "아주 굵음 · 강렬함",          "web"],
+  ["주아",             "'Jua',sans-serif",                 "둥글둥글 · 캐주얼",           "web"],
+  ["개구",             "'Gaegu',cursive",                  "손글씨 · 가벼움",             "web"],
+  ["동해독도",          "'East Sea Dokdo',cursive",         "거친 붓글씨 · 괴기",          "web"]
+];
+document.getElementById('list').innerHTML = FONTS.map(([nm, ff, ds, kind], i) => `
+  <div class="card">
+    <div class="hd">
+      <span class="no">${String(i).padStart(2,'0')}</span>
+      <span class="nm">${nm}</span>
+      <span class="ds">${ds}</span>
+      <span class="tag ${kind}">${kind === 'web' ? '웹폰트' : '시스템'}</span>
+    </div>
+    <div style="font-family:${ff}">
+      <span class="chip">제11격 · 외신</span>
+      <div class="zone">궁극의 혼돈</div>
+      <div class="flav">여기서는 이름을 부르는 것조차 위험하다.</div>
+      <div class="foe">니알라토텝의 화신<span class="lv">Lv.13,400,000,000</span></div>
+      <div class="ttl">천 개의 가면을 쓴 기어오는 혼돈</div>
+      <div class="st">생명 221.0B · 공격 30.0B · 방어 19.0B · 민첩 24.0B</div>
+      <div class="st">+1,847 EXP · 전리품 3종 각 46% · 성장 ×2.62</div>
+      <div class="win">73% <small>승률</small></div>
+      <button class="btn">맞선다</button>
+      <div class="num">에너지 <b>28</b>/30 · 회차 <b>69</b> · 전리품 <b>344</b>/428</div>
+    </div>
+  </div>`).join('');
+</script>
+</body>
+</html>

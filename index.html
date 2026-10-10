@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<!-- viewport-fit=cover + 아래 safe-area 패딩으로 아이폰 홈 인디케이터를 피합니다 -->
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1c1007">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>제목 미정 — jjunsgame</title>
+<!-- 도트 글꼴 — 갈무리(본문) · 둥근모꼴(제목). 바깥에서 받아오므로 인터넷이 없으면
+     style.css 의 대체 글꼴(맑은 고딕 등)로 떨어집니다 — 깨지지는 않습니다. -->
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/galmuri@2.40.3/dist/galmuri.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/neodgm/neodgm-webfont@1.601/neodgm/style.css">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body data-tab="journey">
+
+<header class="topbar">
+  <div class="brand">
+    <span class="logo">◣◥</span>
+    <div>
+      <h1 id="gameTitle">제목 미정</h1>
+      <p class="studio">jjunsgame</p>
+    </div>
+  </div>
+</header>
+
+<main class="layout">
+
+  <!-- 왼쪽: 나 -->
+  <section class="panel hero-panel">
+    <!-- 여태까지의 기록. 회차를 넘겨도 남는 것들입니다. -->
+    <div class="frame"><div class="records" id="records"></div></div>
+
+    <div class="frame">
+      <div class="level-row">
+        <span class="level-badge" id="heroLevel">Lv.1</span>
+        <!-- 분배는 패널 맨 아래에 있어서 찍으려면 매번 스크롤해야 했습니다.
+             레벨 옆에 두고 창으로 띄웁니다. -->
+        <button class="btn tiny" id="openAllocBtn">스탯 분배<span class="alloc-pip" id="allocPip"></span></button>
+      </div>
+
+      <div class="hero-rank" id="heroRank"></div>
+
+      <div class="bar-wrap">
+        <div class="bar-label"><span>경험치</span><span id="xpText">0 / 0</span></div>
+        <div class="bar"><div class="bar-fill xp" id="xpFill"></div></div>
+      </div>
+
+      <div class="energy-block">
+        <div class="bar-label"><span>에너지</span><span id="energyText">20 / 20</span></div>
+        <div class="pips" id="energyPips"></div>
+      </div>
+    </div>
+
+    <div class="frame"><ul class="stats" id="heroStats"></ul></div>
+  </section>
+
+  <!-- 가운데: 여정 — 창들은 renderJourney 가 그립니다 -->
+  <section class="panel journey-panel">
+    <div id="journey"></div>
+  </section>
+
+  <!-- 오른쪽: 장비 -->
+  <section class="panel gear-panel">
+    <div class="frame">
+      <h3>장비 세트</h3>
+      <div id="gearSets" class="gear-sets"></div>
+      <!-- 사람 그림이 뒤에 깔리고, 그 위 부위 자리마다 칸이 올라갑니다 -->
+      <div id="equipSlots" class="equip-slots"></div>
+    </div>
+
+    <div class="frame">
+      <!-- 특수장비 칸 넷. 숨어 있는 것을 꺾을 때마다 하나씩 열립니다. -->
+      <div id="specialSlots" class="special-slots"></div>
+      <!-- 같은 성격을 여러 부위에 끼면 붙는 세트 효과 -->
+      <div id="setBonus" class="set-bonus"></div>
+    </div>
+  </section>
+
+</main>
+
+<!-- 부위를 누르면 뜨는 창. 예전엔 아래로 스크롤해서 골랐는데,
+     열두 칸을 오갈 때마다 화면이 위아래로 튀어서 창으로 바꿨습니다. -->
+<div id="slotModal" class="modal hidden">
+  <div class="modal-back" data-closeslot></div>
+  <div class="modal-card">
+    <div class="modal-head">
+      <h3><span id="collectionTitle">무기</span> <span class="count" id="ownedCount"></span></h3>
+      <button class="btn tiny" data-closeslot>닫기</button>
+    </div>
+    <div id="equipDetail"></div>
+    <div id="inventory" class="inventory"></div>
+  </div>
+</div>
+
+<!-- 이 지역에 있는 것. 지역 이름 옆 「1 / 11」 로 엽니다. -->
+<div id="rosterModal" class="modal hidden">
+  <div class="modal-back" data-closeroster></div>
+  <div class="modal-card">
+    <div class="modal-head">
+      <h3><span id="rosterTitle">지역</span> <span class="count" id="rosterSub"></span></h3>
+      <button class="btn tiny" id="rosterAllBtn">전체 도감</button>
+      <button class="btn tiny" data-closeroster>닫기</button>
+    </div>
+    <div id="roster" class="roster"></div>
+  </div>
+</div>
+
+<!-- 스탯 분배 창. 레벨 옆 버튼으로 엽니다. -->
+<div id="allocModal" class="modal hidden">
+  <div class="modal-back" data-closealloc></div>
+  <div class="modal-card">
+    <div class="modal-head">
+      <h3>스탯 분배 <span class="count" id="pointCount"></span></h3>
+      <button class="btn tiny" data-closealloc>닫기</button>
+    </div>
+    <div id="alloc" class="alloc"></div>
+  </div>
+</div>
+
+<!-- 아래: 로그 + 설정. 로그는 길어서 기본으로 접혀 있고 「보기」로 펼칩니다. -->
+<section class="panel log-panel">
+  <div class="frame">
+    <div class="log-head">
+      <h3>기록</h3>
+      <button class="btn tiny" id="logToggle">보기</button>
+    </div>
+    <div id="log" class="log" hidden></div>
+  </div>
+
+  <div class="frame">
+    <h3>설정</h3>
+    <div id="settings" class="settings"></div>
+  </div>
+</section>
+
+<footer class="footer">
+  <button id="toTitleBtn" class="btn small">초기 화면으로</button>
+  <span class="footer-note">© jjunsgame</span>
+</footer>
+
+<!-- 좁은 화면에서만 나오는 하단 탭. 세 패널을 한 번에 하나씩 봅니다. -->
+<nav class="mobile-tabs" id="mobileTabs">
+  <button data-tab="hero"><span class="mt-icon">◆</span>나</button>
+  <button data-tab="journey"><span class="mt-icon">▲</span>여정</button>
+  <button data-tab="gear"><span class="mt-icon">■</span>전리품</button>
+  <button data-tab="log"><span class="mt-icon">≡</span>기록</button>
+</nav>
+
+<!-- 초기 화면 -->
+<div id="title" class="title-screen hidden">
+  <div class="title-inner">
+    <div class="title-plaque">
+      <div class="title-mark">◣◥</div>
+      <h1 class="title-name">제목 미정</h1>
+      <p class="title-studio">jjunsgame</p>
+    </div>
+    <div id="titleMenu" class="title-menu"></div>
+  </div>
+</div>
+
+<!-- 세이브 내보내기 / 가져오기. 초기 화면의 저장 칸에서 엽니다. -->
+<div id="saveModal" class="modal save-modal hidden">
+  <div class="modal-back" data-closesave></div>
+  <div class="modal-card">
+    <div class="modal-head">
+      <h3 id="saveModalTitle">세이브</h3>
+      <button class="btn tiny" data-closesave>닫기</button>
+    </div>
+    <div id="saveModalBody"></div>
+  </div>
+</div>
+
+<!-- 튜토리얼 -->
+<div id="tutorial" class="overlay hidden">
+  <div class="overlay-card tutorial-card">
+    <div class="tut-step" id="tutStep"></div>
+    <h2 id="tutTitle"></h2>
+    <p id="tutBody" class="tut-body"></p>
+    <div class="tut-actions">
+      <button id="tutNext" class="btn primary">다음<kbd>Space</kbd></button>
+      <button id="tutSkip" class="btn small">건너뛰기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 회차 종료 오버레이 -->
+<div id="overlay" class="overlay hidden">
+  <div class="overlay-card">
+    <h2 id="overTitle">격이 무너졌다</h2>
+    <p id="overReason" class="over-reason"></p>
+    <ul class="over-stats" id="overStats"></ul>
+    <button id="newRunBtn" class="btn primary">다시 오른다<kbd>Space</kbd></button>
+  </div>
+</div>
+
+<!-- 맨 뒤의 헤진 지도. 게임과 상관없이 먼저 그려둡니다. -->
+<script src="js/backdrop.js"></script>
+<!-- 효과음과 배경음. 소리 파일 없이 그 자리에서 만듭니다. -->
+<script src="js/sound.js"></script>
+<script src="js/data.js"></script>
+<script src="js/game.js"></script>
+<script src="js/ui.js"></script>
+</body>
+</html>

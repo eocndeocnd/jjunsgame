@@ -1,0 +1,12 @@
+# 이 컴퓨터에만 있는 설정 — 미리보기 서버 설정(launch.json)만 함께 둡니다
+.claude/*
+!.claude/launch.json
+
+# 파이썬이 만드는 찌꺼기
+__pycache__/
+*.pyc
+
+# 운영체제가 만드는 파일
+Thumbs.db
+desktop.ini
+.DS_Store

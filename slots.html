@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>1-C 압축하기</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard-dynamic-subset.css">
+<style>
+  :root{
+    --bg:#14161d; --bg-sunken:#191c24; --line:#2a2d3a; --line-soft:#22242f;
+    --text:#e6e8ef; --text-dim:#9aa0b0; --text-faint:#666c7e;
+    --accent:#f0b429; --drop:#f0b429; --energy:#48d17a;
+    --sil:#4a5f80;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--text); padding:18px 14px 70px;
+    font-family:'Pretendard',-apple-system,system-ui,'Malgun Gothic',sans-serif;
+    font-size:14px; line-height:1.6; font-variant-numeric:tabular-nums;
+  }
+  h1{font-size:18px;color:var(--accent);margin-bottom:3px}
+  .lead{font-size:12px;color:var(--text-faint);margin-bottom:20px;line-height:1.7}
+  .lead b{color:var(--text-dim)}
+
+  .variant{background:var(--bg-sunken);border:1px solid var(--line-soft);
+           border-radius:8px;padding:14px;margin-bottom:14px}
+  .vh{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:3px}
+  .vno{font-size:11px;font-weight:700;color:var(--accent)}
+  .vname{font-size:14px;font-weight:700}
+  .vh .tall{font-size:11px;color:var(--text-faint);margin-left:auto}
+  .vdesc{font-size:11px;color:var(--text-faint);line-height:1.7;margin-bottom:12px}
+  .vnote{font-size:11px;line-height:1.7;margin-top:11px;padding-top:10px;border-top:1px solid var(--line-soft)}
+  .vnote .good{color:var(--energy)}
+  .vnote .bad{color:#e5748a}
+
+  .stage{width:100%;max-width:340px;margin:0 auto;position:relative;
+         border:1px solid var(--line-soft);border-radius:6px;
+         background:#161922;overflow:hidden}
+  .bodywrap{position:absolute;inset:0;pointer-events:none}
+  svg.body{display:block;width:100%;height:100%}
+  .fig{fill:none;stroke:var(--sil);stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round;opacity:.85}
+  .fig-fill{fill:var(--sil);opacity:.18;stroke:none}
+
+  .s{
+    position:absolute; z-index:2;
+    background:rgba(24,27,36,.72);
+    -webkit-backdrop-filter:blur(3px); backdrop-filter:blur(3px);
+    border:1px solid rgba(120,132,160,.32);
+    border-radius:4px; padding:5px 4px;
+    display:flex; flex-direction:column; align-items:center; gap:3px;
+    text-align:center; overflow:hidden;
+  }
+  .s.on{background:rgba(52,42,14,.82);border-color:var(--accent);
+        box-shadow:0 0 0 1px rgba(240,180,41,.25)}
+  .ic{
+    flex:none; display:grid; place-items:center;
+    width:46px; height:46px; font-size:26px;
+    background:rgba(10,12,17,.55);
+    border:1px solid rgba(120,132,160,.22);
+    border-radius:3px; overflow:hidden;
+  }
+  .s.on .ic{border-color:rgba(240,180,41,.4)}
+  .ic img{width:100%;height:100%;object-fit:contain;display:block}
+  .txt{min-width:0;width:100%;display:flex;flex-direction:column}
+  .s-k{font-size:9px;color:var(--text-faint);letter-spacing:.04em;white-space:nowrap;line-height:1.25}
+  .s.on .s-k{color:var(--accent)}
+  .s-item{font-size:10px;font-weight:700;color:var(--text-dim);line-height:1.3;
+          white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .s.empty .s-item{color:var(--text-faint);font-style:italic;font-weight:400}
+  .s .dot{position:absolute;top:3px;right:3px;width:7px;height:7px;border-radius:50%;
+          background:var(--drop);box-shadow:0 0 5px var(--drop);z-index:1}
+  /* 아이콘만 쓰는 판 */
+  .s.bare{padding:4px}
+  .s.bare .txt{display:none}
+
+  .bar{max-width:340px;margin:8px auto 0;padding:8px 10px;background:#1c1f28;
+       border:1px solid var(--line-soft);border-radius:4px;display:flex;
+       align-items:center;gap:9px}
+  .bar .bic{width:30px;height:30px;flex:none;display:grid;place-items:center;font-size:17px;
+            background:rgba(10,12,17,.55);border:1px solid rgba(120,132,160,.22);border-radius:3px}
+  .bar .bk{font-size:9px;color:var(--text-faint);display:block;line-height:1.3}
+  .bar .bv{font-size:12px;font-weight:700;color:var(--accent);line-height:1.3}
+  .bar .bs{font-size:10px;color:var(--text-dim);margin-left:auto;text-align:right}
+
+  .cmp{width:100%;border-collapse:collapse;font-size:11px;margin-top:6px}
+  .cmp th,.cmp td{border:1px solid var(--line-soft);padding:7px 8px;text-align:left;vertical-align:top}
+  .cmp th{color:var(--text-dim);font-weight:700;background:#1c1f28}
+  .cmp td:first-child{color:var(--accent);font-weight:700;white-space:nowrap}
+  .cmp .hi{color:var(--energy);font-weight:700}
+  @media(min-width:860px){ .wrap{max-width:760px;margin:0 auto} }
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>1-C 압축하기</h1>
+<p class="lead">
+  1-C 가 614px 이나 되는 건 <b>가운데 기둥에 다섯 칸</b>(투구·갑옷·허리띠·각반·신발)이
+  쌓이기 때문입니다. 86px × 5 = 430px 라, 간격을 아무리 좁혀도 그 아래로는 못 내려갑니다.<br>
+  그래서 <b>기둥마다 네 칸씩</b> 고르게 나눴습니다. 아이콘 46px 는 그대로입니다.
+</p>
+<div id="out"></div>
+
+<div class="variant">
+  <div class="vh"><span class="vname">한눈에 비교</span></div>
+  <table class="cmp">
+    <tr><th>안</th><th>높이</th><th>줄인 폭</th><th>버린 것</th></tr>
+    <tr><td>1-C (원본)</td><td>614px</td><td>—</td><td>—</td></tr>
+    <tr><td>C-1</td><td class="hi" id="h1">—</td><td id="d1">—</td><td>없음 — 기둥만 고르게 나눔</td></tr>
+    <tr><td>C-2</td><td class="hi" id="h2">—</td><td id="d2">—</td><td>부위 이름 (빈 칸에만 보임)</td></tr>
+    <tr><td>C-3</td><td class="hi" id="h3">—</td><td id="d3">—</td><td>글자 전부 — 아래 띠로 뺌</td></tr>
+  </table>
+</div>
+</div>
+
+<script>
+const ITEM = {
+  helm:['투구','뿔 달린 투구','🪖'], necklace:['목걸이','지하수로의 열쇠','📿'],
+  cloak:['망토','깃털 망토','🧣'], armor:['갑옷','나무껍질 갑옷','🛡️'],
+  gloves:['장갑','오크 손등가리개','🧤'], bracelet:['팔찌','거미줄 팔찌','⭕'],
+  ring:['반지','암살자의 인장','💍'], belt:['허리띠','덩굴 허리띠','🎗️'],
+  greaves:['각반','두꺼운 각반','🦿'], boots:['신발','그림자 신','👢'],
+  weapon:['무기','녹슨 단검','🗡️'], offhand:['보조무기','뿌리 방패','🔰']
+};
+const STATE = { weapon:'on', armor:'on', helm:'', necklace:'new', cloak:'',
+                gloves:'', belt:'', greaves:'empty', boots:'', ring:'empty',
+                bracelet:'new', offhand:'' };
+
+// mode: 'full' 부위+이름 · 'name' 이름만(빈 칸은 부위) · 'bare' 글자 없음
+function cell(id, style, mode) {
+  const [k, name, ic] = ITEM[id];
+  const st = STATE[id] || '';
+  const empty = st === 'empty';
+  let txt = '';
+  if (mode === 'full') {
+    txt = `<span class="s-k">${k}</span><span class="s-item">${empty ? '비어 있음' : name}</span>`;
+  } else if (mode === 'name') {
+    txt = empty ? `<span class="s-k">${k}</span>` : `<span class="s-item">${name}</span>`;
+  }
+  return `<div class="s ${mode==='bare'?'bare':''} ${st==='on'?'on':''} ${empty?'empty':''}"
+               style="${style}" title="${k} · ${empty?'비어 있음':name}">
+      ${st==='new' ? '<span class="dot"></span>' : ''}
+      <span class="ic">${empty ? '' : ic}</span>
+      <span class="txt">${txt}</span>
+    </div>`;
+}
+
+function body() {
+  return `<svg class="body" viewBox="0 0 100 200" preserveAspectRatio="xMidYMid meet">
+    <g class="fig-fill">
+      <ellipse cx="50" cy="24" rx="13.5" ry="15"/>
+      <path d="M34 50 Q50 43 66 50 L72 108 L28 108 Z"/>
+      <path d="M32 52 L19 96 L15 124 L23 126 L27 98 L37 60 Z"/>
+      <path d="M68 52 L81 96 L85 124 L77 126 L73 98 L63 60 Z"/>
+      <path d="M30 108 L34 152 L31 186 L43 186 L45 152 L50 120 L55 152 L57 186 L69 186 L66 152 L70 108 Z"/>
+    </g>
+    <g class="fig">
+      <circle cx="50" cy="24" r="14"/>
+      <path d="M50 38 L50 50"/>
+      <path d="M34 50 Q50 43 66 50"/>
+      <path d="M34 50 L28 108 L72 108 L66 50"/>
+      <path d="M32 52 L19 96 L15 124"/>
+      <path d="M68 52 L81 96 L85 124"/>
+      <circle cx="14" cy="132" r="8"/>
+      <circle cx="86" cy="132" r="8"/>
+      <path d="M34 108 L31 152 L30 186"/>
+      <path d="M66 108 L69 152 L70 186"/>
+      <path d="M50 108 L50 120"/>
+      <path d="M24 190 L38 190 M62 190 L76 190"/>
+      <path d="M30 186 Q24 189 24 190"/>
+      <path d="M70 186 Q76 189 76 190"/>
+    </g>
+  </svg>`;
+}
+
+const W = 31;   // 가운데 칸과 옆 칸이 맞닿지 않는 최대 폭
+
+// 기둥마다 네 칸. 위에서 아래로 몸을 따라 내려갑니다.
+const MID   = ['helm', 'armor', 'belt', 'boots'];        // 머리 · 가슴 · 허리 · 발
+const LEFT  = ['cloak', 'bracelet', 'gloves', 'weapon']; // 어깨 · 손목 · 손 · 손
+const RIGHT = ['necklace', 'ring', 'offhand', 'greaves'];// 목 · 손가락 · 손 · 정강이
+
+function layout(mode, cellH, gap) {
+  const C = 'left:50%;transform:translateX(-50%)';
+  const top = (i) => 6 + i * (cellH + gap);
+  // 옆 기둥은 반 칸 내려서 가운데와 어긋나게 — 몸이 덜 가려집니다
+  const sideTop = (i) => 6 + Math.round((cellH + gap) * 0.55) + i * (cellH + gap);
+  const h = Math.max(top(3), sideTop(3)) + cellH + 8;
+
+  let s = `<div class="stage" style="height:${h}px"><div class="bodywrap">${body()}</div>`;
+  MID.forEach((id, i)   => s += cell(id, `${C};top:${top(i)}px;width:${W}%`, mode));
+  LEFT.forEach((id, i)  => s += cell(id, `left:2%;top:${sideTop(i)}px;width:${W}%`, mode));
+  RIGHT.forEach((id, i) => s += cell(id, `right:2%;top:${sideTop(i)}px;width:${W}%`, mode));
+  return s + '</div>';
+}
+
+function bar() {
+  return `<div class="bar">
+    <span class="bic">🗡️</span>
+    <span><span class="bk">무기</span><span class="bv">녹슨 단검</span></span>
+    <span class="bs">공격력 +2 · 민첩 +1</span>
+  </div>`;
+}
+
+function variant(no, name, desc, html, note) {
+  return `<div class="variant">
+    <div class="vh"><span class="vno">${no}</span><span class="vname">${name}</span></div>
+    <div class="vdesc">${desc}</div>
+    ${html}
+    <div class="vnote">${note}</div>
+  </div>`;
+}
+
+let out = '';
+
+out += variant('C-1', '기둥마다 네 칸 — 버린 것 없음',
+  '각반을 오른쪽 기둥으로 옮겨 4·4·4 로 맞췄습니다. 옆 기둥은 반 칸 내려 어긋나게 둬서 몸이 덜 가려집니다. 글자는 그대로 다 있습니다.',
+  layout('full', 86, 10),
+  `<span class="good">좋은 점</span> 아무것도 안 버리고 높이만 줄임. 아이콘 46px 유지.<br>
+   <span class="bad">아쉬운 점</span> 각반이 오른쪽에 있어 다리와 조금 떨어져 보임.`);
+
+out += variant('C-2', '부위 이름은 빈 칸에만',
+  '채워진 칸은 전리품 이름만 보여줍니다. 어느 부위인지는 위치가 이미 말해주니까요. 빈 칸에만 「투구」 같은 부위명이 뜹니다.',
+  layout('name', 72, 10),
+  `<span class="good">좋은 점</span> 한 줄을 지워 칸이 14px 낮아짐. 화면이 조용해짐.<br>
+   <span class="bad">아쉬운 점</span> 위치만으로 부위를 알아야 함 — 각반/신발처럼 붙은 것은 헷갈릴 수 있음.`);
+
+out += variant('C-3', '아이콘만 — 이름은 아래 띠에',
+  '칸에서 글자를 모두 빼고 아이콘만 남겼습니다. 고른 칸의 이름과 능력치는 아래 띠에 뜹니다.',
+  layout('bare', 56, 12) + bar(),
+  `<span class="good">좋은 점</span> 가장 짧음. 실루엣이 거의 안 가려지고 그림이 주인공이 됨.<br>
+   <span class="bad">아쉬운 점</span> 뭘 끼고 있는지 훑어볼 수 없음 — 아이콘을 다 외워야 함.`);
+
+document.getElementById('out').innerHTML = out;
+
+// 실제로 그려진 높이를 표에 적어줍니다
+const hs = [...document.querySelectorAll('.stage')].map(s => Math.round(s.getBoundingClientRect().height));
+[1,2,3].forEach((n, i) => {
+  document.getElementById('h'+n).textContent = hs[i] + 'px';
+  document.getElementById('d'+n).textContent = '−' + (614 - hs[i]) + 'px';
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>밸런스 시뮬레이터 — jjunsgame</title>
+<style>
+  body { background: #12131a; color: #d8dae3; font: 13px/1.5 'Malgun Gothic', sans-serif; margin: 16px; }
+  button { background: #22242f; color: inherit; border: 1px solid #3a3d4d; padding: 6px 12px; cursor: pointer; }
+  table { border-collapse: collapse; margin-top: 12px; font-variant-numeric: tabular-nums; }
+  td, th { border-bottom: 1px solid #2a2c38; padding: 2px 10px; text-align: right; }
+  th { color: #9aa0b0; font-weight: 400; }
+  #sum { white-space: pre; margin-top: 12px; color: #f0b429; }
+</style>
+</head>
+<body>
+<h3>밸런스 시뮬레이터</h3>
+<p>게임 규칙(data.js · game.js)을 그대로 쓰고, 사람의 판단만 단순한 규칙으로 흉내 냅니다 (tools/sim.js 참고).</p>
+<label>시드 <input id="seed" value="1" size="4"></label>
+<button id="go">돌리기</button>
+<div id="sum"></div>
+<table id="tbl"></table>
+
+<script src="../js/data.js"></script>
+<script src="../js/game.js"></script>
+<script src="sim.js"></script>
+<script>
+document.getElementById('go').onclick = () => {
+  document.getElementById('sum').textContent = '돌리는 중…';
+  simStart(Number(document.getElementById('seed').value) || 1, out => {
+    document.getElementById('sum').textContent = JSON.stringify(simSummary(out), null, 1);
+    const head = '<tr><th>회차</th><th>지역</th><th>레벨</th><th>전투</th><th>패배</th><th>보스</th><th>전리품</th><th>에너지</th><th>강화</th></tr>';
+    document.getElementById('tbl').innerHTML = head + out.runs.map(r =>
+      `<tr><td>${r.n}</td><td>${r.zone}</td><td>${fmtLevel(r.level)}</td><td>${r.fights}</td><td>${r.losses}</td>
+           <td>${r.bosses}</td><td>${r.owned}</td><td>${r.energy}</td><td>${r.enh}</td></tr>`).join('');
+  });
+};
+</script>
+</body>
+</html>

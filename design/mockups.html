@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>비주얼 시안 — jjunsgame</title>
+<!-- 한글 도트 글꼴: 갈무리(Galmuri) · 둥근모꼴(NeoDunggeunmo) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/galmuri@latest/dist/galmuri.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/neodgm/neodgm-webfont@latest/neodgm/style.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/neodgm/neodgm-webfont@latest/neodgm_code/style.css">
+<style>
+/* ============================================================
+   시안 페이지 — 게임 화면 두 장을 네 가지 스타일로.
+   같은 마크업에 body 의 t-a ~ t-d 만 바꿔 끼웁니다.
+   위쪽 고르기 막대는 시안이 아니라 비교용이라 평범하게 둡니다.
+   ============================================================ */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #141414; color: #ddd; font-family: system-ui, sans-serif; }
+
+.picker {
+  position: sticky; top: 0; z-index: 20;
+  display: flex; flex-wrap: wrap; gap: 6px;
+  padding: 10px 12px; background: #1c1c1c; border-bottom: 1px solid #333;
+}
+.picker button {
+  font: 13px/1 system-ui, sans-serif; color: #ddd; background: #2a2a2a;
+  border: 1px solid #444; border-radius: 6px; padding: 8px 11px; cursor: pointer;
+}
+.picker button.on { background: #f0b429; color: #111; border-color: #f0b429; font-weight: 700; }
+.desc { max-width: 780px; margin: 0 auto; padding: 12px 16px 0; font: 13px/1.65 system-ui, sans-serif; color: #b5b5b5; }
+.desc b { color: #eee; }
+
+.stage { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; padding: 14px 4px 48px; }
+.shot { display: flex; flex-direction: column; gap: 6px; align-items: center; }
+.shot-label { font: 12px system-ui, sans-serif; color: #888; }
+
+/* ---------- 휴대폰 화면 뼈대 (모든 시안 공통) ---------- */
+.phone {
+  position: relative;
+  width: 360px; height: 760px;
+  display: flex; flex-direction: column;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: var(--fs, 14px);
+  line-height: 1.5;
+  -webkit-font-smoothing: none;
+  image-rendering: pixelated;
+}
+.scr { flex: 1; min-height: 0; padding: 14px 12px 10px; display: flex; flex-direction: column; gap: 14px; overflow: hidden; }
+.row { display: flex; align-items: center; gap: 8px; }
+.grow { flex: 1; min-width: 0; }
+.small { font-family: var(--font-s, var(--font)); font-size: var(--fs-s, 11px); }
+.dim { color: var(--dim); }
+.num { font-variant-numeric: tabular-nums; }
+
+.top { display: flex; align-items: baseline; gap: 8px; padding: 8px 10px; }
+.top .logo { color: var(--acc); }
+.top .ttl { font-family: var(--font-t, var(--font)); font-size: var(--fs-t, 18px); color: var(--acc); }
+
+.chip { font-size: var(--fs-s, 11px); font-family: var(--font-s, var(--font)); padding: 2px 6px; white-space: nowrap; }
+.zname { font-weight: 700; }
+
+.meter { display: flex; justify-content: space-between; align-items: baseline; padding: 8px 10px; }
+.meter b { font-size: 18px; }
+
+.unit { display: flex; flex-direction: column; gap: 4px; }
+.u-top { display: flex; align-items: baseline; gap: 6px; }
+.u-name { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.u-name i { font-style: normal; color: var(--dim); font-size: var(--fs-s, 11px); font-family: var(--font-s, var(--font)); margin-left: 4px; }
+.u-ic { width: 22px; text-align: center; }
+.u-ic[data-g]::after { content: ''; }
+.u-ic.big { font-size: 22px; width: 30px; }
+
+.bar { height: 12px; position: relative; overflow: hidden; }
+.bar > i { position: absolute; inset: 0 auto 0 0; display: block; }
+
+.log { min-height: 168px; padding: 8px 10px; display: flex; flex-direction: column; gap: 1px; }
+.log p { display: flex; gap: 6px; }
+.log .t { width: 30px; flex: none; color: var(--dim); font-size: var(--fs-s, 11px); font-family: var(--font-s, var(--font)); padding-top: 2px; }
+
+.btn {
+  display: block; width: 100%; padding: 10px 12px;
+  font: inherit; color: inherit; text-align: center; cursor: pointer;
+  background: none; border: none;
+}
+.btn kbd { font: inherit; font-size: var(--fs-s, 11px); font-family: var(--font-s, var(--font)); opacity: 0.6; margin-left: 6px; }
+.btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+.feel { font-weight: 700; }
+.drops { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.drop { text-align: center; padding: 6px 4px; font-size: var(--fs-s, 11px); font-family: var(--font-s, var(--font)); }
+.drop .ic { font-size: 18px; display: block; }
+
+.slots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.slot { position: relative; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 6px 4px; font-size: var(--fs-s, 11px); font-family: var(--font-s, var(--font)); }
+.drop { min-width: 0; }
+.slot .ic { font-size: 18px; height: 24px; line-height: 24px; }
+.slot .k { color: var(--dim); }
+.slot .nm { width: 100%; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.slot .lv { position: absolute; top: 3px; right: 4px; color: var(--acc); }
+.slot.lock { opacity: 0.45; }
+.sp-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+
+.tabs { display: grid; grid-template-columns: repeat(4, 1fr); flex: none; }
+.tabs a { padding: 10px 0 12px; text-align: center; font-size: var(--fs-s, 11px); font-family: var(--font-s, var(--font)); color: var(--dim); text-decoration: none; }
+.tabs a.on { color: var(--acc); }
+
+/* 승률 예감 — 시안마다 바탕에 맞게 다시 칠합니다 */
+.f0 { color: var(--f0); } .f1 { color: var(--f1); } .f2 { color: var(--f2); }
+.f3 { color: var(--f3); } .f4 { color: var(--f4); } .f5 { color: var(--f5); }
+
+/* ============================================================
+   A. 클래식 JRPG — 파란 창, 흰 테두리, 명령 앞의 ▶
+   ============================================================ */
+.t-a .phone {
+  --font: 'Galmuri14', monospace; --font-s: 'Galmuri11', monospace; --font-t: 'Galmuri14', monospace;
+  --fs: 14px; --fs-s: 11px; --fs-t: 21px;
+  --bg: #000; --ink: #f6f6f6; --dim: #9fb0ff; --acc: #ffe14d;
+  --f0: #ff5a5a; --f1: #ff9f45; --f2: #ffe14d; --f3: #c7f05a; --f4: #63e07b; --f5: #6ad7ff;
+}
+/* 픽셀 창: 안쪽 흰 테 4px + 바깥 검은 테 4px, 모서리 한 칸씩 깎음 */
+.t-a .win {
+  background: linear-gradient(180deg, #2f43c9 0 34%, #273aba 34% 67%, #2033a8 67% 100%);
+  margin: 6px;
+  box-shadow:
+    0 -3px 0 0 #f6f6f6, 0 3px 0 0 #f6f6f6, -3px 0 0 0 #f6f6f6, 3px 0 0 0 #f6f6f6,
+    0 -6px 0 0 #000, 0 6px 0 0 #000, -6px 0 0 0 #000, 6px 0 0 0 #000,
+    -3px -3px 0 0 #000, 3px -3px 0 0 #000, -3px 3px 0 0 #000, 3px 3px 0 0 #000;
+}
+.t-a .top { background: none; padding: 2px 4px; }
+.t-a .top .ttl { text-shadow: 2px 2px 0 #7a3a00; }
+.t-a .chip { background: #000; border: 2px solid currentColor; }
+.t-a .bar { background: #000; border: 2px solid #f6f6f6; height: 14px; }
+.t-a .bar > i { background: repeating-linear-gradient(90deg, var(--c) 0 5px, rgba(0,0,0,.35) 5px 6px); }
+.t-a .bar.hero > i { --c: #63e07b; }
+.t-a .bar.foe  > i { --c: #ff5a5a; }
+.t-a .log { background: #000; border: 2px solid #f6f6f6; }
+.t-a .l-crit { color: var(--acc); } .t-a .l-harm { color: #ffb347; }
+.t-a .l-foe { color: #ff8a8a; } .t-a .l-fcrit { color: #ff5a5a; }
+.t-a .l-heal { color: #63e07b; } .t-a .l-sp { color: #6ad7ff; }
+.t-a .l-miss { color: #8a93c8; } .t-a .l-win { color: var(--acc); }
+/* 명령 — 고른 것 앞에 ▶ 가 깜빡입니다 */
+.t-a .btn { text-align: left; padding: 8px 14px 8px 30px; position: relative; }
+.t-a .btn.primary::before { content: '▶'; position: absolute; left: 10px; color: var(--acc); animation: a-blink 0.9s steps(1) infinite; }
+@keyframes a-blink { 50% { opacity: 0; } }
+.t-a .drop, .t-a .slot { background: #000; border: 2px solid #9fb0ff; }
+.t-a .slot.worn { border-color: #f6f6f6; }
+.t-a .slot.sp { border-color: #c48cff; }
+.t-a .tabs { background: linear-gradient(180deg, #2f43c9, #2033a8); border-top: 3px solid #f6f6f6; }
+.t-a .tabs a.on::before { content: '▶ '; }
+
+/* ============================================================
+   B. 양피지 — 나무 바탕, 잉크 글씨, 붉은 밀랍
+   ============================================================ */
+.t-b .phone {
+  --font: 'Galmuri14', monospace; --font-s: 'Galmuri11', monospace; --font-t: 'NeoDunggeunmo', monospace;
+  --fs: 14px; --fs-s: 11px; --fs-t: 22px;
+  --bg: #2a1a0e; --ink: #3a2312; --dim: #86633f; --acc: #a8262b;
+  --f0: #b3171e; --f1: #c25a12; --f2: #9a7400; --f3: #5f7f12; --f4: #2c7a2c; --f5: #1f5f8a;
+  background-image: repeating-linear-gradient(90deg, #2e1d10 0 6px, #27180c 6px 12px, #2b1b0e 12px 15px);
+}
+.t-b .win {
+  background-color: #ead6a6;
+  background-image:
+    repeating-conic-gradient(#e3cc95 0 25%, transparent 0 50%);
+  background-size: 4px 4px;
+  margin: 6px;
+  box-shadow:
+    0 -3px 0 0 #8b5a2b, 0 3px 0 0 #8b5a2b, -3px 0 0 0 #8b5a2b, 3px 0 0 0 #8b5a2b,
+    0 -6px 0 0 #1c1007, 0 6px 0 0 #1c1007, -6px 0 0 0 #1c1007, 6px 0 0 0 #1c1007,
+    -3px -3px 0 0 #1c1007, 3px -3px 0 0 #1c1007, -3px 3px 0 0 #1c1007, 3px 3px 0 0 #1c1007;
+}
+.t-b .top { color: #f1e2bd; }
+.t-b .top .ttl { color: #f3dca0; text-shadow: 2px 2px 0 #1c1007; }
+.t-b .top .logo { color: #d9433f; }
+.t-b .top .dim { color: #b99464; }
+/* 밀랍 꼬리표 — 바탕이 붉어서 글씨는 늘 크림색 (격 · 등급 색은 쓰지 않습니다) */
+.t-b .chip { background: var(--acc); color: #f6e7c3 !important; box-shadow: 0 0 0 2px #5c1012; }
+.t-b .bar { background: #d8bf86; height: 14px; box-shadow: 0 0 0 2px #3a2312; }
+.t-b .bar > i { background: repeating-linear-gradient(135deg, var(--c) 0 3px, var(--c2) 3px 6px); }
+.t-b .bar.hero > i { --c: #3f7d2c; --c2: #34692a; }
+.t-b .bar.foe  > i { --c: #a8262b; --c2: #8c1f24; }
+.t-b .log { background: #f2e2b8; box-shadow: inset 0 0 0 2px #c7a464; }
+.t-b .l-hit { color: #3a2312; } .t-b .l-crit { color: #a8262b; font-weight: 700; } .t-b .l-harm { color: #c25a12; font-weight: 700; }
+.t-b .l-foe { color: #7a3a1c; } .t-b .l-fcrit { color: #b3171e; font-weight: 700; }
+.t-b .l-heal { color: #2c7a2c; } .t-b .l-sp { color: #5b2a86; font-weight: 700; }
+.t-b .l-miss { color: #9c8460; } .t-b .l-win { color: #a8262b; font-weight: 700; }
+/* 나무판 버튼 */
+.t-b .btn {
+  color: #f6e7c3; background: #7b4a22;
+  box-shadow: inset 0 3px 0 #a8703a, inset 0 -3px 0 #3f240f, 0 0 0 2px #1c1007;
+}
+.t-b .btn.primary { background: #a8262b; box-shadow: inset 0 3px 0 #d0473f, inset 0 -3px 0 #5c1012, 0 0 0 2px #1c1007; }
+.t-b .btn:active { transform: translateY(2px); }
+.t-b .drop, .t-b .slot { background: #f2e2b8; box-shadow: 0 0 0 2px #b08a52; }
+.t-b .slot.worn { box-shadow: 0 0 0 2px #6b4320; }
+.t-b .slot.sp { box-shadow: 0 0 0 2px #5b2a86; }
+.t-b .tabs { background: #1c1007; border-top: 3px solid #8b5a2b; }
+.t-b .tabs a { color: #b99464; }
+.t-b .tabs a.on { color: #f3dca0; }
+
+/* ============================================================
+   C. 다크 판타지 16비트 — 어두운 돌판, 금테, 보석색
+   ============================================================ */
+.t-c .phone {
+  --font: 'Galmuri14', monospace; --font-s: 'Galmuri11', monospace; --font-t: 'Galmuri14', monospace;
+  --fs: 14px; --fs-s: 11px; --fs-t: 21px;
+  --bg: #0c0a12; --ink: #e2dccb; --dim: #8e86a3; --acc: #e9c25a;
+  --f0: #ff4d5e; --f1: #ff8c42; --f2: #f2cf4a; --f3: #b3e05a; --f4: #4fd89a; --f5: #5cc8ff;
+  background-image: repeating-conic-gradient(#100d18 0 25%, #0c0a12 0 50%);
+  background-size: 6px 6px;
+}
+.t-c .win {
+  background: #1d1829;
+  margin: 6px;
+  /* 금테 3px + 검은 외곽 3px, 안쪽은 돋을새김 (위·왼쪽 밝게, 아래·오른쪽 어둡게) */
+  box-shadow:
+    inset 3px 3px 0 #3b3354, inset -3px -3px 0 #0b0911,
+    0 -3px 0 0 #c9a227, 0 3px 0 0 #8a6d14, -3px 0 0 0 #c9a227, 3px 0 0 0 #8a6d14,
+    0 -6px 0 0 #050408, 0 6px 0 0 #050408, -6px 0 0 0 #050408, 6px 0 0 0 #050408,
+    -3px -3px 0 0 #050408, 3px -3px 0 0 #050408, -3px 3px 0 0 #050408, 3px 3px 0 0 #050408;
+}
+.t-c .top .ttl { color: var(--acc); text-shadow: 2px 2px 0 #3a2a05; }
+.t-c .chip { color: #f2e7c4; background: #6a2a8a; box-shadow: inset 2px 2px 0 #9a5ac0, inset -2px -2px 0 #3a1050, 0 0 0 2px #050408; }
+.t-c .bar { background: #07060b; height: 14px; box-shadow: 0 0 0 2px #050408, inset 0 0 0 1px #2a2438; }
+.t-c .bar > i { background: linear-gradient(180deg, var(--hi) 0 3px, var(--c) 3px 10px, var(--lo) 10px 100%); }
+.t-c .bar.hero > i { --hi: #8ff0b8; --c: #2fbf74; --lo: #1a7a48; }
+.t-c .bar.foe  > i { --hi: #ff9aa4; --c: #d9304a; --lo: #7a1426; }
+.t-c .log { background: #0f0c18; box-shadow: inset 0 0 0 2px #2a2438; }
+.t-c .l-crit { color: var(--acc); } .t-c .l-harm { color: #ffb347; text-shadow: 0 0 6px rgba(255,179,71,.5); }
+.t-c .l-foe { color: #e88a96; } .t-c .l-fcrit { color: #ff4d5e; }
+.t-c .l-heal { color: #4fd89a; } .t-c .l-sp { color: #b98cff; }
+.t-c .l-miss { color: #6a6380; } .t-c .l-win { color: var(--acc); }
+/* 돌 버튼 · 금판 버튼 */
+.t-c .btn { background: #2a2338; box-shadow: inset 3px 3px 0 #453b5e, inset -3px -3px 0 #120f1b, 0 0 0 2px #050408; }
+.t-c .btn.primary { color: #1b1405; background: #e9c25a; box-shadow: inset 3px 3px 0 #fff0b0, inset -3px -3px 0 #9a7a1e, 0 0 0 2px #050408; }
+.t-c .btn:active { transform: translate(1px, 1px); }
+.t-c .drop, .t-c .slot { background: #15111f; box-shadow: inset 2px 2px 0 #2c2540, inset -2px -2px 0 #07060b, 0 0 0 2px #050408; }
+.t-c .slot.worn { box-shadow: inset 2px 2px 0 #2c2540, inset -2px -2px 0 #07060b, 0 0 0 2px #8a6d14; }
+.t-c .slot.sp { box-shadow: inset 2px 2px 0 #2c2540, inset -2px -2px 0 #07060b, 0 0 0 2px #7a4ab0; }
+.t-c .tabs { background: #15111f; box-shadow: inset 0 3px 0 #c9a227; }
+
+/* ============================================================
+   D. CRT 로그라이크 — 검은 화면, 호박색 글씨, 주사선, 몬스터는 글자
+   ============================================================ */
+.t-d .phone {
+  --font: 'NeoDunggeunmo Code', monospace; --font-s: 'GalmuriMono11', monospace; --font-t: 'NeoDunggeunmo Code', monospace;
+  --fs: 16px; --fs-s: 11px; --fs-t: 20px;
+  --bg: #050705; --ink: #ffb84d; --dim: #8a6a2c; --acc: #ffd27a;
+  --f0: #ff4b3e; --f1: #ff8c2e; --f2: #ffd23f; --f3: #c6f04a; --f4: #47f07a; --f5: #45d8ff;
+  text-shadow: 0 0 4px rgba(255, 170, 60, 0.45);
+}
+/* 주사선과 화면 가장자리 어둡게 */
+.t-d .phone::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 5;
+  background:
+    repeating-linear-gradient(180deg, transparent 0 2px, rgba(0, 0, 0, 0.28) 2px 3px),
+    radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, 0.55) 100%);
+}
+.t-d .win { border: 3px double #b8862e; background: rgba(255, 184, 77, 0.03); }
+.t-d .top .ttl::before { content: '> '; color: var(--dim); }
+.t-d .chip { border: 1px solid currentColor; }
+.t-d .chip::before { content: '['; } .t-d .chip::after { content: ']'; }
+.t-d .u-ic[data-g] { font-size: 0; }
+.t-d .u-ic[data-g]::after { content: attr(data-g); font-size: 16px; color: var(--gc, var(--ink)); }
+.t-d .drop .ic, .t-d .slot .ic { font-size: 0; }
+.t-d .drop .ic::after, .t-d .slot .ic::after { content: attr(data-g); font-size: 15px; color: var(--gc, var(--ink)); }
+/* 막대도 글자처럼 — 칸칸이 끊긴 블록 */
+.t-d .bar { height: 14px; background: repeating-linear-gradient(90deg, #2a1d08 0 7px, transparent 7px 9px); }
+.t-d .bar > i { background: repeating-linear-gradient(90deg, var(--c) 0 7px, transparent 7px 9px); }
+.t-d .bar.hero > i { --c: #47f07a; }
+.t-d .bar.foe  > i { --c: #ff4b3e; }
+.t-d .log { border: 1px dashed #5a4418; }
+.t-d .l-crit { color: #ffe27a; } .t-d .l-harm { color: #ff8c2e; }
+.t-d .l-foe { color: #ff7a6a; } .t-d .l-fcrit { color: #ff4b3e; }
+.t-d .l-heal { color: #47f07a; } .t-d .l-sp { color: #45d8ff; }
+.t-d .l-miss { color: #6a5022; } .t-d .l-win { color: #ffe27a; }
+.t-d .btn { border: 1px solid #b8862e; }
+.t-d .btn::before { content: '[ '; } .t-d .btn::after { content: ' ]'; }
+.t-d .btn.primary { background: #ffb84d; color: #140c00; text-shadow: none; }
+.t-d .drop, .t-d .slot { border: 1px solid #5a4418; }
+.t-d .slot.worn { border-color: #b8862e; }
+.t-d .slot.sp { border-color: #45d8ff; }
+.t-d .tabs { border-top: 3px double #b8862e; }
+.t-d .tabs a.on::before { content: '>'; }
+</style>
+</head>
+<body class="t-a">
+
+<div class="picker" id="picker">
+  <button data-t="t-a" class="on">A · 클래식 JRPG</button>
+  <button data-t="t-b">B · 양피지</button>
+  <button data-t="t-c">C · 다크 판타지 16비트</button>
+  <button data-t="t-d">D · CRT 로그라이크</button>
+</div>
+<div class="desc" id="desc"></div>
+
+<div class="stage">
+  <!-- ───────── 화면 1 · 전투 중 ───────── -->
+  <div class="shot">
+    <div class="shot-label">여정 · 전투 중</div>
+    <div class="phone">
+      <div class="scr">
+        <div class="top"><span class="logo">◣◥</span><span class="ttl">제목 미정</span><span class="small dim">jjunsgame</span></div>
+
+        <div class="win" style="padding:10px 12px">
+          <div class="row">
+            <span class="chip" style="color:#b08a5a">제3격 · 마수</span>
+            <span class="zname grow">무너진 왕국</span>
+            <span class="small dim">도감 3/15</span>
+          </div>
+          <div class="small dim" style="margin-top:4px">왕은 없고 왕관만 굴러다닌다.</div>
+        </div>
+
+        <div class="win meter">
+          <span><span class="small dim">에너지 </span><b class="num">27</b><span class="small dim">/30</span></span>
+          <span><span class="small dim">Lv. </span><b class="num" style="color:var(--acc)">1,180</b></span>
+        </div>
+
+        <div class="win" style="padding:12px; display:flex; flex-direction:column; gap:10px">
+          <div class="unit">
+            <div class="u-top"><span class="u-ic" data-g="M" style="--gc:#ff7a6a">🐂</span>
+              <span class="u-name">미노타우로스<i>Lv.1,320</i></span><span class="small num">4.2K / 9.8K</span></div>
+            <div class="bar foe"><i style="width:43%"></i></div>
+          </div>
+          <div class="unit">
+            <div class="u-top"><span class="u-ic" data-g="@" style="--gc:#ffd27a">🛡️</span>
+              <span class="u-name">나<i>Lv.1,180</i></span><span class="small num">6.1K / 8.0K</span></div>
+            <div class="bar hero"><i style="width:76%"></i></div>
+          </div>
+          <div class="log">
+            <p class="l-hit"><span class="t">1턴</span>미노타우로스에게 1.9K</p>
+            <p class="l-foe"><span class="t"></span>미노타우로스의 공격 — 820</p>
+            <p class="l-crit"><span class="t">2턴</span>치명타! 미노타우로스에게 3.7K</p>
+            <p class="l-heal"><span class="t"></span>흡혈 — 생명 +180</p>
+            <p class="l-miss"><span class="t"></span>미노타우로스의 공격이 빗나갔다</p>
+            <p class="l-sp"><span class="t">3턴</span>연속 턴 — 한 번 더 움직인다</p>
+            <p class="l-harm"><span class="t"></span>일격! 미노타우로스에게 9.1K</p>
+          </div>
+          <button class="btn">건너뛴다<kbd>Space</kbd></button>
+        </div>
+      </div>
+      <nav class="tabs"><a>나</a><a class="on">여정</a><a>전리품</a><a>기록</a></nav>
+    </div>
+  </div>
+
+  <!-- ───────── 화면 2 · 조우 + 장비 ───────── -->
+  <div class="shot">
+    <div class="shot-label">조우 · 장비</div>
+    <div class="phone">
+      <div class="scr">
+        <div class="win" style="padding:12px; display:flex; flex-direction:column; gap:9px">
+          <div class="row">
+            <span class="u-ic big" data-g="G" style="--gc:#c6f04a">🦅</span>
+            <div class="grow">
+              <div><span class="chip" style="color:var(--f4)">정예</span> <b>그리핀 로드</b> <span class="small dim">Lv.1,050</span></div>
+              <div class="small dim">하늘의 왕관을 쓴</div>
+            </div>
+          </div>
+          <div class="small dim">생명 9.1K · 공격 2.1K · 방어 1.4K</div>
+          <div class="row"><span class="feel f3 grow">이길 수 있을 것 같다</span><span class="small dim">예감</span></div>
+          <div class="drops">
+            <div class="drop"><span class="ic" data-g="]" style="--gc:#ffd27a">🪶</span>창공의 발톱</div>
+            <div class="drop"><span class="ic" data-g="?">?</span>????</div>
+            <div class="drop"><span class="ic" data-g="?">?</span>????</div>
+          </div>
+          <div class="btns">
+            <button class="btn primary">맞선다</button>
+            <button class="btn">물러선다</button>
+          </div>
+          <div class="small dim" style="text-align:center">물러설 수 없다 — 지면 에너지 3 손실</div>
+        </div>
+
+        <div class="win" style="padding:12px; display:flex; flex-direction:column; gap:9px">
+          <div class="row"><b class="grow">장비</b><span class="small dim">세트 1 · 입는 중</span></div>
+          <div class="slots">
+            <div class="slot worn"><span class="lv">+7</span><span class="ic" data-g="/" style="--gc:#ffd27a">🗡️</span><span class="k">무기</span><span class="nm">왕의 세검</span></div>
+            <div class="slot worn"><span class="lv">+5</span><span class="ic" data-g="^" style="--gc:#c6f04a">👑</span><span class="k">투구</span><span class="nm">녹슨 왕관</span></div>
+            <div class="slot worn"><span class="lv">+6</span><span class="ic" data-g="[" style="--gc:#45d8ff">🛡️</span><span class="k">갑옷</span><span class="nm">화강암 갑주</span></div>
+            <div class="slot worn"><span class="lv">+3</span><span class="ic" data-g="=" style="--gc:#ff8c2e">💍</span><span class="k">반지</span><span class="nm">만티코어의 송곳니</span></div>
+            <div class="slot"><span class="ic" data-g="." >·</span><span class="k">장갑</span><span class="nm dim">비어 있음</span></div>
+            <div class="slot worn"><span class="lv">+4</span><span class="ic" data-g="&quot;" style="--gc:#47f07a">📿</span><span class="k">목걸이</span><span class="nm">왕의 깃털</span></div>
+          </div>
+          <div class="small dim">특수장비 2/4</div>
+          <div class="sp-row">
+            <div class="slot sp"><span class="ic" data-g="*" style="--gc:#ff4b3e">💎</span><span class="nm">카벙클의 홍옥</span></div>
+            <div class="slot sp"><span class="ic" data-g="~" style="--gc:#45d8ff">🔍</span><span class="nm">세공사의 돋보기</span></div>
+            <div class="slot lock"><span class="ic" data-g="#">🔒</span><span class="nm">닫혀 있음</span></div>
+            <div class="slot lock"><span class="ic" data-g="#">🔒</span><span class="nm">닫혀 있음</span></div>
+          </div>
+          <div class="small"><span class="chip" style="color:#4a9eff">수호</span> 3부위 · 막기 +3%</div>
+        </div>
+      </div>
+      <nav class="tabs"><a>나</a><a>여정</a><a class="on">전리품</a><a>기록</a></nav>
+    </div>
+  </div>
+</div>
+
+<script>
+// 시안 고르기 — body 의 클래스만 갈아 끼웁니다
+const DESC = {
+  't-a': '<b>A · 클래식 JRPG</b> — 드래곤 퀘스트 · 파이널 판타지의 파란 창. 흰 픽셀 테두리, 노란 강조, 고른 명령 앞에서 깜빡이는 ▶ 커서. 가장 "옛날 RPG" 같고 글씨가 또렷합니다.',
+  't-b': '<b>B · 양피지</b> — 나무 바탕 위의 양피지 창, 잉크 글씨, 붉은 밀랍 강조, 나무판 버튼. 신화 · 설화를 다루는 이 게임의 분위기와 잘 맞습니다. 밝은 화면이라 낮에 보기 편합니다.',
+  't-c': '<b>C · 다크 판타지 16비트</b> — 어두운 돌판에 금테, 돋을새김 버튼, 보석색 강조. 슈퍼패미컴 시절 RPG 메뉴 느낌. 격(格)마다 색이 있는 지금 구조와 가장 잘 어울립니다.',
+  't-d': '<b>D · CRT 로그라이크</b> — 검은 화면에 호박색 형광 글씨, 주사선, 몬스터는 그림 대신 글자(M · G · @). 로그라이트라는 정체성이 가장 선명하지만, 나중에 그림을 넣을 때는 방향을 다시 정해야 합니다.'
+};
+const picker = document.getElementById('picker');
+function pick(t) {
+  document.body.className = t;
+  for (const b of picker.querySelectorAll('button')) b.classList.toggle('on', b.dataset.t === t);
+  document.getElementById('desc').innerHTML = DESC[t];
+  try { localStorage.setItem('jjg.mockup', t); } catch (e) {}
+}
+picker.addEventListener('click', e => { const b = e.target.closest('button'); if (b) pick(b.dataset.t); });
+let start = 't-a';
+try { start = localStorage.getItem('jjg.mockup') || 't-a'; } catch (e) {}
+pick(DESC[start] ? start : 't-a');
+</script>
+</body>
+</html>
