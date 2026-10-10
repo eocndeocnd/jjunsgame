@@ -7,6 +7,7 @@
 // 슬롯 두 개를 따로 씁니다. 슬롯을 고르기 전에는 아무것도 저장되지 않습니다.
 const SAVE_SLOTS = 2;
 const saveKey = n => `jjunsgame.rpg.v3.slot${n}`;
+const runKey  = n => `${saveKey(n)}.run`;   // 진행 중인 회차 — 아래 「진행 중인 회차」
 
 let currentSlot = 0;               // 0 = 아직 안 고름 (초기화면)
 
@@ -15,7 +16,18 @@ function slotSummary(n) {
   try {
     const raw = localStorage.getItem(saveKey(n));
     if (!raw) return null;
-    return summarizeMeta(JSON.parse(raw));
+    const s = summarizeMeta(JSON.parse(raw));
+    s.run = runSummary(n);
+    return s;
+  } catch (e) { return null; }
+}
+
+// 그 칸에 이어서 할 회차가 있으면 어디까지 왔는지 — 끝난 회차는 없는 것으로 칩니다
+function runSummary(n) {
+  try {
+    const d = JSON.parse(localStorage.getItem(runKey(n)) || 'null');
+    if (!d || d.v !== RUN_SAVE_VERSION || d.over || !ZONES[d.zoneIndex]) return null;
+    return { zone: d.zoneIndex + 1, level: d.level, energy: d.energy };
   } catch (e) { return null; }
 }
 
@@ -39,7 +51,7 @@ function summarizeMeta(d) {
 //   JJG0.<base64(json)>         압축을 못 하는 브라우저용
 // 안의 json 은 { game, v, at, slot, meta } 이고, meta 가 localStorage 에 들어가는 그대로입니다.
 // 가져온 뒤 그 슬롯을 열 때 load() 를 거치므로, 예전 형식(겹 시스템 등)도 알아서 옮겨집니다.
-// 진행 중인 회차(레벨·에너지)는 원래 저장되지 않습니다 — 이어하기를 해도 새 회차로 시작합니다.
+// 진행 중인 회차(레벨·에너지)는 코드에 들어가지 않습니다 — 가져간 쪽에서는 새 회차로 시작합니다.
 const SAVE_CODE_GAME = 'jjunsgame';
 
 function bytesToB64(bytes) {
@@ -106,9 +118,11 @@ async function parseSaveCode(text) {
   return meta;
 }
 
-// 가져온 저장 내용을 그 슬롯에 씁니다 (있던 기록은 덮어씁니다)
+// 가져온 저장 내용을 그 슬롯에 씁니다 (있던 기록은 덮어씁니다).
+// 그 칸에서 하던 회차는 버립니다 — 다른 기록 위에서 이어지면 안 되니까요.
 function importSave(n, meta) {
   localStorage.setItem(saveKey(n), JSON.stringify(meta));
+  try { localStorage.removeItem(runKey(n)); } catch (e) {}
 }
 
 function hasAnySave() {
@@ -117,16 +131,20 @@ function hasAnySave() {
 }
 
 // 슬롯을 열고 게임을 시작합니다. fresh 면 그 슬롯을 비우고 새로 시작.
+// 하던 회차가 저장돼 있으면 그 자리에서 이어갑니다.
 function openSlot(n, fresh) {
   currentSlot = n;
   State.meta = freshMeta();
-  if (fresh) { try { localStorage.removeItem(saveKey(n)); } catch (e) {} }
+  if (fresh) wipeSlot(n);
   else load();
-  startRun();
+  if (fresh || !loadRun()) startRun();
 }
 
 function wipeSlot(n) {
-  try { localStorage.removeItem(saveKey(n)); } catch (e) {}
+  try {
+    localStorage.removeItem(saveKey(n));
+    localStorage.removeItem(runKey(n));
+  } catch (e) {}
 }
 
 // ---------- 상태 ----------
@@ -429,8 +447,54 @@ function save() {
   try {
     if (!currentSlot) return;
     localStorage.setItem(saveKey(currentSlot), JSON.stringify(State.meta));
+    saveRun();
   } catch (e) {
     console.warn('저장 실패:', e);
+  }
+}
+
+// ---------- 진행 중인 회차 ----------
+// 폰은 다른 앱에 갔다 오면 페이지를 새로 불러오는 일이 잦습니다. 예전엔 그때마다 회차가 날아가고
+// 새 회차가 시작됐습니다. 이제 회차도 저장 칸 옆(runKey)에 따로 두어, 다시 열면 그 자리에서 이어집니다.
+//
+// 결과 화면(lastResult)은 저장하지 않습니다. 승패 · 경험치 · 전리품은 「맞선다」를 누른 순간 반영되고
+// 저장되므로, 다시 열면 결과를 닫은 자리(갈림길)에서 이어집니다 — 진 판을 되돌릴 수 없습니다.
+// 마주한 상대와 그 기운은 그대로 돌아옵니다 — 다시 열어서 다른 상대를 뽑을 수도 없습니다.
+// 끝난 회차도 저장해 둡니다. 다시 열면 끝 화면이 뜨고, 거기서 새 회차를 시작합니다.
+const RUN_SAVE_VERSION = 1;
+
+function saveRun() {
+  const run = State.run;
+  if (!currentSlot || !run) return;
+  const data = { ...run, v: RUN_SAVE_VERSION, aura: run.aura ? run.aura.id : null, lastResult: null };
+  localStorage.setItem(runKey(currentSlot), JSON.stringify(data));
+}
+
+// 저장된 회차를 되살립니다. 없거나 지금 게임과 맞지 않으면 false — 그때는 새 회차로 시작합니다.
+function loadRun() {
+  try {
+    const raw = currentSlot ? localStorage.getItem(runKey(currentSlot)) : null;
+    if (!raw) return false;
+    const d = JSON.parse(raw);
+    if (!d || d.v !== RUN_SAVE_VERSION || !ZONES[d.zoneIndex]) return false;
+    if (d.encounter && !getEnemy(d.encounter)) return false;
+
+    const run = { ...freshRun(), ...d };
+    delete run.v;
+    run.aura = d.aura ? (AURAS.find(a => a.id === d.aura) || null) : null;
+    run.lastResult = null;
+    run.spent = { ...emptySpent(), ...(d.spent || {}) };
+    run.downed = Array.isArray(d.downed) ? d.downed : [];
+    run.spentOn = (d.spentOn && typeof d.spentOn === 'object') ? d.spentOn : {};
+    State.run = run;
+
+    State.log = [];
+    pushLog('info', run.over
+      ? `${State.meta.runCount}회차는 이미 끝났다.`
+      : `${State.meta.runCount}회차를 이어서 한다 — ${ZONES[run.zoneIndex].name} · Lv.${fmtLevel(run.level)} · 에너지 ${run.energy}.`);
+    return true;
+  } catch (e) {
+    return false;
   }
 }
 
@@ -694,9 +758,9 @@ function winChance(hero, enemy, samples = 200) {
 }
 
 // ---------- 회차 ----------
-function startRun() {
-  State.meta.runCount += 1;
-  State.run = {
+// 갓 시작한 회차의 모양. 저장된 회차를 되살릴 때도 이 모양 위에 덮어써서, 나중에 칸이 늘어도 비지 않게 합니다.
+function freshRun() {
+  return {
     level: 1,
     xp: 0,
     spent: emptySpent(),          // 이미 찍은 포인트 (되돌릴 수 없음)
@@ -716,6 +780,11 @@ function startRun() {
     victory: false,
     reason: ''
   };
+}
+
+function startRun() {
+  State.meta.runCount += 1;
+  State.run = freshRun();
   if (State.meta.autoAlloc) commitPoints();
 
   State.log = [];

@@ -156,7 +156,7 @@ function confirmWipe() {
     return;
   }
   wipeArmed = false;
-  try { localStorage.removeItem(saveKey(currentSlot)); } catch (e) {}
+  wipeSlot(currentSlot);    // 하던 회차까지 같이 지웁니다
   location.reload();
 }
 
@@ -1705,7 +1705,8 @@ function renderTitle() {
                <span>${s.runCount}회차</span>
                <span>${s.bestZone}지역까지</span>
                <span>전리품 ${s.owned}</span>
-             </div>`
+             </div>
+             ${s.run ? `<div class="ss-run">진행 중 — ${s.run.zone}지역 · Lv.${fmtLevel(s.run.level)} · 에너지 ${s.run.energy}</div>` : ''}`
           : `<div class="ss-info empty">비어 있음</div>`}
         <div class="ss-actions">
           ${s ? `<button class="btn primary" data-continue="${n}">이어하기</button>` : ''}
