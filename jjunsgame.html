@@ -189,8 +189,13 @@ h3::before { content: '◆ '; color: var(--wax); }
   gap: 16px;
   margin-bottom: 24px;
 }
-/* 이름표 — 지도 위에 얹은 나무 명패 */
+/* 이름표 — 지도 위에 얹은 나무 명패. 빠르게 다섯 번 누르면 관리자 창이 열려서,
+   연타해도 글자가 잡히거나 화면이 확대되지 않게 막아둡니다 */
 .brand {
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
   position: relative;
   display: inline-flex;
   align-items: center;
@@ -1612,6 +1617,43 @@ kbd {
   .modal-card { max-height: 84vh; }
 }
 
+/* ---------- 관리자 ---------- */
+.modal-card .admin-body {
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  padding: 2px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.adm-sec { padding-bottom: 14px; background: var(--dots) left bottom / 4px 2px repeat-x; }
+.adm-sec:last-child { background: none; }
+.adm-k { font-size: 11px; font-weight: 700; color: var(--wax); letter-spacing: 0.06em; margin-bottom: 4px; }
+.adm-k span { font-weight: 400; color: var(--text-faint); letter-spacing: 0; margin-left: 6px; }
+.adm-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; }
+.adm-row .swap-from { flex: 1; width: auto; min-width: 0; }
+.adm-note { font-size: 11px; color: var(--text-dim); }
+.adm-note.warn { color: var(--danger); font-weight: 700; }
+select:disabled { opacity: 0.5; }
+
+/* 시험 모드 — 화면 맨 위에 붉은 띠. 이때는 아무것도 저장되지 않습니다 */
+body.test-mode::after {
+  content: '시험 모드 · 저장 안 됨';
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 90;
+  padding: 1px 10px 2px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--cream);
+  background: var(--danger);
+  box-shadow: 0 0 0 2px var(--frame-out);
+  pointer-events: none;
+}
+
 /* ---------- 오버레이 ---------- */
 .overlay {
   position: fixed;
@@ -2087,6 +2129,18 @@ kbd {
       <button class="btn tiny" data-closealloc>닫기</button>
     </div>
     <div id="alloc" class="alloc"></div>
+  </div>
+</div>
+
+<!-- 관리자 — 왼쪽 위 이름표(제목 명패)를 빠르게 다섯 번 누르면 열립니다 -->
+<div id="adminModal" class="modal hidden">
+  <div class="modal-back" data-closeadmin></div>
+  <div class="modal-card">
+    <div class="modal-head">
+      <h3>관리자</h3>
+      <button class="btn tiny" data-closeadmin>닫기</button>
+    </div>
+    <div id="adminBody" class="admin-body"></div>
   </div>
 </div>
 
@@ -5068,10 +5122,9 @@ function defaultSettings() {
 
 // 화면에서 뺀 설정 — 열 때마다 기본값으로 돌려둡니다.
 // 예전에 바꿔둔 값이 고칠 수 없는 채로 남아 있으면 안 되니까요.
-// 알아서 갈아끼우기 · 결과 자동 넘기기는 아예 뺐고(꺼짐),
-// 보기 셋(전투 보기 · 전리품 등장 연출 · 못 얻은 것 펼쳐두기)은 나중에 관리자용 설정으로 돌아옵니다 —
-// 그때 여기서 빼면 됩니다.
-const FIXED_SETTINGS = ['autoContinue', 'autoEquip', 'dropFx', 'showLocked', 'battleSpeed'];
+// 알아서 갈아끼우기 · 결과 자동 넘기기는 아예 뺐습니다(꺼짐).
+// 보기 셋(전투 보기 · 전리품 등장 연출 · 못 얻은 것 펼쳐두기)은 관리자 창에서 바꿉니다 — 그래서 여기 없습니다.
+const FIXED_SETTINGS = ['autoContinue', 'autoEquip'];
 
 const State = {
   meta: {
@@ -5321,9 +5374,13 @@ function setWeights(...vals) {
 function clearWeights() { setWeights(...STAT_KEYS.map(() => 0)); }
 
 // ---------- 저장 / 불러오기 ----------
+// 관리자 창의 「시험 모드」를 켜면 그 뒤로는 아무것도 저장하지 않습니다 — 다시 불러오면 원래대로.
+let saveBlocked = false;
+function blockSaving() { saveBlocked = true; }
+
 function save() {
   try {
-    if (!currentSlot) return;
+    if (!currentSlot || saveBlocked) return;
     localStorage.setItem(saveKey(currentSlot), JSON.stringify(State.meta));
     saveRun();
   } catch (e) {
@@ -6376,6 +6433,7 @@ function render() {
   renderOverlay();
   renderTabBadges();
   syncMusic();
+  if (isAdminOpen()) renderAdmin();
 }
 
 // ---------- 소리 ----------
@@ -6434,10 +6492,8 @@ const SETTINGS_UI = [
     desc: '초기 화면 · 여정 · 보스전 음악.' }
 ];
 
-// 나중에 관리자용 설정으로 돌아올 것들 — 지금은 그리지 않고 기본값으로 고정합니다.
-// 관리자 화면을 만들 때 이 목록을 renderSettings 와 같은 방식으로 그리면 됩니다.
+// 관리자 창에서만 바꾸는 보기 설정 — 화면 설정에는 그리지 않습니다 (아래 「관리자」)
 const ADMIN_SETTINGS_UI = [
-  { group: '보기' },
   { id: 'battleSpeed', type: 'choice', name: '전투 보기',
     desc: '싸우는 과정을 체력 바와 글로 보여줍니다.',
     options: [[0, '끔'], [1, '빠르게'], [2, '보통']] },
@@ -6446,31 +6502,48 @@ const ADMIN_SETTINGS_UI = [
   { id: 'showLocked', type: 'toggle', name: '못 얻은 것 펼쳐두기',
     desc: '부위 창을 열 때 아직 못 얻은 ???? 도 처음부터 보여줍니다.' }
 ];
+const ALL_SETTINGS = [...SETTINGS_UI, ...ADMIN_SETTINGS_UI];
 
 function settingValue(s) {
   if (s.device) return Sound.get(s.id);
   return s.meta ? State.meta[s.id] : State.meta.settings[s.id];
 }
 
-function renderSettings() {
-  const el = $('settings');
-  if (!el) return;
-  el.innerHTML = SETTINGS_UI.map(s => {
+// 설정 줄들 — 화면 설정과 관리자 창이 같은 모양을 씁니다.
+// 화면에는 이름만 둡니다(설명은 마우스를 올렸을 때만). 관리자 창은 설명까지 적습니다(withDesc).
+function settingRowsHTML(list, withDesc) {
+  return list.map(s => {
     if (s.group) return `<div class="set-group">${s.group}</div>`;
     const v = settingValue(s);
     const control = s.type === 'toggle'
       ? `<button class="btn tiny set-toggle ${v ? 'on' : ''}" data-set="${s.id}">${v ? '켜짐' : '꺼짐'}</button>`
       : `<div class="set-choice">${s.options.map(([val, label]) =>
           `<button class="btn tiny ${v === val ? 'on' : ''}" data-set="${s.id}" data-val="${val}">${label}</button>`).join('')}</div>`;
-    // 화면에는 이름만 둡니다. 설명(desc)은 마우스를 올렸을 때만 뜹니다.
     return `
       <div class="set-row" title="${s.desc}">
         <div class="set-body">
           <span class="set-name">${s.name}</span>
+          ${withDesc ? `<span class="set-desc">${s.desc}</span>` : ''}
         </div>
         ${control}
       </div>`;
-  }).join('') + `
+  }).join('');
+}
+
+function wireSettingButtons(el) {
+  for (const b of el.querySelectorAll('[data-set]')) {
+    b.addEventListener('click', () => {
+      const s = ALL_SETTINGS.find(x => x.id === b.dataset.set);
+      if (s.type === 'choice') setSetting(s, Number(b.dataset.val));
+      else setSetting(s, !settingValue(s));
+    });
+  }
+}
+
+function renderSettings() {
+  const el = $('settings');
+  if (!el) return;
+  el.innerHTML = settingRowsHTML(SETTINGS_UI) + `
     <div class="set-group">저장</div>
     <div class="set-row">
       <div class="set-body">
@@ -6479,14 +6552,7 @@ function renderSettings() {
       </div>
       <button class="btn tiny danger" id="wipeBtn">초기화</button>
     </div>`;
-
-  for (const b of el.querySelectorAll('[data-set]')) {
-    b.addEventListener('click', () => {
-      const s = SETTINGS_UI.find(x => x.id === b.dataset.set);
-      if (s.type === 'choice') setSetting(s, Number(b.dataset.val));
-      else setSetting(s, !settingValue(s));
-    });
-  }
+  wireSettingButtons(el);
   const wipe = $('wipeBtn');
   if (wipe) wipe.addEventListener('click', confirmWipe);
 }
@@ -7317,7 +7383,8 @@ function winFeelOf(c) {
   for (const f of WIN_FEELS) if (v >= f.from) feel = f;
   return feel;
 }
-function winFeel(c)      { return winFeelOf(c).text; }
+// 관리자 창에서 「정확한 승률」을 켜면 문장 뒤에 숫자가 붙습니다
+function winFeel(c)      { return winFeelOf(c).text + (Admin.showOdds ? ` · ${Math.round(num(c) * 100)}%` : ''); }
 function winFeelClass(c) { return winFeelOf(c).cls; }
 
 // 여정 한복판에서 차림을 바꿉니다.
@@ -7431,6 +7498,7 @@ function wireKeys() {
       if (ev.key === 'Escape') {
         ev.preventDefault();
         if (isSaveModalOpen()) closeSaveModal();
+        else if (isAdminOpen()) closeAdmin();
         else if (isSlotModalOpen()) closeSlotModal();
         else if (isRosterModalOpen()) closeRosterModal();
         else closeAllocModal();
@@ -7932,7 +8000,7 @@ function isAllocModalOpen() {
   const m = $('allocModal');
   return !!m && !m.classList.contains('hidden');
 }
-function isAnyModalOpen() { return isSlotModalOpen() || isAllocModalOpen() || isRosterModalOpen() || isSaveModalOpen(); }
+function isAnyModalOpen() { return isSlotModalOpen() || isAllocModalOpen() || isRosterModalOpen() || isSaveModalOpen() || isAdminOpen(); }
 
 // 그 부위의 강화를 반영한 실제 수치를 보여줍니다 — 장부상 수치가 아니라 몸에 붙는 값.
 // 강화는 부위에 붙으므로, 목록에 있는 것 무엇을 끼든 이 값이 됩니다.
@@ -8244,11 +8312,221 @@ function endTutorial() {
   save();
 }
 
+// ============================================================
+//  관리자 — 왼쪽 위 이름표(제목 명패)를 빠르게 다섯 번 누르면 열립니다
+// ============================================================
+// 화면 설정에서 뺀 보기 설정 셋, 정확한 승률, 소리 시험, 그리고 그림 · 효과 · 맵을 시험할 때 쓸 도구들.
+// 진행을 바꾸는 도구는 「시험 모드」를 켜야 눌립니다. 시험 모드에서는 아무것도 저장되지 않아서
+// 다시 불러오면 원래대로 돌아갑니다 — 실제 저장을 망가뜨리지 않으려는 안전장치입니다.
+const Admin = { testMode: false, showOdds: false };
+let brandTaps = [];
+
+const SFX_LABELS = {
+  tick: '누르기', encounter: '조우', encounterElite: '조우 · 정예', encounterBoss: '조우 · 보스', aura: '기운',
+  retreat: '물러섬', zoneMove: '지역 이동', hit: '때림', crit: '치명타', harm: '일격', foeHit: '맞음',
+  foeCrit: '크게 맞음', miss: '빗나감', block: '막기', heal: '회복', special: '특수', win: '승리', lose: '패배',
+  drop: '새 전리품', stone: '분해', levelUp: '레벨업', rankUp: '격 상승', pathOpen: '길 열림', unlock: '칸 열림',
+  enhanceOk: '강화 성공', enhanceFail: '강화 실패', equip: '장착', unequip: '해제', commit: '분배',
+  gameOver: '여정의 끝', victory: '모두 깸'
+};
+const SONG_LABELS = { title: '초기 화면', field: '여정', boss: '보스' };
+
+function wireAdmin() {
+  const brand = document.querySelector('.topbar .brand');
+  if (brand) {
+    brand.addEventListener('click', () => {
+      const now = Date.now();
+      brandTaps = brandTaps.filter(t => now - t < 2500);
+      brandTaps.push(now);
+      if (brandTaps.length >= 5) { brandTaps = []; openAdmin(); }
+    });
+  }
+  for (const b of document.querySelectorAll('[data-closeadmin]')) b.addEventListener('click', closeAdmin);
+}
+
+function openAdmin() {
+  renderAdmin();
+  $('adminModal').classList.remove('hidden');
+}
+function closeAdmin() {
+  $('adminModal').classList.add('hidden');
+  render();          // 소리 시험으로 바꾼 배경음도 제자리로
+}
+function isAdminOpen() {
+  const m = $('adminModal');
+  return !!m && !m.classList.contains('hidden');
+}
+
+function renderAdmin() {
+  const el = $('adminBody');
+  const run = State.run;
+  if (!el || !run) return;
+  const t = Admin.testMode;
+  const off = t ? '' : 'disabled';
+  const st = Sound.status();
+  const zoneOpts = ZONES.map((z, i) =>
+    `<option value="${i}" ${i === run.zoneIndex ? 'selected' : ''}>${i + 1}. ${z.name}</option>`).join('');
+  const foeOpts = zoneRoster(run.zoneIndex).map(f =>
+    `<option value="${f.id}">${f.kind !== 'normal' ? `[${KINDS[f.kind].name}] ` : ''}${f.name} · Lv.${fmtLevel(f.level)}</option>`).join('');
+
+  el.innerHTML = `
+    <section class="adm-sec">
+      <div class="adm-k">시험 모드</div>
+      ${t
+        ? `<p class="adm-note warn">켜져 있다 — 지금부터 바꾼 것은 저장되지 않는다.</p>
+           <div class="adm-row"><button class="btn small" data-adm="reload">끝내기 · 다시 불러오기</button></div>`
+        : `<p class="adm-note">아래 도구는 시험 모드에서만 눌린다. 켜면 이 판은 저장되지 않고, 다시 불러오면 원래대로 돌아간다.</p>
+           <div class="adm-row"><button class="btn small primary" data-adm="test">시험 모드 켜기</button></div>`}
+    </section>
+
+    <section class="adm-sec">
+      <div class="adm-k">보기</div>
+      <div class="settings">${settingRowsHTML(ADMIN_SETTINGS_UI, true)}</div>
+      <div class="adm-row">
+        <button class="btn tiny ${Admin.showOdds ? 'on' : ''}" data-adm="odds">정확한 승률 ${Admin.showOdds ? '켜짐' : '꺼짐'}</button>
+      </div>
+    </section>
+
+    <section class="adm-sec">
+      <div class="adm-k">회차 <span>Lv.${fmtLevel(run.level)} · 에너지 ${run.energy}</span></div>
+      <div class="adm-row">
+        <button class="btn tiny" data-adm="lv10" ${off}>레벨 +10</button>
+        <button class="btn tiny" data-adm="lv2x" ${off}>레벨 ×2</button>
+        <button class="btn tiny" data-adm="lv10x" ${off}>레벨 ×10</button>
+      </div>
+      <div class="adm-row">
+        <button class="btn tiny" data-adm="en10" ${off}>에너지 +10</button>
+        <button class="btn tiny" data-adm="en99" ${off}>에너지 99</button>
+        <button class="btn tiny danger" data-adm="end" ${off}>회차 끝내기</button>
+      </div>
+    </section>
+
+    <section class="adm-sec">
+      <div class="adm-k">지역 · 상대</div>
+      <div class="adm-row">
+        <select class="swap-from" id="admZone" ${off}>${zoneOpts}</select>
+        <button class="btn tiny" data-adm="zone" ${off}>이동</button>
+      </div>
+      <div class="adm-row">
+        <select class="swap-from" id="admFoe" ${off}>${foeOpts}</select>
+        <button class="btn tiny" data-adm="foe" ${off}>부르기</button>
+      </div>
+    </section>
+
+    <section class="adm-sec">
+      <div class="adm-k">주기</div>
+      <div class="adm-row">
+        <button class="btn tiny" data-adm="itemsZone" ${off}>이 지역 전리품</button>
+        <button class="btn tiny" data-adm="itemsAll" ${off}>모든 전리품</button>
+        <button class="btn tiny" data-adm="stones" ${off}>강화석 +1,000</button>
+        <button class="btn tiny" data-adm="special" ${off}>특수장비 칸 모두</button>
+      </div>
+    </section>
+
+    <section class="adm-sec">
+      <div class="adm-k">소리 <span>효과음 ${st.prefs.sfx ? '켜짐' : '꺼짐'} · 배경음 ${st.prefs.bgm ? '켜짐' : '꺼짐'}</span></div>
+      <div class="adm-row">${Sound.names().sfx.map(n =>
+        `<button class="btn tiny" data-sfx="${n}">${SFX_LABELS[n] || n}</button>`).join('')}</div>
+      <div class="adm-row">${Sound.names().songs.map(n =>
+        `<button class="btn tiny" data-song="${n}">♪ ${SONG_LABELS[n] || n}</button>`).join('')}
+        <button class="btn tiny" data-song="">■ 멈춤</button>
+      </div>
+    </section>`;
+
+  wireSettingButtons(el);
+  for (const b of el.querySelectorAll('[data-adm]')) b.addEventListener('click', () => adminAction(b.dataset.adm));
+  for (const b of el.querySelectorAll('[data-sfx]')) b.addEventListener('click', () => Sound.play(b.dataset.sfx));
+  for (const b of el.querySelectorAll('[data-song]')) b.addEventListener('click', () => Sound.music(b.dataset.song || null));
+}
+
+function adminAction(a) {
+  const run = State.run;
+  const meta = State.meta;
+  switch (a) {
+    case 'test':
+      Admin.testMode = true;
+      blockSaving();
+      document.body.classList.add('test-mode');
+      break;
+    case 'reload': location.reload(); return;
+    case 'odds': Admin.showOdds = !Admin.showOdds; break;
+    case 'lv10':  adminLevelTo(run.level + 10); break;
+    case 'lv2x':  adminLevelTo(run.level * 2); break;
+    case 'lv10x': adminLevelTo(run.level * 10); break;
+    case 'en10': run.energy += 10; break;
+    case 'en99': run.energy = 99; break;
+    case 'end':
+      stopBattle();
+      run.lastResult = null;
+      run.encounter = null;
+      endRun('관리자가 끝냈다');
+      break;
+    case 'zone': adminJumpZone(Number($('admZone').value)); break;
+    case 'foe':
+      adminSummon($('admFoe').value);
+      closeAdmin();
+      showTab('journey');
+      soundEncounter();
+      return;
+    case 'itemsZone': {
+      const rank = ZONES[run.zoneIndex].rank;
+      for (const it of ITEMS) if (it.rank.n === rank) meta.owned[it.id] = 1;
+      for (const f of zoneRoster(run.zoneIndex)) if (!meta.seen.includes(f.id)) meta.seen.push(f.id);
+      break;
+    }
+    case 'itemsAll':
+      for (const it of ITEMS) meta.owned[it.id] = 1;
+      for (const f of ENEMIES) if (!meta.seen.includes(f.id)) meta.seen.push(f.id);
+      break;
+    case 'stones':
+      for (const k of Object.keys(meta.stones)) meta.stones[k] += 1000;
+      break;
+    case 'special':
+      meta.specialOpened = ENEMIES.filter(f => f.opens).map(f => f.id);
+      break;
+  }
+  render();            // 관리자 창도 render 가 다시 그립니다
+}
+
+// 경험치를 부어 그 레벨까지 — 레벨업 포인트도 정상적으로 받습니다
+function adminLevelTo(target) {
+  const run = State.run;
+  const goal = Math.min(LEVEL_CAP, Math.max(run.level + 1, Math.floor(target)));
+  const need = totalXpFor(goal) - (totalXpFor(run.level) + run.xp);
+  if (need > 0) gainXp(need * (1 + 1e-9) + 1);
+}
+
+function adminJumpZone(i) {
+  const run = State.run;
+  if (!ZONES[i]) return;
+  stopBattle();
+  run.zoneIndex = i;
+  run.progress = 0;
+  run.zoneCleared = false;
+  run.encounter = null;
+  run.onBoss = false;
+  run.aura = null;
+  run.lastResult = null;
+}
+
+// 고른 상대와 바로 마주합니다. 이미 꺾은 정예 · 보스도 다시 부를 수 있습니다.
+function adminSummon(id) {
+  const foe = getEnemy(id);
+  if (!foe) return;
+  const run = State.run;
+  stopBattle();
+  run.lastResult = null;
+  run.downed = run.downed.filter(x => x !== foe.id);
+  beginEncounter(foe, !!foe.once);
+  render();
+}
+
 // ---------- 시작 ----------
 function init() {
   wireTabs();
   wireKeys();
   wireClickSound();
+  wireAdmin();
 
   $('newRunBtn').addEventListener('click', () => { startRun(); showTab('journey'); render(); });
   $('logToggle').addEventListener('click', () => { logOpen = !logOpen; renderLog(); });

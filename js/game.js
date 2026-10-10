@@ -190,10 +190,9 @@ function defaultSettings() {
 
 // 화면에서 뺀 설정 — 열 때마다 기본값으로 돌려둡니다.
 // 예전에 바꿔둔 값이 고칠 수 없는 채로 남아 있으면 안 되니까요.
-// 알아서 갈아끼우기 · 결과 자동 넘기기는 아예 뺐고(꺼짐),
-// 보기 셋(전투 보기 · 전리품 등장 연출 · 못 얻은 것 펼쳐두기)은 나중에 관리자용 설정으로 돌아옵니다 —
-// 그때 여기서 빼면 됩니다.
-const FIXED_SETTINGS = ['autoContinue', 'autoEquip', 'dropFx', 'showLocked', 'battleSpeed'];
+// 알아서 갈아끼우기 · 결과 자동 넘기기는 아예 뺐습니다(꺼짐).
+// 보기 셋(전투 보기 · 전리품 등장 연출 · 못 얻은 것 펼쳐두기)은 관리자 창에서 바꿉니다 — 그래서 여기 없습니다.
+const FIXED_SETTINGS = ['autoContinue', 'autoEquip'];
 
 const State = {
   meta: {
@@ -443,9 +442,13 @@ function setWeights(...vals) {
 function clearWeights() { setWeights(...STAT_KEYS.map(() => 0)); }
 
 // ---------- 저장 / 불러오기 ----------
+// 관리자 창의 「시험 모드」를 켜면 그 뒤로는 아무것도 저장하지 않습니다 — 다시 불러오면 원래대로.
+let saveBlocked = false;
+function blockSaving() { saveBlocked = true; }
+
 function save() {
   try {
-    if (!currentSlot) return;
+    if (!currentSlot || saveBlocked) return;
     localStorage.setItem(saveKey(currentSlot), JSON.stringify(State.meta));
     saveRun();
   } catch (e) {
