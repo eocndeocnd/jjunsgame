@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>스토리 시안 — 아무도 안 시킨 세계 구하기</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/galmuri@2.40.3/dist/galmuri.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/neodgm/neodgm-webfont@1.601/neodgm/style.css">
+<style>
+/* ============================================================
+   스토리에 맞춘 다섯 갈래. 같은 화면(조우)을 시안마다 「이쪽」과 「벽 너머」 두 장으로.
+   위의 단추로 시안을 바꿉니다. 도트 글꼴 · 도트 감성은 다섯 다 유지합니다.
+   ============================================================ */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #141414; color: #ddd; font-family: system-ui, sans-serif; }
+.picker { position: sticky; top: 0; z-index: 20; display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 12px; background: #1c1c1c; border-bottom: 1px solid #333; }
+.picker button { font: 13px/1 system-ui, sans-serif; color: #ddd; background: #2a2a2a; border: 1px solid #444; border-radius: 6px; padding: 8px 11px; cursor: pointer; }
+.picker button.on { background: #f0b429; color: #111; border-color: #f0b429; font-weight: 700; }
+.desc { max-width: 780px; margin: 0 auto; padding: 12px 16px 0; font: 13px/1.65 system-ui, sans-serif; color: #b5b5b5; }
+.desc b { color: #eee; }
+.stage { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; padding: 14px 4px 48px; }
+.shot { display: flex; flex-direction: column; gap: 6px; align-items: center; }
+.shot-label { font: 12px system-ui, sans-serif; color: #888; }
+
+/* ---------- 휴대폰 화면 뼈대 (공통) ---------- */
+.phone {
+  position: relative; width: 340px; height: 700px; overflow: hidden;
+  display: flex; flex-direction: column; gap: 10px; padding: 12px;
+  font-family: 'Galmuri11', sans-serif; font-synthesis: none; -webkit-font-smoothing: none;
+  font-size: 12px; line-height: 1.5; border-radius: 4px;
+}
+.top { display: flex; align-items: center; gap: 8px; padding: 8px 10px; }
+.top .ttl { font-family: 'NeoDunggeunmo', sans-serif; font-size: 15px; }
+.top .sub { font-size: 9px; opacity: 0.7; letter-spacing: 0.15em; }
+.zone { padding: 10px; display: flex; flex-direction: column; gap: 6px; }
+.zone .row { display: flex; align-items: center; gap: 8px; }
+.chip { font-size: 10px; font-weight: 700; padding: 1px 6px; }
+.zname { font-size: 14px; font-weight: 700; }
+.meter { display: flex; justify-content: space-between; font-size: 11px; }
+.enc { flex: 1; display: flex; flex-direction: column; gap: 8px; padding: 10px; min-height: 0; }
+.ename { font-size: 14px; font-weight: 700; }
+.ename .lv { font-size: 10px; font-weight: 400; opacity: 0.7; margin-left: 4px; }
+.estat { font-size: 10px; opacity: 0.8; }
+.feel { font-size: 15px; font-weight: 700; text-align: center; font-family: 'NeoDunggeunmo', sans-serif; }
+.portrait { align-self: center; width: 54%; aspect-ratio: 1; display: grid; place-items: center; font-size: 80px; line-height: 1; position: relative; }
+.drops { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.drops div { display: flex; flex-direction: column; align-items: center; padding: 5px 2px; font-size: 9px; }
+.drops span { font-size: 18px; }
+.acts { display: grid; grid-template-columns: 1fr 2fr; gap: 8px; margin-top: auto; }
+.acts button { font-family: 'Galmuri11', sans-serif; font-weight: 700; font-size: 14px; padding: 13px 6px; cursor: pointer; border: 0; }
+.tabs { display: grid; grid-template-columns: repeat(4, 1fr); font-size: 10px; text-align: center; padding: 7px 0; }
+.extra { font-size: 10px; }
+
+/* ============================================================
+   1. 작업일지 — 협회 하청 뒷정리꾼의 서류철. 모눈 종이 · 고무 도장 · 주의 띠
+   ============================================================ */
+.s1 .phone { background: #e9ecef url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12'%3E%3Cpath d='M12 0H0V12' fill='none' stroke='%23b9c7d6' stroke-width='1'/%3E%3C/svg%3E"); color: #20262e; }
+.s1 .top { background: #fff; border: 2px solid #20262e; box-shadow: 3px 3px 0 #20262e; }
+.s1 .top .logo { width: 22px; height: 22px; background: repeating-linear-gradient(45deg, #f2c200 0 5px, #20262e 5px 10px); }
+.s1 .zone, .s1 .enc { background: #fff; border: 2px solid #20262e; box-shadow: 3px 3px 0 #20262e; position: relative; }
+.s1 .enc::before { content: '작업일지 No.0412'; position: absolute; top: -9px; right: 10px; background: #20262e; color: #fff; font-size: 9px; padding: 1px 6px; }
+.s1 .chip { background: repeating-linear-gradient(45deg, #f2c200 0 6px, #20262e 6px 12px); color: #fff; text-shadow: 1px 1px 0 #20262e, -1px -1px 0 #20262e; }
+.s1 .zname, .s1 .ename { font-family: 'GalmuriMono11', 'Galmuri11', monospace; }
+.s1 .feel { color: #c21d1d; border: 3px double #c21d1d; padding: 4px; transform: rotate(-2deg); align-self: center; }
+.s1 .portrait { background: #f4f6f8; border: 2px dashed #8899aa; }
+.s1 .portrait::after { content: '확인'; position: absolute; right: -12px; bottom: 8px; width: 44px; height: 44px; border-radius: 50%; border: 3px solid #c21d1d; color: #c21d1d; display: grid; place-items: center; font-size: 12px; font-weight: 700; transform: rotate(14deg); opacity: 0.8; }
+.s1 .drops div { border: 1px solid #20262e; background: #fff; }
+.s1 .acts .no { background: #fff; color: #20262e; border: 2px solid #20262e; }
+.s1 .acts .go { background: #20262e; color: #f2c200; border: 2px solid #20262e; }
+.s1 .tabs { background: #20262e; color: #e9ecef; }
+/* 벽 너머 — 종이가 잿빛으로 바래고 잉크가 번지고, 글자가 검게 지워진다 */
+.s1 .far .phone { background-color: #cfcbd6; filter: saturate(0.6); }
+.s1 .far .phone, .s1 .far .top, .s1 .far .zone, .s1 .far .enc { --ink: #3b1f5e; }
+.s1 .far .top, .s1 .far .zone, .s1 .far .enc { border-color: #3b1f5e; box-shadow: 3px 3px 0 #3b1f5e; }
+.s1 .far .feel { color: #5b2a86; border-color: #5b2a86; }
+.s1 .far .redact { background: #111; color: #111; }
+.s1 .far .portrait::after { content: '반려'; color: #5b2a86; border-color: #5b2a86; }
+
+/* ============================================================
+   2. 지하수로 — 콘크리트 · 녹 · 손전등 하나. 표지판 글씨
+   ============================================================ */
+.s2 .phone {
+  background:
+    radial-gradient(ellipse 70% 45% at 50% 48%, rgba(255, 236, 170, 0.18), transparent 70%),
+    repeating-linear-gradient(0deg, #2b2f2d 0 2px, #272b29 2px 4px),
+    #2a2e2c;
+  color: #d8d4c6;
+}
+.s2 .top { background: #3c3a33; border-top: 3px solid #5d594d; border-bottom: 3px solid #1a1916; }
+.s2 .top .logo { width: 20px; height: 20px; border-radius: 50%; background: radial-gradient(circle, #1a1916 35%, #6b5a3a 36% 55%, #1a1916 56%); }
+.s2 .zone, .s2 .enc { background: linear-gradient(#45463f, #3a3b35); border: 3px solid #1a1916; box-shadow: inset 0 0 0 2px #5d5c52; position: relative; }
+.s2 .zone::before, .s2 .zone::after, .s2 .enc::before, .s2 .enc::after { content: ''; position: absolute; top: 5px; width: 5px; height: 5px; background: #8a7b5c; box-shadow: 0 0 0 1px #1a1916; }
+.s2 .zone::before, .s2 .enc::before { left: 5px; } .s2 .zone::after, .s2 .enc::after { right: 5px; }
+.s2 .chip { background: #e0b100; color: #1a1916; font-family: 'NeoDunggeunmo', sans-serif; }
+.s2 .zname { font-family: 'NeoDunggeunmo', sans-serif; color: #e0b100; letter-spacing: 0.08em; }
+.s2 .feel { color: #9fd36a; }
+.s2 .portrait { background: radial-gradient(circle at 50% 40%, rgba(255, 236, 170, 0.25), rgba(0, 0, 0, 0.5) 70%); border: 3px solid #1a1916; box-shadow: inset 0 0 0 2px #6b5a3a; }
+.s2 .drops div { background: #2f302b; border: 2px solid #1a1916; color: #b9b4a3; }
+.s2 .acts .no { background: #3c3a33; color: #d8d4c6; box-shadow: inset 0 -3px 0 #1a1916, inset 0 2px 0 #5d594d; }
+.s2 .acts .go { background: #e0b100; color: #1a1916; box-shadow: inset 0 -3px 0 #8a6d00, inset 0 2px 0 #ffd84a; font-family: 'NeoDunggeunmo', sans-serif; }
+.s2 .tabs { background: #1a1916; color: #8a8576; }
+/* 벽 너머 — 손전등 빛이 보랏빛으로, 콘크리트에 금이 가고 그 틈으로 별 */
+.s2 .far .phone {
+  background:
+    radial-gradient(ellipse 70% 45% at 50% 48%, rgba(170, 120, 255, 0.22), transparent 70%),
+    radial-gradient(1px 1px at 20% 30%, #fff 50%, transparent), radial-gradient(1px 1px at 70% 60%, #cfc 50%, transparent),
+    radial-gradient(1px 1px at 40% 80%, #fff 50%, transparent), radial-gradient(1px 1px at 85% 15%, #fff 50%, transparent),
+    #15121c;
+  color: #d9d2ea;
+}
+.s2 .far .chip, .s2 .far .acts .go { background: #8a5cd6; color: #fff; box-shadow: inset 0 -3px 0 #4a2a86, inset 0 2px 0 #b38cff; }
+.s2 .far .zname { color: #b38cff; }
+.s2 .far .zone, .s2 .far .enc { background: linear-gradient(#2c2838, #221e2c); box-shadow: inset 0 0 0 2px #463e5a; }
+
+/* ============================================================
+   3. 남은 세계 — 끝나 버린 세계의 돌과 금박. 새긴 테두리 · 낡은 금
+   ============================================================ */
+.s3 .phone { background: #23262d repeating-linear-gradient(90deg, rgba(255,255,255,0.02) 0 8px, transparent 8px 16px); color: #e6dcc4; }
+.s3 .top { background: #2e3139; border: 2px solid #b8963e; box-shadow: 0 0 0 3px #23262d, 0 0 0 5px #6e5a28; }
+.s3 .top .logo { width: 20px; height: 20px; background: #b8963e; clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); }
+.s3 .top .ttl { color: #e8cc7a; }
+.s3 .zone, .s3 .enc { background: linear-gradient(#353944, #2c2f37); border: 2px solid #6e5a28; box-shadow: inset 0 0 0 2px #23262d, inset 0 0 0 3px #b8963e; }
+.s3 .chip { background: transparent; color: #e8cc7a; border: 1px solid #b8963e; }
+.s3 .zname, .s3 .ename { font-family: 'NeoDunggeunmo', sans-serif; color: #f0e3bd; letter-spacing: 0.05em; }
+.s3 .feel { color: #e8cc7a; }
+.s3 .portrait { background: radial-gradient(circle, #3e4250 40%, #2a2d35); clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%); }
+.s3 .drops div { background: #2a2d35; border: 1px solid #6e5a28; color: #c9bb93; }
+.s3 .acts .no { background: #2e3139; color: #c9bb93; border: 2px solid #6e5a28; }
+.s3 .acts .go { background: linear-gradient(#cfa94a, #96752c); color: #23262d; border: 2px solid #6e5a28; font-family: 'NeoDunggeunmo', sans-serif; }
+.s3 .tabs { background: #1b1d22; color: #8f8466; border-top: 2px solid #6e5a28; }
+/* 벽 너머 — 금박이 보랏빛으로 식고, 돌이 부서진 자리에 어둠 */
+.s3 .far .phone { background: #121019; color: #ddd4ef; }
+.s3 .far .top, .s3 .far .zone, .s3 .far .enc { border-color: #4a3a6b; box-shadow: inset 0 0 0 2px #121019, inset 0 0 0 3px #8a6cc0; }
+.s3 .far .top .ttl, .s3 .far .chip, .s3 .far .feel { color: #c3a6ff; border-color: #8a6cc0; }
+.s3 .far .acts .go { background: linear-gradient(#9a78d6, #5b3c94); color: #fff; }
+.s3 .far .top .logo { background: #8a6cc0; }
+
+/* ============================================================
+   4. 관측 화면 — 누군가의 감시 화면. 검은 바탕 · 호박색 글씨 · 주사선 · 구석의 녹화 표시
+   ============================================================ */
+.s4 .phone {
+  background: #0c0b08 repeating-linear-gradient(0deg, rgba(255, 180, 60, 0.05) 0 1px, transparent 1px 3px);
+  color: #ffb43c; font-family: 'GalmuriMono11', 'Galmuri11', monospace;
+}
+.s4 .phone::after { content: '● REC  관측 중'; position: absolute; top: 6px; right: 10px; font-size: 9px; color: #ff4b3c; }
+.s4 .top { border: 1px solid #ffb43c; padding-top: 12px; }
+.s4 .top .ttl { font-family: 'GalmuriMono11', monospace; font-size: 13px; }
+.s4 .top .logo::before { content: '👁'; filter: sepia(1) saturate(4) hue-rotate(-10deg); }
+.s4 .zone, .s4 .enc { border: 1px solid rgba(255, 180, 60, 0.6); background: rgba(255, 180, 60, 0.03); }
+.s4 .zone::before { content: '> 대상 구역'; font-size: 9px; opacity: 0.6; }
+.s4 .enc::before { content: '> 접촉'; font-size: 9px; opacity: 0.6; }
+.s4 .chip { border: 1px solid #ffb43c; color: #ffb43c; }
+.s4 .feel { color: #ffd88a; text-shadow: 0 0 6px rgba(255, 180, 60, 0.6); }
+.s4 .portrait { border: 1px solid #ffb43c; background: radial-gradient(circle, rgba(255,180,60,0.08), transparent 70%); filter: sepia(1) saturate(3) hue-rotate(-12deg) contrast(1.2); }
+.s4 .portrait::before, .s4 .portrait::after { content: ''; position: absolute; width: 16px; height: 16px; border: 2px solid #ffb43c; }
+.s4 .portrait::before { top: -4px; left: -4px; border-right: 0; border-bottom: 0; }
+.s4 .portrait::after { bottom: -4px; right: -4px; border-left: 0; border-top: 0; }
+.s4 .drops div { border: 1px dashed rgba(255, 180, 60, 0.5); }
+.s4 .acts button { font-family: 'GalmuriMono11', monospace; background: transparent; color: #ffb43c; border: 1px solid #ffb43c; }
+.s4 .acts .go { background: #ffb43c; color: #0c0b08; }
+.s4 .tabs { border-top: 1px solid rgba(255, 180, 60, 0.5); }
+/* 벽 너머 — 화면이 보랏빛으로 물들고 어긋난다 */
+.s4 .far .phone { background-color: #0b0812; color: #c58cff; text-shadow: 2px 0 rgba(255, 60, 120, 0.35), -2px 0 rgba(60, 200, 255, 0.25); }
+.s4 .far .phone::after { content: '● REC  관측 중  관측 중'; color: #c58cff; }
+.s4 .far .top, .s4 .far .zone, .s4 .far .enc, .s4 .far .chip, .s4 .far .acts button, .s4 .far .portrait, .s4 .far .portrait::before, .s4 .far .portrait::after { border-color: #c58cff; color: #c58cff; }
+.s4 .far .acts .go { background: #c58cff; color: #0b0812; }
+.s4 .far .portrait { filter: grayscale(1) contrast(1.4) brightness(1.2); }
+.s4 .far .enc { transform: translateX(2px); }
+
+/* ============================================================
+   5. 휴대폰 — 주인공의 금 간 휴대폰. 신호 없음 · 배터리가 곧 에너지 · 협회 알림
+   ============================================================ */
+.s5 .phone { background: #f4f5f7; color: #1d2330; border-radius: 22px; border: 6px solid #111; padding-top: 30px; }
+.s5 .phone::before { content: '9:41        서비스 없음   ▮▮▮▯ 24/30'; position: absolute; top: 8px; left: 16px; right: 16px; font-size: 10px; white-space: pre; color: #1d2330; }
+.s5 .phone::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background:
+    linear-gradient(118deg, transparent 49.6%, rgba(255,255,255,0.9) 49.8%, rgba(0,0,0,0.25) 50%, transparent 50.3%) 0 0 / 100% 60% no-repeat,
+    linear-gradient(64deg, transparent 49.6%, rgba(255,255,255,0.8) 49.8%, rgba(0,0,0,0.2) 50%, transparent 50.3%) 100% 100% / 70% 45% no-repeat;
+}
+.s5 .top { background: #fff; border-radius: 12px; box-shadow: 0 2px 0 #d7dae0; }
+.s5 .top .logo { width: 22px; height: 22px; border-radius: 6px; background: #ff5a4e; }
+.s5 .zone, .s5 .enc { background: #fff; border-radius: 14px; box-shadow: 0 2px 0 #d7dae0; }
+.s5 .noti { background: #1d2330; color: #fff; border-radius: 12px; padding: 7px 10px; font-size: 10px; }
+.s5 .noti b { color: #ff9f43; }
+.s5 .chip { background: #eef0f4; border-radius: 6px; color: #5b6475; }
+.s5 .feel { color: #1f8a5b; }
+.s5 .portrait { background: #eef0f4; border-radius: 18px; }
+.s5 .drops div { background: #eef0f4; border-radius: 10px; }
+.s5 .acts button { border-radius: 12px; }
+.s5 .acts .no { background: #eef0f4; color: #1d2330; }
+.s5 .acts .go { background: #ff5a4e; color: #fff; }
+.s5 .tabs { background: #fff; border-radius: 12px; color: #8a92a3; }
+/* 벽 너머 — 화면이 어두워지고, 알 수 없는 발신 */
+.s5 .far .phone { background: #12101a; color: #e3dcf2; }
+.s5 .far .phone::before { content: '?:??        ⟡⟡⟡⟡    ▮▮▮▯ 24/30'; color: #b8a6e6; }
+.s5 .far .top, .s5 .far .zone, .s5 .far .enc, .s5 .far .tabs { background: #1e1a2a; box-shadow: 0 2px 0 #0a0810; color: #e3dcf2; }
+.s5 .far .noti { background: #5b2a86; }
+.s5 .far .noti b { color: #e0c8ff; }
+.s5 .far .chip, .s5 .far .portrait, .s5 .far .drops div, .s5 .far .acts .no { background: #2a2438; color: #cfc4e6; }
+.s5 .far .acts .go { background: #8a5cd6; }
+.s5 .far .feel { color: #c3a6ff; }
+
+.hidden { display: none !important; }
+</style>
+</head>
+<body class="s1">
+<div class="picker" id="picker">
+  <button data-s="s1" class="on">1 작업일지</button>
+  <button data-s="s2">2 지하수로</button>
+  <button data-s="s3">3 남은 세계</button>
+  <button data-s="s4">4 관측 화면</button>
+  <button data-s="s5">5 휴대폰</button>
+</div>
+<p class="desc" id="desc"></p>
+<div class="stage" id="stage"></div>
+
+<script>
+const DESC = {
+  s1: '<b>작업일지</b> — 주인공은 협회 하청 뒷정리꾼. 화면이 그의 서류철이다. 모눈 종이 · 고무 도장 · 노란 주의 띠. 「아무도 안 시킨」 농담과 가장 잘 맞는다. 벽 너머에서는 종이가 바래고 잉크가 번지고, 글자가 검게 지워진다.',
+  s2: '<b>지하수로</b> — 그 공간 자체. 젖은 콘크리트 · 녹슨 철판 · 노란 표지판 글씨, 손전등 하나만큼의 빛. 가장 무겁고 어둡다. 벽 너머에서는 빛이 보랏빛으로 바뀌고 틈으로 별이 보인다.',
+  s3: '<b>남은 세계</b> — 끝나 버린 세계의 돌과 금박. 새긴 테두리, 낡은 금. 신화 쪽 무게. 벽 너머에서는 금박이 보랏빛으로 식는다.',
+  s4: '<b>관측 화면</b> — 하는 사람이 곧 관측자. 검은 바탕 · 호박색 글씨 · 주사선, 구석에 녹화 표시. 「처음부터 보고 있었다」는 느낌을 화면 전체로. 벽 너머에서는 보랏빛으로 물들고 어긋난다.',
+  s5: '<b>휴대폰</b> — 주인공의 금 간 휴대폰. 신호 없음, 배터리 칸이 곧 에너지, 위에 협회 알림. 현대 헌터 세상이 가장 바로 보인다. 벽 너머에서는 화면이 어두워지고 시간도 신호도 알 수 없게 된다.'
+};
+function phone(far) {
+  return `
+  <div class="shot ${far ? 'far' : ''}">
+    <div class="phone">
+      <div class="top"><span class="logo"></span><div><div class="ttl">아무도 안 시킨 세계 구하기</div><div class="sub">jjunsgame</div></div></div>
+      ${'<div class="noti extra-s5">' + (far ? '<b>알 수 없는 발신</b> · ⟡⟡⟡ ⟡⟡ ⟡⟡⟡⟡' : '<b>협회 알림</b> · 3구역 건물 경보 — 하청 인력은 대기') + '</div>'}
+      <div class="zone">
+        <div class="row"><span class="chip">${far ? '제6격 · 마왕' : '제1격 · 잡졸'}</span><span class="zname">${far ? '마계의 왕좌' : '초심자의 지하수로'}</span></div>
+        <div class="meter"><span>에너지 24/30</span><span>Lv.${far ? '4,210' : '12'}</span></div>
+      </div>
+      <div class="enc">
+        <div class="ename">${far ? '아크데몬' : '고블린'}<span class="lv">Lv.${far ? '3,980' : '14'}</span></div>
+        <div class="estat">생명 ${far ? '1.2M' : '320'} · 공격 ${far ? '88K' : '41'} · <span class="${far ? 'redact' : ''}">전리품 2종 각 23%</span></div>
+        <div class="feel">이길 수 있을 것 같다</div>
+        <div class="portrait">${far ? '😈' : '👺'}</div>
+        <div class="drops"><div><span>${far ? '🗡️' : '🪓'}</span>${far ? '심연의 대검' : '고블린 손도끼'}</div><div><span>?</span>????</div><div><span>?</span>????</div></div>
+        <div class="acts"><button class="no">물러선다</button><button class="go">맞선다</button></div>
+      </div>
+      <div class="tabs"><span>나</span><span>여정</span><span>전리품</span><span>기록</span></div>
+    </div>
+    <div class="shot-label">${far ? '벽 너머 (마왕을 꺾은 뒤)' : '이쪽'}</div>
+  </div>`;
+}
+function show(s) {
+  document.body.className = s;
+  for (const b of document.querySelectorAll('#picker button')) b.classList.toggle('on', b.dataset.s === s);
+  document.getElementById('desc').innerHTML = DESC[s];
+  document.getElementById('stage').innerHTML = phone(false) + phone(true);
+  for (const n of document.querySelectorAll('.extra-s5')) n.classList.toggle('hidden', s !== 's5');
+}
+for (const b of document.querySelectorAll('#picker button')) b.addEventListener('click', () => show(b.dataset.s));
+show('s1');
+</script>
+</body>
+</html>
