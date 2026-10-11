@@ -1227,15 +1227,11 @@ function dropStrip(foe) {
     </div>`;
 }
 
-// 마주한 적 카드 — 위에서부터 설명 · 초상(큰 그림) · 남은 전리품 · 맞선다 / 물러선다.
+// 마주한 적 카드 — 위에서부터 이름 · 레벨 · 느낌 한 줄, 초상(큰 그림), 남은 전리품, 맞선다 / 물러선다.
+// 설명은 레벨과 「잡기 쉬울 것 같다」 같은 한 줄만 둡니다 — 스탯 · 경험치 · 전리품 확률 · 졌을 때의 에너지는 뺐습니다.
 // 초상은 지금은 이모지입니다. 나중에 그림이 들어올 자리.
 function encounterCard(foe, isBoss, hero, aura) {
   const chance = winChance(hero, foe);
-  const gap = underlevelBonus(State.run.level, foe.level);
-  const xp = Math.round(foe.xp * gap * (aura ? aura.xpMult : 1) * bossXpMult() * xpGearMult(hero));
-  const left = dropTable(foe.id).filter(i => !owns(i.id)).length;
-  const penalty = lossPenaltyFor(foe.kind);
-
   const style = aura ? `style="--aura:${aura.color}"` : '';
 
   return `
@@ -1245,13 +1241,7 @@ function encounterCard(foe, isBoss, hero, aura) {
         <div class="enc-name">
           ${aura ? `<span class="aura-tag">${aura.name}</span>` : ''}${foe.kind !== 'normal' ? `<span class="grade-tag ${foe.kind}">${KINDS[foe.kind].name}</span>` : ''}${foe.name}<span class="lv">Lv.${fmtLevel(foe.level)}</span>
         </div>
-        <div class="enc-stats">생명 ${fmt(foe.life)} · 공격 ${fmt(foe.damage)} · 방어 ${fmt(foe.defense)}</div>
-        <div class="enc-meta">
-          <span class="foe-xp">+${fmt(xp)} EXP${gap > 1.01 ? ` ×${gap.toFixed(2)}` : ''}</span>
-          <span class="foe-drop">전리품 ${left > 0 ? `${left}종 ` : ''}각 ${Math.round(dropChanceFor(foe, aura ? aura.dropMult : 1) * 100)}%</span>
-        </div>
         <div class="enc-chance chance-value ${winFeelClass(chance)}">${winFeel(chance)}</div>
-        <div class="enc-warn">지면 에너지 −${penalty}</div>
       </div>
       <div class="portrait enc-portrait"><span class="portrait-ic">${foe.icon}</span></div>
       ${dropStrip(foe)}
