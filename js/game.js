@@ -354,15 +354,38 @@ function startEnergy() { return RULES.START_ENERGY + bankedEnergy(); }
 // 지금 『격을 삼키는 검』을 들고 있는가
 function hasDevourer() { return State.meta.equipped.weapon === DEVOURER_ID; }
 
-// 「관측자」가 모습을 드러냈는가
-function hiddenUnlocked() { return State.meta.bossesBeaten.length >= HIDDEN_UNLOCK_BOSSES; }
+// ---------- 벽 ----------
+// 마왕이 떠받친 벽. 그 너머(7격부터)는 마왕을 처음 꺾기 전까지 화면 어디에도 비치지 않습니다 —
+// 도감 · 기록의 분모 · 내 격의 다음 단계 · 못 얻은 전리품 목록까지. 마왕 다음을 미리 알 수 없게.
+// 마왕이 쓰러지는 순간 벽이 무너지고, 그 회차는 분위기가 바뀝니다 (ui.js 의 atmosphere).
+const WALL_BOSS = 'demonking';
+const WALL_ZONE = ZONES.findIndex(z => z.enemies.some(e => e.id === WALL_BOSS));   // 마계의 왕좌
 
-// 히든이 모습을 드러냈는가.
-//   관측자          — 보스를 다섯 꺾은 뒤
-//   칸을 여는 히든  — 그 지역 보스를 한 번이라도 꺾은 뒤
+// 마왕을 한 번이라도 꺾었나 — 그 너머를 본 적이 있나 (영구).
+// 관리자 도구로 지역을 건너뛴 저장본도 본 것으로 칩니다.
+function wallSeen() {
+  const m = State.meta;
+  return m.bossesBeaten.includes(WALL_BOSS) || m.bestZone > WALL_ZONE + 1;
+}
+
+// 이번 회차에 벽 너머에 있나 — 그 공간은 회차마다 되돌아가니, 마왕을 다시 꺾어야 다시 너머다.
+function beyondWall() {
+  const run = State.run;
+  return !!run && (run.zoneIndex > WALL_ZONE || run.downed.includes(WALL_BOSS));
+}
+
+// 지금까지 알고 있는 지역 수. 벽 너머는 닿은 데까지만 — 그 뒤는 몇 개 남았는지도 모르게.
+function knownZoneCount() {
+  return wallSeen() ? Math.min(ZONES.length, Math.max(WALL_ZONE + 1, State.meta.bestZone)) : WALL_ZONE + 1;
+}
+// 지역 하나에 격 하나라, 아는 격도 같은 수입니다
+function knownRank(n) { return n <= knownZoneCount(); }
+function knownItems() { return ITEMS.filter(i => knownRank(i.rank.n)); }
+
+// 히든이 모습을 드러냈는가 — 그 지역 보스를 한 번이라도 꺾은 뒤.
+// 관측자도 마찬가지로 마왕이 쓰러진 뒤에야 나타납니다 (예전엔 보스 다섯을 꺾으면 마왕보다 먼저 나왔습니다).
 function isRevealed(foe) {
   if (foe.kind !== 'hidden') return true;
-  if (!foe.opens) return hiddenUnlocked();
   const boss = zoneBoss(foe.zoneIndex);
   return !!boss && State.meta.bossesBeaten.includes(boss.id);
 }
@@ -809,7 +832,7 @@ function endRun(reason) {
     pushLog('rank', `━━ 여정의 끝 — ${State.meta.runCount}회차에 모든 격을 넘어섰다 ━━`);
   } else {
     const r = rankOf(run.level);
-    pushLog('death', `격이 무너졌다 — ${reason}  (제${r.n}격 ${r.name} · Lv.${fmtLevel(run.level)} · ${run.kills}명을 꺾음)`);
+    pushLog('death', `격이 무너졌다 — ${reason}  (${knownRank(r.n) ? `제${r.n}격 ${r.name}` : '???'} · Lv.${fmtLevel(run.level)} · ${run.kills}명을 꺾음)`);
     pushLog('info', '격은 사라졌지만 빼앗은 것은 남는다.');
   }
   save();
@@ -1053,7 +1076,10 @@ function engage() {
     const after = rankOf(run.level);
     pushLog('level', `Lv.${fmtLevel(run.level)}  (+${fmtLevel(levelsGained)} 레벨)`);
     if (after.n > before.n) {
-      pushLog('rank', `━ 제${after.n}격 · ${after.name}(${after.hanja})에 올랐다 — ${after.desc} ━`);
+      // 아직 모르는 격(마왕 너머)이면 이름을 밝히지 않습니다
+      pushLog('rank', knownRank(after.n)
+        ? `━ 제${after.n}격 · ${after.name}(${after.hanja})에 올랐다 — ${after.desc} ━`
+        : '━ 알 수 없는 격에 올랐다 ━');
     }
   }
   for (const d of drops) {
@@ -1111,10 +1137,8 @@ function engage() {
     if (!State.meta.bossesBeaten.includes(enemy.id)) {
       State.meta.bossesBeaten.push(enemy.id);
       pushLog('rank', `━━ ${enemy.name}의 격을 빼앗았다 — 앞으로 모든 경험치 ×${bossXpMult().toFixed(1)} ━━`);
-      if (hiddenUnlocked() && State.meta.bossesBeaten.length === HIDDEN_UNLOCK_BOSSES) {
-        pushLog('devour', '⟡ 어딘가에서 계속 지켜보던 것이 있다. 마계의 왕좌에서 모습을 드러낼 것이다 ⟡');
-      }
-      // 이 지역에 숨어 있던 것이 이제 모습을 드러냅니다
+      // 이 지역에 숨어 있던 것이 이제 모습을 드러냅니다.
+      // 관측자는 아무 말 없이 나타납니다 — 글로 알리지 않습니다 (벽이 무너지는 연출에 눈만 스칩니다).
       const lurker = zonePosts(enemy.zoneIndex).find(p => p.opens);
       if (lurker && !State.meta.specialOpened.includes(lurker.id)) {
         pushLog('devour', `⟡ ${enemy.zoneName} 어딘가에서 숨어 있던 것이 눈을 떴다 ⟡`);

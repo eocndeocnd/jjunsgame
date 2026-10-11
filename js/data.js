@@ -706,8 +706,6 @@ function stoneYield(item) {
 // 그게 이 검이 만드는 선택입니다.
 const DEVOURER_ID = 'observer_0';
 
-// 「관측자」가 나타나는 조건: 보스를 다섯 꺾어 마족 구간까지 넘어선 뒤부터.
-const HIDDEN_UNLOCK_BOSSES = 5;
 
 // ============================================================
 //  격(格)

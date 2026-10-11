@@ -2283,6 +2283,111 @@ body.test-mode::after {
   .level-badge { font-size: 22px; }
 }
 
+/* ============================================================
+   벽 너머 — 마왕이 쓰러진 회차 (ui.js 의 atmosphere 가 body 에 .beyond 를 붙입니다)
+   같은 창 · 같은 버튼인데 종이가 잿빛으로 식고, 밀랍과 잉크가 보랏빛이 됩니다.
+   맨 뒤 지도도 따로 바뀝니다 (backdrop.js — 더 찢기고, 구멍 너머로 별).
+   그 공간은 회차마다 되돌아가므로, 다음 회차는 다시 이쪽 색에서 시작합니다.
+   ============================================================ */
+body.beyond {
+  --table:     #0b0812;
+  --paper:     #d3cdd9;
+  --paper-dot: #c9c2d1;
+  --paper-hi:  #e2dde7;
+  --paper-lo:  #b8afc3;
+  --frame-in:  #4a3a6b;
+  --frame-out: #0b0812;
+  --brass:     #8f86a8;
+  --wood:      #3b3150;
+  --wood-hi:   #5a4d75;
+  --wood-lo:   #1c1628;
+  --wax:       #5b2a86;
+  --wax-hi:    #7d4aa8;
+  --wax-lo:    #2e1245;
+  --cream:     #ece6f2;
+  --plank: repeating-linear-gradient(90deg,
+             #1e1830 0 22px, #15111f 22px 24px, #1b1529 24px 46px, #120e1b 46px 48px);
+  --line:      #8a7ea0;
+  --line-soft: #b3a9c3;
+  --text:      #1f1830;
+  --text-dim:  #4d4262;
+  --text-faint:#6c6182;
+  --accent:    #5b2a86;
+  --dots: linear-gradient(90deg, var(--line-soft) 50%, transparent 0);
+}
+/* 지도 밑 바탕은 html 에만 — body 에 깔면 맨 뒤의 지도(body::before, z-index −1)를 덮어 버립니다 */
+html:has(body.beyond) { background: #0b0812; }
+
+/* 아직 모르는 격 — 이름 대신 ??? */
+.rank-chip.unknown { --rc: #4f4a44; letter-spacing: 0.2em; }
+
+/* 마왕을 꺾은 결과에만 붙는 한 줄. 벽이 무너지는 연출이 걷힌 뒤에 천천히 */
+.res-path.exit { color: var(--outer); }
+.res-path.exit.late { animation: exit-line 0.8s steps(8) 2.9s both; }
+@keyframes exit-line { from { opacity: 0; } to { opacity: 1; } }
+
+/* ---------- 벽이 무너지는 순간 ----------
+   하얗게 번쩍 → 화면 한가운데서 금이 뻗고 → 어두워지고 → 눈 하나가 깜빡 → 걷히면 다른 세상.
+   길이는 ui.js 의 WALL_FX_DARK(0.9초에 가장 어둡고, 그때 분위기가 바뀜) · WALL_FX_LEN(2.4초)과 맞춥니다. */
+.wall-break { position: fixed; inset: 0; z-index: 95; pointer-events: none; overflow: hidden; }
+.wall-break .wb-flash { position: absolute; inset: 0; background: #fff8e8; opacity: 0; animation: wb-flash 0.45s steps(5) both; }
+@keyframes wb-flash { 0% { opacity: 0.95; } 100% { opacity: 0; } }
+.wall-break .wb-cracks { position: absolute; inset: 0; width: 100%; height: 100%; }
+.wall-break .wb-cracks path {
+  fill: none;
+  stroke: #0b0812;
+  stroke-width: 3;
+  stroke-linecap: square;
+  stroke-linejoin: miter;
+  shape-rendering: crispEdges;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: wb-crack 0.4s steps(8) 0.05s forwards;
+}
+@keyframes wb-crack { to { stroke-dashoffset: 0; } }
+.wall-break .wb-dark { position: absolute; inset: 0; background: #07050c; opacity: 0; animation: wb-dark 2.4s linear both; }
+@keyframes wb-dark {
+  0%, 15% { opacity: 0; }
+  35%     { opacity: 0.96; }
+  62%     { opacity: 0.96; }
+  100%    { opacity: 0; }
+}
+.wall-break .wb-eye {
+  position: absolute;
+  left: 50%;
+  top: 42%;
+  transform: translate(-50%, -50%);
+  font-size: 54px;
+  line-height: 1;
+  opacity: 0;
+  filter: grayscale(1) brightness(1.4);
+  animation: wb-eye 2.4s steps(1) both;
+}
+@keyframes wb-eye {
+  0%   { opacity: 0; }
+  40%  { opacity: 0.8; }
+  47%  { opacity: 0; }
+  52%  { opacity: 0.55; }
+  58%  { opacity: 0; }
+}
+
+/* 마왕 너머를 본 뒤 — 격이 무너지는 화면 구석에 아주 옅은 눈 하나 */
+.overlay-card.watched::after {
+  content: '👁️';
+  position: absolute;
+  right: 12px;
+  bottom: 10px;
+  font-size: 13px;
+  opacity: 0.18;
+  filter: grayscale(1);
+  animation: watch-blink 6s steps(1) infinite;
+}
+@keyframes watch-blink { 0%, 92% { opacity: 0.18; } 93%, 95% { opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .res-path.exit.late, .overlay-card.watched::after { animation: none; }
+}
+
 </style>
 </head>
 <body data-tab="journey">
@@ -2519,6 +2624,15 @@ body.test-mode::after {
     [0x33, 0x22, 0x10]    // 8 타서 검어진 가장자리
   ];
   const RED = [null, [0xa8, 0x50, 0x3a], [0x8f, 0x2e, 0x22]];   // 붉은 길(바랜) · 표시와 나침반 바늘(진한)
+
+  // 벽 너머 — 같은 지도가 잿빛으로 식고, 붉은 잉크는 보랏빛이 됩니다. 종이는 더 찢기고,
+  // 찢겨 나간 구멍 너머로 별이 보입니다 (마왕이 쓰러진 회차 — ui.js 의 atmosphere 가 Backdrop.mode 로 바꿉니다)
+  const ASH = [
+    [0xd6, 0xd0, 0xdc], [0xc6, 0xbf, 0xcf], [0xb4, 0xab, 0xc0], [0x9e, 0x94, 0xad], [0x86, 0x7a, 0x98],
+    [0x6a, 0x5e, 0x7e], [0x4f, 0x44, 0x63], [0x34, 0x2b, 0x45], [0x1d, 0x17, 0x29]
+  ];
+  const VIOLET = [null, [0x7d, 0x4a, 0xa8], [0x5b, 0x2a, 0x86]];
+  const STAR = [[0xe9, 0xe2, 0xff], [0x9d, 0x8f, 0xc9]];
   // 4×4 순서 디더 — 사다리 두 칸 사이를 바둑판 무늬로 섞습니다
   const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
 
@@ -2587,15 +2701,27 @@ body.test-mode::after {
 
   // ---------- 그리기 ----------
   let lastKey = '';
+  let mode = 'map';            // 'map' 이쪽 · 'beyond' 벽 너머
+  const cache = {};            // 한 번 그린 것은 다시 계산하지 않습니다 — 회차마다 오가니까요
+
+  function apply(c) {
+    const root = document.documentElement.style;
+    root.setProperty('--backdrop', c.url);
+    root.setProperty('--bd-size', c.size);
+  }
 
   function draw() {
     const vw = window.innerWidth || 360;
     const vh = window.innerHeight || 640;
     const S = vw < 700 ? 3 : 4;                 // 도트 한 칸의 크기 (px)
     const W = Math.ceil(vw / S), H = Math.ceil(vh / S);
-    const key = `${W}x${H}@${S}`;
+    const key = `${W}x${H}@${S}:${mode}`;
     if (key === lastKey) return;
     lastKey = key;
+    if (cache[key]) { apply(cache[key]); return; }
+    const far = mode === 'beyond';
+    const PAL = far ? ASH : PAPER;
+    const INK = far ? VIOLET : RED;
 
     const N = W * H;
     const tone = new Float32Array(N);           // 사다리 위의 자리 (실수)
@@ -2632,10 +2758,12 @@ body.test-mode::after {
         let biteV = 0, biteH = 0;
         for (const fx of foldX) biteV = Math.max(biteV, 5 * Math.exp(-((x - fx) ** 2) / 6));
         for (const fy of foldY) biteH = Math.max(biteH, 5 * Math.exp(-((y - fy) ** 2) / 6));
-        const rag = 1 + 3.2 * fbm(x * 0.12 + 31, y * 0.12 + 7, 3) + (hash(x, y) - 0.5) * 1.1;
-        const e = Math.min(
+        const rag = (far ? 2.4 : 1) + (far ? 6.5 : 3.2) * fbm(x * 0.12 + 31, y * 0.12 + 7, 3) + (hash(x, y) - 0.5) * 1.1;
+        let e = Math.min(
           Math.min(y, H - 1 - y) - rag - biteV,
           Math.min(x, W - 1 - x) - rag - biteH);
+        // 벽 너머 — 종이 한가운데도 군데군데 찢겨 나갑니다. 구멍 가장자리도 타서 검습니다
+        if (far) e = Math.min(e, (0.66 - fbm(x * 0.05 + 300, y * 0.05 + 300, 3)) * 46);
         if (e < 0) continue;                    // 찢겨 나간 자리 — 밑의 어두운 바탕이 보입니다
         alive[i] = 1;
 
@@ -2843,12 +2971,17 @@ body.test-mode::after {
     for (let y = 0; y < H; y++) {
       for (let x = 0; x < W; x++) {
         const i = y * W + x;
-        if (!alive[i]) continue;                 // 투명 — CSS 바탕색(가장 어두운 갈색)이 비칩니다
         let c;
-        if (red[i]) c = RED[red[i]];
+        if (!alive[i]) {
+          // 투명 — CSS 바탕색(가장 어두운 갈색)이 비칩니다. 벽 너머에서는 그 어둠에 별이 박힙니다
+          if (!far) continue;
+          const h = hash(x * 7 + 1, y * 13 + 5);
+          if (h < 0.986) continue;
+          c = STAR[h > 0.996 ? 0 : 1];
+        } else if (red[i]) c = INK[red[i]];
         else {
           const t = tone[i] + BAYER[(y & 3) * 4 + (x & 3)] / 16 - 0.5;
-          c = PAPER[Math.max(0, Math.min(PAPER.length - 1, Math.round(t)))];
+          c = PAL[Math.max(0, Math.min(PAL.length - 1, Math.round(t)))];
         }
         const o = i * 4;
         px[o] = c[0]; px[o + 1] = c[1]; px[o + 2] = c[2]; px[o + 3] = 255;
@@ -2856,9 +2989,8 @@ body.test-mode::after {
     }
     ctx.putImageData(img, 0, 0);
 
-    const root = document.documentElement.style;
-    root.setProperty('--backdrop', `url("${cv.toDataURL('image/png')}")`);
-    root.setProperty('--bd-size', `${W * S}px ${H * S}px`);
+    cache[key] = { url: `url("${cv.toDataURL('image/png')}")`, size: `${W * S}px ${H * S}px` };
+    apply(cache[key]);
   }
 
   // 브레젠험 — 두 점 사이를 칸 단위로 잇습니다
@@ -2882,6 +3014,15 @@ body.test-mode::after {
     timer = setTimeout(draw, 180);
   });
   try { draw(); } catch (e) { /* 바탕을 못 그려도 게임은 돌아야 합니다 */ }
+
+  // 바꿀 때만 다시 그립니다 (render 마다 불려도 같은 모드면 아무 일도 하지 않습니다)
+  window.Backdrop = {
+    mode(m) {
+      if (m === mode) return;
+      mode = m;
+      try { draw(); } catch (e) { /* 그대로 둡니다 */ }
+    }
+  };
 })();
 
 </script>
@@ -3126,6 +3267,15 @@ const Sound = (() => {
       arp(e, o, t, ['G5', 'C6', 'E6', 'G6'], 0.08, { wave: 'p25', d: 0.1, v: 0.09, last: 0.5 });
       tone(e, o, t + 0.24, { wave: 'tri', f: N('C4'), d: 0.6, v: 0.15, sus: 0.8 });
     },
+    wallBreak: (e, o, t) => {                  // 마왕이 쓰러져 벽이 무너짐 — 땅울림 · 금 가는 소리 · 그 너머의 낯선 음 둘
+      tone(e, o, t, { wave: 'sine', f: 95, f2: 28, d: 1.6, v: 0.55 });
+      noise(e, o, t, { type: 'lowpass', f: 500, f2: 70, d: 1.5, v: 0.5 });
+      noise(e, o, t + 0.04, { f: 3400, f2: 500, d: 0.22, v: 0.45 });
+      noise(e, o, t + 0.3, { f: 2600, f2: 400, d: 0.18, v: 0.3 });
+      tone(e, o, t + 0.95, { wave: 'p12', f: N('D#6'), d: 1.1, v: 0.05, sus: 0.7 });
+      tone(e, o, t + 0.95, { wave: 'p12', f: N('A6'), d: 1.1, v: 0.04, sus: 0.7 });
+      tone(e, o, t + 0.95, { wave: 'tri', f: N('D#3'), d: 1.2, v: 0.12, sus: 0.8 });
+    },
     unlock: (e, o, t) => {                     // 특수장비 칸이 열림 — 신비하게
       arp(e, o, t, ['E6', 'B6', 'G#6', 'E7'], 0.07, { wave: 'p12', d: 0.12, v: 0.1, last: 0.5 });
       tone(e, o, t, { wave: 'tri', f: N('E4'), d: 0.8, v: 0.16, sus: 0.7 });
@@ -3167,7 +3317,7 @@ const Sound = (() => {
   };
 
   // 끝맺는 소리가 나는 동안은 배경음을 잠깐 낮춥니다 (초)
-  const JINGLE = { win: 0.8, lose: 1.2, levelUp: 0.7, rankUp: 1.2, pathOpen: 1.0, unlock: 1.0, zoneMove: 0.8, gameOver: 2.0, victory: 2.6 };
+  const JINGLE = { win: 0.8, lose: 1.2, levelUp: 0.7, rankUp: 1.2, pathOpen: 1.0, wallBreak: 2.4, unlock: 1.0, zoneMove: 0.8, gameOver: 2.0, victory: 2.6 };
   // 전투 중 한 줄마다 나는 소리 — BATTLE_LEVEL 로 따로 낮춥니다
   const BATTLE = new Set(['hit', 'crit', 'harm', 'foeHit', 'foeCrit', 'miss', 'block', 'heal', 'special']);
   const outFor = (e, name) => BATTLE.has(name) ? e.battle : e.sfx;
@@ -3215,6 +3365,18 @@ const Sound = (() => {
   const H_B  = 'F#4 - - - - - - - D#4 - - - - - - -';
   const X_BEAT = 'k . h k s . h . k k h . s . h h';
   const X_FILL = 'k . h . s . h . s . s s s s s s';
+
+  // --- 벽 너머 · 「잿빛 들판」 — 라단조, 조금 느리게. 반음 위의 화음(E♭)이 낯설게 끼어듭니다 ---
+  // 짧게 끊어 치는 분산화음이 바닥에 깔리고, 선율은 드문드문. 북은 거의 비웁니다.
+  const Y_DM = 'D4 . F4 . A4 . D5 . A4 . F4 . D4 . F4 .';
+  const Y_EB = 'D#4 . G4 . A#4 . D#5 . A#4 . G4 . D#4 . G4 .';
+  const Y_C  = 'C4 . E4 . G4 . C5 . G4 . E4 . C4 . E4 .';
+  const Y_BB = 'A#3 . D4 . F4 . A#4 . F4 . D4 . A#3 . D4 .';
+  const Y_GM = 'G3 . A#3 . D4 . G4 . D4 . A#3 . G3 . A#3 .';
+  const Y_A  = 'A3 . C#4 . E4 . A4 . E4 . C#4 . A3 . C#4 .';
+  const yBass = n => `${n} - - - - - - - ${n} - - - - - - -`;
+  const Y_BEAT = 'k . . . . . h . k . . . s . . .';
+  const Y_FILL = 'k . . . s . . . k . s . s . s s';
 
   const SONGS = {
     title: { bpm: 80, tracks: [
@@ -3276,6 +3438,22 @@ const Sound = (() => {
       { wave: 'p12', v: 0.035, sus: 0.7, notes: [H_EM, H_EM, H_C, H_D, H_EM, H_EM, H_C, H_B].join(' | ') },
       { wave: 'tri', v: 0.14, sus: 0.8, notes: [X_EM, X_EM, X_C, X_D, X_EM, X_EM, X_C, X_B].join(' | ') },
       { drum: true, v: 0.6, notes: [rep(X_BEAT, 7), X_FILL].join(' | ') }
+    ] },
+
+    beyond: { bpm: 96, tracks: [
+      { wave: 'p25', v: 0.06, sus: 0.8, notes: [
+        'A4 - - - - - - - D5 - - - C5 - A4 -',
+        'A#4 - - - - - - - G4 - - - - - - -',
+        'F4 - - - A4 - - - D5 - - - E5 - F5 -',
+        'E5 - - - - - - - C5 - - - . . . .',
+        'D5 - - - F5 - - - A#4 - - - D5 - - -',
+        'G5 - - - F5 - D5 - A#4 - - - - - . .',
+        'A4 - - - C#5 - - - E5 - - - G5 - - -',
+        'F5 - - - E5 - - - C#5 - - - - - . .'
+      ].join(' | ') },
+      { wave: 'p12', v: 0.03, sus: 0.5, notes: [Y_DM, Y_EB, Y_DM, Y_C, Y_BB, Y_GM, Y_A, Y_A].join(' | ') },
+      { wave: 'tri', v: 0.13, sus: 0.85, notes: ['D2', 'D#2', 'D2', 'C2', 'A#1', 'G1', 'A1', 'A1'].map(yBass).join(' | ') },
+      { drum: true, v: 0.45, notes: [rep(Y_BEAT, 7), Y_FILL].join(' | ') }
     ] }
   };
 
@@ -4323,8 +4501,6 @@ function stoneYield(item) {
 // 그게 이 검이 만드는 선택입니다.
 const DEVOURER_ID = 'observer_0';
 
-// 「관측자」가 나타나는 조건: 보스를 다섯 꺾어 마족 구간까지 넘어선 뒤부터.
-const HIDDEN_UNLOCK_BOSSES = 5;
 
 // ============================================================
 //  격(格)
@@ -5715,15 +5891,38 @@ function startEnergy() { return RULES.START_ENERGY + bankedEnergy(); }
 // 지금 『격을 삼키는 검』을 들고 있는가
 function hasDevourer() { return State.meta.equipped.weapon === DEVOURER_ID; }
 
-// 「관측자」가 모습을 드러냈는가
-function hiddenUnlocked() { return State.meta.bossesBeaten.length >= HIDDEN_UNLOCK_BOSSES; }
+// ---------- 벽 ----------
+// 마왕이 떠받친 벽. 그 너머(7격부터)는 마왕을 처음 꺾기 전까지 화면 어디에도 비치지 않습니다 —
+// 도감 · 기록의 분모 · 내 격의 다음 단계 · 못 얻은 전리품 목록까지. 마왕 다음을 미리 알 수 없게.
+// 마왕이 쓰러지는 순간 벽이 무너지고, 그 회차는 분위기가 바뀝니다 (ui.js 의 atmosphere).
+const WALL_BOSS = 'demonking';
+const WALL_ZONE = ZONES.findIndex(z => z.enemies.some(e => e.id === WALL_BOSS));   // 마계의 왕좌
 
-// 히든이 모습을 드러냈는가.
-//   관측자          — 보스를 다섯 꺾은 뒤
-//   칸을 여는 히든  — 그 지역 보스를 한 번이라도 꺾은 뒤
+// 마왕을 한 번이라도 꺾었나 — 그 너머를 본 적이 있나 (영구).
+// 관리자 도구로 지역을 건너뛴 저장본도 본 것으로 칩니다.
+function wallSeen() {
+  const m = State.meta;
+  return m.bossesBeaten.includes(WALL_BOSS) || m.bestZone > WALL_ZONE + 1;
+}
+
+// 이번 회차에 벽 너머에 있나 — 그 공간은 회차마다 되돌아가니, 마왕을 다시 꺾어야 다시 너머다.
+function beyondWall() {
+  const run = State.run;
+  return !!run && (run.zoneIndex > WALL_ZONE || run.downed.includes(WALL_BOSS));
+}
+
+// 지금까지 알고 있는 지역 수. 벽 너머는 닿은 데까지만 — 그 뒤는 몇 개 남았는지도 모르게.
+function knownZoneCount() {
+  return wallSeen() ? Math.min(ZONES.length, Math.max(WALL_ZONE + 1, State.meta.bestZone)) : WALL_ZONE + 1;
+}
+// 지역 하나에 격 하나라, 아는 격도 같은 수입니다
+function knownRank(n) { return n <= knownZoneCount(); }
+function knownItems() { return ITEMS.filter(i => knownRank(i.rank.n)); }
+
+// 히든이 모습을 드러냈는가 — 그 지역 보스를 한 번이라도 꺾은 뒤.
+// 관측자도 마찬가지로 마왕이 쓰러진 뒤에야 나타납니다 (예전엔 보스 다섯을 꺾으면 마왕보다 먼저 나왔습니다).
 function isRevealed(foe) {
   if (foe.kind !== 'hidden') return true;
-  if (!foe.opens) return hiddenUnlocked();
   const boss = zoneBoss(foe.zoneIndex);
   return !!boss && State.meta.bossesBeaten.includes(boss.id);
 }
@@ -6170,7 +6369,7 @@ function endRun(reason) {
     pushLog('rank', `━━ 여정의 끝 — ${State.meta.runCount}회차에 모든 격을 넘어섰다 ━━`);
   } else {
     const r = rankOf(run.level);
-    pushLog('death', `격이 무너졌다 — ${reason}  (제${r.n}격 ${r.name} · Lv.${fmtLevel(run.level)} · ${run.kills}명을 꺾음)`);
+    pushLog('death', `격이 무너졌다 — ${reason}  (${knownRank(r.n) ? `제${r.n}격 ${r.name}` : '???'} · Lv.${fmtLevel(run.level)} · ${run.kills}명을 꺾음)`);
     pushLog('info', '격은 사라졌지만 빼앗은 것은 남는다.');
   }
   save();
@@ -6414,7 +6613,10 @@ function engage() {
     const after = rankOf(run.level);
     pushLog('level', `Lv.${fmtLevel(run.level)}  (+${fmtLevel(levelsGained)} 레벨)`);
     if (after.n > before.n) {
-      pushLog('rank', `━ 제${after.n}격 · ${after.name}(${after.hanja})에 올랐다 — ${after.desc} ━`);
+      // 아직 모르는 격(마왕 너머)이면 이름을 밝히지 않습니다
+      pushLog('rank', knownRank(after.n)
+        ? `━ 제${after.n}격 · ${after.name}(${after.hanja})에 올랐다 — ${after.desc} ━`
+        : '━ 알 수 없는 격에 올랐다 ━');
     }
   }
   for (const d of drops) {
@@ -6472,10 +6674,8 @@ function engage() {
     if (!State.meta.bossesBeaten.includes(enemy.id)) {
       State.meta.bossesBeaten.push(enemy.id);
       pushLog('rank', `━━ ${enemy.name}의 격을 빼앗았다 — 앞으로 모든 경험치 ×${bossXpMult().toFixed(1)} ━━`);
-      if (hiddenUnlocked() && State.meta.bossesBeaten.length === HIDDEN_UNLOCK_BOSSES) {
-        pushLog('devour', '⟡ 어딘가에서 계속 지켜보던 것이 있다. 마계의 왕좌에서 모습을 드러낼 것이다 ⟡');
-      }
-      // 이 지역에 숨어 있던 것이 이제 모습을 드러냅니다
+      // 이 지역에 숨어 있던 것이 이제 모습을 드러냅니다.
+      // 관측자는 아무 말 없이 나타납니다 — 글로 알리지 않습니다 (벽이 무너지는 연출에 눈만 스칩니다).
       const lurker = zonePosts(enemy.zoneIndex).find(p => p.opens);
       if (lurker && !State.meta.specialOpened.includes(lurker.id)) {
         pushLog('devour', `⟡ ${enemy.zoneName} 어딘가에서 숨어 있던 것이 눈을 떴다 ⟡`);
@@ -6861,8 +7061,72 @@ function render() {
   renderSettings();
   renderOverlay();
   renderTabBadges();
+  atmosphere();        // 배경음이 분위기를 따라가므로 먼저
   syncMusic();
   if (isAdminOpen()) renderAdmin();
+}
+
+// ---------- 벽 너머의 분위기 ----------
+// 마왕이 쓰러지면 그 회차는 벽 너머다 — 잿빛 종이, 보랏빛 잉크, 찢어진 틈으로 별이 보이는 지도, 다른 배경음.
+// 그 공간은 회차마다 되돌아가므로, 다음 회차는 다시 이쪽에서 시작해 마왕을 다시 꺾어야 다시 너머로 간다.
+//
+// 바뀌는 순간은 연출 뒤로 미룹니다 — 마왕과 싸우는 동안, 그리고 결과가 뜬 뒤 벽이 무너지는 연출의
+// 가장 어두운 때까지는 아직 이쪽입니다 (wallPending).
+let wallPending = false;
+function atmosphere() {
+  const titleUp = !$('title').classList.contains('hidden');
+  let on = !titleUp && beyondWall() && !wallPending;
+  if (battle && battle.r.enemy.id === WALL_BOSS) on = false;
+  document.body.classList.toggle('beyond', on);
+  if (typeof Backdrop !== 'undefined') Backdrop.mode(on ? 'beyond' : 'map');
+}
+
+// 벽이 무너지는 순간 — 하얗게 번쩍 · 금이 간다 · 어두워진다 · 눈 하나가 깜빡 · 걷히면 다른 세상.
+// 글로 설명하지 않습니다. 결과 화면의 「나가는 길도 열렸다.」 한 줄과 이 연출이 전부입니다.
+const WALL_FX_DELAY = 600;   // 결과가 뜨고 승리 소리가 한 번 울린 뒤
+const WALL_FX_DARK = 900;    // 연출 시작부터 가장 어두운 때까지 — 여기서 분위기가 바뀝니다
+const WALL_FX_LEN = 2400;
+const wallMoments = new WeakSet();
+function wallMoment(r) {
+  if (!r.win || r.enemy.id !== WALL_BOSS || wallMoments.has(r)) return;
+  wallMoments.add(r);
+  wallPending = true;
+  const turn = () => { wallPending = false; atmosphere(); syncMusic(); };
+  if (calmMotion()) { setTimeout(turn, WALL_FX_DELAY); return; }
+  setTimeout(() => {
+    const fx = document.createElement('div');
+    fx.className = 'wall-break';
+    fx.setAttribute('aria-hidden', 'true');
+    fx.innerHTML = `<div class="wb-flash"></div>${wallCracks()}<div class="wb-dark"></div><div class="wb-eye">👁️</div>`;
+    document.body.appendChild(fx);
+    const stage = document.querySelector('.stage');
+    if (stage) stage.animate(
+      [{ transform: 'none' }, { transform: 'translate(-6px, 3px)' }, { transform: 'translate(5px, -4px)' },
+       { transform: 'translate(-3px, 2px)' }, { transform: 'none' }],
+      { duration: 420, easing: 'steps(5)' });
+    setTimeout(turn, WALL_FX_DARK);
+    setTimeout(() => fx.remove(), WALL_FX_LEN);
+  }, WALL_FX_DELAY);
+}
+
+// 화면 한가운데서 뻗어 나가는 금 — 매번 조금씩 다르게. 각진 도트 선으로.
+function wallCracks() {
+  const W = 400, H = 700, cx = W / 2 + (Math.random() - 0.5) * 60, cy = H * 0.42 + (Math.random() - 0.5) * 60;
+  let paths = '';
+  const n = 9;
+  for (let k = 0; k < n; k++) {
+    let a = (k / n) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
+    let x = cx, y = cy, d = `M${x.toFixed(0)} ${y.toFixed(0)}`;
+    const steps = 5 + Math.floor(Math.random() * 4);
+    for (let s = 0; s < steps; s++) {
+      a += (Math.random() - 0.5) * 0.9;
+      const len = 30 + Math.random() * 45;
+      x += Math.cos(a) * len; y += Math.sin(a) * len;
+      d += ` L${x.toFixed(0)} ${y.toFixed(0)}`;
+    }
+    paths += `<path d="${d}" pathLength="1"/>`;
+  }
+  return `<svg class="wb-cracks" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid slice">${paths}</svg>`;
 }
 
 // ---------- 소리 ----------
@@ -6882,7 +7146,9 @@ function syncMusic() {
   if (!run) return;
   if (run.over && !run.lastResult) { Sound.music(null); return; }
   const foe = facingFoe();
-  Sound.music(foe && (foe.kind === 'boss' || foe.kind === 'hidden') ? 'boss' : 'field');
+  if (foe && (foe.kind === 'boss' || foe.kind === 'hidden')) { Sound.music('boss'); return; }
+  // 벽 너머에서는 여정의 노래가 바뀝니다
+  Sound.music(document.body.classList.contains('beyond') ? 'beyond' : 'field');
 }
 
 // 상대가 나타났을 때 — 정예는 세 음, 보스 · 히든은 무겁게. 기운을 둘렀으면 반짝임을 덧붙입니다
@@ -7020,14 +7286,16 @@ function renderRecords() {
   const m = State.meta;
   const deepest = ZONES[Math.min(m.bestZone, ZONES.length) - 1];
   const bm = bossXpMult();
+  // 분모는 아는 데까지만 — 마왕 너머가 몇이나 남았는지 숫자로도 새지 않게 (game.js 의 knownZoneCount)
+  const known = knownZoneCount();
   $('records').innerHTML = `
     ${record('회차', m.runCount)}
     ${record('최고 레벨', fmtLevel(m.bestLevel))}
     ${record('최심 도달', `${m.bestZone}지역 · ${deepest.name}`)}
-    ${record('빼앗은 격', `${m.bossesBeaten.length}/${ZONES.length}`, bm > 1.01 ? 'boost' : '')}
+    ${record('빼앗은 격', `${m.bossesBeaten.length}/${known}`, bm > 1.01 ? 'boost' : '')}
     ${bm > 1.01 ? record('영구 경험치', `×${bm.toFixed(1)}`, 'boost') : ''}
-    ${record('전리품', `${ownedIds().length}/${ITEMS.length}`)}
-    ${record('도감 완성', `${completedRanks()}/${RANKS.length}`, completedRanks() ? 'boost' : '')}
+    ${record('전리품', `${ownedIds().length}/${knownItems().length}`)}
+    ${record('도감 완성', `${completedRanks()}/${known}`, completedRanks() ? 'boost' : '')}
     ${m.cleared ? record('', '클리어', 'cleared') : ''}
   `;
 }
@@ -7048,12 +7316,15 @@ function renderHero() {
   $('heroLevel').textContent = 'Lv.' + fmtLevel(run.level);
   // 회차는 바로 위 기록 칸에 있습니다 — 여기 또 적으면 한 패널에 같은 숫자가 두 번 찍힙니다
 
-  // 내 격 — 레벨이 올라가면 격이 바뀝니다
+  // 내 격 — 레벨이 올라가면 격이 바뀝니다.
+  // 아직 모르는 격(마왕 너머)은 이름도, 다음 단계가 있다는 것도 보이지 않습니다.
   const rank = rankOf(run.level);
   const next = RANKS.find(r => r.minLevel > run.level);
   $('heroRank').innerHTML = `
-    <span class="rank-chip r${rank.n}">제${rank.n}격 · ${rank.name}</span>
-    ${next ? `<span class="rank-next">제${next.n}격까지 Lv.${fmtLevel(next.minLevel - run.level)}</span>` : ''}
+    ${knownRank(rank.n)
+      ? `<span class="rank-chip r${rank.n}">제${rank.n}격 · ${rank.name}</span>`
+      : `<span class="rank-chip unknown">???</span>`}
+    ${next && knownRank(next.n) ? `<span class="rank-next">제${next.n}격까지 Lv.${fmtLevel(next.minLevel - run.level)}</span>` : ''}
   `;
 
   // 경험치 바
@@ -7240,7 +7511,7 @@ function renderJourney() {
         <span class="rank-chip r${rank.n}">제${rank.n}격 · ${rank.name}<span class="hanja">${rank.hanja}</span></span>
         <span class="zone-name">${zone.name}</span>
         <button class="zone-count" id="rosterBtn" title="이 지역에 있는 것">
-          <span class="zc-k">도감</span>${run.zoneIndex + 1} / ${ZONES.length}
+          <span class="zc-k">도감</span>${run.zoneIndex + 1} / ${knownZoneCount()}
         </button>
       </div>
       <div class="journey-energy ${low ? 'low' : ''}">
@@ -7263,6 +7534,7 @@ function renderJourney() {
   } else if (run.lastResult) {
     html += resultCard(run.lastResult, run);
     resultSounds(run.lastResult, run);
+    wallMoment(run.lastResult);
   } else if (run.over) {
     html += `<p class="stage-msg">여정이 끝났다.</p>`;
   } else if (run.encounter) {
@@ -7325,13 +7597,15 @@ function renderRoster() {
     return;
   }
 
-  // 전체 — 백서른 마리를 격마다 묶어서 보여줍니다.
+  // 전체 — 격마다 묶어서 보여줍니다. 아는 지역까지만 (마왕 너머는 닿은 데까지만).
   // 승률 계산을 줄여 잡습니다(40판). 전부 제대로 돌리면 2만 판이 넘습니다.
-  const seenCount = ENEMIES.filter(f => isSeen(f.id)).length;
+  const zones = ZONES.slice(0, knownZoneCount());
+  const known = ENEMIES.filter(f => f.zoneIndex < zones.length);
+  const seenCount = known.filter(f => isSeen(f.id)).length;
   if (title) title.textContent = '전체 도감';
-  if (sub) sub.textContent = `${seenCount}/${ENEMIES.length} 마주침`;
+  if (sub) sub.textContent = `${seenCount}/${known.length} 마주침`;
 
-  el.innerHTML = ZONES.map((zone, zi) => {
+  el.innerHTML = zones.map((zone, zi) => {
     const rank = RANKS.find(r => r.n === zone.rank);
     const list = zoneRoster(zi);
     const got = list.filter(f => isSeen(f.id)).length;
@@ -7393,6 +7667,9 @@ function revealDrops() {
   for (const t of dropTimers) clearTimeout(t);
   dropTimers = [];
   const r = State.run && State.run.lastResult;
+  // 마왕을 꺾은 결과면, 벽이 무너지는 연출이 걷힌 뒤에 튀어나옵니다 — 어둠 속에서 나와 버리면 못 보니까요
+  const wait = r && r.enemy.id === WALL_BOSS && wallPending
+    ? WALL_FX_DELAY + (calmMotion() ? 0 : WALL_FX_LEN - 300) : 0;
   const veiled = document.querySelectorAll('.res-drop.veiled');
   veiled.forEach((el, i) => {
     dropTimers.push(setTimeout(() => {
@@ -7401,7 +7678,7 @@ function revealDrops() {
       if (r) dropsShown.set(r, Math.max(dropsShown.get(r) || 0, Number(el.dataset.drop) + 1));
       // 새 것은 반짝, 이미 가진 것(분해)은 짤랑
       Sound.play(el.classList.contains('is-new') ? 'drop' : 'stone');
-    }, DROP_DELAY + i * DROP_STEP));
+    }, wait + DROP_DELAY + i * DROP_STEP));
   });
 }
 
@@ -7516,7 +7793,8 @@ function resultSounds(r, run) {
     const rankUp = rankOf(r.levelBefore).n !== rankOf(run.level).n;
     Sound.play(rankUp ? 'rankUp' : 'levelUp', { delay: 0.2 });
   }
-  if (r.openedPath) Sound.play('pathOpen', { delay: 0.9 });
+  // 마왕이면 길이 열리는 소리 대신 벽이 무너지는 소리 (연출과 같은 때 — wallMoment)
+  if (r.openedPath) Sound.play(r.enemy.id === WALL_BOSS ? 'wallBreak' : 'pathOpen', { delay: r.enemy.id === WALL_BOSS ? WALL_FX_DELAY / 1000 : 0.9 });
   if (r.openedSpecial) Sound.play('unlock', { delay: 1.2 });
 }
 
@@ -7801,6 +8079,8 @@ function resultCard(r, run) {
         <span class="res-turns">${r.turns}턴</span>
       </div>
       ${r.openedPath ? `<div class="res-path">길이 열렸다</div>` : ''}
+      ${r.openedPath && foe.id === WALL_BOSS
+        ? `<div class="res-path exit ${wallMoments.has(r) ? '' : 'late'}">나가는 길도 열렸다.</div>` : ''}
       <div class="res-lines">${lines.join('')}</div>
       ${drops}
       <div class="res-actions">
@@ -8354,13 +8634,14 @@ function renderGear() {
 
   // 아래쪽: 고른 부위의 도감
   $('collectionTitle').textContent = SLOT_NAMES[selectedSlot];
-  $('ownedCount').textContent = `${ownedIds().length}/${ITEMS.length}`;
+  $('ownedCount').textContent = `${ownedIds().length}/${knownItems().length}`;
 
   // 목록이 길어지면 새로 얻은 게 저 밑에 묻힙니다.
   // NEW → 착용중 → 나머지는 높은 격부터. 못 얻은 ???? 는 맨 아래로 접어둡니다.
   // 특수장비 칸 넷은 같은 목록(특수장비 전부)을 봅니다.
   const fk = freshKey(selectedSlot);
-  const all = itemsInSlot(special ? 'special' : selectedSlot);
+  // 못 얻은 것 목록도 아는 격까지만 — 마왕 너머의 전리품은 몇 개인지조차 보이지 않습니다
+  const all = itemsInSlot(special ? 'special' : selectedSlot).filter(i => owns(i.id) || knownRank(i.rank.n));
   const have = all.filter(i => owns(i.id));
   const lockedCount = all.length - have.length;
 
@@ -8721,16 +9002,18 @@ function renderOverlay() {
   const card = $('overlay').querySelector('.overlay-card');
 
   card.classList.toggle('victory', !!run.victory);
+  // 마왕 너머를 본 뒤로는, 격이 무너지는 화면 구석에 눈 하나가 아주 옅게 스칩니다 (말은 없습니다)
+  card.classList.toggle('watched', wallSeen() && !run.victory);
   $('overTitle').textContent = run.victory ? '모든 격을 넘어섰다' : '격이 무너졌다';
   // 깼을 때는 제목이 곧 사연이라 아래 줄을 비웁니다 (비면 CSS 가 숨깁니다)
   $('overReason').textContent = run.victory ? '' : run.reason;
 
   $('overStats').innerHTML = `
     <li><span class="k">도달한 지역</span><span class="v">${run.zoneIndex + 1}지역 · ${zone.name}</span></li>
-    <li><span class="k">도달한 격</span><span class="v">제${r.n}격 · ${r.name}</span></li>
+    <li><span class="k">도달한 격</span><span class="v">${knownRank(r.n) ? `제${r.n}격 · ${r.name}` : '???'}</span></li>
     <li><span class="k">최종 레벨</span><span class="v">Lv.${fmtLevel(run.level)}</span></li>
     <li><span class="k">꺾은 화신</span><span class="v">${run.kills}</span></li>
-    <li><span class="k">전리품</span><span class="v">${ownedIds().length}/${ITEMS.length}</span></li>
+    <li><span class="k">전리품</span><span class="v">${ownedIds().length}/${knownItems().length}</span></li>
     <li><span class="k">영구 경험치</span><span class="v">×${bossXpMult().toFixed(1)}</span></li>
   `;
   // 끝을 알리는 소리는 그 회차에 한 번만
@@ -8747,6 +9030,7 @@ let soundedOver = null;
 // ============================================================
 function showTitle() {
   $('title').classList.remove('hidden');
+  atmosphere();
   renderTitle();
   Sound.music('title');
 }

@@ -237,6 +237,15 @@ const Sound = (() => {
       arp(e, o, t, ['G5', 'C6', 'E6', 'G6'], 0.08, { wave: 'p25', d: 0.1, v: 0.09, last: 0.5 });
       tone(e, o, t + 0.24, { wave: 'tri', f: N('C4'), d: 0.6, v: 0.15, sus: 0.8 });
     },
+    wallBreak: (e, o, t) => {                  // 마왕이 쓰러져 벽이 무너짐 — 땅울림 · 금 가는 소리 · 그 너머의 낯선 음 둘
+      tone(e, o, t, { wave: 'sine', f: 95, f2: 28, d: 1.6, v: 0.55 });
+      noise(e, o, t, { type: 'lowpass', f: 500, f2: 70, d: 1.5, v: 0.5 });
+      noise(e, o, t + 0.04, { f: 3400, f2: 500, d: 0.22, v: 0.45 });
+      noise(e, o, t + 0.3, { f: 2600, f2: 400, d: 0.18, v: 0.3 });
+      tone(e, o, t + 0.95, { wave: 'p12', f: N('D#6'), d: 1.1, v: 0.05, sus: 0.7 });
+      tone(e, o, t + 0.95, { wave: 'p12', f: N('A6'), d: 1.1, v: 0.04, sus: 0.7 });
+      tone(e, o, t + 0.95, { wave: 'tri', f: N('D#3'), d: 1.2, v: 0.12, sus: 0.8 });
+    },
     unlock: (e, o, t) => {                     // 특수장비 칸이 열림 — 신비하게
       arp(e, o, t, ['E6', 'B6', 'G#6', 'E7'], 0.07, { wave: 'p12', d: 0.12, v: 0.1, last: 0.5 });
       tone(e, o, t, { wave: 'tri', f: N('E4'), d: 0.8, v: 0.16, sus: 0.7 });
@@ -278,7 +287,7 @@ const Sound = (() => {
   };
 
   // 끝맺는 소리가 나는 동안은 배경음을 잠깐 낮춥니다 (초)
-  const JINGLE = { win: 0.8, lose: 1.2, levelUp: 0.7, rankUp: 1.2, pathOpen: 1.0, unlock: 1.0, zoneMove: 0.8, gameOver: 2.0, victory: 2.6 };
+  const JINGLE = { win: 0.8, lose: 1.2, levelUp: 0.7, rankUp: 1.2, pathOpen: 1.0, wallBreak: 2.4, unlock: 1.0, zoneMove: 0.8, gameOver: 2.0, victory: 2.6 };
   // 전투 중 한 줄마다 나는 소리 — BATTLE_LEVEL 로 따로 낮춥니다
   const BATTLE = new Set(['hit', 'crit', 'harm', 'foeHit', 'foeCrit', 'miss', 'block', 'heal', 'special']);
   const outFor = (e, name) => BATTLE.has(name) ? e.battle : e.sfx;
@@ -326,6 +335,18 @@ const Sound = (() => {
   const H_B  = 'F#4 - - - - - - - D#4 - - - - - - -';
   const X_BEAT = 'k . h k s . h . k k h . s . h h';
   const X_FILL = 'k . h . s . h . s . s s s s s s';
+
+  // --- 벽 너머 · 「잿빛 들판」 — 라단조, 조금 느리게. 반음 위의 화음(E♭)이 낯설게 끼어듭니다 ---
+  // 짧게 끊어 치는 분산화음이 바닥에 깔리고, 선율은 드문드문. 북은 거의 비웁니다.
+  const Y_DM = 'D4 . F4 . A4 . D5 . A4 . F4 . D4 . F4 .';
+  const Y_EB = 'D#4 . G4 . A#4 . D#5 . A#4 . G4 . D#4 . G4 .';
+  const Y_C  = 'C4 . E4 . G4 . C5 . G4 . E4 . C4 . E4 .';
+  const Y_BB = 'A#3 . D4 . F4 . A#4 . F4 . D4 . A#3 . D4 .';
+  const Y_GM = 'G3 . A#3 . D4 . G4 . D4 . A#3 . G3 . A#3 .';
+  const Y_A  = 'A3 . C#4 . E4 . A4 . E4 . C#4 . A3 . C#4 .';
+  const yBass = n => `${n} - - - - - - - ${n} - - - - - - -`;
+  const Y_BEAT = 'k . . . . . h . k . . . s . . .';
+  const Y_FILL = 'k . . . s . . . k . s . s . s s';
 
   const SONGS = {
     title: { bpm: 80, tracks: [
@@ -387,6 +408,22 @@ const Sound = (() => {
       { wave: 'p12', v: 0.035, sus: 0.7, notes: [H_EM, H_EM, H_C, H_D, H_EM, H_EM, H_C, H_B].join(' | ') },
       { wave: 'tri', v: 0.14, sus: 0.8, notes: [X_EM, X_EM, X_C, X_D, X_EM, X_EM, X_C, X_B].join(' | ') },
       { drum: true, v: 0.6, notes: [rep(X_BEAT, 7), X_FILL].join(' | ') }
+    ] },
+
+    beyond: { bpm: 96, tracks: [
+      { wave: 'p25', v: 0.06, sus: 0.8, notes: [
+        'A4 - - - - - - - D5 - - - C5 - A4 -',
+        'A#4 - - - - - - - G4 - - - - - - -',
+        'F4 - - - A4 - - - D5 - - - E5 - F5 -',
+        'E5 - - - - - - - C5 - - - . . . .',
+        'D5 - - - F5 - - - A#4 - - - D5 - - -',
+        'G5 - - - F5 - D5 - A#4 - - - - - . .',
+        'A4 - - - C#5 - - - E5 - - - G5 - - -',
+        'F5 - - - E5 - - - C#5 - - - - - . .'
+      ].join(' | ') },
+      { wave: 'p12', v: 0.03, sus: 0.5, notes: [Y_DM, Y_EB, Y_DM, Y_C, Y_BB, Y_GM, Y_A, Y_A].join(' | ') },
+      { wave: 'tri', v: 0.13, sus: 0.85, notes: ['D2', 'D#2', 'D2', 'C2', 'A#1', 'G1', 'A1', 'A1'].map(yBass).join(' | ') },
+      { drum: true, v: 0.45, notes: [rep(Y_BEAT, 7), Y_FILL].join(' | ') }
     ] }
   };
 

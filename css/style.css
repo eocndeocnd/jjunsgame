@@ -2266,3 +2266,108 @@ body.test-mode::after {
   .records { grid-template-columns: repeat(2, 1fr); }
   .level-badge { font-size: 22px; }
 }
+
+/* ============================================================
+   벽 너머 — 마왕이 쓰러진 회차 (ui.js 의 atmosphere 가 body 에 .beyond 를 붙입니다)
+   같은 창 · 같은 버튼인데 종이가 잿빛으로 식고, 밀랍과 잉크가 보랏빛이 됩니다.
+   맨 뒤 지도도 따로 바뀝니다 (backdrop.js — 더 찢기고, 구멍 너머로 별).
+   그 공간은 회차마다 되돌아가므로, 다음 회차는 다시 이쪽 색에서 시작합니다.
+   ============================================================ */
+body.beyond {
+  --table:     #0b0812;
+  --paper:     #d3cdd9;
+  --paper-dot: #c9c2d1;
+  --paper-hi:  #e2dde7;
+  --paper-lo:  #b8afc3;
+  --frame-in:  #4a3a6b;
+  --frame-out: #0b0812;
+  --brass:     #8f86a8;
+  --wood:      #3b3150;
+  --wood-hi:   #5a4d75;
+  --wood-lo:   #1c1628;
+  --wax:       #5b2a86;
+  --wax-hi:    #7d4aa8;
+  --wax-lo:    #2e1245;
+  --cream:     #ece6f2;
+  --plank: repeating-linear-gradient(90deg,
+             #1e1830 0 22px, #15111f 22px 24px, #1b1529 24px 46px, #120e1b 46px 48px);
+  --line:      #8a7ea0;
+  --line-soft: #b3a9c3;
+  --text:      #1f1830;
+  --text-dim:  #4d4262;
+  --text-faint:#6c6182;
+  --accent:    #5b2a86;
+  --dots: linear-gradient(90deg, var(--line-soft) 50%, transparent 0);
+}
+/* 지도 밑 바탕은 html 에만 — body 에 깔면 맨 뒤의 지도(body::before, z-index −1)를 덮어 버립니다 */
+html:has(body.beyond) { background: #0b0812; }
+
+/* 아직 모르는 격 — 이름 대신 ??? */
+.rank-chip.unknown { --rc: #4f4a44; letter-spacing: 0.2em; }
+
+/* 마왕을 꺾은 결과에만 붙는 한 줄. 벽이 무너지는 연출이 걷힌 뒤에 천천히 */
+.res-path.exit { color: var(--outer); }
+.res-path.exit.late { animation: exit-line 0.8s steps(8) 2.9s both; }
+@keyframes exit-line { from { opacity: 0; } to { opacity: 1; } }
+
+/* ---------- 벽이 무너지는 순간 ----------
+   하얗게 번쩍 → 화면 한가운데서 금이 뻗고 → 어두워지고 → 눈 하나가 깜빡 → 걷히면 다른 세상.
+   길이는 ui.js 의 WALL_FX_DARK(0.9초에 가장 어둡고, 그때 분위기가 바뀜) · WALL_FX_LEN(2.4초)과 맞춥니다. */
+.wall-break { position: fixed; inset: 0; z-index: 95; pointer-events: none; overflow: hidden; }
+.wall-break .wb-flash { position: absolute; inset: 0; background: #fff8e8; opacity: 0; animation: wb-flash 0.45s steps(5) both; }
+@keyframes wb-flash { 0% { opacity: 0.95; } 100% { opacity: 0; } }
+.wall-break .wb-cracks { position: absolute; inset: 0; width: 100%; height: 100%; }
+.wall-break .wb-cracks path {
+  fill: none;
+  stroke: #0b0812;
+  stroke-width: 3;
+  stroke-linecap: square;
+  stroke-linejoin: miter;
+  shape-rendering: crispEdges;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: wb-crack 0.4s steps(8) 0.05s forwards;
+}
+@keyframes wb-crack { to { stroke-dashoffset: 0; } }
+.wall-break .wb-dark { position: absolute; inset: 0; background: #07050c; opacity: 0; animation: wb-dark 2.4s linear both; }
+@keyframes wb-dark {
+  0%, 15% { opacity: 0; }
+  35%     { opacity: 0.96; }
+  62%     { opacity: 0.96; }
+  100%    { opacity: 0; }
+}
+.wall-break .wb-eye {
+  position: absolute;
+  left: 50%;
+  top: 42%;
+  transform: translate(-50%, -50%);
+  font-size: 54px;
+  line-height: 1;
+  opacity: 0;
+  filter: grayscale(1) brightness(1.4);
+  animation: wb-eye 2.4s steps(1) both;
+}
+@keyframes wb-eye {
+  0%   { opacity: 0; }
+  40%  { opacity: 0.8; }
+  47%  { opacity: 0; }
+  52%  { opacity: 0.55; }
+  58%  { opacity: 0; }
+}
+
+/* 마왕 너머를 본 뒤 — 격이 무너지는 화면 구석에 아주 옅은 눈 하나 */
+.overlay-card.watched::after {
+  content: '👁️';
+  position: absolute;
+  right: 12px;
+  bottom: 10px;
+  font-size: 13px;
+  opacity: 0.18;
+  filter: grayscale(1);
+  animation: watch-blink 6s steps(1) infinite;
+}
+@keyframes watch-blink { 0%, 92% { opacity: 0.18; } 93%, 95% { opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .res-path.exit.late, .overlay-card.watched::after { animation: none; }
+}

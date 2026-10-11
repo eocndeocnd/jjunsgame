@@ -23,6 +23,15 @@
     [0x33, 0x22, 0x10]    // 8 타서 검어진 가장자리
   ];
   const RED = [null, [0xa8, 0x50, 0x3a], [0x8f, 0x2e, 0x22]];   // 붉은 길(바랜) · 표시와 나침반 바늘(진한)
+
+  // 벽 너머 — 같은 지도가 잿빛으로 식고, 붉은 잉크는 보랏빛이 됩니다. 종이는 더 찢기고,
+  // 찢겨 나간 구멍 너머로 별이 보입니다 (마왕이 쓰러진 회차 — ui.js 의 atmosphere 가 Backdrop.mode 로 바꿉니다)
+  const ASH = [
+    [0xd6, 0xd0, 0xdc], [0xc6, 0xbf, 0xcf], [0xb4, 0xab, 0xc0], [0x9e, 0x94, 0xad], [0x86, 0x7a, 0x98],
+    [0x6a, 0x5e, 0x7e], [0x4f, 0x44, 0x63], [0x34, 0x2b, 0x45], [0x1d, 0x17, 0x29]
+  ];
+  const VIOLET = [null, [0x7d, 0x4a, 0xa8], [0x5b, 0x2a, 0x86]];
+  const STAR = [[0xe9, 0xe2, 0xff], [0x9d, 0x8f, 0xc9]];
   // 4×4 순서 디더 — 사다리 두 칸 사이를 바둑판 무늬로 섞습니다
   const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
 
@@ -91,15 +100,27 @@
 
   // ---------- 그리기 ----------
   let lastKey = '';
+  let mode = 'map';            // 'map' 이쪽 · 'beyond' 벽 너머
+  const cache = {};            // 한 번 그린 것은 다시 계산하지 않습니다 — 회차마다 오가니까요
+
+  function apply(c) {
+    const root = document.documentElement.style;
+    root.setProperty('--backdrop', c.url);
+    root.setProperty('--bd-size', c.size);
+  }
 
   function draw() {
     const vw = window.innerWidth || 360;
     const vh = window.innerHeight || 640;
     const S = vw < 700 ? 3 : 4;                 // 도트 한 칸의 크기 (px)
     const W = Math.ceil(vw / S), H = Math.ceil(vh / S);
-    const key = `${W}x${H}@${S}`;
+    const key = `${W}x${H}@${S}:${mode}`;
     if (key === lastKey) return;
     lastKey = key;
+    if (cache[key]) { apply(cache[key]); return; }
+    const far = mode === 'beyond';
+    const PAL = far ? ASH : PAPER;
+    const INK = far ? VIOLET : RED;
 
     const N = W * H;
     const tone = new Float32Array(N);           // 사다리 위의 자리 (실수)
@@ -136,10 +157,12 @@
         let biteV = 0, biteH = 0;
         for (const fx of foldX) biteV = Math.max(biteV, 5 * Math.exp(-((x - fx) ** 2) / 6));
         for (const fy of foldY) biteH = Math.max(biteH, 5 * Math.exp(-((y - fy) ** 2) / 6));
-        const rag = 1 + 3.2 * fbm(x * 0.12 + 31, y * 0.12 + 7, 3) + (hash(x, y) - 0.5) * 1.1;
-        const e = Math.min(
+        const rag = (far ? 2.4 : 1) + (far ? 6.5 : 3.2) * fbm(x * 0.12 + 31, y * 0.12 + 7, 3) + (hash(x, y) - 0.5) * 1.1;
+        let e = Math.min(
           Math.min(y, H - 1 - y) - rag - biteV,
           Math.min(x, W - 1 - x) - rag - biteH);
+        // 벽 너머 — 종이 한가운데도 군데군데 찢겨 나갑니다. 구멍 가장자리도 타서 검습니다
+        if (far) e = Math.min(e, (0.66 - fbm(x * 0.05 + 300, y * 0.05 + 300, 3)) * 46);
         if (e < 0) continue;                    // 찢겨 나간 자리 — 밑의 어두운 바탕이 보입니다
         alive[i] = 1;
 
@@ -347,12 +370,17 @@
     for (let y = 0; y < H; y++) {
       for (let x = 0; x < W; x++) {
         const i = y * W + x;
-        if (!alive[i]) continue;                 // 투명 — CSS 바탕색(가장 어두운 갈색)이 비칩니다
         let c;
-        if (red[i]) c = RED[red[i]];
+        if (!alive[i]) {
+          // 투명 — CSS 바탕색(가장 어두운 갈색)이 비칩니다. 벽 너머에서는 그 어둠에 별이 박힙니다
+          if (!far) continue;
+          const h = hash(x * 7 + 1, y * 13 + 5);
+          if (h < 0.986) continue;
+          c = STAR[h > 0.996 ? 0 : 1];
+        } else if (red[i]) c = INK[red[i]];
         else {
           const t = tone[i] + BAYER[(y & 3) * 4 + (x & 3)] / 16 - 0.5;
-          c = PAPER[Math.max(0, Math.min(PAPER.length - 1, Math.round(t)))];
+          c = PAL[Math.max(0, Math.min(PAL.length - 1, Math.round(t)))];
         }
         const o = i * 4;
         px[o] = c[0]; px[o + 1] = c[1]; px[o + 2] = c[2]; px[o + 3] = 255;
@@ -360,9 +388,8 @@
     }
     ctx.putImageData(img, 0, 0);
 
-    const root = document.documentElement.style;
-    root.setProperty('--backdrop', `url("${cv.toDataURL('image/png')}")`);
-    root.setProperty('--bd-size', `${W * S}px ${H * S}px`);
+    cache[key] = { url: `url("${cv.toDataURL('image/png')}")`, size: `${W * S}px ${H * S}px` };
+    apply(cache[key]);
   }
 
   // 브레젠험 — 두 점 사이를 칸 단위로 잇습니다
@@ -386,4 +413,13 @@
     timer = setTimeout(draw, 180);
   });
   try { draw(); } catch (e) { /* 바탕을 못 그려도 게임은 돌아야 합니다 */ }
+
+  // 바꿀 때만 다시 그립니다 (render 마다 불려도 같은 모드면 아무 일도 하지 않습니다)
+  window.Backdrop = {
+    mode(m) {
+      if (m === mode) return;
+      mode = m;
+      try { draw(); } catch (e) { /* 그대로 둡니다 */ }
+    }
+  };
 })();
