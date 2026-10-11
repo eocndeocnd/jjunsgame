@@ -2436,6 +2436,11 @@ body.lv-rolling .je-xp-fill, body.lv-rolling .bar-fill.xp { transition: none; tr
 /* ---------- 떠돌이 상인 ---------- */
 .post.merchant .post-icon { filter: saturate(0.8); }
 .modal-card .shop-body { overflow-y: auto; flex: 1; min-height: 0; padding: 2px; }
+.shop-stones { padding: 10px; border: 2px dashed var(--line); }
+.shop-packs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 8px; }
+.shop-packs .btn { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 7px 4px; font-size: 11px; --bev: 2px; }
+.shop-packs .btn span { font-size: 10px; font-weight: 400; opacity: 0.85; }
+.shop-wares { margin-top: 12px; }
 .inv-item.ware.sold { opacity: 0.55; }
 
 </style>
@@ -3909,6 +3914,9 @@ const RULES = {
   // 떠돌이 상인의 물건 값 = 그 격 일반 화신 한 번 몫의 이만큼 배.
   // 제1격에서 한 회차에 하나쯤 살 수 있는 값입니다 (일반 25번 · 정예 둘 · 보스 하나 ≈ 215골드). 무엇을 팔지는 아직 — 구조만.
   WARE_PRICE: 30,
+  // 떠돌이 상인의 강화석 값 — 그 격 일반 화신 한 번 몫의 골드로, 그 격 일반 전리품 하나를 분해한 강화석의 1/STONE_PRICE 만큼.
+  // 4 면 제1격에서 강화석 1개에 2골드, 제6격에서 8골드쯤. 값은 상인이 서 있는 지역의 격을 따릅니다.
+  STONE_PRICE: 4,
   BOSS_XP_MULT: 1.04      // 지금까지 꺾어본 보스 한 명당 경험치 배수 (영구히 이월)
                           //
                           // 이게 게임 전체 길이를 정하는 손잡이입니다. 시뮬 실측
@@ -5623,6 +5631,11 @@ function goldFor(foe) {
   const r = foe && foe.rank ? foe.rank.n : 1;
   return RULES.GOLD_BASE * Math.pow(RULES.GOLD_GROWTH, r - 1) * KINDS[foe ? foe.kind : 'normal'].gold;
 }
+// 떠돌이 상인에게서 강화석 n 개를 사는 값 (그 지역의 격 기준)
+function stonePriceFor(rank, n) {
+  const per = RULES.GOLD_BASE * Math.pow(RULES.GOLD_GROWTH, rank - 1) / (STONE_BASE * rank) * RULES.STONE_PRICE;
+  return Math.max(1, Math.ceil(per * n));
+}
 // 그 격 일반 화신 한 번 몫을 n 배 한 값 — 상인의 물건 값
 function priceFor(rank, n) { return Math.round(RULES.GOLD_BASE * Math.pow(RULES.GOLD_GROWTH, rank - 1) * n / 10) * 10; }
 
@@ -6670,7 +6683,20 @@ function merchantHere() {
   return !!(run && run.merchant && run.merchant.zone === run.zoneIndex && !run.over);
 }
 
-// 산다. 성공하면 true.
+// 강화석을 산다 — 일반 부위 열세 칸 중 하나. 성공하면 true.
+const STONE_PACKS = [10, 100, 1000];
+function buyStones(slot, n) {
+  if (!merchantHere() || !SLOT_IDS.includes(slot) || !(n > 0)) return false;
+  const price = stonePriceFor(ZONES[State.run.merchant.zone].rank, n);
+  if (num(State.meta.gold) < price) return false;
+  State.meta.gold -= price;
+  State.meta.stones[slot] = stonesOf(slot) + n;
+  pushLog('drop', `떠돌이 상인에게서 ${SLOT_NAMES[slot]} 강화석 ${fmt(n)}개를 샀다 — ${fmt(price)} 골드`);
+  save();
+  return true;
+}
+
+// 물건을 산다 (지금은 파는 물건이 없습니다 — MERCHANT_WARES). 성공하면 true.
 function buyWare(id) {
   const run = State.run;
   const it = getItem(id);
@@ -9220,9 +9246,12 @@ function isSlotModalOpen() {
 }
 
 // ---------- 떠돌이 상인의 상점 ----------
-// 무엇을 팔지는 아직 정하지 않았습니다 (data.js 의 MERCHANT_WARES 가 비어 있음) — 창과 사고파는 구조만.
+// 지금은 강화석만 팝니다 — 부위를 고르고 10 · 100 · 1,000개 묶음으로. 값은 상인이 서 있는 지역의 격을 따릅니다.
+// 물건(MERCHANT_WARES)을 넣으면 아래에 같이 나옵니다 (지금은 비어 있음).
+let shopSlot = null;   // 강화석을 살 부위. 창을 열 때 지금 고른 부위로 맞춥니다
 function openShop() {
   if (!merchantHere()) return;
+  shopSlot = SLOT_IDS.includes(selectedSlot) ? selectedSlot : SLOT_IDS[0];
   $('shopModal').classList.remove('hidden');
   renderShop();
 }
@@ -9262,9 +9291,28 @@ function renderShop() {
           : `<button class="btn" data-buy="${id}" ${can ? '' : 'disabled'}>${fmt(item.price)} 골드</button>`}
       </div>`;
   }).join('');
-  $('shopBody').innerHTML = cards
-    ? `<div class="inventory">${cards}</div>`
-    : `<p class="hint">팔 물건이 없다</p>`;
+  // 강화석 — 부위를 고르면 그 부위의 지금 강화석 · 강화 단계와 다음 강화에 드는 수가 보입니다
+  const rank = ZONES[m.zone].rank;
+  const nx = nextEnhance(shopSlot);
+  const stones = `
+    <div class="shop-stones">
+      <div class="swap-head">강화석</div>
+      <select class="swap-from" id="shopSlot">${SLOT_IDS.map(s =>
+        `<option value="${s}" ${s === shopSlot ? 'selected' : ''}>${SLOT_NAMES[s]} +${enhanceLevel(s)} · 강화석 ${fmt(stonesOf(s))}${nextEnhance(s) ? ` / ${fmt(nextEnhance(s).cost)}` : ' · 최대'}</option>`).join('')}</select>
+      <div class="shop-packs">${STONE_PACKS.map(n => {
+        const price = stonePriceFor(rank, n);
+        return `<button class="btn" data-stones="${n}" ${gold >= price ? '' : 'disabled'}><b>${fmt(n)}개</b><span>${fmt(price)} 골드</span></button>`;
+      }).join('')}</div>
+      ${nx ? '' : '<div class="adm-note">이 부위는 강화가 끝까지 올라 있다</div>'}
+    </div>`;
+  $('shopBody').innerHTML = stones + (cards ? `<div class="inventory shop-wares">${cards}</div>` : '');
+  const sel = $('shopSlot');
+  if (sel) sel.addEventListener('change', () => { shopSlot = sel.value; renderShop(); });
+  for (const b of document.querySelectorAll('[data-stones]')) {
+    b.addEventListener('click', () => {
+      if (buyStones(shopSlot, Number(b.dataset.stones))) { Sound.play('stone'); render(); }
+    });
+  }
   for (const b of document.querySelectorAll('[data-buy]')) {
     b.addEventListener('click', () => {
       if (buyWare(b.dataset.buy)) { Sound.play('equip'); render(); }

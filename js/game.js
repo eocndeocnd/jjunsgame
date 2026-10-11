@@ -996,7 +996,20 @@ function merchantHere() {
   return !!(run && run.merchant && run.merchant.zone === run.zoneIndex && !run.over);
 }
 
-// 산다. 성공하면 true.
+// 강화석을 산다 — 일반 부위 열세 칸 중 하나. 성공하면 true.
+const STONE_PACKS = [10, 100, 1000];
+function buyStones(slot, n) {
+  if (!merchantHere() || !SLOT_IDS.includes(slot) || !(n > 0)) return false;
+  const price = stonePriceFor(ZONES[State.run.merchant.zone].rank, n);
+  if (num(State.meta.gold) < price) return false;
+  State.meta.gold -= price;
+  State.meta.stones[slot] = stonesOf(slot) + n;
+  pushLog('drop', `떠돌이 상인에게서 ${SLOT_NAMES[slot]} 강화석 ${fmt(n)}개를 샀다 — ${fmt(price)} 골드`);
+  save();
+  return true;
+}
+
+// 물건을 산다 (지금은 파는 물건이 없습니다 — MERCHANT_WARES). 성공하면 true.
 function buyWare(id) {
   const run = State.run;
   const it = getItem(id);

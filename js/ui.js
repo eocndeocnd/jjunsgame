@@ -1979,9 +1979,12 @@ function isSlotModalOpen() {
 }
 
 // ---------- 떠돌이 상인의 상점 ----------
-// 무엇을 팔지는 아직 정하지 않았습니다 (data.js 의 MERCHANT_WARES 가 비어 있음) — 창과 사고파는 구조만.
+// 지금은 강화석만 팝니다 — 부위를 고르고 10 · 100 · 1,000개 묶음으로. 값은 상인이 서 있는 지역의 격을 따릅니다.
+// 물건(MERCHANT_WARES)을 넣으면 아래에 같이 나옵니다 (지금은 비어 있음).
+let shopSlot = null;   // 강화석을 살 부위. 창을 열 때 지금 고른 부위로 맞춥니다
 function openShop() {
   if (!merchantHere()) return;
+  shopSlot = SLOT_IDS.includes(selectedSlot) ? selectedSlot : SLOT_IDS[0];
   $('shopModal').classList.remove('hidden');
   renderShop();
 }
@@ -2021,9 +2024,28 @@ function renderShop() {
           : `<button class="btn" data-buy="${id}" ${can ? '' : 'disabled'}>${fmt(item.price)} 골드</button>`}
       </div>`;
   }).join('');
-  $('shopBody').innerHTML = cards
-    ? `<div class="inventory">${cards}</div>`
-    : `<p class="hint">팔 물건이 없다</p>`;
+  // 강화석 — 부위를 고르면 그 부위의 지금 강화석 · 강화 단계와 다음 강화에 드는 수가 보입니다
+  const rank = ZONES[m.zone].rank;
+  const nx = nextEnhance(shopSlot);
+  const stones = `
+    <div class="shop-stones">
+      <div class="swap-head">강화석</div>
+      <select class="swap-from" id="shopSlot">${SLOT_IDS.map(s =>
+        `<option value="${s}" ${s === shopSlot ? 'selected' : ''}>${SLOT_NAMES[s]} +${enhanceLevel(s)} · 강화석 ${fmt(stonesOf(s))}${nextEnhance(s) ? ` / ${fmt(nextEnhance(s).cost)}` : ' · 최대'}</option>`).join('')}</select>
+      <div class="shop-packs">${STONE_PACKS.map(n => {
+        const price = stonePriceFor(rank, n);
+        return `<button class="btn" data-stones="${n}" ${gold >= price ? '' : 'disabled'}><b>${fmt(n)}개</b><span>${fmt(price)} 골드</span></button>`;
+      }).join('')}</div>
+      ${nx ? '' : '<div class="adm-note">이 부위는 강화가 끝까지 올라 있다</div>'}
+    </div>`;
+  $('shopBody').innerHTML = stones + (cards ? `<div class="inventory shop-wares">${cards}</div>` : '');
+  const sel = $('shopSlot');
+  if (sel) sel.addEventListener('change', () => { shopSlot = sel.value; renderShop(); });
+  for (const b of document.querySelectorAll('[data-stones]')) {
+    b.addEventListener('click', () => {
+      if (buyStones(shopSlot, Number(b.dataset.stones))) { Sound.play('stone'); render(); }
+    });
+  }
   for (const b of document.querySelectorAll('[data-buy]')) {
     b.addEventListener('click', () => {
       if (buyWare(b.dataset.buy)) { Sound.play('equip'); render(); }

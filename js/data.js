@@ -52,6 +52,9 @@ const RULES = {
   // 떠돌이 상인의 물건 값 = 그 격 일반 화신 한 번 몫의 이만큼 배.
   // 제1격에서 한 회차에 하나쯤 살 수 있는 값입니다 (일반 25번 · 정예 둘 · 보스 하나 ≈ 215골드). 무엇을 팔지는 아직 — 구조만.
   WARE_PRICE: 30,
+  // 떠돌이 상인의 강화석 값 — 그 격 일반 화신 한 번 몫의 골드로, 그 격 일반 전리품 하나를 분해한 강화석의 1/STONE_PRICE 만큼.
+  // 4 면 제1격에서 강화석 1개에 2골드, 제6격에서 8골드쯤. 값은 상인이 서 있는 지역의 격을 따릅니다.
+  STONE_PRICE: 4,
   BOSS_XP_MULT: 1.04      // 지금까지 꺾어본 보스 한 명당 경험치 배수 (영구히 이월)
                           //
                           // 이게 게임 전체 길이를 정하는 손잡이입니다. 시뮬 실측
@@ -1765,6 +1768,11 @@ for (const it of ITEMS) {
 function goldFor(foe) {
   const r = foe && foe.rank ? foe.rank.n : 1;
   return RULES.GOLD_BASE * Math.pow(RULES.GOLD_GROWTH, r - 1) * KINDS[foe ? foe.kind : 'normal'].gold;
+}
+// 떠돌이 상인에게서 강화석 n 개를 사는 값 (그 지역의 격 기준)
+function stonePriceFor(rank, n) {
+  const per = RULES.GOLD_BASE * Math.pow(RULES.GOLD_GROWTH, rank - 1) / (STONE_BASE * rank) * RULES.STONE_PRICE;
+  return Math.max(1, Math.ceil(per * n));
 }
 // 그 격 일반 화신 한 번 몫을 n 배 한 값 — 상인의 물건 값
 function priceFor(rank, n) { return Math.round(RULES.GOLD_BASE * Math.pow(RULES.GOLD_GROWTH, rank - 1) * n / 10) * 10; }
