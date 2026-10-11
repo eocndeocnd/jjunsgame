@@ -660,11 +660,12 @@ h3::before { content: '◆ '; color: var(--wax); }
 
 /* ---------- 지역 머리 ---------- */
 .zone-card { padding: 10px 12px; }
+/* 격 · 지역 이름 · 도감을 한 줄에 — 이름이 길면 이름만 줄여 「…」 (예전엔 도감 버튼이 혼자 다음 줄로 떨어졌습니다) */
 .zone-head {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: 8px 10px;
-  flex-wrap: wrap;
+  gap: 8px;
 }
 .zone-name {
   font-family: var(--font-t);
@@ -672,11 +673,13 @@ h3::before { content: '◆ '; color: var(--wax); }
   font-weight: 400;
   color: var(--text);
   letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 /* 「1 / 11」 은 버튼입니다 — 누르면 이 지역에 누가 있는지 뜹니다.
    예전엔 여정 맨 아래까지 스크롤해야 볼 수 있었습니다. */
 .zone-count {
-  margin-left: auto;
   font-size: 11px;
   color: var(--text-dim);
   letter-spacing: 0.06em;
@@ -733,12 +736,12 @@ h3::before { content: '◆ '; color: var(--wax); }
   .journey-energy.low .je-v, .alloc-pip.on { animation: none; }
 }
 
-/* 여정 한복판의 차림 바꾸기 — 상대를 보고 그 자리에서 갈아입습니다 */
+/* 여정 한복판의 차림 바꾸기 — 상대를 보고 그 자리에서 갈아입습니다.
+   세트 셋 + 스탯 분배를 한 줄에 넷으로 (예전엔 폰에서 두 줄로 흩어졌습니다) */
 .journey-sets {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
   padding-top: 10px;
   background: var(--dots) left top / 4px 2px repeat-x;
 }
@@ -749,13 +752,18 @@ h3::before { content: '◆ '; color: var(--wax); }
   margin-right: 2px;
 }
 .js-set {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+  line-height: 1.3;
   font: inherit;
   font-size: 11px;
   color: var(--text-dim);
   background: var(--paper-hi);
   border: 2px solid var(--line);
   box-shadow: var(--lift);
-  padding: 3px 9px;
+  padding: 4px 2px;
   cursor: pointer;
 }
 .js-set:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
@@ -769,7 +777,8 @@ h3::before { content: '◆ '; color: var(--wax); }
 }
 
 /* 차림 줄 끝의 「스탯 분배」 — 안 찍은 포인트가 있으면 붉은 밀랍으로 깨어나고 점이 깜빡입니다 */
-.js-set.js-alloc { margin-left: auto; }
+.js-set b { font-weight: 700; white-space: nowrap; }
+.js-set span { font-size: 10px; opacity: 0.8; white-space: nowrap; }
 .js-set.js-alloc.ready { color: var(--cream); background: var(--wax); border-color: var(--wax-lo); }
 
 /* ---------- 무대 ---------- */
@@ -2492,6 +2501,12 @@ body.lv-rolling .je-xp-fill, body.lv-rolling .bar-fill.xp { transition: none; tr
 }
 .av-power-desc { font-size: 11px; font-weight: 700; color: #9a6a10; margin-top: 4px; }
 .bt-line.b-power { color: #b07a10; font-weight: 700; }
+
+/* 폰 — 지역 머리의 격 꼬리표에서 한자를 빼 이름 자리를 넓힙니다 */
+@media (max-width: 860px) {
+  .zone-head .rank-chip .hanja { display: none; }
+  .zone-name { font-size: 15px; }
+}
 
 </style>
 </head>
@@ -8672,8 +8687,10 @@ function fxMs() { return Math.max(220, Math.min(480, ((battle && battle.step) ||
 
 // 그림 이펙트 (fx.js) — 내 공격은 상대 초상 가운데, 상대 공격은 내 초상 위.
 // 기기에서 「움직임 줄이기」를 켰으면 띄우지 않습니다.
+// 그림 이펙트는 기기의 「움직임 줄이기」가 켜져 있어도 보여줍니다 — 맞고 때리는 걸 알아보는 핵심이라서요.
+// (안드로이드의 「애니메이션 삭제」 · 절전 모드가 이걸 켜서 폰에서만 이펙트가 사라졌습니다.) 흔들림 · 튀어나감은 그대로 뺍니다.
 function fxSprite(sheet, anim, el, scale) {
-  if (calmMotion() || typeof FX === 'undefined') return;
+  if (typeof FX === 'undefined') return;
   FX.play(sheet, anim, el, { ms: fxMs(), scale });
 }
 
@@ -9022,11 +9039,12 @@ function journeySets() {
       ${Array.from({ length: SET_COUNT }, (_, n) => {
         const on = isSetActive(n);
         const filled = setFilled(n);
+        // 두 줄 — 위는 이름, 아래는 상태. 한 줄에 넷(세트 셋 + 스탯 분배)이 폰에서도 들어가게
         return `<button class="js-set ${on ? 'on' : ''}" data-jset="${n}" ${on ? 'disabled' : ''}>
-                  세트 ${n + 1}${on ? ' · 입는 중' : (filled ? ` · ${filled}부위` : ' · 빔')}
+                  <b>세트 ${n + 1}</b><span>${on ? '입는 중' : (filled ? `${filled}부위` : '빔')}</span>
                 </button>`;
       }).join('')}
-      <button class="js-set js-alloc ${State.run.unspent > 0 ? 'ready' : ''}" id="jAllocBtn">스탯 분배${State.run.unspent > 0 ? '<span class="alloc-pip on"></span>' : ''}</button>
+      <button class="js-set js-alloc ${State.run.unspent > 0 ? 'ready' : ''}" id="jAllocBtn"><b>스탯 분배</b><span>${State.run.unspent > 0 ? `${fmt(State.run.unspent)}점` : '—'}</span></button>
     </div>`;
 }
 

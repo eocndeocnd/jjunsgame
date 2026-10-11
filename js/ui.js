@@ -1079,8 +1079,10 @@ function fxMs() { return Math.max(220, Math.min(480, ((battle && battle.step) ||
 
 // 그림 이펙트 (fx.js) — 내 공격은 상대 초상 가운데, 상대 공격은 내 초상 위.
 // 기기에서 「움직임 줄이기」를 켰으면 띄우지 않습니다.
+// 그림 이펙트는 기기의 「움직임 줄이기」가 켜져 있어도 보여줍니다 — 맞고 때리는 걸 알아보는 핵심이라서요.
+// (안드로이드의 「애니메이션 삭제」 · 절전 모드가 이걸 켜서 폰에서만 이펙트가 사라졌습니다.) 흔들림 · 튀어나감은 그대로 뺍니다.
 function fxSprite(sheet, anim, el, scale) {
-  if (calmMotion() || typeof FX === 'undefined') return;
+  if (typeof FX === 'undefined') return;
   FX.play(sheet, anim, el, { ms: fxMs(), scale });
 }
 
@@ -1429,11 +1431,12 @@ function journeySets() {
       ${Array.from({ length: SET_COUNT }, (_, n) => {
         const on = isSetActive(n);
         const filled = setFilled(n);
+        // 두 줄 — 위는 이름, 아래는 상태. 한 줄에 넷(세트 셋 + 스탯 분배)이 폰에서도 들어가게
         return `<button class="js-set ${on ? 'on' : ''}" data-jset="${n}" ${on ? 'disabled' : ''}>
-                  세트 ${n + 1}${on ? ' · 입는 중' : (filled ? ` · ${filled}부위` : ' · 빔')}
+                  <b>세트 ${n + 1}</b><span>${on ? '입는 중' : (filled ? `${filled}부위` : '빔')}</span>
                 </button>`;
       }).join('')}
-      <button class="js-set js-alloc ${State.run.unspent > 0 ? 'ready' : ''}" id="jAllocBtn">스탯 분배${State.run.unspent > 0 ? '<span class="alloc-pip on"></span>' : ''}</button>
+      <button class="js-set js-alloc ${State.run.unspent > 0 ? 'ready' : ''}" id="jAllocBtn"><b>스탯 분배</b><span>${State.run.unspent > 0 ? `${fmt(State.run.unspent)}점` : '—'}</span></button>
     </div>`;
 }
 
