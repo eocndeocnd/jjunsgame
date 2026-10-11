@@ -752,6 +752,10 @@ h3::before { content: '◆ '; color: var(--wax); }
   cursor: default;
 }
 
+/* 차림 줄 끝의 「스탯 분배」 — 안 찍은 포인트가 있으면 붉은 밀랍으로 깨어나고 점이 깜빡입니다 */
+.js-set.js-alloc { margin-left: auto; }
+.js-set.js-alloc.ready { color: var(--cream); background: var(--wax); border-color: var(--wax-lo); }
+
 /* ---------- 무대 ---------- */
 .stage { padding: 14px; }
 /* 정예 · 보스 · 히든 앞에서는 창 테두리가 그 색으로 바뀝니다 (ui.js 의 renderJourney) */
@@ -2377,12 +2381,13 @@ html:has(body.beyond) { background: #0b0812; }
    폰에서 「나」 탭을 안 열어도 경험치가 차오르는 게 보입니다. */
 .je-xp { height: 4px; background: var(--paper-lo); box-shadow: 0 0 0 1px var(--line-soft); }
 .je-xp-fill { height: 100%; background: repeating-linear-gradient(135deg, #2b74ad 0 3px, #1d5f8f 3px 6px); transition: width 0.25s ease; }
-/* 결과가 뜬 뒤 숫자가 굴러 올라가는 동안은 매 프레임 직접 그리므로 전환을 끕니다 */
-body.lv-rolling .je-xp-fill, body.lv-rolling .bar-fill.xp { transition: none; }
+/* 결과가 뜬 뒤 숫자가 굴러 올라가는 동안은 매 프레임 직접 그리므로 전환을 끕니다.
+   그동안 막대는 폭 대신 transform 으로 늘립니다 (ui.js 의 paintLevel) — 왼쪽을 축으로 */
+body.lv-rolling .je-xp-fill, body.lv-rolling .bar-fill.xp { transition: none; transform-origin: left center; will-change: transform; }
 
 /* 다 올라갔을 때 — 레벨 숫자가 한 번 튀고, 여정 창 위로 「레벨 업!」이 떠올랐다 사라집니다 */
 .journey-energy { position: relative; }
-.lv-pop { animation: lv-pop 0.6s steps(6); }
+.lv-pop { animation: lv-pop 0.55s ease-out; }
 @keyframes lv-pop {
   0%   { transform: scale(1);    color: var(--accent); }
   30%  { transform: scale(1.25); color: #e09a1a; text-shadow: 0 0 6px rgba(240, 180, 40, 0.8); }
@@ -2399,7 +2404,7 @@ body.lv-rolling .je-xp-fill, body.lv-rolling .bar-fill.xp { transition: none; }
   text-shadow: 2px 2px 0 var(--frame-out);
   pointer-events: none;
   white-space: nowrap;
-  animation: lv-up-pop 1.5s steps(15) both;
+  animation: lv-up-pop 1.5s ease-out both;
 }
 @keyframes lv-up-pop {
   0%   { opacity: 0; transform: translateY(8px) scale(0.8); }

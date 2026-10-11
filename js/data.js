@@ -1540,6 +1540,10 @@ const SPECIAL_DROPS = {
 // 특수장비에 자리를 내준 전리품. 저장본에 남아 있으면 그 부위의 강화석으로 바꿔 드립니다.
 const RETIRED_ITEMS = {};
 
+// 특수장비가 떨어지는 가장 낮은 격. 그 아래(1~3격)의 화신은 특수장비를 남기지 않습니다 —
+// 3격의 숨은 것(카벙클)은 특수장비 칸을 열고 떠돌이 상인을 불러올 뿐입니다.
+const SPECIAL_MIN_RANK = 4;
+
 // ============================================================
 //  세트 효과 · 도감 보상
 // ============================================================
@@ -1659,8 +1663,17 @@ ZONES.forEach((zone, zi) => {
     // [부위, 이름] 뒤에 숫자를 붙이면 그 전리품만 성능 배수를 따로 줍니다.
     // 세 번째가 'none' 이면 성격 없이 맨 스탯만 (격을 삼키는 검처럼 특별한 것).
     // 부위가 'special' 이면 특수장비 — 세 번째에 { gem } 또는 { relic } 이 옵니다.
-    const sp = SPECIAL_DROPS[e.id];
+    // 특수장비는 4격부터만 떨어집니다 (SPECIAL_MIN_RANK). 그 아래 격에 붙어 있던 특수장비는 빼고,
+    // 이미 가진 저장본은 특수장비 강화석으로 돌려받습니다 (RETIRED_ITEMS).
+    const low = rank.n < SPECIAL_MIN_RANK;
+    const sp = low ? null : SPECIAL_DROPS[e.id];
     let list = e.d.concat(EXTRA_DROPS[e.id] || []);
+    if (low && SPECIAL_DROPS[e.id]) {
+      RETIRED_ITEMS[`${e.id}_${list.length}`] = { slot: 'special', grade: kind, rank, name: SPECIAL_DROPS[e.id].item[1] };
+    }
+    if (low) list.forEach(([slot, name], i) => {
+      if (slot === 'special') RETIRED_ITEMS[`${e.id}_${i}`] = { slot: 'special', grade: kind, rank, name };
+    });
     let retired = -1;
     if (sp) {
       retired = list.findIndex(x => x[0] === sp.replace);
@@ -1669,7 +1682,8 @@ ZONES.forEach((zone, zi) => {
       }
       list = list.concat([sp.item]);   // 번호는 맨 뒤에 새로 받습니다 — 빠진 것의 번호를 물려받지 않게
     }
-    const cands = list.map((spec, idx) => ({ spec, idx })).filter(c => c.idx !== retired);
+    const cands = list.map((spec, idx) => ({ spec, idx }))
+      .filter(c => c.idx !== retired && !(low && c.spec[0] === 'special'));
     const drops = trimDrops(cands, e.id, e.d.length);
     drops.forEach(({ spec: [slot, name, opt], idx: i }) => {
       const noArch = opt === 'none';

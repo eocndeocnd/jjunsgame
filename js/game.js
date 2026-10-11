@@ -1262,6 +1262,8 @@ function rollDrops(enemyId, auraMult = 1) {
   const result = [];
 
   for (const it of dropTable(enemyId)) {
+    // 특수장비는 3지역의 숨은 것(카벙클)을 처음 꺾기 전엔 떨어지지 않습니다
+    if (it.slot === 'special' && !merchantUnlocked()) continue;
     if (Math.random() >= chance) continue;               // 이번엔 안 나왔다
 
     if (owns(it.id)) {

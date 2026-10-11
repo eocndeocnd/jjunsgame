@@ -96,11 +96,22 @@ function levelWait(r) {
   return r.enemy.id === WALL_BOSS && r.openedPath && !wallMoments.has(r) && !calmMotion()
     ? WALL_FX_DELAY + WALL_FX_LEN - 300 : 150;
 }
-function paintLevel(lv, pct) {
+// 막대는 굴러가는 동안 폭(width) 대신 transform 으로 늘립니다 — 폭을 바꾸면 매 프레임 화면 배치를 다시 잡아서 버벅입니다
+let lastLvText = '';
+function paintLevel(lv, pct, done) {
   const txt = fmtLevel(lv);
-  const a = $('heroLevel'); if (a) a.textContent = 'Lv.' + txt;
-  const b = $('jeLv'); if (b) b.textContent = txt;
-  for (const id of ['xpFill', 'jeXpFill']) { const el = $(id); if (el) el.style.width = Math.max(0, Math.min(100, pct)) + '%'; }
+  if (txt !== lastLvText) {        // 숫자는 바뀔 때만 씁니다
+    lastLvText = txt;
+    const a = $('heroLevel'); if (a) a.textContent = 'Lv.' + txt;
+    const b = $('jeLv'); if (b) b.textContent = txt;
+  }
+  const p = Math.max(0, Math.min(100, pct));
+  for (const id of ['xpFill', 'jeXpFill']) {
+    const el = $(id);
+    if (!el) continue;
+    if (done) { el.style.transform = ''; el.style.width = p + '%'; }
+    else { el.style.width = '100%'; el.style.transform = `scaleX(${p / 100})`; }
+  }
 }
 function levelMoment(r) {
   if (!r.win || !r.pre || levelMoments.has(r)) return;
@@ -111,26 +122,28 @@ function levelMoment(r) {
   const fromPct = r.pre.xp / xpToNext(from) * 100;
   const toPct = run.xp / xpToNext(to) * 100;
   if (calmMotion()) { if (gained > 0) levelPop(); return; }
-  paintLevel(from, fromPct);
+  lastLvText = '';
   document.body.classList.add('lv-rolling');   // 막대의 짧은 전환 효과를 끕니다 — 매 프레임 직접 그리니까
+  paintLevel(from, fromPct);
   setTimeout(() => {
     const dur = gained > 0 ? LEVEL_ANIM : XP_ANIM;
-    const loops = Math.max(1, Math.min(gained, 3));
     const t0 = performance.now();
+    const ease = t => t * t * (3 - 2 * t);     // 천천히 시작해 천천히 끝나는 곡선 — 숫자가 고르게 넘어갑니다
     const frame = now => {
       const t = Math.min(1, (now - t0) / dur);
-      const e = 1 - Math.pow(1 - t, 3);
+      const e = ease(t);
+      if (t >= 1) {
+        paintLevel(to, toPct, true);
+        document.body.classList.remove('lv-rolling');
+        if (gained > 0) levelPop();
+        return;
+      }
       if (gained > 0) {
-        let pct;
-        if (t < 0.7) {                       // 처음 70% — 오른 만큼(최대 세 바퀴) 막대가 찼다 비었다
-          const u = (t / 0.7) * loops;
-          pct = u < 1 ? fromPct + (100 - fromPct) * u : (u % 1) * 100;
-        } else pct = toPct * (t - 0.7) / 0.3;   // 남은 30% — 새 레벨에서 지금 자리까지
-        paintLevel(t >= 1 ? to : from + Math.floor(gained * e), t >= 1 ? toPct : pct);
+        // 막대는 한 바퀴만 — 앞 55% 동안 끝까지 차고, 뒤 45% 동안 새 레벨에서 지금 자리까지
+        const pct = e < 0.55 ? fromPct + (100 - fromPct) * (e / 0.55) : toPct * ((e - 0.55) / 0.45);
+        paintLevel(from + Math.floor(gained * e), pct);
       } else paintLevel(to, fromPct + (toPct - fromPct) * e);
-      if (t < 1) { requestAnimationFrame(frame); return; }
-      document.body.classList.remove('lv-rolling');
-      if (gained > 0) levelPop();
+      requestAnimationFrame(frame);
     };
     requestAnimationFrame(frame);
   }, wait);
@@ -1341,7 +1354,6 @@ function winFeelClass(c) { return winFeelOf(c).cls; }
 function journeySets() {
   return `
     <div class="journey-sets">
-      <span class="js-k">차림</span>
       ${Array.from({ length: SET_COUNT }, (_, n) => {
         const on = isSetActive(n);
         const filled = setFilled(n);
@@ -1349,6 +1361,7 @@ function journeySets() {
                   세트 ${n + 1}${on ? ' · 입는 중' : (filled ? ` · ${filled}부위` : ' · 빔')}
                 </button>`;
       }).join('')}
+      <button class="js-set js-alloc ${State.run.unspent > 0 ? 'ready' : ''}" id="jAllocBtn">스탯 분배${State.run.unspent > 0 ? '<span class="alloc-pip on"></span>' : ''}</button>
     </div>`;
 }
 
@@ -1358,6 +1371,7 @@ function wireJourney() {
     b.addEventListener('click', () => { switchSet(Number(b.dataset.jset)); Sound.play('equip'); render(); });
   }
   on('rosterBtn',    openRosterModal);
+  on('jAllocBtn',    openAllocHere);   // 여정 화면 그대로 분배 창만 띄웁니다
   on('shopBtn',      () => { Sound.play('encounter'); openShop(); });
   const rab = $('rosterAllBtn');
   if (rab && !rab.dataset.wired) {
@@ -2051,6 +2065,12 @@ function isEnhModalOpen() {
 // 레벨 바로 옆 버튼으로 띄웁니다.
 function openAllocModal() {
   showTab('hero');
+  render();
+  const m = $('allocModal');
+  if (m) m.classList.remove('hidden');
+}
+// 여정의 「스탯 분배」 — 탭을 「나」로 옮기지 않고 창만 띄웁니다
+function openAllocHere() {
   render();
   const m = $('allocModal');
   if (m) m.classList.remove('hidden');
