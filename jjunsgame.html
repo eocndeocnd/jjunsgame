@@ -3914,9 +3914,8 @@ const RULES = {
   // 떠돌이 상인의 물건 값 = 그 격 일반 화신 한 번 몫의 이만큼 배.
   // 제1격에서 한 회차에 하나쯤 살 수 있는 값입니다 (일반 25번 · 정예 둘 · 보스 하나 ≈ 215골드). 무엇을 팔지는 아직 — 구조만.
   WARE_PRICE: 30,
-  // 떠돌이 상인의 강화석 값 — 그 격 일반 화신 한 번 몫의 골드로, 그 격 일반 전리품 하나를 분해한 강화석의 1/STONE_PRICE 만큼.
-  // 4 면 제1격에서 강화석 1개에 2골드, 제6격에서 8골드쯤. 값은 상인이 서 있는 지역의 격을 따릅니다.
-  STONE_PRICE: 4,
+  // 떠돌이 상인의 강화석 값 — 강화석 1개에 몇 골드. 1~6지역 어디에 나타나든 같은 상인이라 값도 같습니다.
+  STONE_PRICE: 2,
   BOSS_XP_MULT: 1.04      // 지금까지 꺾어본 보스 한 명당 경험치 배수 (영구히 이월)
                           //
                           // 이게 게임 전체 길이를 정하는 손잡이입니다. 시뮬 실측
@@ -5631,11 +5630,8 @@ function goldFor(foe) {
   const r = foe && foe.rank ? foe.rank.n : 1;
   return RULES.GOLD_BASE * Math.pow(RULES.GOLD_GROWTH, r - 1) * KINDS[foe ? foe.kind : 'normal'].gold;
 }
-// 떠돌이 상인에게서 강화석 n 개를 사는 값 (그 지역의 격 기준)
-function stonePriceFor(rank, n) {
-  const per = RULES.GOLD_BASE * Math.pow(RULES.GOLD_GROWTH, rank - 1) / (STONE_BASE * rank) * RULES.STONE_PRICE;
-  return Math.max(1, Math.ceil(per * n));
-}
+// 떠돌이 상인에게서 강화석 n 개를 사는 값 — 어느 지역에서든 같습니다
+function stonePriceFor(n) { return Math.max(1, Math.ceil(RULES.STONE_PRICE * n)); }
 // 그 격 일반 화신 한 번 몫을 n 배 한 값 — 상인의 물건 값
 function priceFor(rank, n) { return Math.round(RULES.GOLD_BASE * Math.pow(RULES.GOLD_GROWTH, rank - 1) * n / 10) * 10; }
 
@@ -6687,7 +6683,7 @@ function merchantHere() {
 const STONE_PACKS = [10, 100, 1000];
 function buyStones(slot, n) {
   if (!merchantHere() || !SLOT_IDS.includes(slot) || !(n > 0)) return false;
-  const price = stonePriceFor(ZONES[State.run.merchant.zone].rank, n);
+  const price = stonePriceFor(n);
   if (num(State.meta.gold) < price) return false;
   State.meta.gold -= price;
   State.meta.stones[slot] = stonesOf(slot) + n;
@@ -8588,9 +8584,10 @@ function crossroads(boss, hero, run) {
 const WIN_FEELS = [
   { from: 0.0, text: '불가능할 것 같다',     cls: 'feel-0' },   //  0~20%
   { from: 0.2, text: '이기기 힘들 것 같다',  cls: 'feel-1' },   // 20~40%
-  { from: 0.4, text: '해볼 만하다',          cls: 'feel-2' },   // 40~60%
-  { from: 0.6, text: '이길 수 있을 것 같다', cls: 'feel-3' },   // 60~80%
-  { from: 0.8, text: '어렵지 않을 것 같다',  cls: 'feel-4' },   // 80~90%
+  // 40~80% 는 예전 문장(해볼 만하다 · 이길 수 있을 것 같다)이 확률에 비해 너무 쉬워 보여 한 칸씩 내렸습니다
+  { from: 0.4, text: '쉽지 않을 것 같다',    cls: 'feel-2' },   // 40~60%
+  { from: 0.6, text: '해볼 만하다',          cls: 'feel-3' },   // 60~80%
+  { from: 0.8, text: '이길 수 있을 것 같다', cls: 'feel-4' },   // 80~90%
   { from: 0.9, text: '잡기 쉬울 것 같다',    cls: 'feel-5' }    // 90~100%
 ];
 
@@ -9246,7 +9243,7 @@ function isSlotModalOpen() {
 }
 
 // ---------- 떠돌이 상인의 상점 ----------
-// 지금은 강화석만 팝니다 — 부위를 고르고 10 · 100 · 1,000개 묶음으로. 값은 상인이 서 있는 지역의 격을 따릅니다.
+// 지금은 강화석만 팝니다 — 부위를 고르고 10 · 100 · 1,000개 묶음으로. 어느 지역에서든 같은 상인, 같은 값입니다.
 // 물건(MERCHANT_WARES)을 넣으면 아래에 같이 나옵니다 (지금은 비어 있음).
 let shopSlot = null;   // 강화석을 살 부위. 창을 열 때 지금 고른 부위로 맞춥니다
 function openShop() {
@@ -9292,7 +9289,6 @@ function renderShop() {
       </div>`;
   }).join('');
   // 강화석 — 부위를 고르면 그 부위의 지금 강화석 · 강화 단계와 다음 강화에 드는 수가 보입니다
-  const rank = ZONES[m.zone].rank;
   const nx = nextEnhance(shopSlot);
   const stones = `
     <div class="shop-stones">
@@ -9300,7 +9296,7 @@ function renderShop() {
       <select class="swap-from" id="shopSlot">${SLOT_IDS.map(s =>
         `<option value="${s}" ${s === shopSlot ? 'selected' : ''}>${SLOT_NAMES[s]} +${enhanceLevel(s)} · 강화석 ${fmt(stonesOf(s))}${nextEnhance(s) ? ` / ${fmt(nextEnhance(s).cost)}` : ' · 최대'}</option>`).join('')}</select>
       <div class="shop-packs">${STONE_PACKS.map(n => {
-        const price = stonePriceFor(rank, n);
+        const price = stonePriceFor(n);
         return `<button class="btn" data-stones="${n}" ${gold >= price ? '' : 'disabled'}><b>${fmt(n)}개</b><span>${fmt(price)} 골드</span></button>`;
       }).join('')}</div>
       ${nx ? '' : '<div class="adm-note">이 부위는 강화가 끝까지 올라 있다</div>'}

@@ -1321,9 +1321,10 @@ function crossroads(boss, hero, run) {
 const WIN_FEELS = [
   { from: 0.0, text: '불가능할 것 같다',     cls: 'feel-0' },   //  0~20%
   { from: 0.2, text: '이기기 힘들 것 같다',  cls: 'feel-1' },   // 20~40%
-  { from: 0.4, text: '해볼 만하다',          cls: 'feel-2' },   // 40~60%
-  { from: 0.6, text: '이길 수 있을 것 같다', cls: 'feel-3' },   // 60~80%
-  { from: 0.8, text: '어렵지 않을 것 같다',  cls: 'feel-4' },   // 80~90%
+  // 40~80% 는 예전 문장(해볼 만하다 · 이길 수 있을 것 같다)이 확률에 비해 너무 쉬워 보여 한 칸씩 내렸습니다
+  { from: 0.4, text: '쉽지 않을 것 같다',    cls: 'feel-2' },   // 40~60%
+  { from: 0.6, text: '해볼 만하다',          cls: 'feel-3' },   // 60~80%
+  { from: 0.8, text: '이길 수 있을 것 같다', cls: 'feel-4' },   // 80~90%
   { from: 0.9, text: '잡기 쉬울 것 같다',    cls: 'feel-5' }    // 90~100%
 ];
 
@@ -1979,7 +1980,7 @@ function isSlotModalOpen() {
 }
 
 // ---------- 떠돌이 상인의 상점 ----------
-// 지금은 강화석만 팝니다 — 부위를 고르고 10 · 100 · 1,000개 묶음으로. 값은 상인이 서 있는 지역의 격을 따릅니다.
+// 지금은 강화석만 팝니다 — 부위를 고르고 10 · 100 · 1,000개 묶음으로. 어느 지역에서든 같은 상인, 같은 값입니다.
 // 물건(MERCHANT_WARES)을 넣으면 아래에 같이 나옵니다 (지금은 비어 있음).
 let shopSlot = null;   // 강화석을 살 부위. 창을 열 때 지금 고른 부위로 맞춥니다
 function openShop() {
@@ -2025,7 +2026,6 @@ function renderShop() {
       </div>`;
   }).join('');
   // 강화석 — 부위를 고르면 그 부위의 지금 강화석 · 강화 단계와 다음 강화에 드는 수가 보입니다
-  const rank = ZONES[m.zone].rank;
   const nx = nextEnhance(shopSlot);
   const stones = `
     <div class="shop-stones">
@@ -2033,7 +2033,7 @@ function renderShop() {
       <select class="swap-from" id="shopSlot">${SLOT_IDS.map(s =>
         `<option value="${s}" ${s === shopSlot ? 'selected' : ''}>${SLOT_NAMES[s]} +${enhanceLevel(s)} · 강화석 ${fmt(stonesOf(s))}${nextEnhance(s) ? ` / ${fmt(nextEnhance(s).cost)}` : ' · 최대'}</option>`).join('')}</select>
       <div class="shop-packs">${STONE_PACKS.map(n => {
-        const price = stonePriceFor(rank, n);
+        const price = stonePriceFor(n);
         return `<button class="btn" data-stones="${n}" ${gold >= price ? '' : 'disabled'}><b>${fmt(n)}개</b><span>${fmt(price)} 골드</span></button>`;
       }).join('')}</div>
       ${nx ? '' : '<div class="adm-note">이 부위는 강화가 끝까지 올라 있다</div>'}

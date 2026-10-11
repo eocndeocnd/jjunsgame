@@ -1000,7 +1000,7 @@ function merchantHere() {
 const STONE_PACKS = [10, 100, 1000];
 function buyStones(slot, n) {
   if (!merchantHere() || !SLOT_IDS.includes(slot) || !(n > 0)) return false;
-  const price = stonePriceFor(ZONES[State.run.merchant.zone].rank, n);
+  const price = stonePriceFor(n);
   if (num(State.meta.gold) < price) return false;
   State.meta.gold -= price;
   State.meta.stones[slot] = stonesOf(slot) + n;
