@@ -654,6 +654,7 @@ function heroStats() {
   for (const k of STAT_KEYS) total[k] = Math.round(total[k] * collect);
   // 삼은 화신 — 다 합친 뒤에 한쪽으로 크게 기울입니다 (data.js 의 avatarProfile)
   const av = activeAvatar();
+  total.avatarPower = av && AVATAR_POWERS[av.id] ? av.id : null;   // 보스 화신의 고유 능력 — simulateBattle 이 봅니다
   if (av) {
     const p = avatarProfile(av);
     for (const k of STAT_KEYS) if (p.mul[k]) total[k] = Math.max(1, Math.round(total[k] * p.mul[k]));
@@ -706,6 +707,21 @@ function simulateBattle(hero, enemy, rng = Math.random, log = null) {
   const hSurvive = num(hero.survive);      // 쓰러질 한 방을 1 남기고 버팀 (전투당 한 번)
   let survived = false;
 
+  // 보스 화신의 고유 능력 (data.js 의 AVATAR_POWERS)
+  const P = hero.avatarPower || null;
+  const bigFoe = P === 'michael' && enemy.life > hero.life;              // 용 떨어뜨리기 — 나보다 큰 상대
+  const fBaseDragon = P === 'imugi' ? damageFormula(enemy.damage, hero.defense * 2) : 0;
+  let opened = false, lastStand = false, dragon = false, firstStrike = P === 'cheonma', revives = 0;
+  const lowHp = () => P === 'yisunsin' && heroHp < hero.life * 0.3;    // 배수진
+  const powerMult = () => {
+    let m = 1;
+    if (lowHp()) m *= 2;
+    if (dragon) m *= 2;
+    if (bigFoe) m *= 2;
+    if (P === 'lucifer') m *= Math.max(0.5, 3 - 0.25 * (turn - 1));   // 추락하는 별 — ×3 에서 턴마다 0.25씩
+    return m;
+  };
+
   const roll = () => 0.85 + rng() * 0.30;
   let turn = 0;
   const note = log
@@ -716,6 +732,21 @@ function simulateBattle(hero, enemy, rng = Math.random, log = null) {
 
   // 영웅이 한 번 움직입니다. 상대가 쓰러지면 true.
   function heroAct() {
+    if (P) {
+      if (!opened) {
+        opened = true;
+        if (bigFoe) note('hero', 'power', 0, { p: 'michael' });
+        if (P === 'lucifer') note('hero', 'power', 0, { p: 'lucifer' });
+      }
+      if (P === 'imugi' && !dragon && turn > 10) { dragon = true; note('hero', 'power', 0, { p: 'imugi' }); }
+      if (P === 'yisunsin' && !lastStand && lowHp()) { lastStand = true; note('hero', 'power', 0, { p: 'yisunsin' }); }
+      if (P === 'zeus' && rng() < 0.15) {                                // 벼락 — 방어를 무시하고 최대 생명의 10%
+        const bolt = enemy.life * 0.1;
+        foeHp -= bolt;
+        note('hero', 'power', bolt, { p: 'zeus' });
+        if (foeHp <= 0) return true;
+      }
+    }
     if (hRegen > 0 && heroHp < hero.life) {
       const heal = Math.min(hero.life - heroHp, hero.life * hRegen);
       heroHp += heal;
@@ -723,15 +754,23 @@ function simulateBattle(hero, enemy, rng = Math.random, log = null) {
     }
     const swings = 1 + (rng() < hDouble ? 1 : 0);
     for (let s = 0; s < swings; s++) {
-      if (rng() >= hHit) { note('hero', 'miss', 0, { second: s > 0 }); continue; }   // 빗나감
-      let out = hBase * roll();
-      const harm = hHarm > 0 && rng() < hHarm;
+      const first = firstStrike;                                        // 천마군림 — 첫 공격은 빗나가지 않는 일격
+      if (first) { firstStrike = false; note('hero', 'power', 0, { p: 'cheonma' }); }
+      if (!first && rng() >= hHit) { note('hero', 'miss', 0, { second: s > 0 }); continue; }   // 빗나감
+      let out = hBase * roll() * (P ? powerMult() : 1);
+      const harm = first || (hHarm > 0 && rng() < hHarm);
       const crit = !harm && rng() < hCrit;
       if (harm) out *= HARM_TOUCH_MULT;
       else if (crit) out *= hCritDmg;
       out = Math.max(1, out);
       foeHp -= out;
       note('hero', 'hit', out, { crit, harm, second: s > 0 });
+      // 문 너머로 — 15% 아래로 떨어진 상대는 그 자리에서 데려갑니다
+      if (P === 'hades' && foeHp > 0 && foeHp < enemy.life * 0.15) {
+        foeHp = 0;
+        note('hero', 'power', 0, { p: 'hades' });
+        return true;
+      }
       if (hSteal > 0 && heroHp < hero.life) {
         const heal = Math.min(hero.life - heroHp, out * hSteal);
         heroHp += heal;
@@ -752,8 +791,8 @@ function simulateBattle(hero, enemy, rng = Math.random, log = null) {
 
     // ── 화신의 턴 ──
     if (rng() >= fHit) { note('foe', 'miss'); continue; }
-    if (rng() < hBlock) { note('foe', 'block'); continue; }   // 막기에 걸리면 통째로 흘립니다
-    let inc = fBase * roll();
+    if (rng() < Math.min(0.6, hBlock + (lowHp() ? 0.2 : 0))) { note('foe', 'block'); continue; }   // 막기에 걸리면 통째로 흘립니다 (배수진 +20%)
+    let inc = (dragon ? fBaseDragon : fBase) * roll();
     const crit = rng() < fCrit;
     if (crit) inc *= fCritDmg;
     inc = Math.max(1, inc);
@@ -775,6 +814,12 @@ function simulateBattle(hero, enemy, rng = Math.random, log = null) {
       foeHp -= inc * hThorn;
       note('hero', 'reflect', inc * hThorn);
       if (foeHp <= 0) return { win: true, turns: turn, heroHpLeft: Math.max(0, heroHp) };
+    }
+    // 열두 번의 귀환 — 쓰러질 때마다 50% 로 생명 20% 에서 다시
+    if (heroHp <= 0 && P === 'heracles' && revives < 12 && rng() < 0.5) {
+      revives++;
+      heroHp = hero.life * 0.2;
+      note('hero', 'power', 0, { p: 'heracles', n: revives });
     }
     if (heroHp <= 0) return { win: false, turns: turn, heroHpLeft: 0 };
   }

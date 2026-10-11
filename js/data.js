@@ -1961,6 +1961,19 @@ const AVATAR_UNIQUE = {
   nyarlathotep:  [{ luck: 2.0, life: 0.5, defense: 0.5 },   { critRate: 0.15, doubleTurn: 0.1 }]          // 천 개의 가면을 쓴 기어오는 혼돈
 };
 
+// 보스 화신만의 고유 능력 — 능력치 기울기 위에 하나씩, 전투의 규칙 자체를 바꿉니다 (game.js 의 simulateBattle).
+// 승률 예감도 같은 계산을 쓰므로 그대로 맞습니다.
+const AVATAR_POWERS = {
+  yisunsin: { name: '배수진',         desc: '생명이 30% 아래로 떨어지면 공격력 ×2 · 막기 +20%' },
+  cheonma:  { name: '천마군림',       desc: '싸움의 첫 공격은 반드시 일격 (빗나가지 않고 10배)' },
+  imugi:    { name: '승천',           desc: '싸움이 10턴을 넘기면 용이 된다 — 공격력 · 방어력 ×2' },
+  heracles: { name: '열두 번의 귀환', desc: '쓰러질 때마다 50% 확률로 생명 20%로 다시 일어선다 (한 싸움에 12번까지)' },
+  michael:  { name: '용 떨어뜨리기',  desc: '상대의 생명이 나보다 크면 주는 피해 ×2' },
+  lucifer:  { name: '추락하는 별',    desc: '첫 턴 공격력 ×3 — 턴마다 줄어들어 ×0.5까지 떨어진다' },
+  hades:    { name: '문 너머로',      desc: '상대의 생명이 15% 아래로 떨어지면 그 자리에서 데려간다' },
+  zeus:     { name: '벼락',           desc: '내 턴마다 15% 확률로 방어를 무시하고 상대 생명의 10%를 깎는다' }
+};
+
 function canBecomeAvatar(foe) { return !!foe && foe.rank.n >= AVATAR_MIN_RANK && !foe.final; }
 function avatarTitle(foe) { return /의 화신$/.test(foe.name) ? foe.name : `${foe.name}의 화신`; }
 function avatarChance(foe) { return foe.kind === 'boss' ? AVATAR_CHANCE_BOSS : AVATAR_CHANCE; }

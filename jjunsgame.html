@@ -2479,6 +2479,20 @@ body.lv-rolling .je-xp-fill, body.lv-rolling .bar-fill.xp { transition: none; tr
 }
 @media (prefers-reduced-motion: reduce) { .res-avatar { animation: none; } }
 
+/* 보스 화신의 고유 능력 — 금빛 꼬리표와 한 줄. 전투 기록에서도 금빛으로 */
+.av-power {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.5;
+  color: #3a2312;
+  background: linear-gradient(#f3d27a, #c9982a);
+  box-shadow: 0 0 0 1px rgba(28, 16, 7, 0.5);
+  padding: 0 5px;
+}
+.av-power-desc { font-size: 11px; font-weight: 700; color: #9a6a10; margin-top: 4px; }
+.bt-line.b-power { color: #b07a10; font-weight: 700; }
+
 </style>
 </head>
 <body data-tab="journey">
@@ -5862,6 +5876,19 @@ const AVATAR_UNIQUE = {
   nyarlathotep:  [{ luck: 2.0, life: 0.5, defense: 0.5 },   { critRate: 0.15, doubleTurn: 0.1 }]          // 천 개의 가면을 쓴 기어오는 혼돈
 };
 
+// 보스 화신만의 고유 능력 — 능력치 기울기 위에 하나씩, 전투의 규칙 자체를 바꿉니다 (game.js 의 simulateBattle).
+// 승률 예감도 같은 계산을 쓰므로 그대로 맞습니다.
+const AVATAR_POWERS = {
+  yisunsin: { name: '배수진',         desc: '생명이 30% 아래로 떨어지면 공격력 ×2 · 막기 +20%' },
+  cheonma:  { name: '천마군림',       desc: '싸움의 첫 공격은 반드시 일격 (빗나가지 않고 10배)' },
+  imugi:    { name: '승천',           desc: '싸움이 10턴을 넘기면 용이 된다 — 공격력 · 방어력 ×2' },
+  heracles: { name: '열두 번의 귀환', desc: '쓰러질 때마다 50% 확률로 생명 20%로 다시 일어선다 (한 싸움에 12번까지)' },
+  michael:  { name: '용 떨어뜨리기',  desc: '상대의 생명이 나보다 크면 주는 피해 ×2' },
+  lucifer:  { name: '추락하는 별',    desc: '첫 턴 공격력 ×3 — 턴마다 줄어들어 ×0.5까지 떨어진다' },
+  hades:    { name: '문 너머로',      desc: '상대의 생명이 15% 아래로 떨어지면 그 자리에서 데려간다' },
+  zeus:     { name: '벼락',           desc: '내 턴마다 15% 확률로 방어를 무시하고 상대 생명의 10%를 깎는다' }
+};
+
 function canBecomeAvatar(foe) { return !!foe && foe.rank.n >= AVATAR_MIN_RANK && !foe.final; }
 function avatarTitle(foe) { return /의 화신$/.test(foe.name) ? foe.name : `${foe.name}의 화신`; }
 function avatarChance(foe) { return foe.kind === 'boss' ? AVATAR_CHANCE_BOSS : AVATAR_CHANCE; }
@@ -6560,6 +6587,7 @@ function heroStats() {
   for (const k of STAT_KEYS) total[k] = Math.round(total[k] * collect);
   // 삼은 화신 — 다 합친 뒤에 한쪽으로 크게 기울입니다 (data.js 의 avatarProfile)
   const av = activeAvatar();
+  total.avatarPower = av && AVATAR_POWERS[av.id] ? av.id : null;   // 보스 화신의 고유 능력 — simulateBattle 이 봅니다
   if (av) {
     const p = avatarProfile(av);
     for (const k of STAT_KEYS) if (p.mul[k]) total[k] = Math.max(1, Math.round(total[k] * p.mul[k]));
@@ -6612,6 +6640,21 @@ function simulateBattle(hero, enemy, rng = Math.random, log = null) {
   const hSurvive = num(hero.survive);      // 쓰러질 한 방을 1 남기고 버팀 (전투당 한 번)
   let survived = false;
 
+  // 보스 화신의 고유 능력 (data.js 의 AVATAR_POWERS)
+  const P = hero.avatarPower || null;
+  const bigFoe = P === 'michael' && enemy.life > hero.life;              // 용 떨어뜨리기 — 나보다 큰 상대
+  const fBaseDragon = P === 'imugi' ? damageFormula(enemy.damage, hero.defense * 2) : 0;
+  let opened = false, lastStand = false, dragon = false, firstStrike = P === 'cheonma', revives = 0;
+  const lowHp = () => P === 'yisunsin' && heroHp < hero.life * 0.3;    // 배수진
+  const powerMult = () => {
+    let m = 1;
+    if (lowHp()) m *= 2;
+    if (dragon) m *= 2;
+    if (bigFoe) m *= 2;
+    if (P === 'lucifer') m *= Math.max(0.5, 3 - 0.25 * (turn - 1));   // 추락하는 별 — ×3 에서 턴마다 0.25씩
+    return m;
+  };
+
   const roll = () => 0.85 + rng() * 0.30;
   let turn = 0;
   const note = log
@@ -6622,6 +6665,21 @@ function simulateBattle(hero, enemy, rng = Math.random, log = null) {
 
   // 영웅이 한 번 움직입니다. 상대가 쓰러지면 true.
   function heroAct() {
+    if (P) {
+      if (!opened) {
+        opened = true;
+        if (bigFoe) note('hero', 'power', 0, { p: 'michael' });
+        if (P === 'lucifer') note('hero', 'power', 0, { p: 'lucifer' });
+      }
+      if (P === 'imugi' && !dragon && turn > 10) { dragon = true; note('hero', 'power', 0, { p: 'imugi' }); }
+      if (P === 'yisunsin' && !lastStand && lowHp()) { lastStand = true; note('hero', 'power', 0, { p: 'yisunsin' }); }
+      if (P === 'zeus' && rng() < 0.15) {                                // 벼락 — 방어를 무시하고 최대 생명의 10%
+        const bolt = enemy.life * 0.1;
+        foeHp -= bolt;
+        note('hero', 'power', bolt, { p: 'zeus' });
+        if (foeHp <= 0) return true;
+      }
+    }
     if (hRegen > 0 && heroHp < hero.life) {
       const heal = Math.min(hero.life - heroHp, hero.life * hRegen);
       heroHp += heal;
@@ -6629,15 +6687,23 @@ function simulateBattle(hero, enemy, rng = Math.random, log = null) {
     }
     const swings = 1 + (rng() < hDouble ? 1 : 0);
     for (let s = 0; s < swings; s++) {
-      if (rng() >= hHit) { note('hero', 'miss', 0, { second: s > 0 }); continue; }   // 빗나감
-      let out = hBase * roll();
-      const harm = hHarm > 0 && rng() < hHarm;
+      const first = firstStrike;                                        // 천마군림 — 첫 공격은 빗나가지 않는 일격
+      if (first) { firstStrike = false; note('hero', 'power', 0, { p: 'cheonma' }); }
+      if (!first && rng() >= hHit) { note('hero', 'miss', 0, { second: s > 0 }); continue; }   // 빗나감
+      let out = hBase * roll() * (P ? powerMult() : 1);
+      const harm = first || (hHarm > 0 && rng() < hHarm);
       const crit = !harm && rng() < hCrit;
       if (harm) out *= HARM_TOUCH_MULT;
       else if (crit) out *= hCritDmg;
       out = Math.max(1, out);
       foeHp -= out;
       note('hero', 'hit', out, { crit, harm, second: s > 0 });
+      // 문 너머로 — 15% 아래로 떨어진 상대는 그 자리에서 데려갑니다
+      if (P === 'hades' && foeHp > 0 && foeHp < enemy.life * 0.15) {
+        foeHp = 0;
+        note('hero', 'power', 0, { p: 'hades' });
+        return true;
+      }
       if (hSteal > 0 && heroHp < hero.life) {
         const heal = Math.min(hero.life - heroHp, out * hSteal);
         heroHp += heal;
@@ -6658,8 +6724,8 @@ function simulateBattle(hero, enemy, rng = Math.random, log = null) {
 
     // ── 화신의 턴 ──
     if (rng() >= fHit) { note('foe', 'miss'); continue; }
-    if (rng() < hBlock) { note('foe', 'block'); continue; }   // 막기에 걸리면 통째로 흘립니다
-    let inc = fBase * roll();
+    if (rng() < Math.min(0.6, hBlock + (lowHp() ? 0.2 : 0))) { note('foe', 'block'); continue; }   // 막기에 걸리면 통째로 흘립니다 (배수진 +20%)
+    let inc = (dragon ? fBaseDragon : fBase) * roll();
     const crit = rng() < fCrit;
     if (crit) inc *= fCritDmg;
     inc = Math.max(1, inc);
@@ -6681,6 +6747,12 @@ function simulateBattle(hero, enemy, rng = Math.random, log = null) {
       foeHp -= inc * hThorn;
       note('hero', 'reflect', inc * hThorn);
       if (foeHp <= 0) return { win: true, turns: turn, heroHpLeft: Math.max(0, heroHp) };
+    }
+    // 열두 번의 귀환 — 쓰러질 때마다 50% 로 생명 20% 에서 다시
+    if (heroHp <= 0 && P === 'heracles' && revives < 12 && rng() < 0.5) {
+      revives++;
+      heroHp = hero.life * 0.2;
+      note('hero', 'power', 0, { p: 'heracles', n: revives });
     }
     if (heroHp <= 0) return { win: false, turns: turn, heroHpLeft: 0 };
   }
@@ -8079,10 +8151,12 @@ function renderAvatars() {
       <div class="av-top">
         <span class="av-ic">${f.icon}</span>
         <span class="avatar-tag">${avatarTitle(f)}</span>
+        ${AVATAR_POWERS[f.id] ? `<span class="av-power">${AVATAR_POWERS[f.id].name}</span>` : ''}
         ${f.id === cur
           ? '<button class="btn tiny" data-avatar="">벗는다</button>'
           : `<button class="btn tiny" data-avatar="${f.id}" ${battle ? 'disabled' : ''}>삼는다</button>`}
       </div>
+      ${AVATAR_POWERS[f.id] ? `<div class="av-power-desc">${AVATAR_POWERS[f.id].desc}</div>` : ''}
       <div class="av-fx">${avatarEffectHTML(f)}</div>
     </div>`).join('');
   for (const b of el.querySelectorAll('[data-avatar]')) {
@@ -8419,6 +8493,7 @@ function battleSound(e) {
       case 'steal':   return 'heal';
       case 'extra':
       case 'survive': return 'special';
+      case 'power':   return e.p === 'zeus' || e.p === 'hades' ? 'harm' : 'special';
     }
   } else {
     switch (e.k) {
@@ -8449,6 +8524,21 @@ function resultSounds(r, run) {
 }
 
 // 기록 한 줄 → 글. 이름이 길어도 한 줄에 들어가게 짧게 씁니다.
+// 보스 화신의 고유 능력이 터진 줄
+function powerLine(e, foeName, v) {
+  const n = (AVATAR_POWERS[e.p] || {}).name || '';
+  switch (e.p) {
+    case 'yisunsin': return `${n} — 물러설 곳이 없다`;
+    case 'cheonma':  return `${n} —`;
+    case 'imugi':    return `${n} — 용이 되었다`;
+    case 'heracles': return `${n} — 다시 일어섰다 (${e.n}/12)`;
+    case 'michael':  return `${n} — 큰 상대다`;
+    case 'lucifer':  return `${n} — 지금이 가장 빛난다`;
+    case 'hades':    return `${n} — ${foeName}${josa(foeName, '을', '를')} 데려갔다`;
+    case 'zeus':     return `${n}! ${foeName}에게 ${v}`;
+  }
+  return n;
+}
 function battleLine(e, foeName) {
   const v = fmt(e.v);
   if (e.who === 'hero') {
@@ -8461,6 +8551,7 @@ function battleLine(e, foeName) {
       case 'reflect': return { cls: 'b-hero', text: `반사 — ${foeName}에게 ${v}` };
       case 'extra':   return { cls: 'b-special', text: '연속 턴 — 한 번 더 움직인다' };
       case 'survive': return { cls: 'b-special', text: '생존 — 생명 1을 남기고 버텼다' };
+      case 'power':   return { cls: 'b-power', text: powerLine(e, foeName, v) };
     }
   } else {
     switch (e.k) {
@@ -8611,6 +8702,20 @@ function battleFx(e) {
       case 'steal':   fxFloat(heroEl, `+${v}`, 'heal'); break;
       case 'extra':   fxBanner('연속 턴!'); break;
       case 'survive': fxHit(heroEl, false); fxBanner('버텼다!'); break;
+      case 'power': {
+        const n = (AVATAR_POWERS[e.p] || {}).name || '';
+        if (e.p === 'zeus') {
+          fxSprite('hero', 'bolt', foeEl, 1.5);
+          fxHit(foeEl, true); fxFloat(foeEl, `벼락 ${v}`, 'harm');
+          fxAnim(box, FX_SHAKE, 300, 'steps(5, end)');
+        } else if (e.p === 'hades') {
+          fxHit(foeEl, true); fxAnim(box, FX_SHAKE, 360, 'steps(6, end)');
+        } else if (e.p === 'heracles') {
+          fxFloat(heroEl, '다시', 'heal');
+        }
+        fxBanner(`${n}!`);
+        break;
+      }
     }
   } else {
     switch (e.k) {

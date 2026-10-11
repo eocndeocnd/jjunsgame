@@ -2462,3 +2462,17 @@ body.lv-rolling .je-xp-fill, body.lv-rolling .bar-fill.xp { transition: none; tr
   100% { transform: none; text-shadow: none; }
 }
 @media (prefers-reduced-motion: reduce) { .res-avatar { animation: none; } }
+
+/* 보스 화신의 고유 능력 — 금빛 꼬리표와 한 줄. 전투 기록에서도 금빛으로 */
+.av-power {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.5;
+  color: #3a2312;
+  background: linear-gradient(#f3d27a, #c9982a);
+  box-shadow: 0 0 0 1px rgba(28, 16, 7, 0.5);
+  padding: 0 5px;
+}
+.av-power-desc { font-size: 11px; font-weight: 700; color: #9a6a10; margin-top: 4px; }
+.bt-line.b-power { color: #b07a10; font-weight: 700; }

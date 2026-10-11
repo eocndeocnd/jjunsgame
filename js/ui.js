@@ -558,10 +558,12 @@ function renderAvatars() {
       <div class="av-top">
         <span class="av-ic">${f.icon}</span>
         <span class="avatar-tag">${avatarTitle(f)}</span>
+        ${AVATAR_POWERS[f.id] ? `<span class="av-power">${AVATAR_POWERS[f.id].name}</span>` : ''}
         ${f.id === cur
           ? '<button class="btn tiny" data-avatar="">벗는다</button>'
           : `<button class="btn tiny" data-avatar="${f.id}" ${battle ? 'disabled' : ''}>삼는다</button>`}
       </div>
+      ${AVATAR_POWERS[f.id] ? `<div class="av-power-desc">${AVATAR_POWERS[f.id].desc}</div>` : ''}
       <div class="av-fx">${avatarEffectHTML(f)}</div>
     </div>`).join('');
   for (const b of el.querySelectorAll('[data-avatar]')) {
@@ -898,6 +900,7 @@ function battleSound(e) {
       case 'steal':   return 'heal';
       case 'extra':
       case 'survive': return 'special';
+      case 'power':   return e.p === 'zeus' || e.p === 'hades' ? 'harm' : 'special';
     }
   } else {
     switch (e.k) {
@@ -928,6 +931,21 @@ function resultSounds(r, run) {
 }
 
 // 기록 한 줄 → 글. 이름이 길어도 한 줄에 들어가게 짧게 씁니다.
+// 보스 화신의 고유 능력이 터진 줄
+function powerLine(e, foeName, v) {
+  const n = (AVATAR_POWERS[e.p] || {}).name || '';
+  switch (e.p) {
+    case 'yisunsin': return `${n} — 물러설 곳이 없다`;
+    case 'cheonma':  return `${n} —`;
+    case 'imugi':    return `${n} — 용이 되었다`;
+    case 'heracles': return `${n} — 다시 일어섰다 (${e.n}/12)`;
+    case 'michael':  return `${n} — 큰 상대다`;
+    case 'lucifer':  return `${n} — 지금이 가장 빛난다`;
+    case 'hades':    return `${n} — ${foeName}${josa(foeName, '을', '를')} 데려갔다`;
+    case 'zeus':     return `${n}! ${foeName}에게 ${v}`;
+  }
+  return n;
+}
 function battleLine(e, foeName) {
   const v = fmt(e.v);
   if (e.who === 'hero') {
@@ -940,6 +958,7 @@ function battleLine(e, foeName) {
       case 'reflect': return { cls: 'b-hero', text: `반사 — ${foeName}에게 ${v}` };
       case 'extra':   return { cls: 'b-special', text: '연속 턴 — 한 번 더 움직인다' };
       case 'survive': return { cls: 'b-special', text: '생존 — 생명 1을 남기고 버텼다' };
+      case 'power':   return { cls: 'b-power', text: powerLine(e, foeName, v) };
     }
   } else {
     switch (e.k) {
@@ -1090,6 +1109,20 @@ function battleFx(e) {
       case 'steal':   fxFloat(heroEl, `+${v}`, 'heal'); break;
       case 'extra':   fxBanner('연속 턴!'); break;
       case 'survive': fxHit(heroEl, false); fxBanner('버텼다!'); break;
+      case 'power': {
+        const n = (AVATAR_POWERS[e.p] || {}).name || '';
+        if (e.p === 'zeus') {
+          fxSprite('hero', 'bolt', foeEl, 1.5);
+          fxHit(foeEl, true); fxFloat(foeEl, `벼락 ${v}`, 'harm');
+          fxAnim(box, FX_SHAKE, 300, 'steps(5, end)');
+        } else if (e.p === 'hades') {
+          fxHit(foeEl, true); fxAnim(box, FX_SHAKE, 360, 'steps(6, end)');
+        } else if (e.p === 'heracles') {
+          fxFloat(heroEl, '다시', 'heal');
+        }
+        fxBanner(`${n}!`);
+        break;
+      }
     }
   } else {
     switch (e.k) {
