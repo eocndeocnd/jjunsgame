@@ -1431,12 +1431,12 @@ function journeySets() {
       ${Array.from({ length: SET_COUNT }, (_, n) => {
         const on = isSetActive(n);
         const filled = setFilled(n);
-        // 두 줄 — 위는 이름, 아래는 상태. 한 줄에 넷(세트 셋 + 스탯 분배)이 폰에서도 들어가게
+        // 이름만 — 입는 중인 것은 붉게. 한 줄에 넷(세트 셋 + 스탯 분배)이 폰에서도 들어가게
         return `<button class="js-set ${on ? 'on' : ''}" data-jset="${n}" ${on ? 'disabled' : ''}>
-                  <b>세트 ${n + 1}</b><span>${on ? '입는 중' : (filled ? `${filled}부위` : '빔')}</span>
+                  세트 ${n + 1}
                 </button>`;
       }).join('')}
-      <button class="js-set js-alloc ${State.run.unspent > 0 ? 'ready' : ''}" id="jAllocBtn"><b>스탯 분배</b><span>${State.run.unspent > 0 ? `${fmt(State.run.unspent)}점` : '—'}</span></button>
+      <button class="js-set js-alloc ${State.run.unspent > 0 ? 'ready' : ''}" id="jAllocBtn">스탯 분배${State.run.unspent > 0 ? '<span class="alloc-pip on"></span>' : ''}</button>
     </div>`;
 }
 

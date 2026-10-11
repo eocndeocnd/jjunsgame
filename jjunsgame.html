@@ -2519,6 +2519,23 @@ body.lv-rolling .je-xp-fill, body.lv-rolling .bar-fill.xp { transition: none; tr
   .modal-card { max-height: 100%; }
 }
 
+/* ---------- 폰 — 여정 · 전리품은 한 화면에 ----------
+   싸움 화면과 싸움이 끝난 뒤의 결과(전리품까지)가 스크롤 없이 한 화면에 들어오게 줄입니다.
+   - 여정 · 전리품 탭에서는 맨 위 제목 명패를 뺍니다 (「나」 · 「기록」 탭에는 남아 있어 관리자 창도 그대로 열 수 있음)
+   - 아래 붙박인 주 버튼(길을 떠난다 · 맞선다 · 계속한다)을 낮춥니다 */
+@media (max-width: 860px) {
+  body[data-tab="journey"] .topbar, body[data-tab="gear"] .topbar { display: none; }
+  .btn.thumb, .thumb-bar .btn, .thumb-bar .btn.big { min-height: 50px; padding-top: 8px; padding-bottom: 8px; }
+  .btn.big { padding: 11px 16px; }
+  body[data-tab="journey"] .journey-panel { padding-bottom: 136px; }
+  .js-set { padding: 7px 2px; }
+}
+@media (max-width: 860px) {
+  /* 결과 아래의 두 버튼(새 전리품 보러 · 스탯 다시 나누기)은 한 줄에 나란히 — 쌓으면 「계속한다」 밑으로 숨습니다 */
+  .res-actions { flex-direction: row; gap: 8px; margin-top: 12px; }
+  .res-actions .btn:not(.thumb) { flex: 1 1 0; min-width: 0; padding: 9px 4px; font-size: 12px; }
+}
+
 </style>
 </head>
 <body data-tab="journey">
@@ -9050,12 +9067,12 @@ function journeySets() {
       ${Array.from({ length: SET_COUNT }, (_, n) => {
         const on = isSetActive(n);
         const filled = setFilled(n);
-        // 두 줄 — 위는 이름, 아래는 상태. 한 줄에 넷(세트 셋 + 스탯 분배)이 폰에서도 들어가게
+        // 이름만 — 입는 중인 것은 붉게. 한 줄에 넷(세트 셋 + 스탯 분배)이 폰에서도 들어가게
         return `<button class="js-set ${on ? 'on' : ''}" data-jset="${n}" ${on ? 'disabled' : ''}>
-                  <b>세트 ${n + 1}</b><span>${on ? '입는 중' : (filled ? `${filled}부위` : '빔')}</span>
+                  세트 ${n + 1}
                 </button>`;
       }).join('')}
-      <button class="js-set js-alloc ${State.run.unspent > 0 ? 'ready' : ''}" id="jAllocBtn"><b>스탯 분배</b><span>${State.run.unspent > 0 ? `${fmt(State.run.unspent)}점` : '—'}</span></button>
+      <button class="js-set js-alloc ${State.run.unspent > 0 ? 'ready' : ''}" id="jAllocBtn">스탯 분배${State.run.unspent > 0 ? '<span class="alloc-pip on"></span>' : ''}</button>
     </div>`;
 }
 
