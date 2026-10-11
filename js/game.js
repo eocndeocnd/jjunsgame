@@ -534,6 +534,7 @@ function load() {
     State.meta.bossesBeaten = Array.isArray(data.bossesBeaten) ? data.bossesBeaten : [];
     State.meta.banked = Array.isArray(data.banked) ? data.banked : [];
     State.meta.specialOpened = Array.isArray(data.specialOpened) ? data.specialOpened : [];
+    State.meta.gold = Math.max(0, Math.floor(num(data.gold)));
     State.meta.seen = Array.isArray(data.seen) ? data.seen : [];
     State.meta.fresh = (data.fresh && typeof data.fresh === 'object') ? data.fresh : {};
     State.meta.sets = Array.isArray(data.sets) ? data.sets : [null, null, null];
@@ -602,6 +603,7 @@ function freshMeta() {
     bossesBeaten: [],
     banked: [],
     specialOpened: [],
+    gold: 0,                          // 골드 — 회차가 끝나도 남습니다
     runCount: 0,
     bestLevel: 1,
     bestKill: 0,
@@ -802,6 +804,7 @@ function freshRun() {
     aura: null,          // 그 화신이 두른 기운 (없으면 null)
     lastResult: null,    // 방금 끝난 전투의 결과 — 결과 화면이 이걸 보고 그립니다
     onBoss: false,       // 그 조우가 보스전인가
+    merchant: null,      // 이번 회차의 떠돌이 상인 — { zone, wares, bought } (없으면 null)
     over: false,
     victory: false,
     reason: ''
@@ -811,6 +814,7 @@ function freshRun() {
 function startRun() {
   State.meta.runCount += 1;
   State.run = freshRun();
+  State.run.merchant = rollMerchant(0);
   if (State.meta.autoAlloc) commitPoints();
 
   State.log = [];
@@ -970,6 +974,45 @@ function addSpentOn(id, n) {
   run.spentOn[id] = (run.spentOn[id] || 0) + n;
 }
 
+// ---------- 떠돌이 상인 ----------
+// 3지역의 숨은 것(카벙클)을 처음 꺾은 뒤부터, 회차마다 1~6지역 중 한 곳에 나타납니다.
+// 싸우지 않습니다 — 들르면 물건을 팝니다. 들르는 데 에너지는 들지 않습니다.
+function merchantUnlocked() { return State.meta.specialOpened.includes(MERCHANT_UNLOCK); }
+
+// fromZone 이후(포함) ~ 마계의 왕좌 사이 한 곳. 파는 것은 아직 안 가진 것 중 셋까지 (그 지역 격 +1 까지).
+function rollMerchant(fromZone) {
+  if (!merchantUnlocked()) return null;
+  const lo = Math.min(fromZone, WALL_ZONE);
+  const zone = lo + Math.floor(Math.random() * (WALL_ZONE - lo + 1));
+  const rank = ZONES[zone].rank;
+  const pool = ITEMS.filter(i => i.ware && !owns(i.id) && i.rank.n <= rank + 1);
+  for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
+  return { zone, wares: pool.slice(0, 3).map(i => i.id), bought: [] };
+}
+
+// 지금 이 지역에 상인이 있나
+function merchantHere() {
+  const run = State.run;
+  return !!(run && run.merchant && run.merchant.zone === run.zoneIndex && !run.over);
+}
+
+// 산다. 성공하면 true.
+function buyWare(id) {
+  const run = State.run;
+  const it = getItem(id);
+  if (!merchantHere() || !it || !it.ware) return false;
+  const m = run.merchant;
+  if (!m.wares.includes(id) || m.bought.includes(id) || owns(id)) return false;
+  if (num(State.meta.gold) < it.price) return false;
+  State.meta.gold -= it.price;
+  State.meta.owned[id] = 1;
+  markFresh(it);
+  m.bought.push(id);
+  pushLog('drop', `떠돌이 상인에게서 『${it.name}』${josa(it.name, '을', '를')} 샀다 — ${fmt(it.price)} 골드`);
+  save();
+  return true;
+}
+
 // 이 여정에서 이미 꺾었는가 (정예·보스 전용)
 function isDowned(enemyId) { return State.run.downed.includes(enemyId); }
 
@@ -1060,6 +1103,9 @@ function engage() {
   const levelBefore = run.level;
   const levelsGained = gainXp(xp);
   const drops = rollDrops(enemy.id, aura ? aura.dropMult : 1);
+  // 골드 — 기운이 두른 상대일수록, 행운과 골드 획득 장비가 많을수록. 조금씩 흔들립니다.
+  const gold = Math.max(1, Math.round(goldFor(enemy) * (aura ? aura.dropMult : 1) * goldMult() * (0.85 + Math.random() * 0.3)));
+  State.meta.gold = num(State.meta.gold) + gold;
 
   const bits = [];
   if (gap > 1.01) bits.push(`격차 ×${gap.toFixed(2)}`);
@@ -1069,7 +1115,7 @@ function engage() {
   const multText = bits.length ? `  (${bits.join(' · ')})` : '';
 
   pushLog('battle',
-    `${enemy.icon} ${enemy.name}${josa(enemy.name, '을', '를')} 꺾었다 (Lv.${fmtLevel(enemy.level)}) — ${result.turns}턴, +${fmt(xp)} EXP${multText}`);
+    `${enemy.icon} ${enemy.name}${josa(enemy.name, '을', '를')} 꺾었다 (Lv.${fmtLevel(enemy.level)}) — ${result.turns}턴, +${fmt(xp)} EXP · +${fmt(gold)} 골드${multText}`);
 
   if (levelsGained > 0) {
     const before = rankOf(run.level - levelsGained);
@@ -1108,7 +1154,7 @@ function engage() {
   // 결과 화면이 보고 그릴 내용
   run.lastResult = {
     win: true, enemy, turns: result.turns, aura,
-    xp, gap, auraXp, bossM, levelBefore, levelsGained, drops, devoured,
+    xp, gap, auraXp, bossM, levelBefore, levelsGained, drops, devoured, gold,
     openedPath: false, replay
   };
 
@@ -1128,6 +1174,8 @@ function engage() {
     State.meta.specialOpened.push(enemy.id);
     const n = specialOpenCount();
     run.lastResult.openedSpecial = n;
+    // 3지역의 숨은 것을 처음 꺾으면 떠돌이 상인이 나타나기 시작합니다 — 이번 회차는 지금 이후의 지역 어딘가에
+    if (enemy.id === MERCHANT_UNLOCK && !run.merchant) run.merchant = rollMerchant(run.zoneIndex);
     pushLog('rank', `━━ 특수장비 칸이 열렸다 (${n}/${SPECIAL_SLOT_MAX}) — 보석이나 유물을 끼울 수 있다 ━━`);
     fillSpecialSlots();
   }
@@ -1387,6 +1435,12 @@ function dropChanceFor(foe, auraMult = 1, stats = null) {
 function findPower(stats = null) {
   const h = stats || heroStats();
   return luckMult() * (1 + num(h.findRate));
+}
+
+// 골드 배수 — 행운 분배(전리품과 같은 배수) × 장비의 골드 획득
+function goldMult(stats = null) {
+  const h = stats || heroStats();
+  return luckMult() * (1 + num(h.goldRate));
 }
 
 // 장비가 얹어주는 경험치 배수.

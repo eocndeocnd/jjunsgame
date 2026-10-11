@@ -44,6 +44,14 @@ const RULES = {
   // 첫 회차가 제1격 하나로 다 갔습니다. 그 지점을 앞으로 당기는 값입니다.
   RANK_XP_EARLY: 2.0,
   AURA_CHANCE: 0.22,      // 화신이 이상한 기운을 두르고 나타날 확률
+  // 골드 — 싸워서 이기면 떨어집니다. 회차가 끝나도 남습니다 (떠돌이 상인에게서 씁니다).
+  // 한 번 이길 때 = GOLD_BASE × GOLD_GROWTH^(격−1) × 종류(일반 1 · 정예 4 · 히든 5 · 보스 10) × 기운 × 골드 배수
+  // 골드 배수 = 행운 배수(분배) × (1 + 장비의 골드 획득)
+  GOLD_BASE: 5,
+  GOLD_GROWTH: 1.9,
+  // 떠돌이 상인의 물건 값 = 그 격 일반 화신 한 번 몫의 이만큼 배.
+  // 제1격에서 한 회차에 하나쯤 살 수 있는 값입니다 (일반 25번 · 정예 둘 · 보스 하나 ≈ 215골드). 무엇을 팔지는 아직 — 구조만.
+  WARE_PRICE: 30,
   BOSS_XP_MULT: 1.04      // 지금까지 꺾어본 보스 한 명당 경험치 배수 (영구히 이월)
                           //
                           // 이게 게임 전체 길이를 정하는 손잡이입니다. 시뮬 실측
@@ -492,6 +500,8 @@ const SPECIALS = [
   { id: 'xpRate',    name: '경험치',     side: 'get', unit: '%', base: 18, cap: 2.00, desc: '얻는 경험치' },
   // 특수장비(유물)에서만 나옵니다. 이미 가진 것을 분해할 때 나오는 강화석에 곱해집니다.
   { id: 'stoneRate', name: '강화석',     side: 'get', unit: '%', base: 30, cap: 1.50, desc: '분해할 때 나오는 강화석' },
+  // 이긴 판마다 떨어지는 골드에 곱해집니다. 돈 · 보물 · 탐욕과 어울리는 장비에만 붙습니다 (GOLD_ITEMS).
+  { id: 'goldRate',  name: '골드 획득',  side: 'get', unit: '%', base: 20, cap: 3.00, desc: '이길 때 얻는 골드' },
 
   // ── 원작(Resolute Hero)에 있고 여기엔 없던 넷 ──
   // 유물과 세트 효과로만 얻습니다. 일반 장비의 성격은 이걸 붙여주지 않습니다.
@@ -618,10 +628,10 @@ const KINDS = {
   // 세 종류를 가진 일반 적이라면 22% 를 세 번 굴리므로
   // 아무것도 못 얻을 확률이 47% 입니다 — 빈손으로 돌아서는 날이 있어야
   // 행운에 투자할 이유가 생깁니다.
-  normal: { id: 'normal', name: '일반', mult: 1.0, lifeMult: 1.0,  penalty: 'LOSS_PENALTY',       once: false, energy: 0, dropChance: 0.22 },
-  elite:  { id: 'elite',  name: '정예', mult: 1.4, lifeMult: 1.2,  penalty: 'LOSS_PENALTY_ELITE', once: true,  energy: 2, dropChance: 0.32 },
-  hidden: { id: 'hidden', name: '히든', mult: 1.6, lifeMult: 1.25, penalty: 'LOSS_PENALTY_ELITE', once: true,  energy: 3, dropChance: 1.00 },
-  boss:   { id: 'boss',   name: '격',   mult: 1.8, lifeMult: 1.3,  penalty: 'BOSS_LOSS_PENALTY',  once: true,  energy: 4, dropChance: 0.40 }
+  normal: { id: 'normal', name: '일반', mult: 1.0, lifeMult: 1.0,  penalty: 'LOSS_PENALTY',       once: false, energy: 0, dropChance: 0.22, gold: 1 },
+  elite:  { id: 'elite',  name: '정예', mult: 1.4, lifeMult: 1.2,  penalty: 'LOSS_PENALTY_ELITE', once: true,  energy: 2, dropChance: 0.32, gold: 4 },
+  hidden: { id: 'hidden', name: '히든', mult: 1.6, lifeMult: 1.25, penalty: 'LOSS_PENALTY_ELITE', once: true,  energy: 3, dropChance: 1.00, gold: 5 },
+  boss:   { id: 'boss',   name: '격',   mult: 1.8, lifeMult: 1.3,  penalty: 'BOSS_LOSS_PENALTY',  once: true,  energy: 4, dropChance: 0.40, gold: 10 }
 };
 
 function lossPenaltyFor(kind) { return RULES[KINDS[kind].penalty]; }
@@ -1718,8 +1728,59 @@ const SLOT_SCARCITY = (() => {
   return out;
 })();
 
-// 격마다 전리품 id — 도감 완성을 셀 때 씁니다
+// 격마다 전리품 id — 도감 완성을 셀 때 씁니다 (떠돌이 상인의 물건은 아래에서 따로 들어가므로 안 셉니다)
 const RANK_ITEMS = Object.fromEntries(RANKS.map(r => [r.n, ITEMS.filter(i => i.rank.n === r.n).map(i => i.id)]));
+
+// ---------- 골드 획득이 붙는 장비 ----------
+// 돈 · 보물 · 탐욕 · 거래와 어울리는 것들에만. 값은 %.
+// 행운 분배로도 골드가 늘어납니다 (game.js 의 goldMult).
+const GOLD_ITEMS = {
+  '가짜 금화': 20, '미끼 반지': 15,                               // 미믹 — 보물인 척하는 것
+  '무너진 옥새': 20,                                               // 몰락한 왕
+  '탐욕의 반지': 30, '끝없는 자루': 35, '탐욕의 전대': 30,         // 칠죄종 · 탐욕
+  '금섬 팔찌': 30, '금전표': 30,                                   // 세 발 금두꺼비 — 동전을 뱉으면 복이 온다
+  '칸의 인장': 25, '황금 사과': 30,
+  '피로 쓴 계약서': 40,                                            // 메피스토펠레스 — 영혼을 값으로 쳐주는 상인
+  '황금 태양원반': 35, '옥새': 40
+};
+for (const it of ITEMS) {
+  if (GOLD_ITEMS[it.name]) it.goldRate = +(GOLD_ITEMS[it.name] / 100).toFixed(4);
+}
+
+// 한 번 이겼을 때 떨어지는 골드 (기운 · 골드 배수를 곱하기 전)
+function goldFor(foe) {
+  const r = foe && foe.rank ? foe.rank.n : 1;
+  return RULES.GOLD_BASE * Math.pow(RULES.GOLD_GROWTH, r - 1) * KINDS[foe ? foe.kind : 'normal'].gold;
+}
+// 그 격 일반 화신 한 번 몫을 n 배 한 값 — 상인의 물건 값
+function priceFor(rank, n) { return Math.round(RULES.GOLD_BASE * Math.pow(RULES.GOLD_GROWTH, rank - 1) * n / 10) * 10; }
+
+// ---------- 떠돌이 상인 ----------
+// 그 공간 어딘가를 떠도는 숨은 것. 칸을 열지도, 싸우지도 않습니다 — 물건을 팝니다.
+// 3지역의 숨은 것(카벙클)을 처음 꺾은 뒤부터, 회차마다 1~6지역 중 한 곳에 나타납니다.
+// 누구인지 · 무엇을 왜 파는지는 말하지 않습니다.
+// 무엇을 팔지는 아직 정하지 않았습니다 — 구조만 있습니다. 여기에 한 줄씩 넣으면 상점에 나옵니다.
+//   [id, 이름, 부위, 아이콘, 격, 성격, 골드 획득 %(없으면 생략)]
+//   성능은 그 격 지역의 가장 센 일반 화신 것만큼, 값은 priceFor(격, WARE_PRICE).
+//   예: ['ware_hardhat', '안전모', 'helm', '⛑️', 2, 'guard']
+const MERCHANT_ID = 'merchant';
+const MERCHANT_UNLOCK = 'carbuncle';
+const MERCHANT_WARES = [];
+for (const [id, name, slot, icon, r, arch, gold] of MERCHANT_WARES) {
+  const zone = ZONES.findIndex(z => z.rank === r);
+  const level = Math.max(...ENEMIES.filter(e => e.zoneIndex === zone && e.kind === 'normal').map(e => e.level));
+  const rank = RANKS.find(x => x.n === r);
+  ITEMS.push({
+    id, name, slot,
+    grade: 'normal', arch, special: null, unique: false, note: null,
+    level, rank,
+    from: MERCHANT_ID, fromName: '떠돌이 상인', fromIcon: icon,
+    ware: true,
+    price: priceFor(r, RULES.WARE_PRICE),
+    ...makeItemStats(slot, level, 1.2, arch, false),
+    ...(gold ? { goldRate: gold / 100 } : {})
+  });
+}
 
 // id 로 바로 찾습니다 — 스탯을 셀 때마다 수백 개를 훑지 않게
 const ENEMY_BY_ID = Object.fromEntries(ENEMIES.map(e => [e.id, e]));

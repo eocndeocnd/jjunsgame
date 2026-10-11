@@ -2388,6 +2388,51 @@ html:has(body.beyond) { background: #0b0812; }
   .res-path.exit.late, .overlay-card.watched::after { animation: none; }
 }
 
+/* ---------- 여정 창의 경험치 막대 ----------
+   레벨 숫자 옆이 아니라 그 아래 한 줄을 통째로 씁니다 (레벨이 백억까지 가서 옆자리는 숫자 몫).
+   폰에서 「나」 탭을 안 열어도 경험치가 차오르는 게 보입니다. */
+.je-xp { height: 4px; background: var(--paper-lo); box-shadow: 0 0 0 1px var(--line-soft); }
+.je-xp-fill { height: 100%; background: repeating-linear-gradient(135deg, #2b74ad 0 3px, #1d5f8f 3px 6px); transition: width 0.25s ease; }
+/* 결과가 뜬 뒤 숫자가 굴러 올라가는 동안은 매 프레임 직접 그리므로 전환을 끕니다 */
+body.lv-rolling .je-xp-fill, body.lv-rolling .bar-fill.xp { transition: none; }
+
+/* 다 올라갔을 때 — 레벨 숫자가 한 번 튀고, 여정 창 위로 「레벨 업!」이 떠올랐다 사라집니다 */
+.journey-energy { position: relative; }
+.lv-pop { animation: lv-pop 0.6s steps(6); }
+@keyframes lv-pop {
+  0%   { transform: scale(1);    color: var(--accent); }
+  30%  { transform: scale(1.25); color: #e09a1a; text-shadow: 0 0 6px rgba(240, 180, 40, 0.8); }
+  100% { transform: scale(1); }
+}
+.je-lv.lv-pop { transform-origin: right center; }
+.lv-up-pop {
+  position: absolute;
+  right: 4px;
+  top: -6px;
+  font-family: var(--font-t);
+  font-size: 15px;
+  color: #e09a1a;
+  text-shadow: 2px 2px 0 var(--frame-out);
+  pointer-events: none;
+  white-space: nowrap;
+  animation: lv-up-pop 1.5s steps(15) both;
+}
+@keyframes lv-up-pop {
+  0%   { opacity: 0; transform: translateY(8px) scale(0.8); }
+  15%  { opacity: 1; transform: translateY(-4px) scale(1.15); }
+  30%  { transform: translateY(-6px) scale(1); }
+  80%  { opacity: 1; transform: translateY(-12px); }
+  100% { opacity: 0; transform: translateY(-18px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lv-pop, .lv-up-pop { animation: none; }
+}
+
+/* ---------- 떠돌이 상인 ---------- */
+.post.merchant .post-icon { filter: saturate(0.8); }
+.modal-card .shop-body { overflow-y: auto; flex: 1; min-height: 0; padding: 2px; }
+.inv-item.ware.sold { opacity: 0.55; }
+
 </style>
 </head>
 <body data-tab="journey">
@@ -2481,6 +2526,18 @@ html:has(body.beyond) { background: #0b0812; }
       <button class="btn tiny" data-closeenh>닫기</button>
     </div>
     <div id="enhBody" class="enh-body"></div>
+  </div>
+</div>
+
+<!-- 떠돌이 상인. 그 지역에 상인이 있으면 갈림길의 「들른다」로 엽니다. 파는 것은 ui.js 의 renderShop 이 그립니다. -->
+<div id="shopModal" class="modal hidden">
+  <div class="modal-back" data-closeshop></div>
+  <div class="modal-card">
+    <div class="modal-head">
+      <h3>떠돌이 상인 <span class="count" id="shopGold"></span></h3>
+      <button class="btn tiny" data-closeshop>닫기</button>
+    </div>
+    <div id="shopBody" class="shop-body"></div>
   </div>
 </div>
 
@@ -3839,6 +3896,14 @@ const RULES = {
   // 첫 회차가 제1격 하나로 다 갔습니다. 그 지점을 앞으로 당기는 값입니다.
   RANK_XP_EARLY: 2.0,
   AURA_CHANCE: 0.22,      // 화신이 이상한 기운을 두르고 나타날 확률
+  // 골드 — 싸워서 이기면 떨어집니다. 회차가 끝나도 남습니다 (떠돌이 상인에게서 씁니다).
+  // 한 번 이길 때 = GOLD_BASE × GOLD_GROWTH^(격−1) × 종류(일반 1 · 정예 4 · 히든 5 · 보스 10) × 기운 × 골드 배수
+  // 골드 배수 = 행운 배수(분배) × (1 + 장비의 골드 획득)
+  GOLD_BASE: 5,
+  GOLD_GROWTH: 1.9,
+  // 떠돌이 상인의 물건 값 = 그 격 일반 화신 한 번 몫의 이만큼 배.
+  // 제1격에서 한 회차에 하나쯤 살 수 있는 값입니다 (일반 25번 · 정예 둘 · 보스 하나 ≈ 215골드). 무엇을 팔지는 아직 — 구조만.
+  WARE_PRICE: 30,
   BOSS_XP_MULT: 1.04      // 지금까지 꺾어본 보스 한 명당 경험치 배수 (영구히 이월)
                           //
                           // 이게 게임 전체 길이를 정하는 손잡이입니다. 시뮬 실측
@@ -4287,6 +4352,8 @@ const SPECIALS = [
   { id: 'xpRate',    name: '경험치',     side: 'get', unit: '%', base: 18, cap: 2.00, desc: '얻는 경험치' },
   // 특수장비(유물)에서만 나옵니다. 이미 가진 것을 분해할 때 나오는 강화석에 곱해집니다.
   { id: 'stoneRate', name: '강화석',     side: 'get', unit: '%', base: 30, cap: 1.50, desc: '분해할 때 나오는 강화석' },
+  // 이긴 판마다 떨어지는 골드에 곱해집니다. 돈 · 보물 · 탐욕과 어울리는 장비에만 붙습니다 (GOLD_ITEMS).
+  { id: 'goldRate',  name: '골드 획득',  side: 'get', unit: '%', base: 20, cap: 3.00, desc: '이길 때 얻는 골드' },
 
   // ── 원작(Resolute Hero)에 있고 여기엔 없던 넷 ──
   // 유물과 세트 효과로만 얻습니다. 일반 장비의 성격은 이걸 붙여주지 않습니다.
@@ -4413,10 +4480,10 @@ const KINDS = {
   // 세 종류를 가진 일반 적이라면 22% 를 세 번 굴리므로
   // 아무것도 못 얻을 확률이 47% 입니다 — 빈손으로 돌아서는 날이 있어야
   // 행운에 투자할 이유가 생깁니다.
-  normal: { id: 'normal', name: '일반', mult: 1.0, lifeMult: 1.0,  penalty: 'LOSS_PENALTY',       once: false, energy: 0, dropChance: 0.22 },
-  elite:  { id: 'elite',  name: '정예', mult: 1.4, lifeMult: 1.2,  penalty: 'LOSS_PENALTY_ELITE', once: true,  energy: 2, dropChance: 0.32 },
-  hidden: { id: 'hidden', name: '히든', mult: 1.6, lifeMult: 1.25, penalty: 'LOSS_PENALTY_ELITE', once: true,  energy: 3, dropChance: 1.00 },
-  boss:   { id: 'boss',   name: '격',   mult: 1.8, lifeMult: 1.3,  penalty: 'BOSS_LOSS_PENALTY',  once: true,  energy: 4, dropChance: 0.40 }
+  normal: { id: 'normal', name: '일반', mult: 1.0, lifeMult: 1.0,  penalty: 'LOSS_PENALTY',       once: false, energy: 0, dropChance: 0.22, gold: 1 },
+  elite:  { id: 'elite',  name: '정예', mult: 1.4, lifeMult: 1.2,  penalty: 'LOSS_PENALTY_ELITE', once: true,  energy: 2, dropChance: 0.32, gold: 4 },
+  hidden: { id: 'hidden', name: '히든', mult: 1.6, lifeMult: 1.25, penalty: 'LOSS_PENALTY_ELITE', once: true,  energy: 3, dropChance: 1.00, gold: 5 },
+  boss:   { id: 'boss',   name: '격',   mult: 1.8, lifeMult: 1.3,  penalty: 'BOSS_LOSS_PENALTY',  once: true,  energy: 4, dropChance: 0.40, gold: 10 }
 };
 
 function lossPenaltyFor(kind) { return RULES[KINDS[kind].penalty]; }
@@ -5513,8 +5580,59 @@ const SLOT_SCARCITY = (() => {
   return out;
 })();
 
-// 격마다 전리품 id — 도감 완성을 셀 때 씁니다
+// 격마다 전리품 id — 도감 완성을 셀 때 씁니다 (떠돌이 상인의 물건은 아래에서 따로 들어가므로 안 셉니다)
 const RANK_ITEMS = Object.fromEntries(RANKS.map(r => [r.n, ITEMS.filter(i => i.rank.n === r.n).map(i => i.id)]));
+
+// ---------- 골드 획득이 붙는 장비 ----------
+// 돈 · 보물 · 탐욕 · 거래와 어울리는 것들에만. 값은 %.
+// 행운 분배로도 골드가 늘어납니다 (game.js 의 goldMult).
+const GOLD_ITEMS = {
+  '가짜 금화': 20, '미끼 반지': 15,                               // 미믹 — 보물인 척하는 것
+  '무너진 옥새': 20,                                               // 몰락한 왕
+  '탐욕의 반지': 30, '끝없는 자루': 35, '탐욕의 전대': 30,         // 칠죄종 · 탐욕
+  '금섬 팔찌': 30, '금전표': 30,                                   // 세 발 금두꺼비 — 동전을 뱉으면 복이 온다
+  '칸의 인장': 25, '황금 사과': 30,
+  '피로 쓴 계약서': 40,                                            // 메피스토펠레스 — 영혼을 값으로 쳐주는 상인
+  '황금 태양원반': 35, '옥새': 40
+};
+for (const it of ITEMS) {
+  if (GOLD_ITEMS[it.name]) it.goldRate = +(GOLD_ITEMS[it.name] / 100).toFixed(4);
+}
+
+// 한 번 이겼을 때 떨어지는 골드 (기운 · 골드 배수를 곱하기 전)
+function goldFor(foe) {
+  const r = foe && foe.rank ? foe.rank.n : 1;
+  return RULES.GOLD_BASE * Math.pow(RULES.GOLD_GROWTH, r - 1) * KINDS[foe ? foe.kind : 'normal'].gold;
+}
+// 그 격 일반 화신 한 번 몫을 n 배 한 값 — 상인의 물건 값
+function priceFor(rank, n) { return Math.round(RULES.GOLD_BASE * Math.pow(RULES.GOLD_GROWTH, rank - 1) * n / 10) * 10; }
+
+// ---------- 떠돌이 상인 ----------
+// 그 공간 어딘가를 떠도는 숨은 것. 칸을 열지도, 싸우지도 않습니다 — 물건을 팝니다.
+// 3지역의 숨은 것(카벙클)을 처음 꺾은 뒤부터, 회차마다 1~6지역 중 한 곳에 나타납니다.
+// 누구인지 · 무엇을 왜 파는지는 말하지 않습니다.
+// 무엇을 팔지는 아직 정하지 않았습니다 — 구조만 있습니다. 여기에 한 줄씩 넣으면 상점에 나옵니다.
+//   [id, 이름, 부위, 아이콘, 격, 성격, 골드 획득 %(없으면 생략)]
+//   성능은 그 격 지역의 가장 센 일반 화신 것만큼, 값은 priceFor(격, WARE_PRICE).
+//   예: ['ware_hardhat', '안전모', 'helm', '⛑️', 2, 'guard']
+const MERCHANT_ID = 'merchant';
+const MERCHANT_UNLOCK = 'carbuncle';
+const MERCHANT_WARES = [];
+for (const [id, name, slot, icon, r, arch, gold] of MERCHANT_WARES) {
+  const zone = ZONES.findIndex(z => z.rank === r);
+  const level = Math.max(...ENEMIES.filter(e => e.zoneIndex === zone && e.kind === 'normal').map(e => e.level));
+  const rank = RANKS.find(x => x.n === r);
+  ITEMS.push({
+    id, name, slot,
+    grade: 'normal', arch, special: null, unique: false, note: null,
+    level, rank,
+    from: MERCHANT_ID, fromName: '떠돌이 상인', fromIcon: icon,
+    ware: true,
+    price: priceFor(r, RULES.WARE_PRICE),
+    ...makeItemStats(slot, level, 1.2, arch, false),
+    ...(gold ? { goldRate: gold / 100 } : {})
+  });
+}
 
 // id 로 바로 찾습니다 — 스탯을 셀 때마다 수백 개를 훑지 않게
 const ENEMY_BY_ID = Object.fromEntries(ENEMIES.map(e => [e.id, e]));
@@ -6071,6 +6189,7 @@ function load() {
     State.meta.bossesBeaten = Array.isArray(data.bossesBeaten) ? data.bossesBeaten : [];
     State.meta.banked = Array.isArray(data.banked) ? data.banked : [];
     State.meta.specialOpened = Array.isArray(data.specialOpened) ? data.specialOpened : [];
+    State.meta.gold = Math.max(0, Math.floor(num(data.gold)));
     State.meta.seen = Array.isArray(data.seen) ? data.seen : [];
     State.meta.fresh = (data.fresh && typeof data.fresh === 'object') ? data.fresh : {};
     State.meta.sets = Array.isArray(data.sets) ? data.sets : [null, null, null];
@@ -6139,6 +6258,7 @@ function freshMeta() {
     bossesBeaten: [],
     banked: [],
     specialOpened: [],
+    gold: 0,                          // 골드 — 회차가 끝나도 남습니다
     runCount: 0,
     bestLevel: 1,
     bestKill: 0,
@@ -6339,6 +6459,7 @@ function freshRun() {
     aura: null,          // 그 화신이 두른 기운 (없으면 null)
     lastResult: null,    // 방금 끝난 전투의 결과 — 결과 화면이 이걸 보고 그립니다
     onBoss: false,       // 그 조우가 보스전인가
+    merchant: null,      // 이번 회차의 떠돌이 상인 — { zone, wares, bought } (없으면 null)
     over: false,
     victory: false,
     reason: ''
@@ -6348,6 +6469,7 @@ function freshRun() {
 function startRun() {
   State.meta.runCount += 1;
   State.run = freshRun();
+  State.run.merchant = rollMerchant(0);
   if (State.meta.autoAlloc) commitPoints();
 
   State.log = [];
@@ -6507,6 +6629,45 @@ function addSpentOn(id, n) {
   run.spentOn[id] = (run.spentOn[id] || 0) + n;
 }
 
+// ---------- 떠돌이 상인 ----------
+// 3지역의 숨은 것(카벙클)을 처음 꺾은 뒤부터, 회차마다 1~6지역 중 한 곳에 나타납니다.
+// 싸우지 않습니다 — 들르면 물건을 팝니다. 들르는 데 에너지는 들지 않습니다.
+function merchantUnlocked() { return State.meta.specialOpened.includes(MERCHANT_UNLOCK); }
+
+// fromZone 이후(포함) ~ 마계의 왕좌 사이 한 곳. 파는 것은 아직 안 가진 것 중 셋까지 (그 지역 격 +1 까지).
+function rollMerchant(fromZone) {
+  if (!merchantUnlocked()) return null;
+  const lo = Math.min(fromZone, WALL_ZONE);
+  const zone = lo + Math.floor(Math.random() * (WALL_ZONE - lo + 1));
+  const rank = ZONES[zone].rank;
+  const pool = ITEMS.filter(i => i.ware && !owns(i.id) && i.rank.n <= rank + 1);
+  for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
+  return { zone, wares: pool.slice(0, 3).map(i => i.id), bought: [] };
+}
+
+// 지금 이 지역에 상인이 있나
+function merchantHere() {
+  const run = State.run;
+  return !!(run && run.merchant && run.merchant.zone === run.zoneIndex && !run.over);
+}
+
+// 산다. 성공하면 true.
+function buyWare(id) {
+  const run = State.run;
+  const it = getItem(id);
+  if (!merchantHere() || !it || !it.ware) return false;
+  const m = run.merchant;
+  if (!m.wares.includes(id) || m.bought.includes(id) || owns(id)) return false;
+  if (num(State.meta.gold) < it.price) return false;
+  State.meta.gold -= it.price;
+  State.meta.owned[id] = 1;
+  markFresh(it);
+  m.bought.push(id);
+  pushLog('drop', `떠돌이 상인에게서 『${it.name}』${josa(it.name, '을', '를')} 샀다 — ${fmt(it.price)} 골드`);
+  save();
+  return true;
+}
+
 // 이 여정에서 이미 꺾었는가 (정예·보스 전용)
 function isDowned(enemyId) { return State.run.downed.includes(enemyId); }
 
@@ -6597,6 +6758,9 @@ function engage() {
   const levelBefore = run.level;
   const levelsGained = gainXp(xp);
   const drops = rollDrops(enemy.id, aura ? aura.dropMult : 1);
+  // 골드 — 기운이 두른 상대일수록, 행운과 골드 획득 장비가 많을수록. 조금씩 흔들립니다.
+  const gold = Math.max(1, Math.round(goldFor(enemy) * (aura ? aura.dropMult : 1) * goldMult() * (0.85 + Math.random() * 0.3)));
+  State.meta.gold = num(State.meta.gold) + gold;
 
   const bits = [];
   if (gap > 1.01) bits.push(`격차 ×${gap.toFixed(2)}`);
@@ -6606,7 +6770,7 @@ function engage() {
   const multText = bits.length ? `  (${bits.join(' · ')})` : '';
 
   pushLog('battle',
-    `${enemy.icon} ${enemy.name}${josa(enemy.name, '을', '를')} 꺾었다 (Lv.${fmtLevel(enemy.level)}) — ${result.turns}턴, +${fmt(xp)} EXP${multText}`);
+    `${enemy.icon} ${enemy.name}${josa(enemy.name, '을', '를')} 꺾었다 (Lv.${fmtLevel(enemy.level)}) — ${result.turns}턴, +${fmt(xp)} EXP · +${fmt(gold)} 골드${multText}`);
 
   if (levelsGained > 0) {
     const before = rankOf(run.level - levelsGained);
@@ -6645,7 +6809,7 @@ function engage() {
   // 결과 화면이 보고 그릴 내용
   run.lastResult = {
     win: true, enemy, turns: result.turns, aura,
-    xp, gap, auraXp, bossM, levelBefore, levelsGained, drops, devoured,
+    xp, gap, auraXp, bossM, levelBefore, levelsGained, drops, devoured, gold,
     openedPath: false, replay
   };
 
@@ -6665,6 +6829,8 @@ function engage() {
     State.meta.specialOpened.push(enemy.id);
     const n = specialOpenCount();
     run.lastResult.openedSpecial = n;
+    // 3지역의 숨은 것을 처음 꺾으면 떠돌이 상인이 나타나기 시작합니다 — 이번 회차는 지금 이후의 지역 어딘가에
+    if (enemy.id === MERCHANT_UNLOCK && !run.merchant) run.merchant = rollMerchant(run.zoneIndex);
     pushLog('rank', `━━ 특수장비 칸이 열렸다 (${n}/${SPECIAL_SLOT_MAX}) — 보석이나 유물을 끼울 수 있다 ━━`);
     fillSpecialSlots();
   }
@@ -6926,6 +7092,12 @@ function findPower(stats = null) {
   return luckMult() * (1 + num(h.findRate));
 }
 
+// 골드 배수 — 행운 분배(전리품과 같은 배수) × 장비의 골드 획득
+function goldMult(stats = null) {
+  const h = stats || heroStats();
+  return luckMult() * (1 + num(h.goldRate));
+}
+
 // 장비가 얹어주는 경험치 배수.
 // 전리품 확률과 달리 행운 같은 걸 타지 않고, 오직 착용한 『성장』 장비만 봅니다.
 function xpGearMult(stats = null) {
@@ -7056,8 +7228,8 @@ const $ = id => document.getElementById(id);
 // ---------- 전체 다시 그리기 ----------
 function render() {
   withHeldSpoils(renderRecords);
-  renderHero();
-  renderJourney();
+  withHeldSpoils(renderHero);      // 레벨 · 경험치 · 스탯도 전투가 끝난 뒤에
+  withHeldSpoils(renderJourney);
   withHeldSpoils(renderGear);
   renderLog();
   renderSettings();
@@ -7065,6 +7237,7 @@ function render() {
   withHeldSpoils(renderTabBadges);
   atmosphere();        // 배경음이 분위기를 따라가므로 먼저
   syncMusic();
+  renderShop();
   if (isAdminOpen()) renderAdmin();
 }
 
@@ -7129,6 +7302,74 @@ function wallCracks() {
     paths += `<path d="${d}" pathLength="1"/>`;
   }
   return `<svg class="wb-cracks" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid slice">${paths}</svg>`;
+}
+
+// ---------- 레벨이 올라가는 모습 ----------
+// 경험치는 「맞선다」를 누르는 순간 들어오지만, 전투를 보여주는 동안은 싸우기 전 값으로 그립니다 (withHeldSpoils).
+// 결과가 뜨면 싸우기 전 레벨에서 숫자가 굴러 올라가고, 경험치 막대가 차오르고(오른 만큼 몇 바퀴),
+// 다 올라가면 「레벨 업」이 한 번 튑니다. 여정 창(폰에서도 보이는 곳)과 「나」 창이 같이 움직입니다.
+const LEVEL_ANIM = 1000;     // 레벨이 올랐을 때 숫자가 다 올라가기까지
+const XP_ANIM = 500;         // 레벨은 그대로이고 막대만 찰 때
+const levelMoments = new WeakSet();
+// 마왕을 꺾은 결과면 벽이 무너지는 연출이 걷힌 뒤에 시작합니다
+function levelWait(r) {
+  return r.enemy.id === WALL_BOSS && r.openedPath && !wallMoments.has(r) && !calmMotion()
+    ? WALL_FX_DELAY + WALL_FX_LEN - 300 : 150;
+}
+function paintLevel(lv, pct) {
+  const txt = fmtLevel(lv);
+  const a = $('heroLevel'); if (a) a.textContent = 'Lv.' + txt;
+  const b = $('jeLv'); if (b) b.textContent = txt;
+  for (const id of ['xpFill', 'jeXpFill']) { const el = $(id); if (el) el.style.width = Math.max(0, Math.min(100, pct)) + '%'; }
+}
+function levelMoment(r) {
+  if (!r.win || !r.pre || levelMoments.has(r)) return;
+  const wait = levelWait(r);
+  levelMoments.add(r);
+  const run = State.run;
+  const from = r.pre.level, to = run.level, gained = to - from;
+  const fromPct = r.pre.xp / xpToNext(from) * 100;
+  const toPct = run.xp / xpToNext(to) * 100;
+  if (calmMotion()) { if (gained > 0) levelPop(); return; }
+  paintLevel(from, fromPct);
+  document.body.classList.add('lv-rolling');   // 막대의 짧은 전환 효과를 끕니다 — 매 프레임 직접 그리니까
+  setTimeout(() => {
+    const dur = gained > 0 ? LEVEL_ANIM : XP_ANIM;
+    const loops = Math.max(1, Math.min(gained, 3));
+    const t0 = performance.now();
+    const frame = now => {
+      const t = Math.min(1, (now - t0) / dur);
+      const e = 1 - Math.pow(1 - t, 3);
+      if (gained > 0) {
+        let pct;
+        if (t < 0.7) {                       // 처음 70% — 오른 만큼(최대 세 바퀴) 막대가 찼다 비었다
+          const u = (t / 0.7) * loops;
+          pct = u < 1 ? fromPct + (100 - fromPct) * u : (u % 1) * 100;
+        } else pct = toPct * (t - 0.7) / 0.3;   // 남은 30% — 새 레벨에서 지금 자리까지
+        paintLevel(t >= 1 ? to : from + Math.floor(gained * e), t >= 1 ? toPct : pct);
+      } else paintLevel(to, fromPct + (toPct - fromPct) * e);
+      if (t < 1) { requestAnimationFrame(frame); return; }
+      document.body.classList.remove('lv-rolling');
+      if (gained > 0) levelPop();
+    };
+    requestAnimationFrame(frame);
+  }, wait);
+}
+// 다 올라갔을 때 — 레벨 숫자가 한 번 튀고, 그 위로 「레벨 업」이 떠올랐다 사라집니다
+function levelPop() {
+  for (const el of [$('heroLevel'), document.querySelector('.je-lv')]) {
+    if (!el) continue;
+    el.classList.remove('lv-pop');
+    void el.offsetWidth;
+    el.classList.add('lv-pop');
+  }
+  const host = document.querySelector('.journey-energy');
+  if (!host || calmMotion()) return;
+  const pop = document.createElement('span');
+  pop.className = 'lv-up-pop';
+  pop.textContent = '레벨 업!';
+  host.appendChild(pop);
+  setTimeout(() => pop.remove(), 1500);
 }
 
 // ---------- 소리 ----------
@@ -7296,6 +7537,7 @@ function renderRecords() {
     ${record('최심 도달', `${m.bestZone}지역 · ${deepest.name}`)}
     ${record('빼앗은 격', `${m.bossesBeaten.length}/${known}`, bm > 1.01 ? 'boost' : '')}
     ${bm > 1.01 ? record('영구 경험치', `×${bm.toFixed(1)}`, 'boost') : ''}
+    ${record('골드', fmt(num(m.gold)))}
     ${record('전리품', `${ownedIds().length}/${knownItems().length}`)}
     ${record('도감 완성', `${completedRanks()}/${known}`, completedRanks() ? 'boost' : '')}
     ${m.cleared ? record('', '클리어', 'cleared') : ''}
@@ -7363,6 +7605,9 @@ function renderHero() {
     ${statRow('경험치', total.xpRate > 0
         ? `×${xpGearMult(total).toFixed(2)} <span class="stat-note">(장비 +${Math.round(total.xpRate * 100)}%)</span>`
         : '×1.00', 0)}
+    ${statRow('골드', total.goldRate > 0
+        ? `×${goldMult(total).toFixed(2)} <span class="stat-note">(행운 ×${luckMult().toFixed(2)} · 장비 +${Math.round(total.goldRate * 100)}%)</span>`
+        : `×${luckMult().toFixed(2)}`, 0)}
     ${statRow('강화석', `+${Math.round(total.stoneRate * 100)}%`, 0)}
     ${statRow('꺾은 것', run.kills, 0)}
   `;
@@ -7519,8 +7764,9 @@ function renderJourney() {
       <div class="journey-energy ${low ? 'low' : ''}">
         <span class="je-k">에너지</span>
         <span class="je-v">${run.energy}<span class="je-max">/${max}</span></span>
-        <span class="je-lv"><span class="lv-k">Lv.</span>${fmtLevel(run.level)}</span>
+        <span class="je-lv"><span class="lv-k">Lv.</span><span id="jeLv">${fmtLevel(run.level)}</span></span>
       </div>
+      <div class="je-xp"><div class="je-xp-fill" id="jeXpFill" style="width:${Math.min(100, run.xp / xpToNext(run.level) * 100)}%"></div></div>
       ${journeySets()}
     </div>
   `;
@@ -7537,6 +7783,7 @@ function renderJourney() {
     html += resultCard(run.lastResult, run);
     resultSounds(run.lastResult, run);
     wallMoment(run.lastResult);
+    levelMoment(run.lastResult);
   } else if (run.over) {
     html += `<p class="stage-msg">여정이 끝났다.</p>`;
   } else if (run.encounter) {
@@ -7547,7 +7794,7 @@ function renderJourney() {
   html += `</div>`;
 
   $('journey').innerHTML = html;
-  withHeldSpoils(renderRoster);   // 도감의 전리품 칸도 전투가 끝난 뒤에
+  renderRoster();
   wireJourney();
   if (battle) { paintBattle(); return; }   // 전투가 끝나야 전리품이 튀어나오고 자동 넘기기가 돕니다
   revealDrops();
@@ -7743,7 +7990,9 @@ function heldSpoils(r) {
   const held = {
     owned: { ...m.owned },
     stones: { ...m.stones },
-    fresh: Object.fromEntries(Object.entries(m.fresh).map(([k, v]) => [k, v.slice()]))
+    fresh: Object.fromEntries(Object.entries(m.fresh).map(([k, v]) => [k, v.slice()])),
+    gold: num(m.gold) - num(r && r.gold),
+    run: r && r.pre ? { ...r.pre } : null
   };
   for (const d of (r && r.win && r.drops) || []) {
     if (d.isNew) {
@@ -7760,10 +8009,15 @@ function heldSpoils(r) {
 // 전투 중이면 그 전투의 전리품을 잠깐 빼 둔 채로 fn 을 그립니다 (끝나면 바로 되돌립니다)
 function withHeldSpoils(fn) {
   if (!battle || !battle.held) return fn();
-  const m = State.meta;
-  const real = { owned: m.owned, stones: m.stones, fresh: m.fresh };
-  Object.assign(m, battle.held);
-  try { return fn(); } finally { Object.assign(m, real); }
+  const m = State.meta, run = State.run, h = battle.held;
+  const real = { owned: m.owned, stones: m.stones, fresh: m.fresh, gold: m.gold };
+  const realRun = h.run ? Object.fromEntries(Object.keys(h.run).map(k => [k, run[k]])) : null;
+  Object.assign(m, { owned: h.owned, stones: h.stones, fresh: h.fresh, gold: h.gold });
+  if (h.run) Object.assign(run, h.run);
+  try { return fn(); } finally {
+    Object.assign(m, real);
+    if (realRun) Object.assign(run, realRun);
+  }
 }
 
 function stopBattle() {
@@ -7826,7 +8080,7 @@ function resultSounds(r, run) {
   if (!r.win) return;
   if (r.levelsGained > 0) {
     const rankUp = rankOf(r.levelBefore).n !== rankOf(run.level).n;
-    Sound.play(rankUp ? 'rankUp' : 'levelUp', { delay: 0.2 });
+    Sound.play(rankUp ? 'rankUp' : 'levelUp', { delay: (levelWait(r) + LEVEL_ANIM) / 1000 });   // 숫자가 다 올라간 때
   }
   // 마왕이면 길이 열리는 소리 대신 벽이 무너지는 소리 (연출과 같은 때 — wallMoment)
   if (r.openedPath) Sound.play(r.enemy.id === WALL_BOSS ? 'wallBreak' : 'pathOpen', { delay: r.enemy.id === WALL_BOSS ? WALL_FX_DELAY / 1000 : 0.9 });
@@ -8061,6 +8315,7 @@ function resultCard(r, run) {
   const lines = [];
   if (r.win) {
     lines.push(row('경험치', `+${fmt(r.xp)}`, mults.length ? mults.join(' · ') : ''));
+    if (r.gold) lines.push(row('골드', `+${fmt(r.gold)}`));
     lines.push(r.levelsGained > 0
       ? row('레벨', `Lv.${fmtLevel(r.levelBefore)} → Lv.${fmtLevel(run.level)}`, `+${fmtLevel(r.levelsGained)}`)
       : row('레벨', `Lv.${fmtLevel(run.level)}`));
@@ -8245,6 +8500,16 @@ function crossroads(boss, hero, run) {
       </div>`;
   }).join('');
 
+  // 떠돌이 상인 — 이 지역에 있으면 정해진 자리들 맨 위에. 싸우지 않고, 들르는 데 에너지도 들지 않습니다.
+  const merchant = merchantHere() ? `
+      <div class="post hidden merchant">
+        <span class="post-icon">🎒</span>
+        <div class="post-body">
+          <div class="post-name"><span class="grade-tag hidden">${KINDS.hidden.name}</span>떠돌이 상인</div>
+        </div>
+        <button class="btn post-btn hidden" id="shopBtn">들른다</button>
+      </div>` : '';
+
   return `
     <div class="crossroads">
       ${run.zoneCleared && nextZone ? `
@@ -8258,6 +8523,7 @@ function crossroads(boss, hero, run) {
         <span class="cost">에너지 ${RULES.TRAVEL_COST}</span>
       </button>
 
+      ${merchant}
       ${posts}
     </div>`;
 }
@@ -8312,6 +8578,7 @@ function wireJourney() {
     b.addEventListener('click', () => { switchSet(Number(b.dataset.jset)); Sound.play('equip'); render(); });
   }
   on('rosterBtn',    openRosterModal);
+  on('shopBtn',      () => { Sound.play('encounter'); openShop(); });
   const rab = $('rosterAllBtn');
   if (rab && !rab.dataset.wired) {
     rab.dataset.wired = '1';
@@ -8329,7 +8596,16 @@ function wireJourney() {
   }
   on('travelBtn',    () => { travel();         soundEncounter();         render(); });
   on('nextZoneBtn',  () => { moveToNextZone(); Sound.play('zoneMove');   render(); });
-  on('engageBtn',    () => { const from = logSeq; startBattle(engage(), from); render(); });   // 소리는 전투 화면이 한 줄씩 냅니다
+  on('engageBtn',    () => {
+    // 싸우기 직전의 레벨 · 경험치 · 에너지 — 전투를 보여주는 동안은 이 값으로 그리고, 끝나면 여기서부터 올라가는 모습을 보여줍니다
+    const run = State.run;
+    const pre = { level: run.level, xp: run.xp, unspent: run.unspent, spent: { ...run.spent }, energy: run.energy, kills: run.kills };
+    const from = logSeq;
+    const r = engage();
+    if (r) r.pre = pre;
+    startBattle(r, from);
+    render();
+  });   // 소리는 전투 화면이 한 줄씩 냅니다
   on('retreatBtn',   () => { retreat();        Sound.play('retreat');    render(); });
   on('continueBtn',  () => { dismissResult();  render(); });
   on('toAllocBtn',   () => { dismissResult();  render(); spotlightAlloc(); });
@@ -8401,6 +8677,7 @@ function wireKeys() {
         if (isSaveModalOpen()) closeSaveModal();
         else if (isAdminOpen()) closeAdmin();
         else if (isEnhModalOpen()) closeEnhModal();      // 강화 창이 부위 창 위에 있으니 먼저
+        else if (isShopOpen()) closeShop();
         else if (isSlotModalOpen()) closeSlotModal();
         else if (isRosterModalOpen()) closeRosterModal();
         else closeAllocModal();
@@ -8917,6 +9194,59 @@ function isSlotModalOpen() {
   return !!m && !m.classList.contains('hidden');
 }
 
+// ---------- 떠돌이 상인의 상점 ----------
+// 무엇을 팔지는 아직 정하지 않았습니다 (data.js 의 MERCHANT_WARES 가 비어 있음) — 창과 사고파는 구조만.
+function openShop() {
+  if (!merchantHere()) return;
+  $('shopModal').classList.remove('hidden');
+  renderShop();
+}
+function closeShop() {
+  const m = $('shopModal');
+  if (m) m.classList.add('hidden');
+}
+function isShopOpen() {
+  const m = $('shopModal');
+  return !!m && !m.classList.contains('hidden');
+}
+function renderShop() {
+  if (!isShopOpen()) return;
+  if (!merchantHere()) { closeShop(); return; }
+  const m = State.run.merchant;
+  const gold = num(State.meta.gold);
+  $('shopGold').textContent = `골드 ${fmt(gold)}`;
+  const cards = m.wares.map(id => {
+    const item = getItem(id);
+    if (!item) return '';
+    const sold = m.bought.includes(id) || owns(id);
+    const can = !sold && gold >= item.price;
+    const worn = getItem(State.meta.equipped[item.slot]);
+    const diff = itemDiffText(item, worn, slotMult(item.slot));
+    const spec = itemSpecialText(item);
+    return `
+      <div class="inv-item ware ${sold ? 'sold' : ''}">
+        <div class="inv-head">
+          <span class="inv-icon">${item.fromIcon}</span>${itemTag(item)}
+          <span class="rank-dot r${item.rank.n}" title="제${item.rank.n}격 · ${item.rank.name}"></span>
+        </div>
+        <div class="inv-name">${item.name}</div>
+        <div class="inv-stats">${SLOT_NAMES[item.slot]} · ${itemStatText(item) || '—'}</div>
+        ${spec ? `<div class="inv-spec">${spec}</div>` : ''}
+        ${diff && !sold ? `<div class="inv-diff">${diff}</div>` : ''}
+        ${sold ? '<span class="worn">샀다</span>'
+          : `<button class="btn" data-buy="${id}" ${can ? '' : 'disabled'}>${fmt(item.price)} 골드</button>`}
+      </div>`;
+  }).join('');
+  $('shopBody').innerHTML = cards
+    ? `<div class="inventory">${cards}</div>`
+    : `<p class="hint">팔 물건이 없다</p>`;
+  for (const b of document.querySelectorAll('[data-buy]')) {
+    b.addEventListener('click', () => {
+      if (buyWare(b.dataset.buy)) { Sound.play('equip'); render(); }
+    });
+  }
+}
+
 // ---------- 강화 창 ----------
 // 부위 창 위에 한 겹 더 뜹니다. 닫으면 밑에 있던 부위 창이 그대로 보입니다.
 // 지난번 결과는 지우고 엽니다 — 다시 열었는데 아까의 「실패」가 남아 있으면 헷갈립니다.
@@ -8953,7 +9283,7 @@ function isAllocModalOpen() {
   const m = $('allocModal');
   return !!m && !m.classList.contains('hidden');
 }
-function isAnyModalOpen() { return isSlotModalOpen() || isEnhModalOpen() || isAllocModalOpen() || isRosterModalOpen() || isSaveModalOpen() || isAdminOpen(); }
+function isAnyModalOpen() { return isSlotModalOpen() || isEnhModalOpen() || isShopOpen() || isAllocModalOpen() || isRosterModalOpen() || isSaveModalOpen() || isAdminOpen(); }
 
 // 그 부위의 강화를 반영한 실제 수치를 보여줍니다 — 장부상 수치가 아니라 몸에 붙는 값.
 // 강화는 부위에 붙으므로, 목록에 있는 것 무엇을 끼든 이 값이 됩니다.
@@ -9378,6 +9708,8 @@ function renderAdmin() {
         <button class="btn tiny" data-adm="itemsZone" ${off}>이 지역 전리품</button>
         <button class="btn tiny" data-adm="itemsAll" ${off}>모든 전리품</button>
         <button class="btn tiny" data-adm="stones" ${off}>강화석 +1,000</button>
+        <button class="btn tiny" data-adm="gold" ${off}>골드 +10,000</button>
+        <button class="btn tiny" data-adm="merchant" ${off}>떠돌이 상인을 여기로</button>
         <button class="btn tiny" data-adm="special" ${off}>특수장비 칸 모두</button>
       </div>
     </section>
@@ -9443,6 +9775,15 @@ function adminAction(a) {
     case 'special':
       meta.specialOpened = ENEMIES.filter(f => f.opens).map(f => f.id);
       break;
+    case 'gold':
+      meta.gold = num(meta.gold) + 10000;
+      break;
+    case 'merchant': {
+      // 조건(3지역 숨은 것)과 상관없이 지금 지역에 세웁니다. 파는 것은 아직 안 가진 것 중 셋
+      const pool = ITEMS.filter(i => i.ware && !owns(i.id));
+      run.merchant = { zone: run.zoneIndex, wares: pool.slice(0, 3).map(i => i.id), bought: [] };
+      break;
+    }
   }
   render();            // 관리자 창도 render 가 다시 그립니다
 }
@@ -9493,6 +9834,7 @@ function init() {
   for (const b of document.querySelectorAll('[data-closesave]')) b.addEventListener('click', closeSaveModal);
   $('enhOpenBtn').addEventListener('click', openEnhModal);
   for (const b of document.querySelectorAll('[data-closeenh]')) b.addEventListener('click', closeEnhModal);
+  for (const b of document.querySelectorAll('[data-closeshop]')) b.addEventListener('click', closeShop);
 
   $('tutNext').addEventListener('click', () => {
     if (tutIndex < TUTORIAL.length - 1) { tutIndex++; renderTutorial(); }

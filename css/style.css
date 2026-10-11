@@ -2371,3 +2371,48 @@ html:has(body.beyond) { background: #0b0812; }
 @media (prefers-reduced-motion: reduce) {
   .res-path.exit.late, .overlay-card.watched::after { animation: none; }
 }
+
+/* ---------- 여정 창의 경험치 막대 ----------
+   레벨 숫자 옆이 아니라 그 아래 한 줄을 통째로 씁니다 (레벨이 백억까지 가서 옆자리는 숫자 몫).
+   폰에서 「나」 탭을 안 열어도 경험치가 차오르는 게 보입니다. */
+.je-xp { height: 4px; background: var(--paper-lo); box-shadow: 0 0 0 1px var(--line-soft); }
+.je-xp-fill { height: 100%; background: repeating-linear-gradient(135deg, #2b74ad 0 3px, #1d5f8f 3px 6px); transition: width 0.25s ease; }
+/* 결과가 뜬 뒤 숫자가 굴러 올라가는 동안은 매 프레임 직접 그리므로 전환을 끕니다 */
+body.lv-rolling .je-xp-fill, body.lv-rolling .bar-fill.xp { transition: none; }
+
+/* 다 올라갔을 때 — 레벨 숫자가 한 번 튀고, 여정 창 위로 「레벨 업!」이 떠올랐다 사라집니다 */
+.journey-energy { position: relative; }
+.lv-pop { animation: lv-pop 0.6s steps(6); }
+@keyframes lv-pop {
+  0%   { transform: scale(1);    color: var(--accent); }
+  30%  { transform: scale(1.25); color: #e09a1a; text-shadow: 0 0 6px rgba(240, 180, 40, 0.8); }
+  100% { transform: scale(1); }
+}
+.je-lv.lv-pop { transform-origin: right center; }
+.lv-up-pop {
+  position: absolute;
+  right: 4px;
+  top: -6px;
+  font-family: var(--font-t);
+  font-size: 15px;
+  color: #e09a1a;
+  text-shadow: 2px 2px 0 var(--frame-out);
+  pointer-events: none;
+  white-space: nowrap;
+  animation: lv-up-pop 1.5s steps(15) both;
+}
+@keyframes lv-up-pop {
+  0%   { opacity: 0; transform: translateY(8px) scale(0.8); }
+  15%  { opacity: 1; transform: translateY(-4px) scale(1.15); }
+  30%  { transform: translateY(-6px) scale(1); }
+  80%  { opacity: 1; transform: translateY(-12px); }
+  100% { opacity: 0; transform: translateY(-18px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lv-pop, .lv-up-pop { animation: none; }
+}
+
+/* ---------- 떠돌이 상인 ---------- */
+.post.merchant .post-icon { filter: saturate(0.8); }
+.modal-card .shop-body { overflow-y: auto; flex: 1; min-height: 0; padding: 2px; }
+.inv-item.ware.sold { opacity: 0.55; }
