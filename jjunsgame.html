@@ -2443,6 +2443,42 @@ body.lv-rolling .je-xp-fill, body.lv-rolling .bar-fill.xp { transition: none; tr
 .shop-wares { margin-top: 12px; }
 .inv-item.ware.sold { opacity: 0.55; }
 
+/* ---------- 화신 ----------
+   삼은 화신의 이름이 내 칭호가 됩니다 — 「나」 창의 격 앞, 전투 화면의 「나」 앞.
+   바깥의 보라 밀랍 꼬리표. */
+.avatar-tag {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+  color: var(--cream);
+  background: var(--outer);
+  box-shadow: 0 0 0 1px rgba(28, 16, 7, 0.5);
+  padding: 0 5px;
+  margin-right: 6px;
+  vertical-align: 1px;
+}
+.frame[hidden] { display: none; }
+.av-head { font-size: 11px; font-weight: 700; color: var(--outer); letter-spacing: 0.06em; margin-bottom: 6px; }
+.av-row { padding: 8px 0; background: var(--dots) left bottom / 4px 2px repeat-x; }
+.av-row:last-child { background: none; }
+.av-row.on .avatar-tag { box-shadow: 0 0 0 2px #e0c8ff; }
+.av-top { display: flex; align-items: center; gap: 4px; }
+.av-top .btn { margin-left: auto; flex: none; }
+.av-ic { font-size: 16px; width: 22px; text-align: center; }
+.av-fx { display: flex; flex-wrap: wrap; gap: 2px 10px; margin-top: 4px; font-size: 11px; font-weight: 700; }
+.av-fx .up { color: var(--energy); }
+.av-fx .down { color: var(--danger); }
+/* 결과 화면 — 화신이 되었다 */
+.res-avatar { font-size: 13px; font-weight: 700; color: var(--outer); margin-bottom: 10px; animation: res-avatar 1.2s ease-out both; }
+@keyframes res-avatar {
+  0%   { opacity: 0; transform: scale(0.9); text-shadow: 0 0 0 rgba(125, 74, 168, 0); }
+  40%  { opacity: 1; transform: scale(1.06); text-shadow: 0 0 10px rgba(125, 74, 168, 0.8); }
+  100% { transform: none; text-shadow: none; }
+}
+@media (prefers-reduced-motion: reduce) { .res-avatar { animation: none; } }
+
 </style>
 </head>
 <body data-tab="journey">
@@ -2486,6 +2522,9 @@ body.lv-rolling .je-xp-fill, body.lv-rolling .bar-fill.xp { transition: none; tr
     </div>
 
     <div class="frame"><ul class="stats" id="heroStats"></ul></div>
+
+    <!-- 얻은 화신. 하나도 없으면 창째 숨깁니다 (ui.js 의 renderAvatars) -->
+    <div class="frame" hidden><div id="avatars" class="avatars"></div></div>
   </section>
 
   <!-- 가운데: 여정 — 창들은 renderJourney 가 그립니다 -->
@@ -5664,6 +5703,67 @@ for (const [id, name, slot, icon, r, arch, gold] of MERCHANT_WARES) {
 
 // id 로 바로 찾습니다 — 스탯을 셀 때마다 수백 개를 훑지 않게
 const ENEMY_BY_ID = Object.fromEntries(ENEMIES.map(e => [e.id, e]));
+
+// ---------- 화신 — 내가 그들의 화신이 된다 ----------
+// 7격부터의 상대를 꺾으면 아주 드물게(보통 1% · 보스 0.5%) 그 존재가 나를 화신으로 삼습니다.
+// 한 번 얻은 화신은 남고, 한 번에 하나만 삼습니다 (「나」 창에서 고름). 삼은 화신의 이름이 내 칭호가 됩니다.
+// 아자토스는 「화신을 갖지 못한 유일한 것」이라 화신이 되지 않습니다.
+//
+// 화신이 주는 능력치는 한쪽으로 크게 기웁니다 — 무언가를 크게 얻는 만큼 무언가를 크게 잃습니다.
+// 그래서 어느 화신을 삼을지가 상대 · 지역 · 장비에 따라 고민이 됩니다.
+//   mul — 핵심 스탯 배수(생명 · 공격력 · 방어력 · 민첩 · 행운), 장비 · 강화 · 도감까지 다 합친 뒤에 곱합니다
+//   add — 특수 능력치(+), 상한은 그대로입니다. 얻는 것(전리품 · 경험치 · 골드)만 마이너스가 될 수 있습니다
+const AVATAR_MIN_RANK = 7;
+const AVATAR_CHANCE = 0.01;
+const AVATAR_CHANCE_BOSS = 0.005;
+
+// 성격마다의 기본 꼴. 격이 높을수록, 정예 · 숨은 것일수록 조금씩 더 극단으로 (avatarProfile)
+const AVATAR_ARCH = {
+  fierce: { mul: { damage: 1.8, life: 0.5, defense: 0.6 },           add: { critRate: 0.15 } },
+  guard:  { mul: { defense: 2.0, life: 1.3, damage: 0.5 },           add: { block: 0.15 } },
+  leech:  { mul: { damage: 1.25, life: 0.5 },                        add: { lifesteal: 0.15 } },
+  swift:  { mul: { dex: 2.0, life: 0.6, defense: 0.6 },              add: { doubleHit: 0.15, doubleTurn: 0.06 } },
+  pierce: { mul: { damage: 1.3, dex: 0.5, defense: 0.7 },            add: { pierce: 0.35 } },
+  thorn:  { mul: { defense: 1.6, life: 1.2, damage: 0.4 },           add: { reflect: 0.4 } },
+  lucky:  { mul: { luck: 2.0, damage: 0.55, life: 0.7 },             add: { findRate: 0.8, goldRate: 1.0 } },
+  growth: { mul: { damage: 0.6, defense: 0.6, life: 0.8 },           add: { xpRate: 1.0 } },
+  brutal: { mul: { damage: 1.6, dex: 0.4 },                          add: { harmTouch: 0.06, critRate: 0.05 } },
+  ward:   { mul: { life: 2.2, damage: 0.5, dex: 0.7 },               add: { regen: 0.04 } }
+};
+
+// 보스는 저마다 따로 — 더 극단적으로
+const AVATAR_SIGNATURE = {
+  yisunsin: { mul: { defense: 2.6, life: 1.5, damage: 0.6, dex: 0.6 }, add: { block: 0.25, survive: 0.4 } },          // 아직 열두 척이 남았다
+  cheonma:  { mul: { damage: 2.6, life: 0.35, defense: 0.3 },         add: { critRate: 0.25, pierce: 0.3 } },         // 하늘 아래 마는 하나뿐
+  imugi:    { mul: { life: 1.6, damage: 0.4, dex: 0.5 },              add: { xpRate: 2.0 } },                         // 천 년을 기다려 오르려는
+  heracles: { mul: { life: 1.8, dex: 0.4, luck: 0.4 },                add: { survive: 0.6, regen: 0.06 } },           // 열두 번 죽고 돌아온
+  michael:  { mul: { damage: 0.7, luck: 0.3 },                        add: { reflect: 0.7, block: 0.2 } },            // 용을 떨어뜨린
+  lucifer:  { mul: { damage: 2.0, dex: 2.0, life: 0.3, defense: 0.3 }, add: { critRate: 0.2 } },                      // 가장 빛나던 별, 가장 깊이 떨어진
+  hades:    { mul: { life: 1.5, dex: 0.6 },                           add: { lifesteal: 0.3, survive: 0.3, xpRate: -0.5 } }, // 돌아온 자가 없는 문의 주인
+  zeus:     { mul: { damage: 1.6, defense: 0.4, life: 0.6 },          add: { harmTouch: 0.1, doubleTurn: 0.2 } }      // 올림포스의 마지막 말
+};
+
+function canBecomeAvatar(foe) { return !!foe && foe.rank.n >= AVATAR_MIN_RANK && !foe.final; }
+function avatarTitle(foe) { return /의 화신$/.test(foe.name) ? foe.name : `${foe.name}의 화신`; }
+function avatarChance(foe) { return foe.kind === 'boss' ? AVATAR_CHANCE_BOSS : AVATAR_CHANCE; }
+
+const AVATAR_KIND_SCALE = { normal: 1, elite: 1.1, hidden: 1.15, boss: 1 };
+const avatarCache = {};
+function avatarProfile(foe) {
+  if (!canBecomeAvatar(foe)) return null;
+  if (avatarCache[foe.id]) return avatarCache[foe.id];
+  const sig = AVATAR_SIGNATURE[foe.id];
+  let p;
+  if (sig) p = { mul: { ...sig.mul }, add: { ...sig.add } };
+  else {
+    const base = AVATAR_ARCH[foe.arch] || AVATAR_ARCH.fierce;
+    const s = (1 + 0.04 * (foe.rank.n - AVATAR_MIN_RANK)) * (AVATAR_KIND_SCALE[foe.kind] || 1);
+    p = { mul: {}, add: {} };
+    for (const [k, v] of Object.entries(base.mul)) p.mul[k] = +Math.max(0.1, 1 + (v - 1) * s).toFixed(2);
+    for (const [k, v] of Object.entries(base.add)) p.add[k] = +(v * s).toFixed(3);
+  }
+  return (avatarCache[foe.id] = p);
+}
 const ITEM_BY_ID  = Object.fromEntries(ITEMS.map(i => [i.id, i]));
 function getEnemy(id) { return ENEMY_BY_ID[id]; }
 function getItem(id)  { return id ? ITEM_BY_ID[id] : undefined; }
@@ -6218,6 +6318,8 @@ function load() {
     State.meta.banked = Array.isArray(data.banked) ? data.banked : [];
     State.meta.specialOpened = Array.isArray(data.specialOpened) ? data.specialOpened : [];
     State.meta.gold = Math.max(0, Math.floor(num(data.gold)));
+    State.meta.avatars = Array.isArray(data.avatars) ? data.avatars.filter(id => canBecomeAvatar(getEnemy(id))) : [];
+    State.meta.avatar = State.meta.avatars.includes(data.avatar) ? data.avatar : null;
     State.meta.seen = Array.isArray(data.seen) ? data.seen : [];
     State.meta.fresh = (data.fresh && typeof data.fresh === 'object') ? data.fresh : {};
     State.meta.sets = Array.isArray(data.sets) ? data.sets : [null, null, null];
@@ -6287,6 +6389,8 @@ function freshMeta() {
     banked: [],
     specialOpened: [],
     gold: 0,                          // 골드 — 회차가 끝나도 남습니다
+    avatars: [],                      // 얻은 화신 (적 id) — 회차가 끝나도 남습니다
+    avatar: null,                     // 지금 삼은 화신 — 한 번에 하나
     runCount: 0,
     bestLevel: 1,
     bestKill: 0,
@@ -6331,8 +6435,18 @@ function heroStats() {
   // 다 모은 격 하나마다 핵심 스탯 전체가 조금씩 — 레벨·분배·장비를 다 합친 뒤에 곱합니다
   const collect = 1 + COLLECTION_BONUS * completedRanks();
   for (const k of STAT_KEYS) total[k] = Math.round(total[k] * collect);
-  // 특수 능력치는 상한을 둡니다 — 막기 100% 같은 게 나오면 전투가 성립 안 합니다
-  for (const k of SPECIAL_KEYS) total[k] = Math.min(SPECIAL_INFO[k].cap, total[k]);
+  // 삼은 화신 — 다 합친 뒤에 한쪽으로 크게 기울입니다 (data.js 의 avatarProfile)
+  const av = activeAvatar();
+  if (av) {
+    const p = avatarProfile(av);
+    for (const k of STAT_KEYS) if (p.mul[k]) total[k] = Math.max(1, Math.round(total[k] * p.mul[k]));
+    for (const [k, v] of Object.entries(p.add)) total[k] = (total[k] || 0) + v;
+  }
+  // 특수 능력치는 상한을 둡니다 — 막기 100% 같은 게 나오면 전투가 성립 안 합니다.
+  // 화신이 깎는 것(얻는 것)은 −80% 아래로는 내려가지 않습니다
+  for (const k of SPECIAL_KEYS) {
+    total[k] = Math.max(SPECIAL_INFO[k].side === 'get' ? -0.8 : 0, Math.min(SPECIAL_INFO[k].cap, total[k]));
+  }
   return total;
 }
 
@@ -6657,6 +6771,19 @@ function addSpentOn(id, n) {
   run.spentOn[id] = (run.spentOn[id] || 0) + n;
 }
 
+// ---------- 화신 ----------
+// 지금 삼은 화신 (없으면 null)
+function activeAvatar() {
+  const id = State.meta && State.meta.avatar;
+  return id ? getEnemy(id) : null;
+}
+// 화신을 삼는다 / 벗는다 (null)
+function setAvatar(id) {
+  if (id && !State.meta.avatars.includes(id)) return;
+  State.meta.avatar = id || null;
+  save();
+}
+
 // ---------- 떠돌이 상인 ----------
 // 3지역의 숨은 것(카벙클)을 처음 꺾은 뒤부터, 회차마다 1~6지역 중 한 곳에 나타납니다.
 // 싸우지 않습니다 — 들르면 물건을 팝니다. 들르는 데 에너지는 들지 않습니다.
@@ -6802,6 +6929,13 @@ function engage() {
   // 골드 — 기운이 두른 상대일수록, 행운과 골드 획득 장비가 많을수록. 조금씩 흔들립니다.
   const gold = Math.max(1, Math.round(goldFor(enemy) * (aura ? aura.dropMult : 1) * goldMult() * (0.85 + Math.random() * 0.3)));
   State.meta.gold = num(State.meta.gold) + gold;
+  // 7격부터는 아주 드물게 그 존재가 나를 화신으로 삼습니다 — 처음이면 바로 삼고, 아니면 「나」 창에서 고릅니다
+  let avatarGained = null;
+  if (canBecomeAvatar(enemy) && !State.meta.avatars.includes(enemy.id) && Math.random() < avatarChance(enemy)) {
+    State.meta.avatars.push(enemy.id);
+    if (!State.meta.avatar) State.meta.avatar = enemy.id;
+    avatarGained = enemy.id;
+  }
 
   const bits = [];
   if (gap > 1.01) bits.push(`격차 ×${gap.toFixed(2)}`);
@@ -6824,6 +6958,7 @@ function engage() {
         : '━ 알 수 없는 격에 올랐다 ━');
     }
   }
+  if (avatarGained) pushLog('rank', `━━ ${avatarTitle(enemy)}${josa(avatarTitle(enemy), '이', '가')} 되었다 ━━`);
   for (const d of drops) {
     const g = d.item.grade === 'normal' ? '' : `[${KINDS[d.item.grade].name}] `;
     pushLog('drop', d.isNew
@@ -6850,7 +6985,7 @@ function engage() {
   // 결과 화면이 보고 그릴 내용
   run.lastResult = {
     win: true, enemy, turns: result.turns, aura,
-    xp, gap, auraXp, bossM, levelBefore, levelsGained, drops, devoured, gold,
+    xp, gap, auraXp, bossM, levelBefore, levelsGained, drops, devoured, gold, avatarGained,
     openedPath: false, replay
   };
 
@@ -7620,7 +7755,9 @@ function renderHero() {
   // 아직 모르는 격(마왕 너머)은 이름도, 다음 단계가 있다는 것도 보이지 않습니다.
   const rank = rankOf(run.level);
   const next = RANKS.find(r => r.minLevel > run.level);
+  const av = activeAvatar();
   $('heroRank').innerHTML = `
+    ${av ? `<span class="avatar-tag">${avatarTitle(av)}</span>` : ''}
     ${knownRank(rank.n)
       ? `<span class="rank-chip r${rank.n}">제${rank.n}격 · ${rank.name}</span>`
       : `<span class="rank-chip unknown">???</span>`}
@@ -7656,17 +7793,19 @@ function renderHero() {
       .map(k => specialRow(k, total[k])).join('')}
     <li class="stat-head">얻는 것</li>
     ${statRow('전리품 확률', total.findRate > 0
-        ? `×${findPower(total).toFixed(2)} <span class="stat-note">(행운 ×${luckMult().toFixed(2)} · 장비 +${Math.round(total.findRate * 100)}%)</span>`
+        ? `×${findPower(total).toFixed(2)} <span class="stat-note">(행운 ×${luckMult().toFixed(2)} · 장비 · 화신 +${Math.round(total.findRate * 100)}%)</span>`
         : `×${luckMult().toFixed(2)}`, 0)}
-    ${statRow('경험치', total.xpRate > 0
-        ? `×${xpGearMult(total).toFixed(2)} <span class="stat-note">(장비 +${Math.round(total.xpRate * 100)}%)</span>`
+    ${statRow('경험치', total.xpRate !== 0
+        ? `×${xpGearMult(total).toFixed(2)} <span class="stat-note">(장비 · 화신 ${total.xpRate > 0 ? "+" : "−"}${Math.round(Math.abs(total.xpRate) * 100)}%)</span>`
         : '×1.00', 0)}
     ${statRow('골드', total.goldRate > 0
-        ? `×${goldMult(total).toFixed(2)} <span class="stat-note">(행운 ×${luckMult().toFixed(2)} · 장비 +${Math.round(total.goldRate * 100)}%)</span>`
+        ? `×${goldMult(total).toFixed(2)} <span class="stat-note">(행운 ×${luckMult().toFixed(2)} · 장비 · 화신 +${Math.round(total.goldRate * 100)}%)</span>`
         : `×${luckMult().toFixed(2)}`, 0)}
     ${statRow('강화석', `+${Math.round(total.stoneRate * 100)}%`, 0)}
     ${statRow('꺾은 것', run.kills, 0)}
   `;
+
+  renderAvatars();
 
   // 안 찍은 포인트가 있으면 버튼에 점을 찍습니다 — 창을 안 열어도 보이게.
   const pip = $('allocPip');
@@ -7791,6 +7930,46 @@ function statRow(name, value, bonus) {
     <span class="stat-name">${name}</span>
     <span class="stat-value">${shown}${bonusText}</span>
   </li>`;
+}
+
+// ---------- 화신 ----------
+// 얻은 화신이 있을 때만 「나」 창에 나옵니다. 한 번에 하나만 삼고, 언제든 바꿉니다 (싸우는 중에는 못 바꿈).
+// 화신마다 무엇이 오르고(▲) 무엇이 깎이는지(▼) 그대로 보여줍니다 — 그걸 보고 고르는 게 이 칸의 재미입니다.
+function avatarEffectHTML(foe) {
+  const p = avatarProfile(foe);
+  const name = k => (STAT_INFO.find(s => s.id === k) || SPECIAL_INFO[k] || { name: k }).name;
+  const parts = [];
+  for (const [k, v] of Object.entries(p.mul)) parts.push({ up: v > 1, t: `${name(k)} ×${v.toFixed(2)}` });
+  for (const [k, v] of Object.entries(p.add)) parts.push({ up: v > 0, t: `${name(k)} ${v > 0 ? '+' : '−'}${pctTxt(Math.abs(v))}` });
+  parts.sort((a, b) => b.up - a.up);
+  return parts.map(x => `<span class="${x.up ? 'up' : 'down'}">${x.up ? '▲' : '▼'} ${x.t}</span>`).join('');
+}
+function renderAvatars() {
+  const el = $('avatars');
+  if (!el) return;
+  const list = (State.meta.avatars || []).map(getEnemy).filter(Boolean);
+  el.parentElement.hidden = !list.length;
+  if (!list.length) { el.innerHTML = ''; return; }
+  const cur = State.meta.avatar;
+  el.innerHTML = `<div class="av-head">화신 <span class="count">${list.length}</span></div>` + list.map(f => `
+    <div class="av-row ${f.id === cur ? 'on' : ''}">
+      <div class="av-top">
+        <span class="av-ic">${f.icon}</span>
+        <span class="avatar-tag">${avatarTitle(f)}</span>
+        ${f.id === cur
+          ? '<button class="btn tiny" data-avatar="">벗는다</button>'
+          : `<button class="btn tiny" data-avatar="${f.id}" ${battle ? 'disabled' : ''}>삼는다</button>`}
+      </div>
+      <div class="av-fx">${avatarEffectHTML(f)}</div>
+    </div>`).join('');
+  for (const b of el.querySelectorAll('[data-avatar]')) {
+    b.addEventListener('click', () => {
+      if (battle) return;
+      setAvatar(b.dataset.avatar || null);
+      Sound.play(b.dataset.avatar ? 'equip' : 'unequip');
+      render();
+    });
+  }
 }
 
 // ---------- 여정 ----------
@@ -8048,6 +8227,8 @@ function heldSpoils(r) {
     stones: { ...m.stones },
     fresh: Object.fromEntries(Object.entries(m.fresh).map(([k, v]) => [k, v.slice()])),
     gold: num(m.gold) - num(r && r.gold),
+    avatars: (m.avatars || []).filter(id => !(r && id === r.avatarGained)),
+    avatar: r && r.avatarGained && m.avatar === r.avatarGained ? null : m.avatar,
     run: r && r.pre ? { ...r.pre } : null
   };
   for (const d of (r && r.win && r.drops) || []) {
@@ -8066,9 +8247,9 @@ function heldSpoils(r) {
 function withHeldSpoils(fn) {
   if (!battle || !battle.held) return fn();
   const m = State.meta, run = State.run, h = battle.held;
-  const real = { owned: m.owned, stones: m.stones, fresh: m.fresh, gold: m.gold };
+  const real = { owned: m.owned, stones: m.stones, fresh: m.fresh, gold: m.gold, avatars: m.avatars, avatar: m.avatar };
   const realRun = h.run ? Object.fromEntries(Object.keys(h.run).map(k => [k, run[k]])) : null;
-  Object.assign(m, { owned: h.owned, stones: h.stones, fresh: h.fresh, gold: h.gold });
+  Object.assign(m, { owned: h.owned, stones: h.stones, fresh: h.fresh, gold: h.gold, avatars: h.avatars, avatar: h.avatar });
   if (h.run) Object.assign(run, h.run);
   try { return fn(); } finally {
     Object.assign(m, real);
@@ -8141,6 +8322,7 @@ function resultSounds(r, run) {
   // 마왕이면 길이 열리는 소리 대신 벽이 무너지는 소리 (연출과 같은 때 — wallMoment)
   if (r.openedPath) Sound.play(r.enemy.id === WALL_BOSS ? 'wallBreak' : 'pathOpen', { delay: r.enemy.id === WALL_BOSS ? WALL_FX_DELAY / 1000 : 0.9 });
   if (r.openedSpecial) Sound.play('unlock', { delay: 1.2 });
+  if (r.avatarGained) Sound.play('rankUp', { delay: 0.5 });
 }
 
 // 기록 한 줄 → 글. 이름이 길어도 한 줄에 들어가게 짧게 씁니다.
@@ -8189,7 +8371,7 @@ function battleCard(b) {
         <div class="portrait bt-hero" id="btHero"><span class="portrait-ic">${HERO_ICON}</span></div>
       </div>
       <div class="bt-side hero">
-        <div class="bt-top"><span class="bt-name">나<span class="lv">Lv.${fmtLevel(r.levelBefore || State.run.level)}</span></span>
+        <div class="bt-top"><span class="bt-name">${activeAvatar() ? `<span class="avatar-tag">${avatarTitle(activeAvatar())}</span>` : ''}나<span class="lv">Lv.${fmtLevel(r.levelBefore || State.run.level)}</span></span>
           <span class="bt-hp" id="btHeroHp"></span></div>
         <div class="bt-bar"><div class="bt-fill hero" id="btHeroFill"></div></div>
       </div>
@@ -8424,6 +8606,7 @@ function resultCard(r, run) {
         ${foe.name}<span class="lv">Lv.${fmtLevel(foe.level)}</span>
         <span class="res-turns">${r.turns}턴</span>
       </div>
+      ${r.avatarGained ? `<div class="res-avatar"><span class="avatar-tag">${avatarTitle(foe)}</span>${josa(avatarTitle(foe), '이', '가')} 되었다</div>` : ''}
       ${r.openedPath ? `<div class="res-path">길이 열렸다</div>` : ''}
       ${r.openedPath && foe.id === WALL_BOSS
         ? `<div class="res-path exit ${wallMoments.has(r) ? '' : 'late'}">나가는 길도 열렸다.</div>` : ''}
@@ -9785,6 +9968,7 @@ function renderAdmin() {
         <button class="btn tiny" data-adm="stones" ${off}>강화석 +1,000</button>
         <button class="btn tiny" data-adm="gold" ${off}>골드 +10,000</button>
         <button class="btn tiny" data-adm="merchant" ${off}>떠돌이 상인을 여기로</button>
+        <button class="btn tiny" data-adm="avatar" ${off}>화신 하나 얻기</button>
         <button class="btn tiny" data-adm="special" ${off}>특수장비 칸 모두</button>
       </div>
     </section>
@@ -9853,6 +10037,15 @@ function adminAction(a) {
     case 'gold':
       meta.gold = num(meta.gold) + 10000;
       break;
+    case 'avatar': {
+      // 아직 없는 화신 하나를 무작위로 — 처음이면 바로 삼습니다
+      const pool = ENEMIES.filter(f => canBecomeAvatar(f) && !meta.avatars.includes(f.id));
+      if (!pool.length) break;
+      const f = pool[Math.floor(Math.random() * pool.length)];
+      meta.avatars.push(f.id);
+      if (!meta.avatar) meta.avatar = f.id;
+      break;
+    }
     case 'merchant': {
       // 조건(3지역 숨은 것)과 상관없이 지금 지역에 세웁니다. 파는 것은 아직 안 가진 것 중 셋
       const pool = ITEMS.filter(i => i.ware && !owns(i.id));

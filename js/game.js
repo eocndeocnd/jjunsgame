@@ -535,6 +535,8 @@ function load() {
     State.meta.banked = Array.isArray(data.banked) ? data.banked : [];
     State.meta.specialOpened = Array.isArray(data.specialOpened) ? data.specialOpened : [];
     State.meta.gold = Math.max(0, Math.floor(num(data.gold)));
+    State.meta.avatars = Array.isArray(data.avatars) ? data.avatars.filter(id => canBecomeAvatar(getEnemy(id))) : [];
+    State.meta.avatar = State.meta.avatars.includes(data.avatar) ? data.avatar : null;
     State.meta.seen = Array.isArray(data.seen) ? data.seen : [];
     State.meta.fresh = (data.fresh && typeof data.fresh === 'object') ? data.fresh : {};
     State.meta.sets = Array.isArray(data.sets) ? data.sets : [null, null, null];
@@ -604,6 +606,8 @@ function freshMeta() {
     banked: [],
     specialOpened: [],
     gold: 0,                          // 골드 — 회차가 끝나도 남습니다
+    avatars: [],                      // 얻은 화신 (적 id) — 회차가 끝나도 남습니다
+    avatar: null,                     // 지금 삼은 화신 — 한 번에 하나
     runCount: 0,
     bestLevel: 1,
     bestKill: 0,
@@ -648,8 +652,18 @@ function heroStats() {
   // 다 모은 격 하나마다 핵심 스탯 전체가 조금씩 — 레벨·분배·장비를 다 합친 뒤에 곱합니다
   const collect = 1 + COLLECTION_BONUS * completedRanks();
   for (const k of STAT_KEYS) total[k] = Math.round(total[k] * collect);
-  // 특수 능력치는 상한을 둡니다 — 막기 100% 같은 게 나오면 전투가 성립 안 합니다
-  for (const k of SPECIAL_KEYS) total[k] = Math.min(SPECIAL_INFO[k].cap, total[k]);
+  // 삼은 화신 — 다 합친 뒤에 한쪽으로 크게 기울입니다 (data.js 의 avatarProfile)
+  const av = activeAvatar();
+  if (av) {
+    const p = avatarProfile(av);
+    for (const k of STAT_KEYS) if (p.mul[k]) total[k] = Math.max(1, Math.round(total[k] * p.mul[k]));
+    for (const [k, v] of Object.entries(p.add)) total[k] = (total[k] || 0) + v;
+  }
+  // 특수 능력치는 상한을 둡니다 — 막기 100% 같은 게 나오면 전투가 성립 안 합니다.
+  // 화신이 깎는 것(얻는 것)은 −80% 아래로는 내려가지 않습니다
+  for (const k of SPECIAL_KEYS) {
+    total[k] = Math.max(SPECIAL_INFO[k].side === 'get' ? -0.8 : 0, Math.min(SPECIAL_INFO[k].cap, total[k]));
+  }
   return total;
 }
 
@@ -974,6 +988,19 @@ function addSpentOn(id, n) {
   run.spentOn[id] = (run.spentOn[id] || 0) + n;
 }
 
+// ---------- 화신 ----------
+// 지금 삼은 화신 (없으면 null)
+function activeAvatar() {
+  const id = State.meta && State.meta.avatar;
+  return id ? getEnemy(id) : null;
+}
+// 화신을 삼는다 / 벗는다 (null)
+function setAvatar(id) {
+  if (id && !State.meta.avatars.includes(id)) return;
+  State.meta.avatar = id || null;
+  save();
+}
+
 // ---------- 떠돌이 상인 ----------
 // 3지역의 숨은 것(카벙클)을 처음 꺾은 뒤부터, 회차마다 1~6지역 중 한 곳에 나타납니다.
 // 싸우지 않습니다 — 들르면 물건을 팝니다. 들르는 데 에너지는 들지 않습니다.
@@ -1119,6 +1146,13 @@ function engage() {
   // 골드 — 기운이 두른 상대일수록, 행운과 골드 획득 장비가 많을수록. 조금씩 흔들립니다.
   const gold = Math.max(1, Math.round(goldFor(enemy) * (aura ? aura.dropMult : 1) * goldMult() * (0.85 + Math.random() * 0.3)));
   State.meta.gold = num(State.meta.gold) + gold;
+  // 7격부터는 아주 드물게 그 존재가 나를 화신으로 삼습니다 — 처음이면 바로 삼고, 아니면 「나」 창에서 고릅니다
+  let avatarGained = null;
+  if (canBecomeAvatar(enemy) && !State.meta.avatars.includes(enemy.id) && Math.random() < avatarChance(enemy)) {
+    State.meta.avatars.push(enemy.id);
+    if (!State.meta.avatar) State.meta.avatar = enemy.id;
+    avatarGained = enemy.id;
+  }
 
   const bits = [];
   if (gap > 1.01) bits.push(`격차 ×${gap.toFixed(2)}`);
@@ -1141,6 +1175,7 @@ function engage() {
         : '━ 알 수 없는 격에 올랐다 ━');
     }
   }
+  if (avatarGained) pushLog('rank', `━━ ${avatarTitle(enemy)}${josa(avatarTitle(enemy), '이', '가')} 되었다 ━━`);
   for (const d of drops) {
     const g = d.item.grade === 'normal' ? '' : `[${KINDS[d.item.grade].name}] `;
     pushLog('drop', d.isNew
@@ -1167,7 +1202,7 @@ function engage() {
   // 결과 화면이 보고 그릴 내용
   run.lastResult = {
     win: true, enemy, turns: result.turns, aura,
-    xp, gap, auraXp, bossM, levelBefore, levelsGained, drops, devoured, gold,
+    xp, gap, auraXp, bossM, levelBefore, levelsGained, drops, devoured, gold, avatarGained,
     openedPath: false, replay
   };
 

@@ -1802,6 +1802,67 @@ for (const [id, name, slot, icon, r, arch, gold] of MERCHANT_WARES) {
 
 // id 로 바로 찾습니다 — 스탯을 셀 때마다 수백 개를 훑지 않게
 const ENEMY_BY_ID = Object.fromEntries(ENEMIES.map(e => [e.id, e]));
+
+// ---------- 화신 — 내가 그들의 화신이 된다 ----------
+// 7격부터의 상대를 꺾으면 아주 드물게(보통 1% · 보스 0.5%) 그 존재가 나를 화신으로 삼습니다.
+// 한 번 얻은 화신은 남고, 한 번에 하나만 삼습니다 (「나」 창에서 고름). 삼은 화신의 이름이 내 칭호가 됩니다.
+// 아자토스는 「화신을 갖지 못한 유일한 것」이라 화신이 되지 않습니다.
+//
+// 화신이 주는 능력치는 한쪽으로 크게 기웁니다 — 무언가를 크게 얻는 만큼 무언가를 크게 잃습니다.
+// 그래서 어느 화신을 삼을지가 상대 · 지역 · 장비에 따라 고민이 됩니다.
+//   mul — 핵심 스탯 배수(생명 · 공격력 · 방어력 · 민첩 · 행운), 장비 · 강화 · 도감까지 다 합친 뒤에 곱합니다
+//   add — 특수 능력치(+), 상한은 그대로입니다. 얻는 것(전리품 · 경험치 · 골드)만 마이너스가 될 수 있습니다
+const AVATAR_MIN_RANK = 7;
+const AVATAR_CHANCE = 0.01;
+const AVATAR_CHANCE_BOSS = 0.005;
+
+// 성격마다의 기본 꼴. 격이 높을수록, 정예 · 숨은 것일수록 조금씩 더 극단으로 (avatarProfile)
+const AVATAR_ARCH = {
+  fierce: { mul: { damage: 1.8, life: 0.5, defense: 0.6 },           add: { critRate: 0.15 } },
+  guard:  { mul: { defense: 2.0, life: 1.3, damage: 0.5 },           add: { block: 0.15 } },
+  leech:  { mul: { damage: 1.25, life: 0.5 },                        add: { lifesteal: 0.15 } },
+  swift:  { mul: { dex: 2.0, life: 0.6, defense: 0.6 },              add: { doubleHit: 0.15, doubleTurn: 0.06 } },
+  pierce: { mul: { damage: 1.3, dex: 0.5, defense: 0.7 },            add: { pierce: 0.35 } },
+  thorn:  { mul: { defense: 1.6, life: 1.2, damage: 0.4 },           add: { reflect: 0.4 } },
+  lucky:  { mul: { luck: 2.0, damage: 0.55, life: 0.7 },             add: { findRate: 0.8, goldRate: 1.0 } },
+  growth: { mul: { damage: 0.6, defense: 0.6, life: 0.8 },           add: { xpRate: 1.0 } },
+  brutal: { mul: { damage: 1.6, dex: 0.4 },                          add: { harmTouch: 0.06, critRate: 0.05 } },
+  ward:   { mul: { life: 2.2, damage: 0.5, dex: 0.7 },               add: { regen: 0.04 } }
+};
+
+// 보스는 저마다 따로 — 더 극단적으로
+const AVATAR_SIGNATURE = {
+  yisunsin: { mul: { defense: 2.6, life: 1.5, damage: 0.6, dex: 0.6 }, add: { block: 0.25, survive: 0.4 } },          // 아직 열두 척이 남았다
+  cheonma:  { mul: { damage: 2.6, life: 0.35, defense: 0.3 },         add: { critRate: 0.25, pierce: 0.3 } },         // 하늘 아래 마는 하나뿐
+  imugi:    { mul: { life: 1.6, damage: 0.4, dex: 0.5 },              add: { xpRate: 2.0 } },                         // 천 년을 기다려 오르려는
+  heracles: { mul: { life: 1.8, dex: 0.4, luck: 0.4 },                add: { survive: 0.6, regen: 0.06 } },           // 열두 번 죽고 돌아온
+  michael:  { mul: { damage: 0.7, luck: 0.3 },                        add: { reflect: 0.7, block: 0.2 } },            // 용을 떨어뜨린
+  lucifer:  { mul: { damage: 2.0, dex: 2.0, life: 0.3, defense: 0.3 }, add: { critRate: 0.2 } },                      // 가장 빛나던 별, 가장 깊이 떨어진
+  hades:    { mul: { life: 1.5, dex: 0.6 },                           add: { lifesteal: 0.3, survive: 0.3, xpRate: -0.5 } }, // 돌아온 자가 없는 문의 주인
+  zeus:     { mul: { damage: 1.6, defense: 0.4, life: 0.6 },          add: { harmTouch: 0.1, doubleTurn: 0.2 } }      // 올림포스의 마지막 말
+};
+
+function canBecomeAvatar(foe) { return !!foe && foe.rank.n >= AVATAR_MIN_RANK && !foe.final; }
+function avatarTitle(foe) { return /의 화신$/.test(foe.name) ? foe.name : `${foe.name}의 화신`; }
+function avatarChance(foe) { return foe.kind === 'boss' ? AVATAR_CHANCE_BOSS : AVATAR_CHANCE; }
+
+const AVATAR_KIND_SCALE = { normal: 1, elite: 1.1, hidden: 1.15, boss: 1 };
+const avatarCache = {};
+function avatarProfile(foe) {
+  if (!canBecomeAvatar(foe)) return null;
+  if (avatarCache[foe.id]) return avatarCache[foe.id];
+  const sig = AVATAR_SIGNATURE[foe.id];
+  let p;
+  if (sig) p = { mul: { ...sig.mul }, add: { ...sig.add } };
+  else {
+    const base = AVATAR_ARCH[foe.arch] || AVATAR_ARCH.fierce;
+    const s = (1 + 0.04 * (foe.rank.n - AVATAR_MIN_RANK)) * (AVATAR_KIND_SCALE[foe.kind] || 1);
+    p = { mul: {}, add: {} };
+    for (const [k, v] of Object.entries(base.mul)) p.mul[k] = +Math.max(0.1, 1 + (v - 1) * s).toFixed(2);
+    for (const [k, v] of Object.entries(base.add)) p.add[k] = +(v * s).toFixed(3);
+  }
+  return (avatarCache[foe.id] = p);
+}
 const ITEM_BY_ID  = Object.fromEntries(ITEMS.map(i => [i.id, i]));
 function getEnemy(id) { return ENEMY_BY_ID[id]; }
 function getItem(id)  { return id ? ITEM_BY_ID[id] : undefined; }

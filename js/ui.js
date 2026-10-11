@@ -357,7 +357,9 @@ function renderHero() {
   // 아직 모르는 격(마왕 너머)은 이름도, 다음 단계가 있다는 것도 보이지 않습니다.
   const rank = rankOf(run.level);
   const next = RANKS.find(r => r.minLevel > run.level);
+  const av = activeAvatar();
   $('heroRank').innerHTML = `
+    ${av ? `<span class="avatar-tag">${avatarTitle(av)}</span>` : ''}
     ${knownRank(rank.n)
       ? `<span class="rank-chip r${rank.n}">제${rank.n}격 · ${rank.name}</span>`
       : `<span class="rank-chip unknown">???</span>`}
@@ -393,17 +395,19 @@ function renderHero() {
       .map(k => specialRow(k, total[k])).join('')}
     <li class="stat-head">얻는 것</li>
     ${statRow('전리품 확률', total.findRate > 0
-        ? `×${findPower(total).toFixed(2)} <span class="stat-note">(행운 ×${luckMult().toFixed(2)} · 장비 +${Math.round(total.findRate * 100)}%)</span>`
+        ? `×${findPower(total).toFixed(2)} <span class="stat-note">(행운 ×${luckMult().toFixed(2)} · 장비 · 화신 +${Math.round(total.findRate * 100)}%)</span>`
         : `×${luckMult().toFixed(2)}`, 0)}
-    ${statRow('경험치', total.xpRate > 0
-        ? `×${xpGearMult(total).toFixed(2)} <span class="stat-note">(장비 +${Math.round(total.xpRate * 100)}%)</span>`
+    ${statRow('경험치', total.xpRate !== 0
+        ? `×${xpGearMult(total).toFixed(2)} <span class="stat-note">(장비 · 화신 ${total.xpRate > 0 ? "+" : "−"}${Math.round(Math.abs(total.xpRate) * 100)}%)</span>`
         : '×1.00', 0)}
     ${statRow('골드', total.goldRate > 0
-        ? `×${goldMult(total).toFixed(2)} <span class="stat-note">(행운 ×${luckMult().toFixed(2)} · 장비 +${Math.round(total.goldRate * 100)}%)</span>`
+        ? `×${goldMult(total).toFixed(2)} <span class="stat-note">(행운 ×${luckMult().toFixed(2)} · 장비 · 화신 +${Math.round(total.goldRate * 100)}%)</span>`
         : `×${luckMult().toFixed(2)}`, 0)}
     ${statRow('강화석', `+${Math.round(total.stoneRate * 100)}%`, 0)}
     ${statRow('꺾은 것', run.kills, 0)}
   `;
+
+  renderAvatars();
 
   // 안 찍은 포인트가 있으면 버튼에 점을 찍습니다 — 창을 안 열어도 보이게.
   const pip = $('allocPip');
@@ -528,6 +532,46 @@ function statRow(name, value, bonus) {
     <span class="stat-name">${name}</span>
     <span class="stat-value">${shown}${bonusText}</span>
   </li>`;
+}
+
+// ---------- 화신 ----------
+// 얻은 화신이 있을 때만 「나」 창에 나옵니다. 한 번에 하나만 삼고, 언제든 바꿉니다 (싸우는 중에는 못 바꿈).
+// 화신마다 무엇이 오르고(▲) 무엇이 깎이는지(▼) 그대로 보여줍니다 — 그걸 보고 고르는 게 이 칸의 재미입니다.
+function avatarEffectHTML(foe) {
+  const p = avatarProfile(foe);
+  const name = k => (STAT_INFO.find(s => s.id === k) || SPECIAL_INFO[k] || { name: k }).name;
+  const parts = [];
+  for (const [k, v] of Object.entries(p.mul)) parts.push({ up: v > 1, t: `${name(k)} ×${v.toFixed(2)}` });
+  for (const [k, v] of Object.entries(p.add)) parts.push({ up: v > 0, t: `${name(k)} ${v > 0 ? '+' : '−'}${pctTxt(Math.abs(v))}` });
+  parts.sort((a, b) => b.up - a.up);
+  return parts.map(x => `<span class="${x.up ? 'up' : 'down'}">${x.up ? '▲' : '▼'} ${x.t}</span>`).join('');
+}
+function renderAvatars() {
+  const el = $('avatars');
+  if (!el) return;
+  const list = (State.meta.avatars || []).map(getEnemy).filter(Boolean);
+  el.parentElement.hidden = !list.length;
+  if (!list.length) { el.innerHTML = ''; return; }
+  const cur = State.meta.avatar;
+  el.innerHTML = `<div class="av-head">화신 <span class="count">${list.length}</span></div>` + list.map(f => `
+    <div class="av-row ${f.id === cur ? 'on' : ''}">
+      <div class="av-top">
+        <span class="av-ic">${f.icon}</span>
+        <span class="avatar-tag">${avatarTitle(f)}</span>
+        ${f.id === cur
+          ? '<button class="btn tiny" data-avatar="">벗는다</button>'
+          : `<button class="btn tiny" data-avatar="${f.id}" ${battle ? 'disabled' : ''}>삼는다</button>`}
+      </div>
+      <div class="av-fx">${avatarEffectHTML(f)}</div>
+    </div>`).join('');
+  for (const b of el.querySelectorAll('[data-avatar]')) {
+    b.addEventListener('click', () => {
+      if (battle) return;
+      setAvatar(b.dataset.avatar || null);
+      Sound.play(b.dataset.avatar ? 'equip' : 'unequip');
+      render();
+    });
+  }
 }
 
 // ---------- 여정 ----------
@@ -785,6 +829,8 @@ function heldSpoils(r) {
     stones: { ...m.stones },
     fresh: Object.fromEntries(Object.entries(m.fresh).map(([k, v]) => [k, v.slice()])),
     gold: num(m.gold) - num(r && r.gold),
+    avatars: (m.avatars || []).filter(id => !(r && id === r.avatarGained)),
+    avatar: r && r.avatarGained && m.avatar === r.avatarGained ? null : m.avatar,
     run: r && r.pre ? { ...r.pre } : null
   };
   for (const d of (r && r.win && r.drops) || []) {
@@ -803,9 +849,9 @@ function heldSpoils(r) {
 function withHeldSpoils(fn) {
   if (!battle || !battle.held) return fn();
   const m = State.meta, run = State.run, h = battle.held;
-  const real = { owned: m.owned, stones: m.stones, fresh: m.fresh, gold: m.gold };
+  const real = { owned: m.owned, stones: m.stones, fresh: m.fresh, gold: m.gold, avatars: m.avatars, avatar: m.avatar };
   const realRun = h.run ? Object.fromEntries(Object.keys(h.run).map(k => [k, run[k]])) : null;
-  Object.assign(m, { owned: h.owned, stones: h.stones, fresh: h.fresh, gold: h.gold });
+  Object.assign(m, { owned: h.owned, stones: h.stones, fresh: h.fresh, gold: h.gold, avatars: h.avatars, avatar: h.avatar });
   if (h.run) Object.assign(run, h.run);
   try { return fn(); } finally {
     Object.assign(m, real);
@@ -878,6 +924,7 @@ function resultSounds(r, run) {
   // 마왕이면 길이 열리는 소리 대신 벽이 무너지는 소리 (연출과 같은 때 — wallMoment)
   if (r.openedPath) Sound.play(r.enemy.id === WALL_BOSS ? 'wallBreak' : 'pathOpen', { delay: r.enemy.id === WALL_BOSS ? WALL_FX_DELAY / 1000 : 0.9 });
   if (r.openedSpecial) Sound.play('unlock', { delay: 1.2 });
+  if (r.avatarGained) Sound.play('rankUp', { delay: 0.5 });
 }
 
 // 기록 한 줄 → 글. 이름이 길어도 한 줄에 들어가게 짧게 씁니다.
@@ -926,7 +973,7 @@ function battleCard(b) {
         <div class="portrait bt-hero" id="btHero"><span class="portrait-ic">${HERO_ICON}</span></div>
       </div>
       <div class="bt-side hero">
-        <div class="bt-top"><span class="bt-name">나<span class="lv">Lv.${fmtLevel(r.levelBefore || State.run.level)}</span></span>
+        <div class="bt-top"><span class="bt-name">${activeAvatar() ? `<span class="avatar-tag">${avatarTitle(activeAvatar())}</span>` : ''}나<span class="lv">Lv.${fmtLevel(r.levelBefore || State.run.level)}</span></span>
           <span class="bt-hp" id="btHeroHp"></span></div>
         <div class="bt-bar"><div class="bt-fill hero" id="btHeroFill"></div></div>
       </div>
@@ -1161,6 +1208,7 @@ function resultCard(r, run) {
         ${foe.name}<span class="lv">Lv.${fmtLevel(foe.level)}</span>
         <span class="res-turns">${r.turns}턴</span>
       </div>
+      ${r.avatarGained ? `<div class="res-avatar"><span class="avatar-tag">${avatarTitle(foe)}</span>${josa(avatarTitle(foe), '이', '가')} 되었다</div>` : ''}
       ${r.openedPath ? `<div class="res-path">길이 열렸다</div>` : ''}
       ${r.openedPath && foe.id === WALL_BOSS
         ? `<div class="res-path exit ${wallMoments.has(r) ? '' : 'late'}">나가는 길도 열렸다.</div>` : ''}
@@ -2522,6 +2570,7 @@ function renderAdmin() {
         <button class="btn tiny" data-adm="stones" ${off}>강화석 +1,000</button>
         <button class="btn tiny" data-adm="gold" ${off}>골드 +10,000</button>
         <button class="btn tiny" data-adm="merchant" ${off}>떠돌이 상인을 여기로</button>
+        <button class="btn tiny" data-adm="avatar" ${off}>화신 하나 얻기</button>
         <button class="btn tiny" data-adm="special" ${off}>특수장비 칸 모두</button>
       </div>
     </section>
@@ -2590,6 +2639,15 @@ function adminAction(a) {
     case 'gold':
       meta.gold = num(meta.gold) + 10000;
       break;
+    case 'avatar': {
+      // 아직 없는 화신 하나를 무작위로 — 처음이면 바로 삼습니다
+      const pool = ENEMIES.filter(f => canBecomeAvatar(f) && !meta.avatars.includes(f.id));
+      if (!pool.length) break;
+      const f = pool[Math.floor(Math.random() * pool.length)];
+      meta.avatars.push(f.id);
+      if (!meta.avatar) meta.avatar = f.id;
+      break;
+    }
     case 'merchant': {
       // 조건(3지역 숨은 것)과 상관없이 지금 지역에 세웁니다. 파는 것은 아직 안 가진 것 중 셋
       const pool = ITEMS.filter(i => i.ware && !owns(i.id));
