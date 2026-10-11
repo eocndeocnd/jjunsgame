@@ -1470,8 +1470,10 @@ function isSetActive(n) {
 // 그 고민이 이 게임의 재미라서, 대신 골라주지 않습니다.
 
 // ---------- 로그 ----------
+// 줄마다 번호를 붙입니다 — 전투를 보여주는 동안, 그 전투가 남긴 줄은 화면에서 잠깐 숨기려고 (ui.js 의 renderLog)
+let logSeq = 0;
 function pushLog(kind, text) {
-  State.log.push({ kind, text });
+  State.log.push({ kind, text, n: ++logSeq });
   if (State.log.length > 200) State.log.shift();
 }
 

@@ -7007,8 +7007,10 @@ function isSetActive(n) {
 // 그 고민이 이 게임의 재미라서, 대신 골라주지 않습니다.
 
 // ---------- 로그 ----------
+// 줄마다 번호를 붙입니다 — 전투를 보여주는 동안, 그 전투가 남긴 줄은 화면에서 잠깐 숨기려고 (ui.js 의 renderLog)
+let logSeq = 0;
 function pushLog(kind, text) {
-  State.log.push({ kind, text });
+  State.log.push({ kind, text, n: ++logSeq });
   if (State.log.length > 200) State.log.shift();
 }
 
@@ -7053,14 +7055,14 @@ const $ = id => document.getElementById(id);
 
 // ---------- 전체 다시 그리기 ----------
 function render() {
-  renderRecords();
+  withHeldSpoils(renderRecords);
   renderHero();
   renderJourney();
-  renderGear();
+  withHeldSpoils(renderGear);
   renderLog();
   renderSettings();
   renderOverlay();
-  renderTabBadges();
+  withHeldSpoils(renderTabBadges);
   atmosphere();        // 배경음이 분위기를 따라가므로 먼저
   syncMusic();
   if (isAdminOpen()) renderAdmin();
@@ -7545,7 +7547,7 @@ function renderJourney() {
   html += `</div>`;
 
   $('journey').innerHTML = html;
-  renderRoster();
+  withHeldSpoils(renderRoster);   // 도감의 전리품 칸도 전투가 끝난 뒤에
   wireJourney();
   if (battle) { paintBattle(); return; }   // 전투가 끝나야 전리품이 튀어나오고 자동 넘기기가 돕니다
   revealDrops();
@@ -7721,14 +7723,47 @@ const BATTLE_MAX_MS = 6000;              // 긴 전투도 이 안에 끝나게 �
 // 기록은 최근 여섯 줄만 — 위에 초상이 들어와서 줄였습니다. 폰은 한 화면에 들어오게 다섯 줄.
 const battleLines = () => (window.innerWidth <= 860 ? 5 : 6);
 
-function startBattle(r) {
+// logFrom — engage 직전 기록의 마지막 번호. 그 뒤의 줄(이 전투가 남긴 것)은 전투가 끝날 때까지 숨깁니다.
+function startBattle(r, logFrom) {
   stopBattle();
   const speed = State.meta.settings.battleSpeed;
   const log = r && r.replay && r.replay.log;
   if (!speed || !log || !log.length) return;
   const step = Math.max(30, Math.min(BATTLE_PACE[speed] || 260, BATTLE_MAX_MS / log.length));
-  battle = { r, i: 0, step };
+  battle = { r, i: 0, step, logFrom: logFrom || 0, held: heldSpoils(r) };
   battle.timer = setTimeout(tickBattle, step);
+}
+
+// ---------- 전투가 끝나기 전엔 전리품을 보여주지 않습니다 ----------
+// 승패와 전리품은 「맞선다」를 누르는 순간 이미 정해지고 저장됩니다. 그대로 그리면 싸움이 다 보이기도 전에
+// 전리품 탭에 NEW · 새 물건 · 늘어난 강화석(▲강화)이 먼저 떠 버립니다.
+// 그래서 전투를 보여주는 동안에는, 이 전투에서 얻은 것을 뺀 모습(held)으로 전리품 · 기록 쪽을 그립니다.
+function heldSpoils(r) {
+  const m = State.meta;
+  const held = {
+    owned: { ...m.owned },
+    stones: { ...m.stones },
+    fresh: Object.fromEntries(Object.entries(m.fresh).map(([k, v]) => [k, v.slice()]))
+  };
+  for (const d of (r && r.win && r.drops) || []) {
+    if (d.isNew) {
+      delete held.owned[d.item.id];
+      const f = held.fresh[d.item.slot];
+      if (f) held.fresh[d.item.slot] = f.filter(id => id !== d.item.id);
+    } else if (d.stones) {
+      held.stones[d.item.slot] = (held.stones[d.item.slot] || 0) - d.stones;
+    }
+  }
+  return held;
+}
+
+// 전투 중이면 그 전투의 전리품을 잠깐 빼 둔 채로 fn 을 그립니다 (끝나면 바로 되돌립니다)
+function withHeldSpoils(fn) {
+  if (!battle || !battle.held) return fn();
+  const m = State.meta;
+  const real = { owned: m.owned, stones: m.stones, fresh: m.fresh };
+  Object.assign(m, battle.held);
+  try { return fn(); } finally { Object.assign(m, real); }
 }
 
 function stopBattle() {
@@ -8294,7 +8329,7 @@ function wireJourney() {
   }
   on('travelBtn',    () => { travel();         soundEncounter();         render(); });
   on('nextZoneBtn',  () => { moveToNextZone(); Sound.play('zoneMove');   render(); });
-  on('engageBtn',    () => { startBattle(engage()); render(); });   // 소리는 전투 화면이 한 줄씩 냅니다
+  on('engageBtn',    () => { const from = logSeq; startBattle(engage(), from); render(); });   // 소리는 전투 화면이 한 줄씩 냅니다
   on('retreatBtn',   () => { retreat();        Sound.play('retreat');    render(); });
   on('continueBtn',  () => { dismissResult();  render(); });
   on('toAllocBtn',   () => { dismissResult();  render(); spotlightAlloc(); });
@@ -8869,7 +8904,11 @@ function closeSlotModal() {
   if (m) m.classList.add('hidden');
   // 창을 닫을 때 비로소 NEW! 를 끕니다 — 열어보는 동안에는 남아 있어야
   // 어느 것이 새것인지 보입니다.
-  clearFresh(freshKey(selectedSlot));
+  // 전투를 보는 중에 열었다 닫았으면, 아직 보여주지 않은 이번 전투의 새것은 NEW 를 남겨 둡니다.
+  const key = freshKey(selectedSlot);
+  const keep = battle && battle.held ? (State.meta.fresh[key] || []).filter(id => !(battle.held.fresh[key] || []).includes(id)) : [];
+  clearFresh(key);
+  if (keep.length) { State.meta.fresh[key] = keep; save(); }
   render();
 }
 
@@ -8983,7 +9022,10 @@ function renderLog() {
   // 접혀 있을 때는 그리지도 않습니다 — 200줄을 매번 다시 만들 이유가 없습니다
   if (!logOpen) { el.innerHTML = ''; return; }
   // CSS 가 column-reverse 라서, 오래된 것부터 넣으면 최신이 위에 보입니다.
+  // 전투를 보여주는 동안엔 그 전투가 남긴 줄(획득 · 레벨업 …)을 아직 숨깁니다
+  const cut = battle ? battle.logFrom : Infinity;
   el.innerHTML = State.log
+    .filter(l => !(l.n > cut))
     .map(l => `<div class="log-line ${l.kind}">${l.text}</div>`)
     .join('');
 }
