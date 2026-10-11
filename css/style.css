@@ -2491,3 +2491,14 @@ body.lv-rolling .je-xp-fill, body.lv-rolling .bar-fill.xp { transition: none; tr
   .zone-head .rank-chip .hanja { display: none; }
   .zone-name { font-size: 15px; }
 }
+
+/* ---------- 폰의 창 ----------
+   예전엔 아래에서 올라와 화면을 거의 다 덮어서, 위에 있는 「닫기」까지 손가락이 닿기 어려웠습니다.
+   이제 가운데에 띄우고 사방을 비워 둡니다 — 비어 있는 가장자리(어두운 바탕)를 누르면 창이 닫힙니다. */
+@media (max-width: 860px) {
+  .modal {
+    align-items: center;
+    padding: 64px 22px calc(64px + env(safe-area-inset-bottom));
+  }
+  .modal-card { max-height: 100%; }
+}
