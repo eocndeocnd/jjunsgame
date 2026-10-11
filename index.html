@@ -89,10 +89,23 @@
   <div class="modal-card">
     <div class="modal-head">
       <h3><span id="collectionTitle">무기</span> <span class="count" id="ownedCount"></span></h3>
+      <button class="btn tiny enh-open" id="enhOpenBtn">강화</button>
       <button class="btn tiny" data-closeslot>닫기</button>
     </div>
     <div id="equipDetail"></div>
     <div id="inventory" class="inventory"></div>
+  </div>
+</div>
+
+<!-- 강화 창. 부위 창 머리의 「강화」로 열고, 닫으면 부위 창으로 돌아갑니다. -->
+<div id="enhModal" class="modal enh-modal hidden">
+  <div class="modal-back" data-closeenh></div>
+  <div class="modal-card">
+    <div class="modal-head">
+      <h3 id="enhTitle">강화</h3>
+      <button class="btn tiny" data-closeenh>닫기</button>
+    </div>
+    <div id="enhBody" class="enh-body"></div>
   </div>
 </div>
 

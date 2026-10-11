@@ -550,19 +550,60 @@ h3::before { content: '◆ '; color: var(--wax); }
   letter-spacing: 0.1em;
   margin-bottom: 5px;
 }
+/* 얻은 것 — 조우 화면의 남은 전리품 칸처럼 가로로, 한 줄에 셋까지 (칸 수는 ui.js 가 정합니다).
+   칸마다 위에 물건의 모습(작은 액자), 아래에 이름과 부위 · 얻은 방식 */
+.res-drop-list { display: grid; gap: 6px; }
 .res-drop {
+  position: relative;
+  overflow: hidden;              /* 액자 뒤에서 뻗는 빛살을 칸 안에 가둡니다 */
   display: flex;
-  align-items: baseline;
-  gap: 7px;
-  font-size: 11px;
-  padding: 3px 4px;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  padding: 8px 4px 7px;
+  text-align: center;
+  background: var(--paper-hi);
+  border: 2px solid var(--line-soft);
 }
-.res-slot { color: var(--text-faint); font-size: 10px; min-width: 44px; }
-.res-name { font-weight: 700; color: var(--drop); }
-.res-tag { margin-left: auto; font-size: 10px; color: var(--text-faint); }
-/* 분해된 것 — 이름은 한 단계 죽이고, 강화석 쪽을 살립니다 */
+.res-drop.is-new { border-color: #9a7ab8; }   /* 처음 얻은 것 — 옅은 보라 (전리품 획득의 색) */
+/* 액자 — 테는 ::before 로 맨 위에 그려서, 위에서 떨어지는 그림이 테 뒤로 들어오게 합니다.
+   정예 · 보스 · 히든은 초상과 같은 색 테 */
+.res-art {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  overflow: hidden;
+  background: var(--paper-lo);
+}
+.res-art::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  box-shadow:
+    inset 0 0 0 2px var(--pf, var(--text)),
+    inset 0 0 0 4px var(--paper-hi),
+    inset 0 0 0 5px var(--pf-in, var(--line));
+}
+.res-art.g-elite  { --pf: #2f5a20; --pf-in: #5f8f3e; }
+.res-art.g-boss   { --pf: #5c1012; --pf-in: #a8343a; }
+.res-art.g-hidden { --pf: #2e1245; --pf-in: #7d4aa8; }
+.res-art-ic { position: relative; z-index: 1; font-size: 27px; line-height: 1; user-select: none; -webkit-user-select: none; }
+.res-body { position: relative; z-index: 1; width: 100%; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.res-name { font-size: 12px; font-weight: 700; line-height: 1.4; color: var(--drop); word-break: keep-all; }
+.res-name .grade-tag { margin-right: 4px; }
+.res-meta { display: flex; flex-wrap: wrap; justify-content: center; gap: 0 6px; font-size: 10px; line-height: 1.5; }
+.res-slot { color: var(--text-faint); }
+.res-tag { color: var(--text-faint); }
+/* 분해된 것 — 이름과 그림은 한 단계 죽이고, 강화석 쪽을 살립니다 */
 .res-drop.is-stone .res-name { color: var(--text-dim); font-weight: 400; }
 .res-drop.is-stone .res-tag { color: var(--energy); }
+.res-drop.is-stone .res-art { opacity: 0.7; filter: grayscale(0.8); }
 
 .res-actions { display: flex; gap: 10px; margin-top: 16px; }
 .res-actions .btn { flex: 1; }
@@ -1460,7 +1501,7 @@ kbd {
 .inv-from { font-size: 10px; color: var(--text-dim); }
 /* ---------- 부위 강화 ----------
    부위 칸에는 이름 옆에 +단계, 지금 올릴 수 있으면 초록 ▲.
-   부위 창 맨 위에는 강화 패널이 붙습니다. */
+   강화는 따로 창을 띄웁니다 — 부위 창 머리의 「강화」 버튼 (아래 강화 창). */
 .enh-lv {
   margin-left: 4px;
   font-weight: 700;
@@ -1503,6 +1544,50 @@ kbd {
 .enh-info b { color: var(--text); }
 .enh-info b.enough { color: var(--energy); }
 .enh-btn { width: 100%; margin-top: 10px; }
+
+/* 강화 창 맨 위 — 올리는 물건의 모습 · 이름 · 몇 단계에서 몇 단계로 */
+.enh-top {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 10px;
+  margin-bottom: 8px;
+  background: var(--dots) left bottom / 4px 2px repeat-x;
+}
+.enh-art {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  font-size: 28px;
+  line-height: 1;
+  background: var(--paper-lo);
+  box-shadow:
+    inset 0 0 0 2px var(--text),
+    inset 0 0 0 4px var(--paper-hi),
+    inset 0 0 0 5px var(--line);
+  user-select: none;
+  -webkit-user-select: none;
+}
+/* 방금 누른 결과 — 성공은 초록으로 커졌다 돌아오고, 실패는 붉게 흔들립니다 */
+.enh-art.ok   { animation: enh-ok 0.7s steps(7); }
+.enh-art.fail { animation: enh-fail 0.5s steps(10); }
+@keyframes enh-ok {
+  0%   { background: #9fd27a; transform: scale(1.18); }
+  100% { background: var(--paper-lo); transform: none; }
+}
+@keyframes enh-fail {
+  0%, 100% { transform: none; }
+  15%  { transform: translateX(-4px); background: #e8a29a; }
+  35%  { transform: translateX(4px); }
+  55%  { transform: translateX(-3px); }
+  75%  { transform: translateX(2px); }
+}
+.enh-item { font-size: 13px; font-weight: 700; line-height: 1.4; word-break: keep-all; }
+.enh-item.empty { color: var(--text-faint); font-weight: 400; }
+.enh-step { font-family: var(--font-t); font-size: 20px; color: var(--accent); white-space: nowrap; }
+.enh-step em { font-family: var(--font); font-style: normal; font-size: 11px; color: var(--text-faint); margin: 0 5px; vertical-align: 3px; }
 .enh-last { margin-top: 8px; font-size: 12px; font-weight: 700; text-align: center; animation: enh-pop 0.3s steps(4) both; }
 .enh-last.ok   { color: var(--energy); }
 .enh-last.fail { color: var(--danger); }
@@ -1532,7 +1617,7 @@ kbd {
   to   { transform: scale(1);    opacity: 1; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .enh-last { animation: none; }
+  .enh-last, .enh-art.ok, .enh-art.fail { animation: none; }
 }
 /* 핵심 스탯이 주인공입니다 — 진하고 굵게.
    특수 능력치는 성격을 알려주는 곁들임이라 한 단계 죽입니다. */
@@ -1599,27 +1684,58 @@ kbd {
 }
 
 /* ---------- 전리품 등장 ----------
-   0.2초 뒤에 아래에서 톡 튀어나옵니다. 한 박자 늦어야 "떨어졌다" 가 됩니다. */
+   0.45초 뒤부터 0.45초 간격으로 하나씩, 아래에서 톡 튀어나옵니다. 한 박자 늦어야 "떨어졌다" 가 됩니다.
+   물건 그림은 위에서 떨어져 액자 안에서 한 번 튀고,
+   처음 보는 것은 바탕이 금빛으로 번쩍이며 액자 안에 빛살이 돕니다.
+   다 끝나기까지 1.4초 — ui.js 의 DROP_ANIM 과 맞춥니다. */
 .res-drop.veiled { opacity: 0; }
-.res-drop.pop { animation: drop-pop 0.34s cubic-bezier(0.2, 1.4, 0.4, 1) both; }
+.res-drop.pop { animation: drop-pop 0.6s cubic-bezier(0.2, 1.4, 0.4, 1) both; }
 @keyframes drop-pop {
-  0%   { opacity: 0; transform: translateY(9px) scale(0.94); }
-  60%  { opacity: 1; transform: translateY(-2px) scale(1.02); }
+  0%   { opacity: 0; transform: translateY(12px) scale(0.92); }
+  60%  { opacity: 1; transform: translateY(-3px) scale(1.02); }
   100% { opacity: 1; transform: none; }
 }
-/* 처음 보는 물건은 금빛 바탕으로 한 번 번쩍입니다 */
-.res-drop.is-new.pop {
-  animation: drop-pop 0.34s cubic-bezier(0.2, 1.4, 0.4, 1) both,
-             drop-flash 0.8s steps(4);
+.res-drop.pop .res-art-ic { animation: art-drop 0.8s cubic-bezier(0.3, 1.4, 0.5, 1) 0.1s both; }
+@keyframes art-drop {
+  0%   { opacity: 0; transform: translateY(-38px) scale(0.6); }
+  45%  { opacity: 1; transform: translateY(3px) scale(1.15, 0.88); }
+  72%  { transform: translateY(-3px) scale(0.95, 1.06); }
+  100% { opacity: 1; transform: none; }
 }
+.res-drop.is-new.pop {
+  animation: drop-pop 0.6s cubic-bezier(0.2, 1.4, 0.4, 1) both,
+             drop-flash 1.6s steps(8);
+}
+/* 금빛에서 칸의 제 바탕으로 돌아옵니다 (끝 값을 비워두면 제 바탕이 끝 값이 됩니다) */
 @keyframes drop-flash {
-  0%   { background: #f7d98a; }
-  100% { background: transparent; }
+  0%   { background-color: #f7d98a; }
+}
+/* 빛살 — 처음 보는 것만. 액자 뒤에서 여덟 갈래로 뻗어, 도트 화면에 맞춰 뚝뚝 끊어 돕니다.
+   가운데는 액자에 가려지고 둘레만 보입니다. 바깥으로 갈수록 옅어져 글씨는 덜 덮습니다. */
+.res-drop.is-new::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 32px;                     /* 액자 한가운데 — 위 여백 8 + 액자 48 의 절반 */
+  width: 150px;
+  height: 150px;
+  margin: -75px 0 0 -75px;
+  pointer-events: none;
+  opacity: 0;
+  background: repeating-conic-gradient(rgba(255, 250, 228, 0.95) 0 12deg, transparent 12deg 45deg);
+  -webkit-mask: radial-gradient(circle, #000 22%, transparent 66%);
+          mask: radial-gradient(circle, #000 22%, transparent 66%);
+}
+.res-drop.is-new.pop::before { animation: art-shine 1.2s steps(12) 0.15s both; }
+@keyframes art-shine {
+  0%   { opacity: 0; transform: rotate(0deg) scale(0.5); }
+  25%  { opacity: 1; }
+  100% { opacity: 0; transform: rotate(120deg) scale(1.15); }
 }
 .res-tag.worn-now { color: var(--energy); font-weight: 700; }
 @media (prefers-reduced-motion: reduce) {
   .res-drop.veiled { opacity: 1; }
-  .res-drop.pop { animation: none; }
+  .res-drop.pop, .res-drop.pop .res-art-ic, .res-drop.is-new.pop::before { animation: none; }
 }
 
 /* ---------- 설정 ---------- */
@@ -1685,10 +1801,21 @@ kbd {
 .modal-card #alloc { overflow-y: auto; overflow-x: hidden; flex: 1; min-height: 0; padding: 2px; }
 .modal-card #roster { overflow-y: auto; flex: 1; min-height: 0; }
 .modal-card .hint { flex: none; margin-bottom: 8px; }
+/* 강화 창이 빠져서 착용칸이 맨 위가 됐습니다 */
+#equipDetail > :first-child { margin-top: 0; }
 @media (min-width: 861px) {
   .modal { align-items: center; padding: 24px; }
   .modal-card { max-height: 84vh; }
 }
+
+/* 부위 창 머리의 「강화」 — 지금 올릴 수 있으면 초록 (사람 그림 칸의 ▲강화 딱지와 같은 색) */
+.btn.enh-open.ready { --b: #3f6d2a; --b-hi: #5f8f3e; --b-lo: #22401a; }
+
+/* ---------- 강화 창 ----------
+   부위 창 위에 한 겹 더 뜹니다. 밑의 부위 창이 비쳐 보이게 뒤판은 옅게, 창은 조금 좁게. */
+.enh-modal .modal-back { background: rgba(28, 16, 7, 0.45); }
+.enh-modal .modal-card { max-width: 440px; }
+.modal-card .enh-body { overflow-y: auto; flex: 1; min-height: 0; padding: 2px; }
 
 /* ---------- 관리자 ---------- */
 .modal-card .admin-body {

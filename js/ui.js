@@ -532,21 +532,27 @@ function isRosterModalOpen() {
 }
 
 // ---------- 전리품 등장 ----------
-// 0.2초 뒤부터 하나씩 튀어나옵니다.
+// 0.45초 뒤부터 하나씩 튀어나옵니다.
 // 결과 화면이 그려지는 순간 같이 떠 있으면 그냥 글자 한 줄인데,
 // 한 박자 늦게 나오면 "떨어졌다" 가 됩니다. 그 한 박자를 위한 장치입니다.
-const DROP_DELAY = 200;    // 첫 전리품까지
-const DROP_STEP  = 140;    // 그다음부터 하나씩
+// 예전엔 0.2초 · 0.14초 간격 · 0.34초 연출이라 무엇이 나왔는지 보기도 전에 끝났습니다.
+// 연출 길이(DROP_ANIM)는 style.css 의 drop-pop · art-drop 과 맞춥니다.
+const DROP_DELAY = 450;    // 첫 전리품까지
+const DROP_STEP  = 450;    // 그다음부터 하나씩
+const DROP_ANIM  = 1400;   // 하나가 다 튀어나오기까지 (빛살이 다 돌 때까지)
 
+const dropsShown = new WeakMap();   // 결과 → 이미 튀어나온 전리품 수
 let dropTimers = [];
 function revealDrops() {
   for (const t of dropTimers) clearTimeout(t);
   dropTimers = [];
+  const r = State.run && State.run.lastResult;
   const veiled = document.querySelectorAll('.res-drop.veiled');
   veiled.forEach((el, i) => {
     dropTimers.push(setTimeout(() => {
       el.classList.remove('veiled');
       el.classList.add('pop');
+      if (r) dropsShown.set(r, Math.max(dropsShown.get(r) || 0, Number(el.dataset.drop) + 1));
       // 새 것은 반짝, 이미 가진 것(분해)은 짤랑
       Sound.play(el.classList.contains('is-new') ? 'drop' : 'stone');
     }, DROP_DELAY + i * DROP_STEP));
@@ -566,7 +572,7 @@ function scheduleAutoContinue() {
 
   // 전리품이 다 나온 뒤에 넘겨야 뭘 얻었는지 보입니다
   const shown = (r.drops && r.drops.length && State.meta.settings.dropFx)
-    ? DROP_DELAY + (r.drops.length - 1) * DROP_STEP
+    ? DROP_DELAY + (r.drops.length - 1) * DROP_STEP + DROP_ANIM
     : 0;
   autoContinueTimer = setTimeout(() => {
     autoContinueTimer = null;
@@ -910,18 +916,31 @@ function resultCard(r, run) {
   // 전리품은 **결과가 뜬 다음에** 하나씩 튀어나옵니다.
   // 같이 떠버리면 그냥 글자 줄이지만, 한 박자 늦게 나오면 "뭔가 떨어졌다" 가 됩니다.
   // 늦추는 시간은 renderJourney 가 끝난 뒤 revealDrops() 가 붙여줍니다.
+  // 이미 튀어나온 것은 결과 화면을 다시 그려도(분배 창을 열 때 등) 다시 튀지 않습니다.
+  //
+  // 글자만으로는 뭘 얻었는지 한눈에 안 들어와서 물건의 모습을 함께 둡니다 —
+  // 전리품 탭과 같은 아이콘입니다 (지금은 이모지, 나중에 그림이 들어올 자리).
+  // 조우 화면의 남은 전리품 칸처럼 가로로 늘어놓습니다 (한 줄에 셋까지) —
+  // 한 줄에 하나씩 쌓으면 폰에서 셋째 것이 아래의 「계속한다」에 가려집니다.
   const fx = State.meta.settings.dropFx;
+  const shown = dropsShown.get(r) || 0;
   const drops = r.win && r.drops.length
     ? `<div class="res-drops">
          <div class="res-sub">빼앗은 것 ${r.drops.length}</div>
+         <div class="res-drop-list" style="grid-template-columns:repeat(${Math.min(3, r.drops.length)}, minmax(0, 1fr))">
          ${r.drops.map((d, i) => `
-           <div class="res-drop ${fx ? 'veiled' : ''} ${d.isNew ? 'is-new' : 'is-stone'}" data-drop="${i}">
-             <span class="res-slot">${SLOT_NAMES[d.item.slot]}</span>
-             <span class="res-name">${d.item.name}</span>
-             ${d.item.grade !== 'normal' ? `<span class="grade-tag ${d.item.grade}">${KINDS[d.item.grade].name}</span>` : ''}
-             <span class="res-tag">${d.isNew ? '새로 얻음' : `분해 · ${SLOT_NAMES[d.item.slot]} 강화석 +${fmt(d.stones)}`}</span>
-             ${d.autoWorn ? '<span class="res-tag worn-now">바로 착용</span>' : ''}
+           <div class="res-drop ${fx && i >= shown ? 'veiled' : ''} ${d.isNew ? 'is-new' : 'is-stone'}" data-drop="${i}">
+             <span class="res-art ${d.item.grade !== 'normal' ? `g-${d.item.grade}` : ''}"><span class="res-art-ic">${d.item.fromIcon}</span></span>
+             <span class="res-body">
+               <span class="res-name">${d.item.grade !== 'normal' ? `<span class="grade-tag ${d.item.grade}">${KINDS[d.item.grade].name}</span>` : ''}${d.item.name}</span>
+               <span class="res-meta">
+                 <span class="res-slot">${SLOT_NAMES[d.item.slot]}</span>
+                 <span class="res-tag">${d.isNew ? '새로 얻음' : `분해 · 강화석 +${fmt(d.stones)}`}</span>
+                 ${d.autoWorn ? '<span class="res-tag worn-now">바로 착용</span>' : ''}
+               </span>
+             </span>
            </div>`).join('')}
+         </div>
        </div>`
     : '';
 
@@ -1220,6 +1239,7 @@ function wireKeys() {
         ev.preventDefault();
         if (isSaveModalOpen()) closeSaveModal();
         else if (isAdminOpen()) closeAdmin();
+        else if (isEnhModalOpen()) closeEnhModal();      // 강화 창이 부위 창 위에 있으니 먼저
         else if (isSlotModalOpen()) closeSlotModal();
         else if (isRosterModalOpen()) closeRosterModal();
         else closeAllocModal();
@@ -1467,11 +1487,13 @@ function renderGear() {
   renderSpecialSlots();
   renderSetBonus();
 
-  // 고른 부위에 끼운 것 — 여기만 능력치를 전부 펼칩니다
+  // 고른 부위에 끼운 것 — 여기만 능력치를 전부 펼칩니다.
+  // 강화는 따로 창을 띄웁니다 (부위 창 위의 「강화」 버튼 — renderEnhance).
   const special = isSpecialSlot(selectedSlot);
   const wornId = State.meta.equipped[selectedSlot];
   const wornItem = wornId ? getItem(wornId) : null;
-  $('equipDetail').innerHTML = (special ? specialPanel(selectedSlot) : enhancePanel(selectedSlot)) + (wornItem
+  renderEnhance(special, wornItem);
+  $('equipDetail').innerHTML = (special ? specialPanel(selectedSlot) : '') + (wornItem
     ? `<div class="worn-card">
          <span class="worn-icon">${wornItem.fromIcon}</span>
          <div class="worn-body">
@@ -1595,40 +1617,63 @@ function renderGear() {
 }
 
 // ---------- 부위 강화 ----------
-// 부위 창 맨 위에 붙습니다. 강화는 그 칸에 붙으므로 무엇을 끼고 있든 같은 자리에서 합니다.
-// 방금 누른 결과(성공/실패)는 같은 부위를 보는 동안만 남겨둡니다.
+// 따로 창을 띄웁니다 — 부위 창 머리의 「강화」 버튼으로 열고, 닫으면 부위 창으로 돌아갑니다.
+// 예전엔 부위 창 맨 위에 붙어 있어서, 장비를 고르러 열 때마다 강화 패널이 목록을 밀어냈습니다.
+// 강화는 그 칸에 붙으므로 무엇을 끼고 있든 같은 자리에서 합니다.
+// 방금 누른 결과(성공/실패)는 강화 창을 보는 동안만 남겨둡니다.
 let lastEnhance = null;
 
-function enhancePanel(slot) {
+function renderEnhance(special, wornItem) {
+  // 부위 창 머리의 버튼. 지금 올릴 수 있으면 초록에 ▲ — 사람 그림 칸의 딱지와 같은 뜻입니다.
+  const btn = $('enhOpenBtn');
+  if (btn) {
+    const lv = special ? 0 : enhanceLevel(selectedSlot);
+    const ready = !special && canEnhance(selectedSlot);
+    btn.hidden = special;
+    btn.classList.toggle('ready', ready);
+    btn.textContent = `${ready ? '▲' : ''}강화${lv > 0 ? ` +${lv}` : ''}`;
+  }
+  // 특수장비 칸에는 강화가 없습니다
+  if (special) { closeEnhModal(); return; }
+  $('enhTitle').textContent = `${SLOT_NAMES[selectedSlot]} 강화`;
+  $('enhBody').innerHTML = enhancePanel(selectedSlot, wornItem);
+}
+
+function enhancePanel(slot, item) {
   const lv = enhanceLevel(slot);
   const nx = nextEnhance(slot);
   const stones = stonesOf(slot);
-  const name = SLOT_NAMES[slot];
   const now = Math.round(enhanceBonus(lv) * 100);
+  const mine = lastEnhance && lastEnhance.slot === slot ? lastEnhance : null;
 
-  const last = lastEnhance && lastEnhance.slot === slot
-    ? `<div class="enh-last ${lastEnhance.success ? 'ok' : 'fail'}">${lastEnhance.success
-        ? `성공 — +${lastEnhance.level}`
-        : `실패 — 강화석 ${fmt(lastEnhance.cost)}개가 부서졌다`}</div>`
+  const last = mine
+    ? `<div class="enh-last ${mine.success ? 'ok' : 'fail'}">${mine.success
+        ? `성공 — +${mine.level}`
+        : `실패 — 강화석 ${fmt(mine.cost)}개가 부서졌다`}</div>`
     : '';
 
+  // 맨 위 — 무엇을 올리는지(지금 이 칸에 낀 것)와 몇 단계에서 몇 단계로.
+  // 강화는 칸에 붙으므로 비어 있어도 올릴 수 있습니다.
+  // 그림은 방금 누른 결과에 따라 한 번 번쩍입니다 — 성공은 초록, 실패는 붉게 흔들림.
+  const top = `<div class="enh-top">
+      <span class="enh-art ${mine ? (mine.success ? 'ok' : 'fail') : ''}">${item ? item.fromIcon : ''}</span>
+      <span class="enh-item ${item ? '' : 'empty'}">${item ? `${itemTag(item)}${item.name}` : '비어 있음'}</span>
+      <span class="enh-step">+${lv}${nx ? `<em>▶</em>+${lv + 1}` : '<em>최대</em>'}</span>
+    </div>`;
+
   if (!nx) {
-    return `<div class="enh-panel maxed">
-      <div class="enh-head"><span class="enh-title">${name} 강화 <b>+${lv}</b></span>
-        <span class="enh-now">핵심 스탯 +${now}%</span></div>
-      <div class="enh-info">최대 · 강화석 ${fmt(stones)}</div>
+    return `<div class="enh-panel maxed">${top}
+      <div class="enh-info"><span>핵심 스탯 <b>+${now}%</b></span><span>강화석 ${fmt(stones)}</span></div>
       ${last}
     </div>`;
   }
 
   const chance = enhanceChance(slot);
   const can = stones >= nx.cost;
-  return `<div class="enh-panel">
-    <div class="enh-head"><span class="enh-title">${name} 강화 <b>+${lv}</b></span>
-      <span class="enh-now">핵심 스탯 +${now}%</span></div>
+  return `<div class="enh-panel">${top}
     <div class="enh-info">
+      <span>핵심 스탯 <b>+${now}%</b> → <b>+${Math.round(nx.bonus * 100)}%</b></span>
       <span>강화석 <b class="${can ? 'enough' : ''}">${fmt(stones)}</b> / ${fmt(nx.cost)}</span>
-      <span>다음 +${lv + 1} → +${Math.round(nx.bonus * 100)}%</span>
       <span>성공 ${Math.round(chance * 100)}%</span>
     </div>
     <button class="btn primary enh-btn" data-enhance="${slot}" ${can ? '' : 'disabled'}>
@@ -1685,12 +1730,14 @@ function openSlotModal(slotId) {
   lastSwap = null;
   swapFrom = null;
   showLocked = !!State.meta.settings.showLocked;   // 설정을 따릅니다
+  closeEnhModal();
   render();
   const m = $('slotModal');
   if (m) m.classList.remove('hidden');
 }
 
 function closeSlotModal() {
+  closeEnhModal();
   const m = $('slotModal');
   if (m) m.classList.add('hidden');
   // 창을 닫을 때 비로소 NEW! 를 끕니다 — 열어보는 동안에는 남아 있어야
@@ -1701,6 +1748,25 @@ function closeSlotModal() {
 
 function isSlotModalOpen() {
   const m = $('slotModal');
+  return !!m && !m.classList.contains('hidden');
+}
+
+// ---------- 강화 창 ----------
+// 부위 창 위에 한 겹 더 뜹니다. 닫으면 밑에 있던 부위 창이 그대로 보입니다.
+// 지난번 결과는 지우고 엽니다 — 다시 열었는데 아까의 「실패」가 남아 있으면 헷갈립니다.
+function openEnhModal() {
+  if (isSpecialSlot(selectedSlot)) return;
+  lastEnhance = null;
+  lastSwap = null;
+  $('enhModal').classList.remove('hidden');
+  render();
+}
+function closeEnhModal() {
+  const m = $('enhModal');
+  if (m) m.classList.add('hidden');
+}
+function isEnhModalOpen() {
+  const m = $('enhModal');
   return !!m && !m.classList.contains('hidden');
 }
 
@@ -1721,7 +1787,7 @@ function isAllocModalOpen() {
   const m = $('allocModal');
   return !!m && !m.classList.contains('hidden');
 }
-function isAnyModalOpen() { return isSlotModalOpen() || isAllocModalOpen() || isRosterModalOpen() || isSaveModalOpen() || isAdminOpen(); }
+function isAnyModalOpen() { return isSlotModalOpen() || isEnhModalOpen() || isAllocModalOpen() || isRosterModalOpen() || isSaveModalOpen() || isAdminOpen(); }
 
 // 그 부위의 강화를 반영한 실제 수치를 보여줍니다 — 장부상 수치가 아니라 몸에 붙는 값.
 // 강화는 부위에 붙으므로, 목록에 있는 것 무엇을 끼든 이 값이 됩니다.
@@ -2253,6 +2319,8 @@ function init() {
   $('logToggle').addEventListener('click', () => { logOpen = !logOpen; renderLog(); });
   $('toTitleBtn').addEventListener('click', () => { currentSlot = 0; showTitle(); });
   for (const b of document.querySelectorAll('[data-closesave]')) b.addEventListener('click', closeSaveModal);
+  $('enhOpenBtn').addEventListener('click', openEnhModal);
+  for (const b of document.querySelectorAll('[data-closeenh]')) b.addEventListener('click', closeEnhModal);
 
   $('tutNext').addEventListener('click', () => {
     if (tutIndex < TUTORIAL.length - 1) { tutIndex++; renderTutorial(); }
