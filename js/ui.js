@@ -1861,14 +1861,12 @@ function renderGear() {
     const spec = itemSpecialText(item);
     const fresh = isFresh(item.id, fk);
     const diff = on ? '' : itemDiffText(item, wornItem, slotM);
-    // 특수장비는 다른 특수장비 칸에 끼워져 있을 수 있습니다 — 그때는 이리로 옮깁니다
-    const action = on ? '<span class="worn">착용중</span>'
-      : !canWear ? '<span class="worn locked-note">칸이 닫혀 있다</span>'
-      : at ? `<span class="worn elsewhere">${SLOT_NAMES[at]}에 끼움</span>
-              <button class="btn" data-equip="${item.id}">여기로 옮긴다</button>`
-      : `<button class="btn" data-equip="${item.id}">착용</button>`;
+    // 버튼은 없습니다 — 칸을 누르면 끼우고, 낀 것은 테두리로만 보입니다.
+    // 특수장비는 다른 특수장비 칸에 끼워져 있을 수 있습니다 — 누르면 이리로 옮깁니다 (작은 글로 어디 끼웠는지만)
+    const wearable = canWear && !on;
+    const where = at && !on ? `<div class="inv-where">${SLOT_NAMES[at]}에 끼움</div>` : '';
     return `
-      <div class="inv-item ${on ? 'on' : ''} ${fresh ? 'fresh' : ''}">
+      <div class="inv-item ${on ? 'on' : ''} ${fresh ? 'fresh' : ''} ${wearable ? 'pick' : ''}" ${wearable ? `data-equip="${item.id}"` : ''}>
         <span class="inv-art">${item.fromIcon}</span>
         <div class="inv-body">
           <div class="inv-head">
@@ -1878,8 +1876,8 @@ function renderGear() {
           <div class="inv-stats">${itemStatText(item) || '—'}${spec ? ` <span class="inv-spec">${spec}</span>` : ''}</div>
           ${diff ? `<div class="inv-diff">${diff}</div>` : ''}
           ${item.note ? `<div class="inv-note">${item.note}</div>` : ''}
+          ${where}
         </div>
-        <div class="inv-act">${action}</div>
       </div>`;
   }).join('') : `<p class="hint span2">얻은 것이 없다</p>`) + lockedBlock;
 
@@ -1889,9 +1887,9 @@ function renderGear() {
   for (const el of document.querySelectorAll('[data-slot]')) {
     el.addEventListener('click', () => openSlotModal(el.dataset.slot));
   }
-  // 골랐으면 창을 닫습니다 — 고르러 연 창이니까요.
-  for (const btn of document.querySelectorAll('[data-equip]')) {
-    btn.addEventListener('click', () => { equip(btn.dataset.equip, selectedSlot); Sound.play('equip'); closeSlotModal(); });
+  // 칸을 누르면 끼웁니다. 창은 열어 둡니다 — 테두리가 옮겨 가는 걸로 무엇을 꼈는지 보입니다.
+  for (const row of document.querySelectorAll('#inventory [data-equip]')) {
+    row.addEventListener('click', () => { equip(row.dataset.equip, selectedSlot); Sound.play('equip'); render(); });
   }
   // 해제는 창을 열어둡니다. 벗은 김에 다른 걸 끼우려는 흐름이 자연스럽습니다.
   for (const btn of document.querySelectorAll('[data-unequip]')) {
