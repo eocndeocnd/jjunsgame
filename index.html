@@ -112,6 +112,19 @@
   </div>
 </div>
 
+<!-- 강화석 교환. 사람 그림의 「슬롯 강화」 중에 왼쪽 위 「강화석 교환」으로, 또는 강화 창에서 엽니다.
+     어느 강화석이든 어느 부위로든 — 바꾸는 일은 전부 이 창 하나에서. -->
+<div id="swapModal" class="modal enh-modal hidden">
+  <div class="modal-back" data-closeswap></div>
+  <div class="modal-card">
+    <div class="modal-head">
+      <h3>강화석 교환 <span class="count" id="swapRate"></span></h3>
+      <button class="btn tiny" data-closeswap>닫기</button>
+    </div>
+    <div id="swapBody" class="enh-body"></div>
+  </div>
+</div>
+
 <!-- 떠돌이 상인. 그 지역에 상인이 있으면 갈림길의 「들른다」로 엽니다. 파는 것은 ui.js 의 renderShop 이 그립니다. -->
 <div id="shopModal" class="modal hidden">
   <div class="modal-back" data-closeshop></div>
