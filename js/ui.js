@@ -1841,13 +1841,15 @@ function renderGear() {
          아직 못 얻은 것 ${lockedCount}종 ${showLocked ? '숨기기' : '보기'}
        </button>` + (showLocked ? all.filter(i => !owns(i.id)).map(item => `
         <div class="inv-item locked">
-          <div class="inv-head">
-            <span class="inv-icon">·</span>
-            <span class="rank-dot r${item.rank.n}" title="제${item.rank.n}격 · ${item.rank.name}"></span>
-            ${item.grade !== 'normal' ? `<span class="grade-tag ${item.grade}">${KINDS[item.grade].name}</span>` : ''}
+          <span class="inv-art">?</span>
+          <div class="inv-body">
+            <div class="inv-head">
+              <span class="rank-dot r${item.rank.n}" title="제${item.rank.n}격 · ${item.rank.name}"></span>
+              ${item.grade !== 'normal' ? `<span class="grade-tag ${item.grade}">${KINDS[item.grade].name}</span>` : ''}
+              <span class="inv-name">????</span>
+            </div>
+            <div class="inv-stats">제${item.rank.n}격 · ${item.rank.name}</div>
           </div>
-          <div class="inv-name">????</div>
-          <div class="inv-stats">제${item.rank.n}격 · ${item.rank.name}</div>
         </div>`).join('') : '')
     : '';
 
@@ -1867,18 +1869,17 @@ function renderGear() {
       : `<button class="btn" data-equip="${item.id}">착용</button>`;
     return `
       <div class="inv-item ${on ? 'on' : ''} ${fresh ? 'fresh' : ''}">
-        <div class="inv-head">
-          <span class="inv-icon">${item.fromIcon}</span>
-          ${fresh ? '<span class="new-badge">NEW</span>' : ''}${itemTag(item)}
-          <span class="rank-dot r${item.rank.n}" title="제${item.rank.n}격 · ${item.rank.name}"></span>
-          ${item.grade !== 'normal' ? `<span class="grade-tag ${item.grade}">${KINDS[item.grade].name}</span>` : ''}
+        <span class="inv-art">${item.fromIcon}</span>
+        <div class="inv-body">
+          <div class="inv-head">
+            ${fresh ? '<span class="new-badge">NEW</span>' : ''}${itemTag(item)}${item.grade !== 'normal' ? `<span class="grade-tag ${item.grade}">${KINDS[item.grade].name}</span>` : ''}
+            <span class="inv-name">${item.name}</span>
+          </div>
+          <div class="inv-stats">${itemStatText(item) || '—'}${spec ? ` <span class="inv-spec">${spec}</span>` : ''}</div>
+          ${diff ? `<div class="inv-diff">${diff}</div>` : ''}
+          ${item.note ? `<div class="inv-note">${item.note}</div>` : ''}
         </div>
-        <div class="inv-name">${item.name}</div>
-        <div class="inv-stats">${itemStatText(item) || '—'}</div>
-        ${spec ? `<div class="inv-spec">${spec}</div>` : ''}
-        ${diff ? `<div class="inv-diff">${diff}</div>` : ''}
-        ${item.note ? `<div class="inv-note">${item.note}</div>` : ''}
-        ${action}
+        <div class="inv-act">${action}</div>
       </div>`;
   }).join('') : `<p class="hint span2">얻은 것이 없다</p>`) + lockedBlock;
 
@@ -2097,16 +2098,14 @@ function renderShop() {
     const spec = itemSpecialText(item);
     return `
       <div class="inv-item ware ${sold ? 'sold' : ''}">
-        <div class="inv-head">
-          <span class="inv-icon">${item.fromIcon}</span>${itemTag(item)}
-          <span class="rank-dot r${item.rank.n}" title="제${item.rank.n}격 · ${item.rank.name}"></span>
+        <span class="inv-art">${item.fromIcon}</span>
+        <div class="inv-body">
+          <div class="inv-head">${itemTag(item)}<span class="inv-name">${item.name}</span></div>
+          <div class="inv-stats">${SLOT_NAMES[item.slot]} · ${itemStatText(item) || '—'}${spec ? ` <span class="inv-spec">${spec}</span>` : ''}</div>
+          ${diff && !sold ? `<div class="inv-diff">${diff}</div>` : ''}
         </div>
-        <div class="inv-name">${item.name}</div>
-        <div class="inv-stats">${SLOT_NAMES[item.slot]} · ${itemStatText(item) || '—'}</div>
-        ${spec ? `<div class="inv-spec">${spec}</div>` : ''}
-        ${diff && !sold ? `<div class="inv-diff">${diff}</div>` : ''}
-        ${sold ? '<span class="worn">샀다</span>'
-          : `<button class="btn" data-buy="${id}" ${can ? '' : 'disabled'}>${fmt(item.price)} 골드</button>`}
+        <div class="inv-act">${sold ? '<span class="worn">샀다</span>'
+          : `<button class="btn" data-buy="${id}" ${can ? '' : 'disabled'}>${fmt(item.price)} 골드</button>`}</div>
       </div>`;
   }).join('');
   // 강화석 — 부위를 고르면 그 부위의 지금 강화석 · 강화 단계와 다음 강화에 드는 수가 보입니다

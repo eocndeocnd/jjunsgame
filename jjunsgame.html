@@ -2536,6 +2536,52 @@ body.lv-rolling .je-xp-fill, body.lv-rolling .bar-fill.xp { transition: none; tr
   .res-actions .btn:not(.thumb) { flex: 1 1 0; min-width: 0; padding: 9px 4px; font-size: 12px; }
 }
 
+/* ---------- 전리품 목록 — 한 줄에 하나 ----------
+   왼쪽에 물건 그림을 크게, 그 그림의 크기가 곧 한 칸의 높이. 가운데 이름 · 능력치 · 견줌, 오른쪽에 착용.
+   (예전엔 두 줄로 나눠 칸마다 글이 세로로 길게 늘어졌습니다) */
+.inventory { grid-template-columns: 1fr; gap: 6px; }
+.inv-item {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px 6px 6px;
+}
+.inv-art {
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+  font-size: 34px;
+  line-height: 1;
+  background: var(--paper-lo);
+  box-shadow: inset 0 0 0 2px var(--line), inset 0 0 0 4px var(--paper-hi);
+  user-select: none;
+  -webkit-user-select: none;
+}
+.inv-item.on .inv-art { box-shadow: inset 0 0 0 2px var(--accent), inset 0 0 0 4px var(--paper-hi); }
+.inv-item.locked .inv-art { font-size: 22px; color: var(--text-faint); }
+.inv-body { min-width: 0; }
+.inv-head { display: flex; align-items: center; flex-wrap: wrap; gap: 2px 0; margin-bottom: 1px; }
+.inv-head .inv-name { font-size: 13px; font-weight: 700; line-height: 1.35; }
+.inv-stats { font-size: 11px; line-height: 1.45; margin-top: 0; }
+.inv-stats .inv-spec { display: inline; font-size: 10px; margin: 0; }
+.inv-diff { margin-top: 1px; padding-top: 0; background: none; font-size: 10px; line-height: 1.45; }
+.inv-act { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.inv-item .inv-act .btn { width: auto; margin: 0; padding: 8px 12px; font-size: 12px; white-space: nowrap; }
+.inv-item .inv-act .worn { display: inline; margin: 0; white-space: nowrap; }
+/* 한 칸 = 그림 한 장의 높이 — 이름 한 줄 · 능력치 한 줄 · 견줌 두 줄까지만 (넘치면 …) */
+.inv-item { grid-template-columns: 72px minmax(0, 1fr) auto; min-height: 84px; padding: 6px 8px 6px 6px; }
+.inv-art { width: 72px; height: 72px; font-size: 44px; }
+.inv-head { flex-wrap: nowrap; overflow: hidden; }
+.inv-head .inv-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.inv-head > span:not(.inv-name) { flex: none; }
+.inv-stats, .inv-diff { overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; }
+.inv-stats { -webkit-line-clamp: 1; }
+.inv-diff  { -webkit-line-clamp: 2; }
+.inv-note  { overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 1; }
+.inv-diff > span { margin-right: 7px; }
+
 </style>
 </head>
 <body data-tab="journey">
@@ -9477,13 +9523,15 @@ function renderGear() {
          아직 못 얻은 것 ${lockedCount}종 ${showLocked ? '숨기기' : '보기'}
        </button>` + (showLocked ? all.filter(i => !owns(i.id)).map(item => `
         <div class="inv-item locked">
-          <div class="inv-head">
-            <span class="inv-icon">·</span>
-            <span class="rank-dot r${item.rank.n}" title="제${item.rank.n}격 · ${item.rank.name}"></span>
-            ${item.grade !== 'normal' ? `<span class="grade-tag ${item.grade}">${KINDS[item.grade].name}</span>` : ''}
+          <span class="inv-art">?</span>
+          <div class="inv-body">
+            <div class="inv-head">
+              <span class="rank-dot r${item.rank.n}" title="제${item.rank.n}격 · ${item.rank.name}"></span>
+              ${item.grade !== 'normal' ? `<span class="grade-tag ${item.grade}">${KINDS[item.grade].name}</span>` : ''}
+              <span class="inv-name">????</span>
+            </div>
+            <div class="inv-stats">제${item.rank.n}격 · ${item.rank.name}</div>
           </div>
-          <div class="inv-name">????</div>
-          <div class="inv-stats">제${item.rank.n}격 · ${item.rank.name}</div>
         </div>`).join('') : '')
     : '';
 
@@ -9503,18 +9551,17 @@ function renderGear() {
       : `<button class="btn" data-equip="${item.id}">착용</button>`;
     return `
       <div class="inv-item ${on ? 'on' : ''} ${fresh ? 'fresh' : ''}">
-        <div class="inv-head">
-          <span class="inv-icon">${item.fromIcon}</span>
-          ${fresh ? '<span class="new-badge">NEW</span>' : ''}${itemTag(item)}
-          <span class="rank-dot r${item.rank.n}" title="제${item.rank.n}격 · ${item.rank.name}"></span>
-          ${item.grade !== 'normal' ? `<span class="grade-tag ${item.grade}">${KINDS[item.grade].name}</span>` : ''}
+        <span class="inv-art">${item.fromIcon}</span>
+        <div class="inv-body">
+          <div class="inv-head">
+            ${fresh ? '<span class="new-badge">NEW</span>' : ''}${itemTag(item)}${item.grade !== 'normal' ? `<span class="grade-tag ${item.grade}">${KINDS[item.grade].name}</span>` : ''}
+            <span class="inv-name">${item.name}</span>
+          </div>
+          <div class="inv-stats">${itemStatText(item) || '—'}${spec ? ` <span class="inv-spec">${spec}</span>` : ''}</div>
+          ${diff ? `<div class="inv-diff">${diff}</div>` : ''}
+          ${item.note ? `<div class="inv-note">${item.note}</div>` : ''}
         </div>
-        <div class="inv-name">${item.name}</div>
-        <div class="inv-stats">${itemStatText(item) || '—'}</div>
-        ${spec ? `<div class="inv-spec">${spec}</div>` : ''}
-        ${diff ? `<div class="inv-diff">${diff}</div>` : ''}
-        ${item.note ? `<div class="inv-note">${item.note}</div>` : ''}
-        ${action}
+        <div class="inv-act">${action}</div>
       </div>`;
   }).join('') : `<p class="hint span2">얻은 것이 없다</p>`) + lockedBlock;
 
@@ -9733,16 +9780,14 @@ function renderShop() {
     const spec = itemSpecialText(item);
     return `
       <div class="inv-item ware ${sold ? 'sold' : ''}">
-        <div class="inv-head">
-          <span class="inv-icon">${item.fromIcon}</span>${itemTag(item)}
-          <span class="rank-dot r${item.rank.n}" title="제${item.rank.n}격 · ${item.rank.name}"></span>
+        <span class="inv-art">${item.fromIcon}</span>
+        <div class="inv-body">
+          <div class="inv-head">${itemTag(item)}<span class="inv-name">${item.name}</span></div>
+          <div class="inv-stats">${SLOT_NAMES[item.slot]} · ${itemStatText(item) || '—'}${spec ? ` <span class="inv-spec">${spec}</span>` : ''}</div>
+          ${diff && !sold ? `<div class="inv-diff">${diff}</div>` : ''}
         </div>
-        <div class="inv-name">${item.name}</div>
-        <div class="inv-stats">${SLOT_NAMES[item.slot]} · ${itemStatText(item) || '—'}</div>
-        ${spec ? `<div class="inv-spec">${spec}</div>` : ''}
-        ${diff && !sold ? `<div class="inv-diff">${diff}</div>` : ''}
-        ${sold ? '<span class="worn">샀다</span>'
-          : `<button class="btn" data-buy="${id}" ${can ? '' : 'disabled'}>${fmt(item.price)} 골드</button>`}
+        <div class="inv-act">${sold ? '<span class="worn">샀다</span>'
+          : `<button class="btn" data-buy="${id}" ${can ? '' : 'disabled'}>${fmt(item.price)} 골드</button>`}</div>
       </div>`;
   }).join('');
   // 강화석 — 부위를 고르면 그 부위의 지금 강화석 · 강화 단계와 다음 강화에 드는 수가 보입니다

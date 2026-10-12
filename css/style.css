@@ -2519,3 +2519,49 @@ body.lv-rolling .je-xp-fill, body.lv-rolling .bar-fill.xp { transition: none; tr
   .res-actions { flex-direction: row; gap: 8px; margin-top: 12px; }
   .res-actions .btn:not(.thumb) { flex: 1 1 0; min-width: 0; padding: 9px 4px; font-size: 12px; }
 }
+
+/* ---------- 전리품 목록 — 한 줄에 하나 ----------
+   왼쪽에 물건 그림을 크게, 그 그림의 크기가 곧 한 칸의 높이. 가운데 이름 · 능력치 · 견줌, 오른쪽에 착용.
+   (예전엔 두 줄로 나눠 칸마다 글이 세로로 길게 늘어졌습니다) */
+.inventory { grid-template-columns: 1fr; gap: 6px; }
+.inv-item {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px 6px 6px;
+}
+.inv-art {
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+  font-size: 34px;
+  line-height: 1;
+  background: var(--paper-lo);
+  box-shadow: inset 0 0 0 2px var(--line), inset 0 0 0 4px var(--paper-hi);
+  user-select: none;
+  -webkit-user-select: none;
+}
+.inv-item.on .inv-art { box-shadow: inset 0 0 0 2px var(--accent), inset 0 0 0 4px var(--paper-hi); }
+.inv-item.locked .inv-art { font-size: 22px; color: var(--text-faint); }
+.inv-body { min-width: 0; }
+.inv-head { display: flex; align-items: center; flex-wrap: wrap; gap: 2px 0; margin-bottom: 1px; }
+.inv-head .inv-name { font-size: 13px; font-weight: 700; line-height: 1.35; }
+.inv-stats { font-size: 11px; line-height: 1.45; margin-top: 0; }
+.inv-stats .inv-spec { display: inline; font-size: 10px; margin: 0; }
+.inv-diff { margin-top: 1px; padding-top: 0; background: none; font-size: 10px; line-height: 1.45; }
+.inv-act { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.inv-item .inv-act .btn { width: auto; margin: 0; padding: 8px 12px; font-size: 12px; white-space: nowrap; }
+.inv-item .inv-act .worn { display: inline; margin: 0; white-space: nowrap; }
+/* 한 칸 = 그림 한 장의 높이 — 이름 한 줄 · 능력치 한 줄 · 견줌 두 줄까지만 (넘치면 …) */
+.inv-item { grid-template-columns: 72px minmax(0, 1fr) auto; min-height: 84px; padding: 6px 8px 6px 6px; }
+.inv-art { width: 72px; height: 72px; font-size: 44px; }
+.inv-head { flex-wrap: nowrap; overflow: hidden; }
+.inv-head .inv-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.inv-head > span:not(.inv-name) { flex: none; }
+.inv-stats, .inv-diff { overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; }
+.inv-stats { -webkit-line-clamp: 1; }
+.inv-diff  { -webkit-line-clamp: 2; }
+.inv-note  { overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 1; }
+.inv-diff > span { margin-right: 7px; }
