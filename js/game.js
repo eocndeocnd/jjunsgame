@@ -858,7 +858,7 @@ function freshRun() {
     kills: 0,
     zoneIndex: 0,        // 지금 있는 지역
     zoneCleared: false,  // 이 지역 보스를 꺾어서 길이 열렸는가
-    spentOn: {},         // 정예·히든·보스별로 도전에 쓴 에너지 — 꺾으면 그만큼 돌려받습니다
+    spentOn: {},         // 정예·히든·보스별로 마지막 도전에 쓴 에너지 — 꺾으면 그것만 돌려받습니다
     downed: [],          // 이 여정에서 이미 꺾은 정예·보스 id — 다시 못 만납니다
     progress: 0,         // 이 지역에서 이긴 횟수
     encounter: null,     // 지금 마주한 적 id (없으면 null)
@@ -1028,11 +1028,13 @@ function travel() {
   save();
 }
 
-// 정해진 자리의 상대(정예·히든·보스) 도전에 쓴 에너지를 기록합니다 (접근 비용 + 패배 페널티)
-function addSpentOn(id, n) {
+// 정해진 자리의 상대(정예·히든·보스)에게 향하는 데 쓴 에너지를 기록합니다.
+// 되돌려 받는 건 **이긴 그 도전에 쓴 것뿐** — 그래서 더하지 않고 매번 덮어씁니다.
+// 앞서 진 만큼(패배 페널티)과 그전에 찾아간 값은 돌아오지 않습니다.
+function setSpentOn(id, n) {
   const run = State.run;
   if (!run.spentOn) run.spentOn = {};
-  run.spentOn[id] = (run.spentOn[id] || 0) + n;
+  run.spentOn[id] = n;
 }
 
 // ---------- 화신 ----------
@@ -1113,7 +1115,7 @@ function approachPost(enemyId) {
 
   const run = State.run;
   run.energy -= RULES.TRAVEL_COST;
-  addSpentOn(foe.id, RULES.TRAVEL_COST);
+  setSpentOn(foe.id, RULES.TRAVEL_COST);
   const aura = beginEncounter(foe, true);
 
   pushLog('rank', foe.kind === 'boss'
@@ -1164,7 +1166,6 @@ function engage() {
   if (!result.win) {
     const penalty = lossPenaltyFor(enemy.kind);
     run.energy -= penalty;
-    if (enemy.once) addSpentOn(enemy.id, penalty);
     pushLog('battle',
       `${enemy.icon} ${enemy.name} 앞에 무릎 꿇었다 — ${result.turns}턴, 에너지 -${penalty}`);
     run.lastResult = { win: false, enemy, turns: result.turns, penalty, aura, drops: [], levelsGained: 0, xp: 0, replay };
@@ -1253,10 +1254,11 @@ function engage() {
     openedPath: false, replay
   };
 
-  // 정예·히든·보스를 꺾으면 그 상대에게 쓴 에너지를 전부 돌려받습니다.
-  // 시작 에너지를 넘어서도 됩니다.
+  // 정예·히든·보스를 꺾으면 그 도전에 마지막으로 쓴 에너지(향하는 값)만 돌려받습니다.
+  // 진 만큼은 돌아오지 않습니다. 시작 에너지를 넘어서도 됩니다.
+  // (예전 규칙으로 쌓인 저장본도 향하는 값을 넘지 않게 자릅니다)
   if (enemy.once) {
-    const refund = (run.spentOn && run.spentOn[enemy.id]) || 0;
+    const refund = Math.min((run.spentOn && run.spentOn[enemy.id]) || 0, RULES.TRAVEL_COST);
     if (refund > 0) {
       run.energy += refund;
       run.lastResult.refund = refund;

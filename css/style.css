@@ -2695,3 +2695,19 @@ body.fight-locked .gear-sets { display: none; }
 body.fight-locked #enhOpenBtn,
 body.fight-locked #dollModeBtn,
 body.fight-locked #dollSwapBtn { display: none; }
+
+/* 「길을 떠난다」 아래 — 남은 에너지를 크게. 다섯 이하면 붉게 */
+.travel-energy {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.travel-energy b { font-size: 22px; line-height: 1; color: var(--cream); text-shadow: 0 1px 0 rgba(28, 16, 7, 0.55); }
+.travel-energy em { font-style: normal; font-weight: 400; font-size: 11px; opacity: 0.8; margin-left: -2px; }
+.travel-energy i { font-style: normal; font-weight: 400; font-size: 10px; opacity: 0.8; margin-left: 4px; }
+.travel-energy.low b { color: #ffd5c8; animation: energy-low 1.2s steps(2) infinite; }
+@keyframes energy-low { 50% { color: #ff8f78; } }
+@media (prefers-reduced-motion: reduce) { .travel-energy.low b { animation: none; } }

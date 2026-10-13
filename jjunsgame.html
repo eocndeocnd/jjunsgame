@@ -2712,6 +2712,22 @@ body.fight-locked #enhOpenBtn,
 body.fight-locked #dollModeBtn,
 body.fight-locked #dollSwapBtn { display: none; }
 
+/* 「길을 떠난다」 아래 — 남은 에너지를 크게. 다섯 이하면 붉게 */
+.travel-energy {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.travel-energy b { font-size: 22px; line-height: 1; color: var(--cream); text-shadow: 0 1px 0 rgba(28, 16, 7, 0.55); }
+.travel-energy em { font-style: normal; font-weight: 400; font-size: 11px; opacity: 0.8; margin-left: -2px; }
+.travel-energy i { font-style: normal; font-weight: 400; font-size: 10px; opacity: 0.8; margin-left: 4px; }
+.travel-energy.low b { color: #ffd5c8; animation: energy-low 1.2s steps(2) infinite; }
+@keyframes energy-low { 50% { color: #ff8f78; } }
+@media (prefers-reduced-motion: reduce) { .travel-energy.low b { animation: none; } }
+
 </style>
 </head>
 <body data-tab="journey">
@@ -7022,7 +7038,7 @@ function freshRun() {
     kills: 0,
     zoneIndex: 0,        // 지금 있는 지역
     zoneCleared: false,  // 이 지역 보스를 꺾어서 길이 열렸는가
-    spentOn: {},         // 정예·히든·보스별로 도전에 쓴 에너지 — 꺾으면 그만큼 돌려받습니다
+    spentOn: {},         // 정예·히든·보스별로 마지막 도전에 쓴 에너지 — 꺾으면 그것만 돌려받습니다
     downed: [],          // 이 여정에서 이미 꺾은 정예·보스 id — 다시 못 만납니다
     progress: 0,         // 이 지역에서 이긴 횟수
     encounter: null,     // 지금 마주한 적 id (없으면 null)
@@ -7192,11 +7208,13 @@ function travel() {
   save();
 }
 
-// 정해진 자리의 상대(정예·히든·보스) 도전에 쓴 에너지를 기록합니다 (접근 비용 + 패배 페널티)
-function addSpentOn(id, n) {
+// 정해진 자리의 상대(정예·히든·보스)에게 향하는 데 쓴 에너지를 기록합니다.
+// 되돌려 받는 건 **이긴 그 도전에 쓴 것뿐** — 그래서 더하지 않고 매번 덮어씁니다.
+// 앞서 진 만큼(패배 페널티)과 그전에 찾아간 값은 돌아오지 않습니다.
+function setSpentOn(id, n) {
   const run = State.run;
   if (!run.spentOn) run.spentOn = {};
-  run.spentOn[id] = (run.spentOn[id] || 0) + n;
+  run.spentOn[id] = n;
 }
 
 // ---------- 화신 ----------
@@ -7277,7 +7295,7 @@ function approachPost(enemyId) {
 
   const run = State.run;
   run.energy -= RULES.TRAVEL_COST;
-  addSpentOn(foe.id, RULES.TRAVEL_COST);
+  setSpentOn(foe.id, RULES.TRAVEL_COST);
   const aura = beginEncounter(foe, true);
 
   pushLog('rank', foe.kind === 'boss'
@@ -7328,7 +7346,6 @@ function engage() {
   if (!result.win) {
     const penalty = lossPenaltyFor(enemy.kind);
     run.energy -= penalty;
-    if (enemy.once) addSpentOn(enemy.id, penalty);
     pushLog('battle',
       `${enemy.icon} ${enemy.name} 앞에 무릎 꿇었다 — ${result.turns}턴, 에너지 -${penalty}`);
     run.lastResult = { win: false, enemy, turns: result.turns, penalty, aura, drops: [], levelsGained: 0, xp: 0, replay };
@@ -7417,10 +7434,11 @@ function engage() {
     openedPath: false, replay
   };
 
-  // 정예·히든·보스를 꺾으면 그 상대에게 쓴 에너지를 전부 돌려받습니다.
-  // 시작 에너지를 넘어서도 됩니다.
+  // 정예·히든·보스를 꺾으면 그 도전에 마지막으로 쓴 에너지(향하는 값)만 돌려받습니다.
+  // 진 만큼은 돌아오지 않습니다. 시작 에너지를 넘어서도 됩니다.
+  // (예전 규칙으로 쌓인 저장본도 향하는 값을 넘지 않게 자릅니다)
   if (enemy.once) {
-    const refund = (run.spentOn && run.spentOn[enemy.id]) || 0;
+    const refund = Math.min((run.spentOn && run.spentOn[enemy.id]) || 0, RULES.TRAVEL_COST);
     if (refund > 0) {
       run.energy += refund;
       run.lastResult.refund = refund;
@@ -9179,6 +9197,8 @@ function encounterCard(foe, isBoss, hero, aura) {
 
 // 아무도 없을 때 — 떠날 것인가, 정해진 자리로 갈 것인가, 다음 지역으로 갈 것인가
 function crossroads(boss, hero, run) {
+  const max = startEnergy();
+  const low = run.energy <= 5;
   const canMove = run.energy >= RULES.TRAVEL_COST;
   const nextZone = ZONES[run.zoneIndex + 1];
 
@@ -9223,7 +9243,7 @@ function crossroads(boss, hero, run) {
 
       <button id="travelBtn" class="btn primary big thumb" ${canMove ? '' : 'disabled'}>
         <span class="btn-line">길을 떠난다${KEY_HINT}</span>
-        <span class="cost">에너지 ${RULES.TRAVEL_COST}</span>
+        <span class="travel-energy ${low ? 'low' : ''}">남은 에너지 <b>${run.energy}</b><em>/${max}</em><i>· 한 걸음 −${RULES.TRAVEL_COST}</i></span>
       </button>
 
       ${merchant}

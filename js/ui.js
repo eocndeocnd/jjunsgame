@@ -1355,6 +1355,8 @@ function encounterCard(foe, isBoss, hero, aura) {
 
 // 아무도 없을 때 — 떠날 것인가, 정해진 자리로 갈 것인가, 다음 지역으로 갈 것인가
 function crossroads(boss, hero, run) {
+  const max = startEnergy();
+  const low = run.energy <= 5;
   const canMove = run.energy >= RULES.TRAVEL_COST;
   const nextZone = ZONES[run.zoneIndex + 1];
 
@@ -1399,7 +1401,7 @@ function crossroads(boss, hero, run) {
 
       <button id="travelBtn" class="btn primary big thumb" ${canMove ? '' : 'disabled'}>
         <span class="btn-line">길을 떠난다${KEY_HINT}</span>
-        <span class="cost">에너지 ${RULES.TRAVEL_COST}</span>
+        <span class="travel-energy ${low ? 'low' : ''}">남은 에너지 <b>${run.energy}</b><em>/${max}</em><i>· 한 걸음 −${RULES.TRAVEL_COST}</i></span>
       </button>
 
       ${merchant}
