@@ -2704,6 +2704,11 @@ body.lv-rolling .je-xp-fill, body.lv-rolling .bar-fill.xp { transition: none; tr
   .doll-slot.enh-cell.fx-fail .doll-ic { animation: none; }
 }
 
+/* ---------- 싸우는 동안 ----------
+   마주한 때부터 싸움이 끝날 때까지 세트 바꾸기 · 스탯 분배 버튼은 숨깁니다 (ui.js 의 fightLocked) */
+body.fight-locked #openAllocBtn,
+body.fight-locked .gear-sets { display: none; }
+
 </style>
 </head>
 <body data-tab="journey">
@@ -7822,7 +7827,20 @@ function fmtLevel(n) {
 const $ = id => document.getElementById(id);
 
 // ---------- 전체 다시 그리기 ----------
+// 길을 떠나 상대를 마주한 때부터 싸움(다시 보기)이 끝날 때까지 — 차림 · 스탯 분배는 손댈 수 없습니다.
+// 눈앞의 상대를 보고 갈아입는 건 마주하기 전까지만, 싸우는 도중에 바꿀 수 있으면 승패가 정해진 뒤에도 뒤집어 버립니다.
+function fightLocked() {
+  return !!((State.run && State.run.encounter) || battle);
+}
+
 function render() {
+  const locked = fightLocked();
+  document.body.classList.toggle('fight-locked', locked);
+  if (locked) {
+    if (isSlotModalOpen()) closeSlotModal();
+    if (isEnhModalOpen()) closeEnhModal();
+    closeAllocModal();
+  }
   withHeldSpoils(renderRecords);
   withHeldSpoils(renderHero);      // 레벨 · 경험치 · 스탯도 전투가 끝난 뒤에
   withHeldSpoils(renderJourney);
@@ -9240,6 +9258,7 @@ function winFeelClass(c) { return winFeelOf(c).cls; }
 // 눈앞의 상대를 보고 정하는 일이라, 탭을 오가게 만들면 아무도 안 씁니다.
 // 저장·덮어쓰기는 전리품 탭에 그대로 두고, 여기서는 입기만 합니다.
 function journeySets() {
+  if (fightLocked()) return '';     // 싸우는 동안은 세트 · 스탯 분배 버튼이 아예 없습니다
   return `
     <div class="journey-sets">
       ${Array.from({ length: SET_COUNT }, (_, n) => {
@@ -9257,7 +9276,7 @@ function journeySets() {
 function wireJourney() {
   const on = (id, fn) => { const el = $(id); if (el) el.addEventListener('click', fn); };
   for (const b of document.querySelectorAll('[data-jset]')) {
-    b.addEventListener('click', () => { switchSet(Number(b.dataset.jset)); Sound.play('equip'); render(); });
+    b.addEventListener('click', () => { if (fightLocked()) return; switchSet(Number(b.dataset.jset)); Sound.play('equip'); render(); });
   }
   on('rosterBtn',    openRosterModal);
   on('jAllocBtn',    openAllocHere);   // 여정 화면 그대로 분배 창만 띄웁니다
@@ -9433,7 +9452,7 @@ function renderSets() {
   }).join('');
 
   for (const b of document.querySelectorAll('[data-setpick]')) {
-    b.addEventListener('click', () => { switchSet(Number(b.dataset.setpick)); Sound.play('equip'); render(); });
+    b.addEventListener('click', () => { if (fightLocked()) return; switchSet(Number(b.dataset.setpick)); Sound.play('equip'); render(); });
   }
 }
 
@@ -9665,7 +9684,7 @@ function renderGear() {
            ${itemSpecialText(wornItem) ? `<div class="inv-spec">${itemSpecialText(wornItem)}</div>` : ''}
            ${wornItem.note ? `<div class="inv-note">${wornItem.note}</div>` : ''}
          </div>
-         <button class="btn" data-unequip="${selectedSlot}">해제</button>
+         ${fightLocked() ? '' : `<button class="btn" data-unequip="${selectedSlot}">해제</button>`}
        </div>`
     : `<p class="hint worn-empty">비어 있음</p>`);
 
@@ -9690,7 +9709,7 @@ function renderGear() {
     if (ea !== eb) return eb - ea;                                   // 착용중 다음
     return b.level - a.level;                                        // 그다음 높은 격부터
   });
-  const canWear = isSlotOpen(selectedSlot);
+  const canWear = isSlotOpen(selectedSlot) && !fightLocked();
 
   const lockedBlock = lockedCount
     ? `<button class="btn tiny locked-toggle span2" id="lockedToggle">
@@ -9745,11 +9764,11 @@ function renderGear() {
   }
   // 칸을 누르면 끼웁니다. 창은 열어 둡니다 — 테두리가 옮겨 가는 걸로 무엇을 꼈는지 보입니다.
   for (const row of document.querySelectorAll('#inventory [data-equip]')) {
-    row.addEventListener('click', () => { equip(row.dataset.equip, selectedSlot); Sound.play('equip'); render(); });
+    row.addEventListener('click', () => { if (fightLocked()) return; equip(row.dataset.equip, selectedSlot); Sound.play('equip'); render(); });
   }
   // 해제는 창을 열어둡니다. 벗은 김에 다른 걸 끼우려는 흐름이 자연스럽습니다.
   for (const btn of document.querySelectorAll('[data-unequip]')) {
-    btn.addEventListener('click', ev => { ev.stopPropagation(); unequip(btn.dataset.unequip); Sound.play('unequip'); render(); });
+    btn.addEventListener('click', ev => { ev.stopPropagation(); if (fightLocked()) return; unequip(btn.dataset.unequip); Sound.play('unequip'); render(); });
   }
   for (const btn of document.querySelectorAll('[data-enhance]')) {
     btn.addEventListener('click', ev => {
@@ -10089,6 +10108,7 @@ function isEnhModalOpen() {
 // 분배판은 「나」 패널 맨 아래에 있어서 한 번 찍으려면 매번 스크롤해야 했습니다.
 // 레벨 바로 옆 버튼으로 띄웁니다.
 function openAllocModal() {
+  if (fightLocked()) return;
   showTab('hero');
   render();
   const m = $('allocModal');
@@ -10096,6 +10116,7 @@ function openAllocModal() {
 }
 // 여정의 「스탯 분배」 — 탭을 「나」로 옮기지 않고 창만 띄웁니다
 function openAllocHere() {
+  if (fightLocked()) return;
   render();
   const m = $('allocModal');
   if (m) m.classList.remove('hidden');

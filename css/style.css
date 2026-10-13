@@ -2687,3 +2687,8 @@ body.lv-rolling .je-xp-fill, body.lv-rolling .bar-fill.xp { transition: none; tr
 @media (prefers-reduced-motion: reduce) {
   .doll-slot.enh-cell.fx-fail .doll-ic { animation: none; }
 }
+
+/* ---------- 싸우는 동안 ----------
+   마주한 때부터 싸움이 끝날 때까지 세트 바꾸기 · 스탯 분배 버튼은 숨깁니다 (ui.js 의 fightLocked) */
+body.fight-locked #openAllocBtn,
+body.fight-locked .gear-sets { display: none; }
