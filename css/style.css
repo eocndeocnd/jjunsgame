@@ -2692,3 +2692,6 @@ body.lv-rolling .je-xp-fill, body.lv-rolling .bar-fill.xp { transition: none; tr
    마주한 때부터 싸움이 끝날 때까지 세트 바꾸기 · 스탯 분배 버튼은 숨깁니다 (ui.js 의 fightLocked) */
 body.fight-locked #openAllocBtn,
 body.fight-locked .gear-sets { display: none; }
+body.fight-locked #enhOpenBtn,
+body.fight-locked #dollModeBtn,
+body.fight-locked #dollSwapBtn { display: none; }

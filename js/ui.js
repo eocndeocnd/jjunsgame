@@ -18,7 +18,9 @@ function render() {
   if (locked) {
     if (isSlotModalOpen()) closeSlotModal();
     if (isEnhModalOpen()) closeEnhModal();
+    if (isSwapModalOpen()) closeSwapModal();
     closeAllocModal();
+    enhMode = false;      // 슬롯 강화 중이었다면 칸이 도로 장비 칸으로
   }
   withHeldSpoils(renderRecords);
   withHeldSpoils(renderHero);      // 레벨 · 경험치 · 스탯도 전투가 끝난 뒤에
@@ -1952,6 +1954,7 @@ function renderGear() {
   for (const btn of document.querySelectorAll('[data-enhance]')) {
     btn.addEventListener('click', ev => {
       ev.stopPropagation();
+      if (fightLocked()) return;
       const slot = btn.dataset.enhance;
       const r = tryEnhance(slot);
       if (r) {
@@ -1964,6 +1967,7 @@ function renderGear() {
   // 슬롯 강화 — 칸을 누를 때마다 한 번
   for (const btn of document.querySelectorAll('[data-enhslot]')) {
     btn.addEventListener('click', () => {
+      if (fightLocked()) return;
       const slot = btn.dataset.enhslot;
       const r = tryEnhance(slot);
       if (r) {
@@ -1974,7 +1978,7 @@ function renderGear() {
     });
   }
   const mb = $('dollModeBtn');
-  if (mb) mb.addEventListener('click', () => { enhMode = !enhMode; render(); });
+  if (mb) mb.addEventListener('click', () => { if (fightLocked()) return; enhMode = !enhMode; render(); });
   const sb = $('dollSwapBtn');
   if (sb) sb.addEventListener('click', () => openSwapModal(null));
   for (const btn of document.querySelectorAll('#enhBody [data-openswap]')) {
@@ -2069,6 +2073,7 @@ function swapSources(slot) {
 }
 
 function openSwapModal(to) {
+  if (fightLocked()) return;
   // 받는 쪽 — 강화 창에서 열면 그 부위, 사람 그림에서 열면 다음 강화까지 가장 덜 모자란 부위
   const lackOf = s => { const nx = nextEnhance(s); return nx ? Math.max(0, nx.cost - stonesOf(s)) : Infinity; };
   swapTo = SLOT_IDS.includes(to) ? to : SLOT_IDS.slice().sort((a, b) => lackOf(a) - lackOf(b))[0];
@@ -2268,7 +2273,7 @@ function renderShop() {
 // 부위 창 위에 한 겹 더 뜹니다. 닫으면 밑에 있던 부위 창이 그대로 보입니다.
 // 지난번 결과는 지우고 엽니다 — 다시 열었는데 아까의 「실패」가 남아 있으면 헷갈립니다.
 function openEnhModal() {
-  if (isSpecialSlot(selectedSlot)) return;
+  if (isSpecialSlot(selectedSlot) || fightLocked()) return;
   lastEnhance = null;
   lastSwap = null;
   $('enhModal').classList.remove('hidden');
