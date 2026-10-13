@@ -515,6 +515,8 @@ function loadRun() {
     State.run = run;
 
     State.log = [];
+    // 예전 규칙(넘어가는 데 에너지 2)으로 에너지 0인 채 멈춰 저장된 여정 — 불러오면서 끝냅니다
+    if (!run.over && !run.encounter && run.energy < RULES.TRAVEL_COST) { endRun('에너지 고갈'); return true; }
     pushLog('info', run.over
       ? `${State.meta.runCount}회차는 이미 끝났다.`
       : `${State.meta.runCount}회차를 이어서 한다 — ${ZONES[run.zoneIndex].name} · Lv.${fmtLevel(run.level)} · 에너지 ${run.energy}.`);
@@ -1313,18 +1315,15 @@ function dismissResult() {
   if (State.run) State.run.lastResult = null;
 }
 
-// 다음 격으로 넘어간다. 에너지 ZONE_MOVE_COST 가 듭니다.
+// 다음 격으로 넘어간다. 에너지는 들지 않습니다.
 // 넘어가기 전까지는 이 지역에 머물며 얼마든지 더 사냥할 수 있습니다.
-//
-// 모자라면 넘어가지 못할 뿐, 여정이 끝나지는 않습니다 —
-// 한 걸음(1)은 아직 남아 있을 수 있으니 이 지역에서 더 사냥하면 됩니다.
+// (예전엔 에너지 2가 들었는데, 남은 에너지를 넘어가는 데 다 쓰면
+//  새 지역에서 아무것도 못 한 채 멈춰 있었습니다 — 여정이 끝나지도 않고.)
 function moveToNextZone() {
   const run = State.run;
   if (run.over || run.encounter || !run.zoneCleared) return;
   if (run.zoneIndex + 1 >= ZONES.length) return;
-  if (run.energy < RULES.ZONE_MOVE_COST) return;
 
-  run.energy -= RULES.ZONE_MOVE_COST;
   run.zoneIndex += 1;
   run.progress = 0;
   run.zoneCleared = false;
@@ -1335,6 +1334,7 @@ function moveToNextZone() {
   pushLog('rank', `━━ 제${r.n}격 · ${r.name}(${r.hanja}) — ${z.name}에 들어섰다 ━━`);
   pushLog('info', z.flavor);
   save();
+  checkEnergy();
 }
 
 // 처치하면 1~3개(기운이 붙으면 그 배수만큼)를 빼앗습니다.

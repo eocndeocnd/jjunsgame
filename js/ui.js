@@ -1380,10 +1380,7 @@ function crossroads(boss, hero, run) {
   return `
     <div class="crossroads">
       ${run.zoneCleared && nextZone ? `
-        <button id="nextZoneBtn" class="btn next-btn" ${run.energy >= RULES.ZONE_MOVE_COST ? '' : 'disabled'}>
-          ${nextZone.name}(으)로 넘어간다<span class="cost">에너지 ${RULES.ZONE_MOVE_COST}${run.energy >= RULES.ZONE_MOVE_COST
-            ? '' : ` · 남은 ${run.energy}`}</span>
-        </button>` : ''}
+        <button id="nextZoneBtn" class="btn next-btn">${nextZone.name}(으)로 넘어간다</button>` : ''}
 
       <button id="travelBtn" class="btn primary big thumb" ${canMove ? '' : 'disabled'}>
         <span class="btn-line">길을 떠난다${KEY_HINT}</span>
