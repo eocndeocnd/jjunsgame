@@ -2728,6 +2728,12 @@ body.fight-locked #dollSwapBtn { display: none; }
 @keyframes energy-low { 50% { color: #ff8f78; } }
 @media (prefers-reduced-motion: reduce) { .travel-energy.low b { animation: none; } }
 
+/* 떠돌이 상인 — 소지품이 위, 강화석은 덤으로 아래 */
+.shop-head { margin: 2px 0 8px; font-size: 12px; }
+.shop-wares { margin-top: 0; }
+.shop-empty { padding: 12px 0; font-size: 12px; text-align: center; color: var(--text-faint); }
+.shop-stones { margin-top: 14px; padding: 8px 10px; opacity: 0.92; }
+
 </style>
 </head>
 <body data-tab="journey">
@@ -4214,6 +4220,8 @@ const RULES = {
   // 떠돌이 상인의 물건 값 = 그 격 일반 화신 한 번 몫의 이만큼 배.
   // 제1격에서 한 회차에 하나쯤 살 수 있는 값입니다 (일반 25번 · 정예 둘 · 보스 하나 ≈ 215골드). 무엇을 팔지는 아직 — 구조만.
   WARE_PRICE: 30,
+  // 회차마다 떠돌이 상인이 나타날 확률 (카벙클을 처음 꺾은 그 회차는 반드시 나타납니다)
+  MERCHANT_CHANCE: 0.5,
   // 떠돌이 상인의 강화석 값 — 강화석 1개에 몇 골드. 1~6지역 어디에 나타나든 같은 상인이라 값도 같습니다.
   STONE_PRICE: 2,
   BOSS_XP_MULT: 1.04      // 지금까지 꺾어본 보스 한 명당 경험치 배수 (영구히 이월)
@@ -5939,20 +5947,42 @@ function priceFor(rank, n) { return Math.round(RULES.GOLD_BASE * Math.pow(RULES.
 // 그 공간 어딘가를 떠도는 숨은 것. 칸을 열지도, 싸우지도 않습니다 — 물건을 팝니다.
 // 3지역의 숨은 것(카벙클)을 처음 꺾은 뒤부터, 회차마다 1~6지역 중 한 곳에 나타납니다.
 // 누구인지 · 무엇을 왜 파는지는 말하지 않습니다.
-// 무엇을 팔지는 아직 정하지 않았습니다 — 구조만 있습니다. 여기에 한 줄씩 넣으면 상점에 나옵니다.
-//   [id, 이름, 부위, 아이콘, 격, 성격, 골드 획득 %(없으면 생략)]
-//   성능은 그 격 지역의 가장 센 일반 화신 것만큼, 값은 priceFor(격, WARE_PRICE).
-//   예: ['ware_hardhat', '안전모', 'helm', '⛑️', 2, 'guard']
+// 파는 것은 **먼저 왔던 자들의 소지품**이 주고, 강화석은 덤입니다. 누구의 것이었는지는 말하지 않습니다 —
+// 이름 지워진 안전모, 멈춘 손목시계. 한 줄 메모(note)가 흔적만 남깁니다.
+// 한 번 사면 그 물건은 내 것이 되고 상점에서 사라집니다 (그 여정 동안도, 그 뒤로도).
+//   [id, 이름, 부위, 아이콘, 격, 성격, 흔적 한 줄, 골드 획득 %(없으면 생략)]
+//   성능은 그 격 지역의 가장 센 일반 화신 것의 1.2배, 값은 priceFor(격, WARE_PRICE).
 const MERCHANT_ID = 'merchant';
 const MERCHANT_UNLOCK = 'carbuncle';
-const MERCHANT_WARES = [];
-for (const [id, name, slot, icon, r, arch, gold] of MERCHANT_WARES) {
+const MERCHANT_WARES = [
+  // 제1격 — 지하수로
+  ['ware_hardhat',    '이름이 번진 안전모',   'helm',     '⛑️', 1, 'guard',  '안쪽에 매직으로 쓴 이름이 땀에 번져 읽히지 않는다.'],
+  ['ware_flashlight', '아직 켜지는 손전등',   'offhand',  '🔦', 1, 'swift',  '건전지는 새것이다. 누가 갈아 끼웠는지는 모른다.'],
+  // 제2격 — 숲길
+  ['ware_jacket',     '구겨진 협회 점퍼',     'armor',    '🧥', 2, 'guard',  '왼쪽 가슴에 붙은 번호표가 반쯤 뜯겼다.'],
+  ['ware_boots',      '끈이 해진 등산화',     'boots',    '🥾', 2, 'swift',  '밑창에 아직 진흙이 마르지 않았다.'],
+  // 제3격 — 무너진 왕국
+  ['ware_glove',      '한 짝뿐인 작업 장갑',  'gloves',   '🧤', 3, 'fierce', '나머지 한 짝을 찾는 사람은 없었다.'],
+  ['ware_tag',        '번호만 남은 인식표',   'necklace', '🏷️', 3, 'lucky',  '체인에 묻은 얼룩은 닦이지 않는다.', 28],
+  // 제4격 — 잊혀진 성역
+  ['ware_watch',      '멈춘 손목시계',        'bracelet', '⌚', 4, 'swift',  '바늘은 새벽 네 시 십 분에서 움직이지 않는다.'],
+  ['ware_sign',       '방패 대신 든 표지판',  'offhand',  '🪧', 4, 'thorn',  '「공사중 · 우회하세요」'],
+  // 제5격 — 시체가 걷는 도시
+  ['ware_belt',       '탄창이 빈 전술 벨트',  'belt',     '🎒', 5, 'guard',  '고리마다 누군가의 손때가 있다.'],
+  ['ware_raincoat',   '찢긴 방수 망토',       'cloak',    '☔', 5, 'ward',   '후드를 쓰면 빗소리 같은 것이 들린다.'],
+  // 제6격 — 마계의 왕좌
+  ['ware_bat',        '손잡이만 감긴 쇠파이프', 'weapon', '🔧', 6, 'brutal', '테이프는 새것이고, 쇠는 닳아 있다.'],
+  ['ware_ring',       '안쪽에 날짜가 새겨진 반지', 'ring', '💍', 6, 'lucky',  '날짜는 오늘보다 한참 전이다.', 32],
+  ['ware_greaves',    '무릎보호대',           'greaves',  '🦵', 6, 'ward',   '한쪽만 심하게 닳았다.'],
+  ['ware_scarf',      '색 바랜 목도리',       'shoulder', '🧣', 6, 'leech',  '누가 떠 준 것인지 모르는 채 두르게 된다.']
+];
+for (const [id, name, slot, icon, r, arch, note, gold] of MERCHANT_WARES) {
   const zone = ZONES.findIndex(z => z.rank === r);
   const level = Math.max(...ENEMIES.filter(e => e.zoneIndex === zone && e.kind === 'normal').map(e => e.level));
   const rank = RANKS.find(x => x.n === r);
   ITEMS.push({
     id, name, slot,
-    grade: 'normal', arch, special: null, unique: false, note: null,
+    grade: 'normal', arch, special: null, unique: false, note: note || null,
     level, rank,
     from: MERCHANT_ID, fromName: '떠돌이 상인', fromIcon: icon,
     ware: true,
@@ -6560,7 +6590,8 @@ function knownZoneCount() {
 }
 // 지역 하나에 격 하나라, 아는 격도 같은 수입니다
 function knownRank(n) { return n <= knownZoneCount(); }
-function knownItems() { return ITEMS.filter(i => knownRank(i.rank.n)); }
+// 상인의 물건은 사기 전까지 도감에 없습니다 — 몇 개나 있는지조차 보이지 않습니다
+function knownItems() { return ITEMS.filter(i => knownRank(i.rank.n) && (!i.ware || owns(i.id))); }
 
 // 히든이 모습을 드러냈는가 — 그 지역 보스를 한 번이라도 꺾은 뒤.
 // 관측자도 마찬가지로 마왕이 쓰러진 뒤에야 나타납니다 (예전엔 보스 다섯을 꺾으면 마왕보다 먼저 나왔습니다).
@@ -7236,8 +7267,10 @@ function setAvatar(id) {
 function merchantUnlocked() { return State.meta.specialOpened.includes(MERCHANT_UNLOCK); }
 
 // fromZone 이후(포함) ~ 마계의 왕좌 사이 한 곳. 파는 것은 아직 안 가진 것 중 셋까지 (그 지역 격 +1 까지).
-function rollMerchant(fromZone) {
+// 회차마다 나타날 확률은 MERCHANT_CHANCE — 카벙클을 처음 꺾은 그 순간(sure)만은 반드시 나타납니다.
+function rollMerchant(fromZone, sure) {
   if (!merchantUnlocked()) return null;
+  if (!sure && Math.random() >= RULES.MERCHANT_CHANCE) return null;
   const lo = Math.min(fromZone, WALL_ZONE);
   const zone = lo + Math.floor(Math.random() * (WALL_ZONE - lo + 1));
   const rank = ZONES[zone].rank;
@@ -7452,7 +7485,7 @@ function engage() {
     const n = specialOpenCount();
     run.lastResult.openedSpecial = n;
     // 3지역의 숨은 것을 처음 꺾으면 떠돌이 상인이 나타나기 시작합니다 — 이번 회차는 지금 이후의 지역 어딘가에
-    if (enemy.id === MERCHANT_UNLOCK && !run.merchant) run.merchant = rollMerchant(run.zoneIndex);
+    if (enemy.id === MERCHANT_UNLOCK && !run.merchant) run.merchant = rollMerchant(run.zoneIndex, true);
     pushLog('rank', `━━ 특수장비 칸이 열렸다 (${n}/${SPECIAL_SLOT_MAX}) — 보석이나 유물을 끼울 수 있다 ━━`);
     fillSpecialSlots();
   }
@@ -9722,7 +9755,7 @@ function renderGear() {
   // 특수장비 칸 넷은 같은 목록(특수장비 전부)을 봅니다.
   const fk = freshKey(selectedSlot);
   // 못 얻은 것 목록도 아는 격까지만 — 마왕 너머의 전리품은 몇 개인지조차 보이지 않습니다
-  const all = itemsInSlot(special ? 'special' : selectedSlot).filter(i => owns(i.id) || knownRank(i.rank.n));
+  const all = itemsInSlot(special ? 'special' : selectedSlot).filter(i => owns(i.id) || (knownRank(i.rank.n) && !i.ware));
   const have = all.filter(i => owns(i.id));
   const lockedCount = all.length - have.length;
 
@@ -10068,28 +10101,30 @@ function renderShop() {
   const cards = m.wares.map(id => {
     const item = getItem(id);
     if (!item) return '';
-    const sold = m.bought.includes(id) || owns(id);
-    const can = !sold && gold >= item.price;
+    // 산 물건은 상점에서 사라집니다
+    if (m.bought.includes(id) || owns(id)) return '';
+    const sold = false;
+    const can = gold >= item.price;
     const worn = getItem(State.meta.equipped[item.slot]);
     const diff = itemDiffText(item, worn, slotMult(item.slot));
     const spec = itemSpecialText(item);
     return `
-      <div class="inv-item ware ${sold ? 'sold' : ''}">
+      <div class="inv-item ware">
         <span class="inv-art">${item.fromIcon}</span>
         <div class="inv-body">
           <div class="inv-head">${itemTag(item)}<span class="inv-name">${item.name}</span></div>
           <div class="inv-stats">${SLOT_NAMES[item.slot]} · ${itemStatText(item) || '—'}${spec ? ` <span class="inv-spec">${spec}</span>` : ''}</div>
-          ${diff && !sold ? `<div class="inv-diff">${diff}</div>` : ''}
+          ${diff ? `<div class="inv-diff">${diff}</div>` : ''}
+          ${item.note ? `<div class="inv-note">${item.note}</div>` : ''}
         </div>
-        <div class="inv-act">${sold ? '<span class="worn">샀다</span>'
-          : `<button class="btn" data-buy="${id}" ${can ? '' : 'disabled'}>${fmt(item.price)} 골드</button>`}</div>
+        <div class="inv-act"><button class="btn" data-buy="${id}" ${can ? '' : 'disabled'}>${fmt(item.price)} 골드</button></div>
       </div>`;
   }).join('');
   // 강화석 — 부위를 고르면 그 부위의 지금 강화석 · 강화 단계와 다음 강화에 드는 수가 보입니다
   const nx = nextEnhance(shopSlot);
   const stones = `
     <div class="shop-stones">
-      <div class="swap-head">강화석</div>
+      <div class="swap-head">강화석 <em>덤으로 판다</em></div>
       <select class="swap-from" id="shopSlot">${SLOT_IDS.map(s =>
         `<option value="${s}" ${s === shopSlot ? 'selected' : ''}>${SLOT_NAMES[s]} +${enhanceLevel(s)} · 강화석 ${fmt(stonesOf(s))}${nextEnhance(s) ? ` / ${fmt(nextEnhance(s).cost)}` : ' · 최대'}</option>`).join('')}</select>
       <div class="shop-packs">${STONE_PACKS.map(n => {
@@ -10098,7 +10133,11 @@ function renderShop() {
       }).join('')}</div>
       ${nx ? '' : '<div class="adm-note">이 부위는 강화가 끝까지 올라 있다</div>'}
     </div>`;
-  $('shopBody').innerHTML = stones + (cards ? `<div class="inventory shop-wares">${cards}</div>` : '');
+  // 소지품이 먼저, 강화석은 그 아래 덤 — 산 물건은 사라지고, 다 팔렸으면 한 줄만 남습니다
+  const wares = cards
+    ? `<div class="swap-head shop-head">먼저 온 이들의 소지품</div><div class="inventory shop-wares">${cards}</div>`
+    : (m.wares.length ? `<div class="shop-empty">더는 내놓을 것이 없다</div>` : '');
+  $('shopBody').innerHTML = wares + stones;
   const sel = $('shopSlot');
   if (sel) sel.addEventListener('change', () => { shopSlot = sel.value; renderShop(); });
   for (const b of document.querySelectorAll('[data-stones]')) {

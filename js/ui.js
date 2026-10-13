@@ -1880,7 +1880,7 @@ function renderGear() {
   // 특수장비 칸 넷은 같은 목록(특수장비 전부)을 봅니다.
   const fk = freshKey(selectedSlot);
   // 못 얻은 것 목록도 아는 격까지만 — 마왕 너머의 전리품은 몇 개인지조차 보이지 않습니다
-  const all = itemsInSlot(special ? 'special' : selectedSlot).filter(i => owns(i.id) || knownRank(i.rank.n));
+  const all = itemsInSlot(special ? 'special' : selectedSlot).filter(i => owns(i.id) || (knownRank(i.rank.n) && !i.ware));
   const have = all.filter(i => owns(i.id));
   const lockedCount = all.length - have.length;
 
@@ -2226,28 +2226,30 @@ function renderShop() {
   const cards = m.wares.map(id => {
     const item = getItem(id);
     if (!item) return '';
-    const sold = m.bought.includes(id) || owns(id);
-    const can = !sold && gold >= item.price;
+    // 산 물건은 상점에서 사라집니다
+    if (m.bought.includes(id) || owns(id)) return '';
+    const sold = false;
+    const can = gold >= item.price;
     const worn = getItem(State.meta.equipped[item.slot]);
     const diff = itemDiffText(item, worn, slotMult(item.slot));
     const spec = itemSpecialText(item);
     return `
-      <div class="inv-item ware ${sold ? 'sold' : ''}">
+      <div class="inv-item ware">
         <span class="inv-art">${item.fromIcon}</span>
         <div class="inv-body">
           <div class="inv-head">${itemTag(item)}<span class="inv-name">${item.name}</span></div>
           <div class="inv-stats">${SLOT_NAMES[item.slot]} · ${itemStatText(item) || '—'}${spec ? ` <span class="inv-spec">${spec}</span>` : ''}</div>
-          ${diff && !sold ? `<div class="inv-diff">${diff}</div>` : ''}
+          ${diff ? `<div class="inv-diff">${diff}</div>` : ''}
+          ${item.note ? `<div class="inv-note">${item.note}</div>` : ''}
         </div>
-        <div class="inv-act">${sold ? '<span class="worn">샀다</span>'
-          : `<button class="btn" data-buy="${id}" ${can ? '' : 'disabled'}>${fmt(item.price)} 골드</button>`}</div>
+        <div class="inv-act"><button class="btn" data-buy="${id}" ${can ? '' : 'disabled'}>${fmt(item.price)} 골드</button></div>
       </div>`;
   }).join('');
   // 강화석 — 부위를 고르면 그 부위의 지금 강화석 · 강화 단계와 다음 강화에 드는 수가 보입니다
   const nx = nextEnhance(shopSlot);
   const stones = `
     <div class="shop-stones">
-      <div class="swap-head">강화석</div>
+      <div class="swap-head">강화석 <em>덤으로 판다</em></div>
       <select class="swap-from" id="shopSlot">${SLOT_IDS.map(s =>
         `<option value="${s}" ${s === shopSlot ? 'selected' : ''}>${SLOT_NAMES[s]} +${enhanceLevel(s)} · 강화석 ${fmt(stonesOf(s))}${nextEnhance(s) ? ` / ${fmt(nextEnhance(s).cost)}` : ' · 최대'}</option>`).join('')}</select>
       <div class="shop-packs">${STONE_PACKS.map(n => {
@@ -2256,7 +2258,11 @@ function renderShop() {
       }).join('')}</div>
       ${nx ? '' : '<div class="adm-note">이 부위는 강화가 끝까지 올라 있다</div>'}
     </div>`;
-  $('shopBody').innerHTML = stones + (cards ? `<div class="inventory shop-wares">${cards}</div>` : '');
+  // 소지품이 먼저, 강화석은 그 아래 덤 — 산 물건은 사라지고, 다 팔렸으면 한 줄만 남습니다
+  const wares = cards
+    ? `<div class="swap-head shop-head">먼저 온 이들의 소지품</div><div class="inventory shop-wares">${cards}</div>`
+    : (m.wares.length ? `<div class="shop-empty">더는 내놓을 것이 없다</div>` : '');
+  $('shopBody').innerHTML = wares + stones;
   const sel = $('shopSlot');
   if (sel) sel.addEventListener('change', () => { shopSlot = sel.value; renderShop(); });
   for (const b of document.querySelectorAll('[data-stones]')) {

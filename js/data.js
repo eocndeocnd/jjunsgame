@@ -51,6 +51,8 @@ const RULES = {
   // 떠돌이 상인의 물건 값 = 그 격 일반 화신 한 번 몫의 이만큼 배.
   // 제1격에서 한 회차에 하나쯤 살 수 있는 값입니다 (일반 25번 · 정예 둘 · 보스 하나 ≈ 215골드). 무엇을 팔지는 아직 — 구조만.
   WARE_PRICE: 30,
+  // 회차마다 떠돌이 상인이 나타날 확률 (카벙클을 처음 꺾은 그 회차는 반드시 나타납니다)
+  MERCHANT_CHANCE: 0.5,
   // 떠돌이 상인의 강화석 값 — 강화석 1개에 몇 골드. 1~6지역 어디에 나타나든 같은 상인이라 값도 같습니다.
   STONE_PRICE: 2,
   BOSS_XP_MULT: 1.04      // 지금까지 꺾어본 보스 한 명당 경험치 배수 (영구히 이월)
@@ -1776,20 +1778,42 @@ function priceFor(rank, n) { return Math.round(RULES.GOLD_BASE * Math.pow(RULES.
 // 그 공간 어딘가를 떠도는 숨은 것. 칸을 열지도, 싸우지도 않습니다 — 물건을 팝니다.
 // 3지역의 숨은 것(카벙클)을 처음 꺾은 뒤부터, 회차마다 1~6지역 중 한 곳에 나타납니다.
 // 누구인지 · 무엇을 왜 파는지는 말하지 않습니다.
-// 무엇을 팔지는 아직 정하지 않았습니다 — 구조만 있습니다. 여기에 한 줄씩 넣으면 상점에 나옵니다.
-//   [id, 이름, 부위, 아이콘, 격, 성격, 골드 획득 %(없으면 생략)]
-//   성능은 그 격 지역의 가장 센 일반 화신 것만큼, 값은 priceFor(격, WARE_PRICE).
-//   예: ['ware_hardhat', '안전모', 'helm', '⛑️', 2, 'guard']
+// 파는 것은 **먼저 왔던 자들의 소지품**이 주고, 강화석은 덤입니다. 누구의 것이었는지는 말하지 않습니다 —
+// 이름 지워진 안전모, 멈춘 손목시계. 한 줄 메모(note)가 흔적만 남깁니다.
+// 한 번 사면 그 물건은 내 것이 되고 상점에서 사라집니다 (그 여정 동안도, 그 뒤로도).
+//   [id, 이름, 부위, 아이콘, 격, 성격, 흔적 한 줄, 골드 획득 %(없으면 생략)]
+//   성능은 그 격 지역의 가장 센 일반 화신 것의 1.2배, 값은 priceFor(격, WARE_PRICE).
 const MERCHANT_ID = 'merchant';
 const MERCHANT_UNLOCK = 'carbuncle';
-const MERCHANT_WARES = [];
-for (const [id, name, slot, icon, r, arch, gold] of MERCHANT_WARES) {
+const MERCHANT_WARES = [
+  // 제1격 — 지하수로
+  ['ware_hardhat',    '이름이 번진 안전모',   'helm',     '⛑️', 1, 'guard',  '안쪽에 매직으로 쓴 이름이 땀에 번져 읽히지 않는다.'],
+  ['ware_flashlight', '아직 켜지는 손전등',   'offhand',  '🔦', 1, 'swift',  '건전지는 새것이다. 누가 갈아 끼웠는지는 모른다.'],
+  // 제2격 — 숲길
+  ['ware_jacket',     '구겨진 협회 점퍼',     'armor',    '🧥', 2, 'guard',  '왼쪽 가슴에 붙은 번호표가 반쯤 뜯겼다.'],
+  ['ware_boots',      '끈이 해진 등산화',     'boots',    '🥾', 2, 'swift',  '밑창에 아직 진흙이 마르지 않았다.'],
+  // 제3격 — 무너진 왕국
+  ['ware_glove',      '한 짝뿐인 작업 장갑',  'gloves',   '🧤', 3, 'fierce', '나머지 한 짝을 찾는 사람은 없었다.'],
+  ['ware_tag',        '번호만 남은 인식표',   'necklace', '🏷️', 3, 'lucky',  '체인에 묻은 얼룩은 닦이지 않는다.', 28],
+  // 제4격 — 잊혀진 성역
+  ['ware_watch',      '멈춘 손목시계',        'bracelet', '⌚', 4, 'swift',  '바늘은 새벽 네 시 십 분에서 움직이지 않는다.'],
+  ['ware_sign',       '방패 대신 든 표지판',  'offhand',  '🪧', 4, 'thorn',  '「공사중 · 우회하세요」'],
+  // 제5격 — 시체가 걷는 도시
+  ['ware_belt',       '탄창이 빈 전술 벨트',  'belt',     '🎒', 5, 'guard',  '고리마다 누군가의 손때가 있다.'],
+  ['ware_raincoat',   '찢긴 방수 망토',       'cloak',    '☔', 5, 'ward',   '후드를 쓰면 빗소리 같은 것이 들린다.'],
+  // 제6격 — 마계의 왕좌
+  ['ware_bat',        '손잡이만 감긴 쇠파이프', 'weapon', '🔧', 6, 'brutal', '테이프는 새것이고, 쇠는 닳아 있다.'],
+  ['ware_ring',       '안쪽에 날짜가 새겨진 반지', 'ring', '💍', 6, 'lucky',  '날짜는 오늘보다 한참 전이다.', 32],
+  ['ware_greaves',    '무릎보호대',           'greaves',  '🦵', 6, 'ward',   '한쪽만 심하게 닳았다.'],
+  ['ware_scarf',      '색 바랜 목도리',       'shoulder', '🧣', 6, 'leech',  '누가 떠 준 것인지 모르는 채 두르게 된다.']
+];
+for (const [id, name, slot, icon, r, arch, note, gold] of MERCHANT_WARES) {
   const zone = ZONES.findIndex(z => z.rank === r);
   const level = Math.max(...ENEMIES.filter(e => e.zoneIndex === zone && e.kind === 'normal').map(e => e.level));
   const rank = RANKS.find(x => x.n === r);
   ITEMS.push({
     id, name, slot,
-    grade: 'normal', arch, special: null, unique: false, note: null,
+    grade: 'normal', arch, special: null, unique: false, note: note || null,
     level, rank,
     from: MERCHANT_ID, fromName: '떠돌이 상인', fromIcon: icon,
     ware: true,

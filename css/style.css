@@ -2711,3 +2711,9 @@ body.fight-locked #dollSwapBtn { display: none; }
 .travel-energy.low b { color: #ffd5c8; animation: energy-low 1.2s steps(2) infinite; }
 @keyframes energy-low { 50% { color: #ff8f78; } }
 @media (prefers-reduced-motion: reduce) { .travel-energy.low b { animation: none; } }
+
+/* 떠돌이 상인 — 소지품이 위, 강화석은 덤으로 아래 */
+.shop-head { margin: 2px 0 8px; font-size: 12px; }
+.shop-wares { margin-top: 0; }
+.shop-empty { padding: 12px 0; font-size: 12px; text-align: center; color: var(--text-faint); }
+.shop-stones { margin-top: 14px; padding: 8px 10px; opacity: 0.92; }

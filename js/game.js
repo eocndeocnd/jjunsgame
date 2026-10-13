@@ -380,7 +380,8 @@ function knownZoneCount() {
 }
 // 지역 하나에 격 하나라, 아는 격도 같은 수입니다
 function knownRank(n) { return n <= knownZoneCount(); }
-function knownItems() { return ITEMS.filter(i => knownRank(i.rank.n)); }
+// 상인의 물건은 사기 전까지 도감에 없습니다 — 몇 개나 있는지조차 보이지 않습니다
+function knownItems() { return ITEMS.filter(i => knownRank(i.rank.n) && (!i.ware || owns(i.id))); }
 
 // 히든이 모습을 드러냈는가 — 그 지역 보스를 한 번이라도 꺾은 뒤.
 // 관측자도 마찬가지로 마왕이 쓰러진 뒤에야 나타납니다 (예전엔 보스 다섯을 꺾으면 마왕보다 먼저 나왔습니다).
@@ -1056,8 +1057,10 @@ function setAvatar(id) {
 function merchantUnlocked() { return State.meta.specialOpened.includes(MERCHANT_UNLOCK); }
 
 // fromZone 이후(포함) ~ 마계의 왕좌 사이 한 곳. 파는 것은 아직 안 가진 것 중 셋까지 (그 지역 격 +1 까지).
-function rollMerchant(fromZone) {
+// 회차마다 나타날 확률은 MERCHANT_CHANCE — 카벙클을 처음 꺾은 그 순간(sure)만은 반드시 나타납니다.
+function rollMerchant(fromZone, sure) {
   if (!merchantUnlocked()) return null;
+  if (!sure && Math.random() >= RULES.MERCHANT_CHANCE) return null;
   const lo = Math.min(fromZone, WALL_ZONE);
   const zone = lo + Math.floor(Math.random() * (WALL_ZONE - lo + 1));
   const rank = ZONES[zone].rank;
@@ -1272,7 +1275,7 @@ function engage() {
     const n = specialOpenCount();
     run.lastResult.openedSpecial = n;
     // 3지역의 숨은 것을 처음 꺾으면 떠돌이 상인이 나타나기 시작합니다 — 이번 회차는 지금 이후의 지역 어딘가에
-    if (enemy.id === MERCHANT_UNLOCK && !run.merchant) run.merchant = rollMerchant(run.zoneIndex);
+    if (enemy.id === MERCHANT_UNLOCK && !run.merchant) run.merchant = rollMerchant(run.zoneIndex, true);
     pushLog('rank', `━━ 특수장비 칸이 열렸다 (${n}/${SPECIAL_SLOT_MAX}) — 보석이나 유물을 끼울 수 있다 ━━`);
     fillSpecialSlots();
   }
