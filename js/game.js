@@ -1056,15 +1056,15 @@ function setAvatar(id) {
 // 싸우지 않습니다 — 들르면 물건을 팝니다. 들르는 데 에너지는 들지 않습니다.
 function merchantUnlocked() { return State.meta.specialOpened.includes(MERCHANT_UNLOCK); }
 
-// fromZone 이후(포함) ~ 마계의 왕좌 사이 한 곳. 파는 것은 아직 안 가진 것 중 셋까지 (그 지역 격 +1 까지).
+// fromZone 이후(포함) ~ 마계의 왕좌 사이 한 곳. 파는 것은 아직 안 가진 것 중 셋까지 — 지역의 격과 상관없이 아무 소지품이나.
+// (소지품은 저마다 제 격의 성능 · 값을 갖습니다 — 1지역에서 6격 물건을 만나면 비싸고 아직 못 쓸 만큼 셉니다)
 // 회차마다 나타날 확률은 MERCHANT_CHANCE — 카벙클을 처음 꺾은 그 순간(sure)만은 반드시 나타납니다.
 function rollMerchant(fromZone, sure) {
   if (!merchantUnlocked()) return null;
   if (!sure && Math.random() >= RULES.MERCHANT_CHANCE) return null;
   const lo = Math.min(fromZone, WALL_ZONE);
   const zone = lo + Math.floor(Math.random() * (WALL_ZONE - lo + 1));
-  const rank = ZONES[zone].rank;
-  const pool = ITEMS.filter(i => i.ware && !owns(i.id) && i.rank.n <= rank + 1);
+  const pool = ITEMS.filter(i => i.ware && !owns(i.id));
   for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
   return { zone, wares: pool.slice(0, 3).map(i => i.id), bought: [] };
 }

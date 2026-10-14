@@ -405,6 +405,7 @@ function renderHero() {
     ${statRow('행운', total.luck, total.luck - base.luck)}
     ${statRow('크리티컬', `${Math.round(critChance(total.dex, total.luck, total.critRate) * 100)}% · ×${critDamage(total.dex).toFixed(1)}`
         + (total.critRate > 0 ? ` <span class="stat-note">(장비 +${pctTxt(total.critRate)})</span>` : ''), 0)}
+    ${statRow('명중', `${Math.round(hitChance(total.dex, enemyStats(run.level).dex) * 100)}% <span class="stat-note">(같은 레벨 상대에게)</span>`, 0)}
     ${completedRanks() ? statRow('도감 완성', `${completedRanks()}격 · 핵심 스탯 +${Math.round(completedRanks() * COLLECTION_BONUS * 100)}%`, 0) : ''}
     <li class="stat-head">특수 능력치</li>
     ${['doubleHit', 'pierce', 'lifesteal', 'block', 'reflect', 'regen', 'survive', 'harmTouch', 'doubleTurn']
