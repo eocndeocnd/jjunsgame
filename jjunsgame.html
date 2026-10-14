@@ -2834,10 +2834,9 @@ body.fight-locked .je-xp { display: none; }
 .res-lines .res-xp .je-xp-fill { height: 100%; background: repeating-linear-gradient(135deg, #2b74ad 0 3px, #1d5f8f 3px 6px); transition: width 0.25s ease; }
 body.lv-rolling .res-xp .je-xp-fill { transition: none; transform-origin: left center; will-change: transform; }
 
-/* 결과의 「스탯 분배」 — 오른쪽 위 모서리, 「승리」 밑 (그 줄의 상대 이름이 겹치지 않게 오른쪽을 비웁니다) */
+/* 결과의 「스탯 분배」 — 오른쪽, 상대 이름 줄 바로 아래 (경험치 줄 오른쪽 빈자리) */
 .result { position: relative; }
-.result > .res-alloc { position: absolute; right: 0; top: 46px; width: auto; margin: 0; padding: 7px 11px; white-space: nowrap; z-index: 2; }
-.result.has-alloc .res-foe { padding-right: 96px; }
+.result > .res-alloc { position: absolute; right: 0; top: 94px; width: auto; margin: 0; padding: 7px 11px; white-space: nowrap; z-index: 2; }
 
 </style>
 </head>
