@@ -2815,3 +2815,8 @@ body.fight-locked .je-xp { display: none; }
 /* 결과의 「스탯 분배」 — 줄 모음 오른쪽 아래, 마지막 줄 옆 빈자리 */
 .res-lines { position: relative; }
 .res-lines .res-alloc { position: absolute; right: 0; bottom: 8px; width: auto; margin: 0; padding: 8px 12px; white-space: nowrap; }
+
+/* 결과의 경험치 바 — 레벨 줄 바로 아래 */
+.res-lines .res-xp { height: 6px; margin: 2px 0 10px; background: var(--paper-lo); box-shadow: 0 0 0 1px var(--line-soft); }
+.res-lines .res-xp .je-xp-fill { height: 100%; background: repeating-linear-gradient(135deg, #2b74ad 0 3px, #1d5f8f 3px 6px); transition: width 0.25s ease; }
+body.lv-rolling .res-xp .je-xp-fill { transition: none; transform-origin: left center; will-change: transform; }

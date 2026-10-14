@@ -129,7 +129,7 @@ function paintLevel(lv, pct, done) {
   }
   const c = $('resLv'); if (c) c.textContent = done ? c.dataset.final : 'Lv.' + txt;   // 결과의 레벨 줄 — 굴러가다 끝나면 「A → B」
   const p = Math.max(0, Math.min(100, pct));
-  for (const id of ['xpFill', 'jeXpFill']) {
+  for (const id of ['xpFill', 'jeXpFill', 'resXpFill']) {
     const el = $(id);
     if (!el) continue;
     if (done) { el.style.transform = ''; el.style.width = p + '%'; }
@@ -1262,6 +1262,8 @@ function resultCard(r, run) {
     if (r.gold) lines.push(row('골드', `+${fmt(r.gold)}`));
     const lvFinal = r.levelsGained > 0 ? `Lv.${fmtLevel(r.levelBefore)} → Lv.${fmtLevel(run.level)}` : `Lv.${fmtLevel(run.level)}`;
     lines.push(row('레벨', `<span id="resLv" data-final="${lvFinal}">${lvFinal}</span>`, r.levelsGained > 0 ? `+${fmtLevel(r.levelsGained)}` : ''));
+    // 경험치 바 — 위쪽 지역 창이 빠진 대신 여기서 차오릅니다 (paintLevel 이 resXpFill 도 움직입니다)
+    lines.push(`<div class="je-xp res-xp"><div class="je-xp-fill" id="resXpFill" style="width:${Math.min(100, run.xp / xpToNext(run.level) * 100)}%"></div></div>`);
     // 설명 글은 뺐습니다 — 값만 보고 알 수 있게 적습니다 (삼킨 격은 다음 회차부터 붙으니 「시작 에너지」)
     if (r.devoured > 0) lines.push(row('삼킨 격', `시작 에너지 +${r.devoured}`));
     if (r.refund > 0) lines.push(row('되찾은 에너지', `+${r.refund}`));
