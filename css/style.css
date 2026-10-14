@@ -2745,10 +2745,10 @@ body.fight-locked .je-xp { display: none; }
 .doll-icw { position: relative; flex: none; display: block; width: 46px; height: 46px; }
 .doll-badge {
   position: absolute;
-  top: -6px;
-  right: -8px;
+  top: 3px;
+  right: 4px;
   z-index: 2;
-  font-size: 12px;
+  font-size: 10px;
   font-weight: 700;
   line-height: 1;
   color: var(--accent);
