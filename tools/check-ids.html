@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>전리품 번호 검사 — jjunsgame</title>
+<!-- 옛 저장본이 있는 사람의 장비가 몰래 바뀌지 않는지 검사합니다. Node 가 없을 때 쓰세요.
+     기준은 tools/item-snapshot.json(지난번에 확정한 번호표). 로직은 tools/id-check.js 에 설명이 있습니다. -->
+<style>
+  body { font: 14px/1.6 monospace; margin: 14px; max-width: 900px; }
+  button { font: inherit; padding: 6px 12px; }
+  .bad { color: #b00; } .good { color: #070; }
+  li { margin: 2px 0; }
+</style>
+</head>
+<body>
+<h3>전리품 번호 검사</h3>
+<div id="res">검사 중…</div>
+<p><button id="snap">번호표 갱신(내려받기)</button> — 의도한 변경이고 확인했을 때만. 받은 파일을 <code>tools/item-snapshot.json</code> 에 덮어쓰세요.</p>
+<script src="../js/data.js"></script>
+<script src="id-check.js"></script>
+<script>
+(async () => {
+  const d = { ITEMS, RETIRED_ITEMS };
+  document.getElementById('snap').onclick = () => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(IdCheck.snapshot(d), null, 1) + '\n'], { type: 'application/json' }));
+    a.download = 'item-snapshot.json'; a.click();
+  };
+  let snap;
+  try { snap = await (await fetch('item-snapshot.json', { cache: 'no-store' })).json(); }
+  catch (e) { document.getElementById('res').innerHTML = '<span class="bad">tools/item-snapshot.json 이 없습니다 — 「번호표 갱신」으로 처음 한 번 만드세요.</span>'; return; }
+  const r = IdCheck.compare(snap, d);
+  document.getElementById('res').innerHTML =
+    (r.ok ? '<span class="good">통과 — 옛 저장본의 장비가 몰래 바뀌지 않습니다.</span>' : `<span class="bad">실패 ${r.errors.length}건</span>`)
+    + '<ul>' + r.infos.map(i => `<li>${i}</li>`).join('') + r.errors.map(e => `<li class="bad">✗ ${e}</li>`).join('') + '</ul>';
+  window.__r = r;
+})();
+</script>
+</body>
+</html>

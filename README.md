@@ -449,6 +449,21 @@ Resolute Hero RPG 와 Inflation RPG 를 모티브로 한 로그라이트 오토�
 
 처음 꺾은 보스마다 **앞으로 모든 경험치 ×1.04** 가 영구히 붙습니다. 열다섯 명 전부면 ×1.80.
 
+## 개발 도구와 안전장치
+
+`python build.py` 가 `jjunsgame.html` 을 만들면서 아래를 같이 검사합니다.
+
+| 검사 | Node 필요? | 하는 일 |
+|---|---|---|
+| JS 문법 검사 | 필요 | 쉼표 하나 빠져 게임이 통째로 죽는 일을 빌드에서 잡습니다 (Node 가 없으면 괄호 짝만 셉니다 — 경고가 뜹니다) |
+| **전리품 번호 검사** | 필요 | 적을 옮기거나 목록 순서를 바꿔 옛 저장본의 장비가 몰래 바뀌거나 성능이 폭주하면 **빌드를 멈춥니다.** 기준은 `tools/item-snapshot.json` (지난번에 확정한 번호표) |
+| 그림 목록이 옛것인가 | 불필요 | `design/images/image-manifest.json` 이 지금 `data.js` 와 어긋나면 경고합니다 |
+
+- Node 가 없으면 같은 일을 브라우저 도구로 합니다: `tools/check-ids.html` (번호 검사 · 번호표 갱신) · `tools/export-images.html` (그림 목록 뽑기). `tools/` 폴더가 아닌 저장소 맨 위에서 `python -m http.server` 로 연 뒤 주소로 들어가면 됩니다.
+- Node 가 있으면 한 줄씩: `node tools/cli.js images` (그림 목록 다시 뽑기) · `node tools/cli.js check-ids` (번호 검사) · `node tools/cli.js snapshot` (의도한 변경을 확인한 뒤 번호표 갱신).
+- 번호 검사에서 걸렸을 때: 옛 전리품을 뺀 것이면 `data.js` 의 `RETIRED_ITEMS` 로 정리해 가진 사람이 강화석으로 돌려받게 하고, 순서를 바꾼 것이면 옛 번호의 자리를 `'retired'` 로 비워 두세요 (자세한 건 아래 「6격」 설명과 `id-check.js` 의 주석).
+- 그 밖: `tools/sim.html` (밸런스 시뮬레이터) · `tools/map-draft.html` (맵 초안).
+
 ## 그림 목록 (AI 이미지 생성용)
 
 그림은 다른 곳에서 뽑아 올 예정이라, 필요한 그림 전부를 정리해 두었습니다 (`design/images/`).

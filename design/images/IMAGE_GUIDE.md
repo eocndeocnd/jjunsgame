@@ -1,5 +1,7 @@
 # 그림 목록 (AI 이미지 생성용)
 
+> 이 문서와 `image-manifest.json` 은 `tools/export-images.html` (또는 `node tools/cli.js images`) 로 만든 것입니다. 손으로 고치지 마세요 — 적이나 전리품이 바뀌면 다시 뽑아야 합니다.
+
 게임에 필요한 그림 전부의 목록입니다. 기계가 읽는 전체 데이터는 `image-manifest.json` 이고, 이 문서는 같은 내용을 격(지역)별로 묶은 안내입니다.
 
 ## 공통 규칙

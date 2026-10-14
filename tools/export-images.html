@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>그림 목록 뽑기 — jjunsgame</title>
+<!-- 게임 데이터(js/data.js)에서 「필요한 그림 목록」을 뽑아 내려받게 해 줍니다. Node 가 없을 때 쓰세요.
+     내려받은 두 파일을 design/images/ 에 덮어쓰면 됩니다. 로직은 tools/image-manifest.js. -->
+<style>
+  body { font: 14px/1.6 monospace; margin: 14px; max-width: 760px; }
+  button { font: inherit; padding: 6px 12px; margin-right: 6px; }
+  .bad { color: #b00; } .good { color: #070; }
+</style>
+</head>
+<body>
+<h3>그림 목록 뽑기</h3>
+<div id="state">읽는 중…</div>
+<p><button id="dlJson">image-manifest.json 내려받기</button><button id="dlMd">IMAGE_GUIDE.md 내려받기</button></p>
+<p>받은 파일을 <code>design/images/</code> 에 덮어쓰세요. (Node 가 있으면 <code>node tools/cli.js images</code> 한 줄이면 됩니다)</p>
+<script src="../js/data.js"></script>
+<script src="image-manifest.js"></script>
+<script>
+(async () => {
+  const text = await (await fetch('../js/data.js', { cache: 'no-store' })).text();
+  const out = ImageManifest.build({ ITEMS, ENEMIES, ZONES, RANKS, ARCHETYPES, SPECIAL_INFO, STAT_KEYS, SPECIAL_KEYS, SLOT_IDS,
+    AVATAR_LINES, NAMELESS_ID, ENEMY_BY_ID, canBecomeAvatar }, text);
+  const now = ImageManifest.dataHash(text);
+  let saved = '(없음)';
+  try { saved = JSON.parse(await (await fetch('../design/images/image-manifest.json', { cache: 'no-store' })).text()).data_hash || '(없음)'; } catch (e) {}
+  const fresh = saved === now;
+  document.getElementById('state').innerHTML =
+    `몬스터 ${out.counts.monsters} · 전리품 ${out.counts.items}<br>저장된 목록의 데이터 표시: ${saved} · 지금 데이터: ${now}<br>`
+    + (fresh ? '<span class="good">목록이 최신입니다.</span>' : '<span class="bad">목록이 옛것입니다 — 아래 두 파일을 받아 덮어쓰세요.</span>');
+  const dl = (name, s) => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([s], { type: 'text/plain;charset=utf-8' })); a.download = name; a.click(); };
+  document.getElementById('dlJson').onclick = () => dl('image-manifest.json', out.json);
+  document.getElementById('dlMd').onclick = () => dl('IMAGE_GUIDE.md', out.md);
+  window.__out = out;
+})();
+</script>
+</body>
+</html>

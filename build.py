@@ -12,7 +12,7 @@ jjunsgame.html 하나로 만듭니다. 그 파일은 어디서 열든 돌아갑�
 
     python build.py
 """
-import pathlib, re
+import pathlib, re, sys
 
 ROOT = pathlib.Path(__file__).parent
 OUT = ROOT / "jjunsgame.html"
@@ -108,13 +108,38 @@ if _node:
         if r.returncode != 0:
             raise SystemExit(f"문법 오류 — {f}\n{r.stderr.strip()}")
     print("  문법 검사 통과")
+    # 전리품 번호 검사 — 적을 옮기거나 목록 순서를 바꿔 옛 저장본의 장비가 몰래 바뀌면 빌드를 멈춥니다 (tools/id-check.js)
+    r = subprocess.run([_node, str(ROOT / "tools" / "cli.js"), "check-ids"], capture_output=True, text=True, encoding="utf-8")
+    sys.stdout.write(r.stdout)
+    if r.returncode != 0:
+        sys.stderr.write(r.stderr)
+        raise SystemExit("빌드를 멈춥니다 — 위 전리품 번호 문제를 먼저 해결하세요.")
 else:
+    print("  ⚠ node 가 없어 문법 검사 · 전리품 번호 검사를 건너뜁니다 (괄호 짝만 셉니다). 설치하면 빌드할 때마다 자동으로 돕니다.")
     # node 가 없으면 최소한 괄호 짝이라도 셉니다
     for f in ("js/backdrop.js", "js/sound.js", "js/fx.js", "js/data.js", "js/game.js", "js/ui.js"):
         src = read(f)
         for open_c, close_c in (("{", "}"), ("(", ")"), ("[", "]")):
             if src.count(open_c) != src.count(close_c):
                 raise SystemExit(f"괄호가 안 맞습니다 — {f} 의 {open_c}{close_c}")
+
+# 그림 목록이 옛것이면 알려 줍니다 — design/images/image-manifest.json 에 적힌 data.js 표시와 지금 data.js 를 견줍니다.
+# (표시는 tools/image-manifest.js 의 dataHash 와 같은 32비트 FNV-1a — 줄바꿈 · BOM 차이는 무시)
+def _data_hash(path):
+    b = path.read_bytes()
+    if b.startswith(b"\xef\xbb\xbf"):
+        b = b[3:]
+    b = b.replace(b"\r\n", b"\n")
+    h = 0x811c9dc5
+    for x in b:
+        h = ((h ^ x) * 0x01000193) & 0xffffffff
+    return f"{h:08x}"
+_man = ROOT / "design" / "images" / "image-manifest.json"
+if _man.exists():
+    import json
+    _saved = json.loads(_man.read_text(encoding="utf-8")).get("data_hash", "")
+    if _saved != _data_hash(ROOT / "js" / "data.js"):
+        print("  ⚠ 그림 목록(design/images)이 옛것입니다 — 적이나 전리품이 바뀌었습니다. 다시 뽑으세요: node tools/cli.js images (또는 tools/export-images.html)")
 
 size = OUT.stat().st_size
 warn = f"  (BOM {stray}개 제거)" if stray else ""
