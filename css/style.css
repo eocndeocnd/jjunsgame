@@ -2782,3 +2782,14 @@ body.fight-locked .je-xp { display: none; }
 .doll-set:hover:not(:disabled) { border-color: var(--accent); }
 .doll-set:active:not(:disabled) { transform: translate(1px, 1px); box-shadow: none; }
 .doll-set.on { color: var(--cream); background: var(--wax); border-color: var(--wax-lo); box-shadow: none; cursor: default; }
+
+/* 화신이 데려다 준다 — 맨 처음 1격에서만 */
+.btn.warp-btn {
+  --b: #6a3f9a; --b-hi: #8a5fbf; --b-lo: #3d2260;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  padding: 12px 18px;
+}

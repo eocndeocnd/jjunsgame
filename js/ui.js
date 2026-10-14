@@ -219,7 +219,7 @@ function soundEncounter() {
 }
 
 // 누르는 소리. 저마다 소리가 따로 있는 버튼은 뺍니다 (겹치면 지저분합니다)
-const OWN_SOUND = '#travelBtn, #engageBtn, #nextZoneBtn, #retreatBtn, #commitBtn, '
+const OWN_SOUND = '#travelBtn, #engageBtn, #nextZoneBtn, #warpBtn, #retreatBtn, #commitBtn, '
   + '[data-post], [data-enhslot], [data-equip], [data-unequip], [data-swap], [data-setpick], [data-jset]';
 function wireClickSound() {
   document.addEventListener('click', ev => {
@@ -1427,8 +1427,18 @@ function crossroads(boss, hero, run) {
         <button class="btn post-btn hidden" id="shopBtn">들른다</button>
       </div>` : '';
 
+  // 화신이 데려다 준다 — 맨 처음 1격에서만, 무명의 화신이 아닌 진짜 화신을 삼았을 때
+  const warpAv = canAvatarWarp() ? getEnemy(State.meta.avatar) : null;
+  const warpZone = warpAv ? ZONES[warpZoneIndex()] : null;
+  const warp = warpAv ? `
+      <button id="warpBtn" class="btn warp-btn">
+        <span class="btn-line">${avatarTitle(warpAv)}${josa(avatarTitle(warpAv), '이', '가')} 데려다 준다</span>
+        <span class="cost">제${warpZone.rank}격 · ${warpZone.name} — 에너지 0</span>
+      </button>` : '';
+
   return `
     <div class="crossroads">
+      ${warp}
       ${run.zoneCleared && nextZone ? `
         <button id="nextZoneBtn" class="btn next-btn">${nextZone.name}(으)로 넘어간다</button>` : ''}
 
@@ -1513,6 +1523,7 @@ function wireJourney() {
   }
   on('travelBtn',    () => { travel();         soundEncounter();         render(); });
   on('nextZoneBtn',  () => { moveToNextZone(); Sound.play('zoneMove');   render(); });
+  on('warpBtn',      () => { if (fightLocked()) return; if (avatarWarp()) { Sound.play('zoneMove'); render(); } });
   on('engageBtn',    () => {
     // 싸우기 직전의 레벨 · 경험치 · 에너지 — 전투를 보여주는 동안은 이 값으로 그리고, 끝나면 여기서부터 올라가는 모습을 보여줍니다
     const run = State.run;

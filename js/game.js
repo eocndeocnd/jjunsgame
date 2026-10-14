@@ -1360,6 +1360,32 @@ function moveToNextZone() {
   checkEnergy();
 }
 
+// ---------- 화신이 데려다 준다 ----------
+// 7격 이상에서 얻은 화신(무명의 화신 빼고)을 삼고 있으면, 여정의 맨 처음 1격에서 곧장 7격으로 갈 수 있습니다.
+// 에너지는 들지 않습니다 — 화신이 길을 열어 줍니다. 건너뛰는 지역의 보스는 만나지 않은 채로 갑니다.
+const WARP_RANK = 7;
+function warpZoneIndex() { return ZONES.findIndex(z => z.rank === WARP_RANK); }
+function canAvatarWarp() {
+  const run = State.run, m = State.meta;
+  if (!run || run.over || run.encounter || run.zoneIndex !== 0) return false;
+  return !!m.avatar && m.avatar !== NAMELESS_ID && m.avatars.includes(m.avatar) && warpZoneIndex() > 0;
+}
+function avatarWarp() {
+  if (!canAvatarWarp()) return false;
+  const run = State.run;
+  const av = getEnemy(State.meta.avatar);
+  run.zoneIndex = warpZoneIndex();
+  run.progress = 0;
+  run.zoneCleared = false;
+  if (run.zoneIndex + 1 > State.meta.bestZone) State.meta.bestZone = run.zoneIndex + 1;
+  const z = currentZone();
+  const r = RANKS.find(x => x.n === z.rank);
+  pushLog('rank', `━━ ${avatarTitle(av)}${josa(avatarTitle(av), '이', '가')} 길을 열었다 — 제${r.n}격 · ${r.name}(${r.hanja}), ${z.name}에 닿았다 ━━`);
+  pushLog('info', z.flavor);
+  save();
+  return true;
+}
+
 // 처치하면 1~3개(기운이 붙으면 그 배수만큼)를 빼앗습니다.
 // 이미 가진 것이 또 나오면 **자동으로 분해되어** 그 부위의 강화석이 됩니다 —
 // 그래서 드롭이 죽지 않습니다. 다 모은 상대도 잡을 이유가 남습니다.
