@@ -562,7 +562,7 @@ function statRow(name, value, bonus) {
 }
 
 // ---------- 화신 ----------
-// 화신 창에서 고릅니다 (사람 그림 왼쪽 위의 화신 칸). 한 번에 하나만 삼고, 언제든 바꿉니다 (싸우는 중에는 못 바꿈).
+// 화신 창에서 고릅니다 (전리품 탭 맨 위의 화신 단추). 한 번에 하나만 삼고, 언제든 바꿉니다 (싸우는 중에는 못 바꿈).
 // 화신마다 무엇이 오르고(▲) 무엇이 깎이는지(▼) 그대로 보여줍니다 — 그걸 보고 고르는 게 이 칸의 재미입니다.
 function avatarEffectHTML(foe) {
   const p = avatarProfile(foe);
@@ -604,11 +604,15 @@ function fillAvatars(el) {
 // ---------- 화신 칸 · 화신 창 ----------
 // 마왕을 꺾은 뒤(벽 너머를 본 뒤)부터 사람 그림 왼쪽 위에 화신 칸이 생깁니다 — 화신은 7격부터 얻기 때문입니다.
 // 지금 삼은 화신이 보이고, 누르면 화신 창에서 고릅니다.
-function avatarCell(style) {
+// 창 맨 위에 길게 — 나중에 화신 그림이 들어올 자리라 크게 잡았습니다 (왼쪽 그림 칸 = 지금은 이모티콘)
+function renderAvatarBar() {
+  const el = $('avatarBar');
+  if (!el) return;
+  if (!wallSeen()) { el.innerHTML = ''; return; }
   const f = getEnemy(State.meta.avatar);
-  return `<button class="doll-avatar ${f ? 'worn' : 'empty'}" id="dollAvatarBtn" style="${style}">
-      <span class="da-ic">${f ? f.icon : ''}</span>
-      <span class="da-txt"><span class="da-k">화신</span><span class="da-n">${f ? f.name.replace(/의 화신$/, '') : '비어 있음'}</span></span>
+  el.innerHTML = `<button class="avatar-bar ${f ? 'worn' : 'empty'}" id="dollAvatarBtn">
+      <span class="ab-ic">${f ? f.icon : ''}</span>
+      <span class="ab-txt"><span class="ab-k">화신</span><span class="ab-n">${f ? avatarTitle(f) : '비어 있음'}</span></span>
     </button>`;
 }
 function openAvatarModal() { $('avatarModal').classList.remove('hidden'); renderAvatarModal(); }
@@ -1651,20 +1655,8 @@ let showLocked = false;      // 못 얻은 ???? 를 펼쳐 볼 것인가
 
 // ---------- 장비 세트 ----------
 // 세 벌을 각각 입혀두고 갈아입습니다. 저장·덮어쓰기 버튼은 없습니다 —
-// 카드를 누르면 그 세트로 갈아입고, 지금 입은 세트를 고치면 그 세트가 곧 그렇게 됩니다.
-function renderSets() {
-  $('gearSets').innerHTML = Array.from({ length: SET_COUNT }, (_, n) => {
-    const on = isSetActive(n);
-    return `
-      <button class="gset ${on ? 'on' : ''}" data-setpick="${n}" ${on ? 'disabled' : ''}>
-        <span class="gset-n">세트 ${n + 1}</span>
-      </button>`;
-  }).join('');
-
-  for (const b of document.querySelectorAll('[data-setpick]')) {
-    b.addEventListener('click', () => { if (fightLocked()) return; switchSet(Number(b.dataset.setpick)); Sound.play('equip'); render(); });
-  }
-}
+// 번호를 누르면 그 세트로 갈아입고, 지금 입은 세트를 고치면 그 세트가 곧 그렇게 됩니다.
+// 사람 그림 왼쪽 위(renderDoll)에 숫자만 놓습니다 — 눌러 보면 무슨 기능인지 압니다.
 
 // ---------- 사람 위의 열두 칸 ----------
 // 예전엔 2열 격자로 그냥 나열했습니다. 어디가 어느 부위인지는 글자를 읽어야 알았고,
@@ -1768,7 +1760,7 @@ function renderDoll() {
   DOLL_LEFT.forEach((id, i)  => html += dollCell(id, `left:${DOLL_SIDE}%;top:${sideTop(i)}px;width:${DOLL_W}%`));
   DOLL_RIGHT.forEach((id, i) => html += dollCell(id, `right:${DOLL_SIDE}%;top:${sideTop(i)}px;width:${DOLL_W}%`));
 
-  // 옆 기둥이 반 칸 내려앉아 생긴 위쪽 빈자리 — 오른쪽은 「슬롯 강화」, 슬롯 강화 중이면 왼쪽에 「강화석 교환」
+  // 옆 기둥이 반 칸 내려앉아 생긴 위쪽 빈자리 — 오른쪽은 「슬롯 강화」, 왼쪽은 세트 1 2 3 (슬롯 강화 중이면 「강화석 교환」)
   const btnH = sideTop(0) - 6 - DOLL_GAP;
   // 지금 올릴 수 있는 칸이 몇 개인지 — 올릴 게 있다는 표시는 여기 하나에만 뜹니다
   const readyN = SLOT_IDS.filter(canEnhance).length;
@@ -1777,8 +1769,12 @@ function renderDoll() {
   if (enhMode) {
     html += `<button class="doll-mode swap" id="dollSwapBtn"
                style="left:${DOLL_SIDE}%;top:6px;width:${DOLL_W}%;height:${btnH}px">강화석 교환</button>`;
-  } else if (wallSeen()) {
-    html += avatarCell(`left:${DOLL_SIDE}%;top:6px;width:${DOLL_W}%;height:${btnH}px`);
+  } else {
+    html += `<div class="doll-sets" style="left:${DOLL_SIDE}%;top:6px;width:${DOLL_W}%;height:${btnH}px">${
+      Array.from({ length: SET_COUNT }, (_, n) => {
+        const on = isSetActive(n);
+        return `<button class="doll-set ${on ? 'on' : ''}" data-setpick="${n}" ${on ? 'disabled' : ''} title="세트 ${n + 1}">${n + 1}</button>`;
+      }).join('')}</div>`;
   }
 
   const el = $('equipSlots');
@@ -1878,7 +1874,7 @@ function specialPanel(slot) {
 }
 
 function renderGear() {
-  renderSets();
+  renderAvatarBar();
   renderDoll();
   renderSpecialSlots();
   renderSetBonus();
@@ -2001,6 +1997,9 @@ function renderGear() {
   if (sb) sb.addEventListener('click', () => openSwapModal(null));
   const ab = $('dollAvatarBtn');
   if (ab) ab.addEventListener('click', openAvatarModal);
+  for (const b of document.querySelectorAll('[data-setpick]')) {
+    b.addEventListener('click', () => { if (fightLocked()) return; switchSet(Number(b.dataset.setpick)); Sound.play('equip'); render(); });
+  }
   for (const b of document.querySelectorAll('[data-closeslot]')) {
     b.addEventListener('click', closeSlotModal);
   }
@@ -2537,7 +2536,7 @@ const NAMELESS_TALK = [
   '…들리나. 벽이 깨졌으니 이쪽 말도 닿는 모양이군.',
   '여기까지 올라온 자는 오랜만이다. 이제부터는 이름을 가진 것들이 길을 막는다. 그중 몇은 — 너를 마음에 들어 할지도 모르지.',
   '꺾은 상대가 너를 자기 몫으로 삼는 것. 그걸 <b>화신</b>이라 부른다. 아주 드물게, 정말 드물게 일어난다.',
-  '삼은 화신의 이름이 네 이름 앞에 붙는다. 얻는 것도 잃는 것도 한쪽으로 크게 기운다. <b>한 번에 하나</b>만 삼을 수 있고, 싸우는 동안에는 못 바꾼다. 고르는 건 사람 그림 왼쪽 위의 칸에서 한다.',
+  '삼은 화신의 이름이 네 이름 앞에 붙는다. 얻는 것도 잃는 것도 한쪽으로 크게 기운다. <b>한 번에 하나</b>만 삼을 수 있고, 싸우는 동안에는 못 바꾼다. 고르는 건 이 창 맨 위의 칸에서 한다.',
   '아직 아무도 너를 고르지 않았으니, 그때까지는 <b>내가 대신 맡아 주지.</b> 이름은 묻지 마라. 없다.'
 ];
 let talkIndex = 0;
