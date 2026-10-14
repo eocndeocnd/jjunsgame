@@ -2353,8 +2353,9 @@ function renderTitle() {
           : `<div class="ss-info empty">비어 있음</div>`}
         <div class="ss-actions">
           ${s ? `<button class="btn primary" data-continue="${n}">이어하기</button>` : ''}
-          <button class="btn ${s ? '' : 'primary'}" data-new="${n}">${s ? '새로 시작' : '새 게임 시작'}</button>
-          ${s ? `<button class="btn danger" data-wipe="${n}">초기화</button>` : ''}
+          ${s
+            ? `<button class="btn danger" data-wipe="${n}">초기화</button>`      // 「새로 시작」과 같은 일이라 하나만 둡니다
+            : `<button class="btn primary" data-new="${n}">새 게임 시작</button>`}
         </div>
         <div class="ss-actions ss-transfer">
           ${s ? `<button class="btn small" data-export="${n}">내보내기</button>` : ''}
