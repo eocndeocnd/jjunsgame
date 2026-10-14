@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>맵 초안 — jjunsgame</title>
+<!-- 맵 초안 (디자인 없음).
+     게임 규칙(data.js · game.js)을 그대로 쓰고, 화면은 글자 격자 하나뿐입니다.
+     목적: 「칸을 걸어 다니며 만나는」 구조가 지금의 「길을 떠난다」 루프와 어떻게 다른지 손으로 만져 보기.
+     계획과 정해야 할 것들은 docs/MAP-DRAFT.md 에 있습니다. -->
+<style>
+  body { font: 14px/1.5 monospace; margin: 12px; max-width: 760px; }
+  pre { font: 20px/1.15 monospace; margin: 8px 0; }
+  button { font: inherit; padding: 4px 10px; }
+  .row { margin: 6px 0; }
+  #log { white-space: pre-wrap; border-top: 1px solid #888; margin-top: 8px; padding-top: 6px; min-height: 8em; }
+  .pad button { width: 3em; }
+</style>
+</head>
+<body>
+<h3>맵 초안 (디자인 없음)</h3>
+
+<div class="row">
+  지역 <select id="zone"></select>
+  레벨 <input id="lv" size="10">
+  <label><input type="checkbox" id="gear" checked> 그 격 아래 전리품을 다 가진 채로</label>
+  <button id="start">새 판</button>
+</div>
+
+<div class="row" id="status"></div>
+<pre id="grid"></pre>
+<div class="row pad">
+  <button data-d="up">↑</button><br>
+  <button data-d="left">←</button><button data-d="down">↓</button><button data-d="right">→</button>
+  &nbsp; (방향키 · WASD 도 됩니다)
+</div>
+<div class="row" id="enc"></div>
+<div id="log"></div>
+<details><summary>이 지역에 서 있는 것 (좌표)</summary><pre id="roster" style="font-size:13px"></pre></details>
+
+<script src="../js/data.js"></script>
+<script src="../js/game.js"></script>
+<script>
+'use strict';
+// ───────────────────────── 맵 만들기 ─────────────────────────
+// 지역마다 하나로 고정(같은 지역은 늘 같은 맵). 폭 9 × 높이 7, 왼쪽에서 시작해 오른쪽으로 나갑니다.
+const W = 9, H = 7;
+function rng(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+
+function makeMap(zi) {
+  const r = rng(zi * 7919 + 13);
+  const mid = H >> 1;
+  const start = { x: 0, y: mid }, exit = { x: W - 1, y: mid };
+  let walls;
+  for (let tries = 0; ; tries++) {
+    walls = Array.from({ length: H }, () => Array(W).fill(false));
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (r() < 0.2) walls[y][x] = true;
+    walls[start.y][start.x] = walls[exit.y][exit.x] = false;
+    walls[mid][W - 2] = false;                                  // 출구 바로 앞은 보스 자리 — 늘 열어 둡니다
+    const dist = bfs(walls, start);
+    if (dist[exit.y][exit.x] >= 0 || tries > 50) {
+      if (dist[exit.y][exit.x] < 0) for (let x = 0; x < W; x++) walls[mid][x] = false;   // 안 되면 가운데 길을 뚫습니다
+      break;
+    }
+  }
+  let dist = bfs(walls, start);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (dist[y][x] < 0) walls[y][x] = true;   // 갈 수 없는 칸은 벽으로
+  dist = bfs(walls, start);
+
+  const spawns = {};                                            // "x,y" → { id, post }
+  const put = (x, y, id, post) => { spawns[`${x},${y}`] = { id, post }; };
+  const taken = new Set([`${start.x},${start.y}`, `${exit.x},${exit.y}`]);
+  const floors = [];
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (!walls[y][x]) floors.push({ x, y, d: dist[y][x] });
+
+  // 정해진 자리(정예 · 히든 · 보스): 보스는 출구 앞, 나머지는 멀리 퍼지게
+  const posts = zonePosts(zi);
+  const boss = posts.find(p => p.kind === 'boss');
+  if (boss) { put(W - 2, mid, boss.id, true); taken.add(`${W - 2},${mid}`); }
+  const maxD = Math.max(...floors.map(f => f.d));
+  const placed = [];
+  for (const p of posts) {
+    if (p === boss) continue;
+    const cand = floors.filter(f => !taken.has(`${f.x},${f.y}`) && f.d >= maxD * 0.3 && f.d <= maxD * 0.9);
+    cand.sort((a, b) => minGap(b, placed) - minGap(a, placed) || r() - 0.5);   // 이미 놓은 것들에서 가장 먼 칸
+    const c = cand[0] || floors.find(f => !taken.has(`${f.x},${f.y}`));
+    if (!c) continue;
+    put(c.x, c.y, p.id, true); taken.add(`${c.x},${c.y}`); placed.push(c);
+  }
+  // 일반 화신 — 남은 칸의 약 22%. 한 번 잡아도 그 칸에 남아 다시 밟으면 또 싸웁니다 (지금의 「몇 번이고 만난다」 그대로)
+  const normals = zoneNormals(zi);
+  const free = floors.filter(f => !taken.has(`${f.x},${f.y}`) && f.d >= 2);
+  for (let i = free.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [free[i], free[j]] = [free[j], free[i]]; }
+  for (const f of free.slice(0, Math.round(free.length * 0.22))) put(f.x, f.y, normals[Math.floor(r() * normals.length)].id, false);
+  return { w: W, h: H, walls, start, exit, spawns, dist };
+}
+function minGap(a, list) { return list.length ? Math.min(...list.map(b => Math.abs(a.x - b.x) + Math.abs(a.y - b.y))) : 99; }
+function bfs(walls, from) {
+  const d = Array.from({ length: H }, () => Array(W).fill(-1));
+  const q = [[from.x, from.y]]; d[from.y][from.x] = 0;
+  while (q.length) {
+    const [x, y] = q.shift();
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const nx = x + dx, ny = y + dy;
+      if (nx < 0 || ny < 0 || nx >= W || ny >= H || walls[ny][nx] || d[ny][nx] >= 0) continue;
+      d[ny][nx] = d[y][x] + 1; q.push([nx, ny]);
+    }
+  }
+  return d;
+}
+
+// ───────────────────────── 한 판 ─────────────────────────
+let map = null, pos = null, prev = null;
+const $ = id => document.getElementById(id);
+const say = t => { $('log').textContent = t + '\n' + $('log').textContent; };
+
+function startGame() {
+  blockSaving(); currentSlot = 0;
+  State.meta = freshMeta(); State.meta.tutorialDone = true;
+  const zi = Number($('zone').value);
+  startRun();
+  const run = State.run;
+  run.zoneIndex = zi; run.energy = 60;
+  run.level = Math.max(1, Number($('lv').value.replace(/,/g, '')) || ZONES[zi] && ENEMIES.find(e => e.zoneIndex === zi).level);
+  if ($('gear').checked) {
+    const rankN = ZONES[zi].rank;
+    for (const it of ITEMS) if (!it.ware && it.rank.n < rankN && it.slot !== 'special') State.meta.owned[it.id] = 1;
+    for (const s of SLOT_IDS) {
+      const best = ITEMS.filter(i => i.slot === s && owns(i.id)).sort((a, b) => b.level - a.level)[0];
+      if (best) equip(best.id, s);
+    }
+  }
+  enterMap();
+  $('log').textContent = '';
+  say(`시작 — ${ZONES[zi].name}`);
+  draw();
+}
+function enterMap() {
+  map = makeMap(State.run.zoneIndex);
+  pos = { ...map.start }; prev = { ...pos };
+}
+function tileFoe(x, y) {
+  const s = map.spawns[`${x},${y}`];
+  if (!s) return null;
+  const foe = getEnemy(s.id);
+  if (s.post && isDowned(foe.id)) return null;                  // 정예 · 히든 · 보스는 한 번뿐
+  if (foe.kind === 'hidden' && !isRevealed(foe)) return null;   // 아직 안 나타난 히든은 빈 칸
+  return { foe, post: s.post };
+}
+
+function step(dir) {
+  const run = State.run;
+  if (!run || run.over) return;
+  if (run.encounter) { say('마주한 상태입니다 — 맞선다 · 물러선다 중에 고르세요.'); return; }
+  if (run.lastResult) run.lastResult = null;
+  const [dx, dy] = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] }[dir];
+  const nx = pos.x + dx, ny = pos.y + dy;
+  if (nx < 0 || ny < 0 || nx >= W || ny >= H || map.walls[ny][nx]) return;   // 벽 — 에너지도 안 씁니다
+  prev = { ...pos };
+  const t = tileFoe(nx, ny);
+  if (t) {
+    if (run.energy < RULES.TRAVEL_COST) { say('에너지가 모자랍니다.'); endRun('에너지 고갈'); draw(); return; }
+    pos = { x: nx, y: ny };
+    if (t.post) approachPost(t.foe.id);                          // 정해진 자리 — 물러설 수 없음
+    else { run.energy -= RULES.TRAVEL_COST; beginEncounter(t.foe, false); }
+    say(`(${nx},${ny}) ${t.foe.name} 앞에 섰다 — 에너지 −${RULES.TRAVEL_COST}`);
+  } else {
+    pos = { x: nx, y: ny };                                      // 빈 칸은 공짜
+    if (nx === map.exit.x && ny === map.exit.y) {
+      if (run.zoneCleared) { moveToNextZone(); enterMap(); say(`출구 — ${currentZone().name} 에 들어섰다`); }
+      else say('출구가 닫혀 있다 — 보스를 꺾어야 한다.');
+    }
+  }
+  draw();
+}
+
+function doEngage() {
+  const r = engage();
+  if (!r) return;
+  say(r.win
+    ? `승리 — 경험치 +${fmt(r.xp)} · 골드 +${fmt(r.gold || 0)} · 레벨 Lv.${fmtLevel(State.run.level)} · 전리품 ${r.drops.length}`
+    : `패배 — 에너지 −${r.penalty}`);
+  if (!r.win) pos = { ...prev };                                 // 지면 직전 칸으로 밀려납니다
+  draw();
+}
+function doRetreat() { retreat(); pos = { ...prev }; say('물러섰다.'); draw(); }
+
+// ───────────────────────── 그리기 (글자만) ─────────────────────────
+function draw() {
+  const run = State.run;
+  if (!run) return;
+  let g = '';
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      let c;
+      if (pos.x === x && pos.y === y) c = '@';
+      else if (map.walls[y][x]) c = '#';
+      else if (x === map.start.x && y === map.start.y) c = 'S';
+      else if (x === map.exit.x && y === map.exit.y) c = run.zoneCleared ? 'O' : 'X';
+      else {
+        const t = tileFoe(x, y);
+        c = !t ? '.' : t.foe.kind === 'boss' ? 'B' : t.foe.kind === 'elite' ? 'E' : t.foe.kind === 'hidden' ? 'H' : 'n';
+      }
+      g += c + ' ';
+    }
+    g += '\n';
+  }
+  $('grid').textContent = g;
+  const z = currentZone();
+  $('status').textContent = `${z.name} (제${z.rank}격) · 에너지 ${run.energy}${run.over ? ' · 끝남(' + run.reason + ')' : ''} · Lv.${fmtLevel(run.level)} · 길 열림: ${run.zoneCleared ? '예' : '아니오'}\n`
+    + '범례  @ 나 · S 시작 · X/O 출구(닫힘/열림) · # 벽 · n 일반 · E 정예 · H 히든 · B 보스 · . 빈 칸(공짜)';
+  const enc = $('enc');
+  if (run.encounter) {
+    const f = getEnemy(run.encounter);
+    const c = winChance(heroStats(), f);
+    enc.innerHTML = `<b>${f.name}</b> (${KINDS[f.kind].name}) Lv.${fmtLevel(f.level)} · 이길 확률 약 ${Math.round(c * 100)}% `
+      + `<button id="bEngage">맞선다</button> ${run.onBoss ? '(물러설 수 없다)' : '<button id="bRetreat">물러선다</button>'}`;
+    $('bEngage').onclick = doEngage;
+    if ($('bRetreat')) $('bRetreat').onclick = doRetreat;
+  } else enc.textContent = '';
+  const rows = [];
+  for (const [k, s] of Object.entries(map.spawns)) {
+    const f = getEnemy(s.id);
+    rows.push(`(${k})  ${KINDS[f.kind].name.padEnd(2)}  ${f.name}  Lv.${fmtLevel(f.level)}${s.post && isDowned(f.id) ? '  [꺾음]' : ''}`);
+  }
+  $('roster').textContent = rows.join('\n');
+}
+
+// ───────────────────────── 시작 ─────────────────────────
+$('zone').innerHTML = ZONES.map((z, i) => `<option value="${i}">제${z.rank}격 ${z.name}</option>`).join('');
+$('zone').onchange = () => { const e = ENEMIES.find(e => e.zoneIndex === Number($('zone').value)); $('lv').value = String(Math.round(e.level * 1.3)); };
+$('zone').onchange();
+$('start').onclick = startGame;
+for (const b of document.querySelectorAll('[data-d]')) b.onclick = () => step(b.dataset.d);
+document.addEventListener('keydown', ev => {
+  const m = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', w: 'up', s: 'down', a: 'left', d: 'right' }[ev.key];
+  if (m && State.run && map) { ev.preventDefault(); step(m); }
+});
+startGame();
+</script>
+</body>
+</html>
