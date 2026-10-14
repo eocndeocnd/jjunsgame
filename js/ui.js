@@ -1698,14 +1698,14 @@ function dollCell(slotId, style) {
   const nf = freshCount(slotId);
   // 강화 단계는 부위 이름 옆에. 올릴 수 있는 칸이 있다는 표시는 「슬롯 강화」 버튼에 뜹니다.
   const lv = enhanceLevel(slotId);
-  const enh = lv > 0 ? `<span class="enh-lv">+${lv}</span>` : '';
+  // 강화 단계는 그림 칸 오른쪽 위 모서리에 +3 으로 — 부위 이름은 적지 않습니다 (자리가 곧 부위입니다)
+  const enh = lv > 0 ? `<span class="doll-badge">+${lv}</span>` : '';
   return `
     <button class="doll-slot ${selectedSlot === slotId ? 'sel' : ''} ${item ? 'worn' : 'empty'}"
             data-slot="${slotId}" style="${style}" title="${s.name}">
       ${nf ? `<span class="new-dot">${nf}</span>` : ''}
-      <span class="doll-ic">${item ? item.fromIcon : ''}</span>
+      <span class="doll-icw"><span class="doll-ic">${item ? item.fromIcon : ''}</span>${enh}</span>
       <span class="doll-txt">
-        <span class="doll-k">${s.name}${enh}</span>
         <span class="doll-item">${item ? item.name : '비어 있음'}</span>
       </span>
     </button>`;
@@ -1731,9 +1731,9 @@ function dollEnhCell(slotId, style) {
     <button class="doll-slot enh-cell ${item ? 'worn' : 'empty'} ${ready ? 'ready' : ''} ${nx ? '' : 'maxed'} ${fx ? (fx.success ? 'fx-ok' : 'fx-fail') : ''}"
             data-enhslot="${slotId}" style="${style}" ${ready ? '' : 'disabled'}>
       ${fx ? `<span class="enh-float">${fx.success ? `성공 +${fx.level}` : '실패'}</span>` : ''}
-      <span class="doll-ic">${item ? item.fromIcon : ''}</span>
+      <span class="doll-icw"><span class="doll-ic">${item ? item.fromIcon : ''}</span>${lv > 0 || nx ? `<span class="doll-badge">+${lv}</span>` : ''}</span>
       <span class="doll-txt">
-        <span class="doll-k">${s.name} <b>+${lv}</b>${nx ? `<em>▶</em>+${lv + 1}` : ''}</span>
+        <span class="doll-k">${nx ? `<em>▶</em> +${lv + 1}` : '최대'}</span>
         <span class="doll-item">${sub}</span>
       </span>
     </button>`;

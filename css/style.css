@@ -2739,3 +2739,25 @@ body.fight-locked .je-xp { display: none; }
 .doll-avatar.empty .da-n { font-weight: 400; color: var(--text-faint); }
 .modal-card .avatars { overflow-y: auto; flex: 1; min-height: 0; padding: 2px; }
 #avatarBody .av-head { display: none; }   /* 창 제목이 이미 「화신」 */
+
+/* 강화 단계 — 그림 칸 오른쪽 위 모서리의 작은 딱지 (예: +3). 부위 이름 글자는 없앴습니다 */
+.doll-slot { justify-content: center; }
+.doll-icw { position: relative; flex: none; display: block; width: 46px; height: 46px; }
+.doll-badge {
+  position: absolute;
+  top: -5px;
+  right: -9px;
+  z-index: 2;
+  min-width: 20px;
+  padding: 0 4px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+  color: var(--cream);
+  background: var(--accent);
+  box-shadow: 0 0 0 2px var(--frame-out);
+  white-space: nowrap;
+}
+.doll-slot.enh-cell .doll-badge { background: var(--text-dim); }
+.doll-slot.enh-cell.ready .doll-badge { background: var(--energy); }
