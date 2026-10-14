@@ -36,6 +36,7 @@ function render() {
   renderShop();
   renderSwap();
   if (isAdminOpen()) renderAdmin();
+  if (window.innerWidth > 860) maybeNamelessTalk();   // 넓은 화면에는 탭이 없습니다
 }
 
 // ---------- 벽 너머의 분위기 ----------
@@ -1562,7 +1563,7 @@ function spotlightGear(slot) {
 // 「물러선다」와 정예·보스로 향하는 버튼에는 일부러 안 걸었습니다.
 // 그건 고민해서 눌러야 하는 것들이라, 연타로 잘못 누르면 안 되니까요.
 // 싸우는 동안에는 걸리는 버튼이 없어 스페이스가 아무 일도 하지 않습니다 (건너뛰기 없음).
-const PRIMARY_ORDER = ['tutNext', 'continueBtn', 'engageBtn', 'newRunBtn', 'travelBtn'];
+const PRIMARY_ORDER = ['talkNext', 'tutNext', 'continueBtn', 'engageBtn', 'newRunBtn', 'travelBtn'];
 
 function primaryButton() {
   if (!$('title').classList.contains('hidden')) return null;   // 초기화면에서는 안 씁니다
@@ -1622,6 +1623,7 @@ function showTab(name) {
   // 탭을 옮기면 열려 있던 부위 창은 닫습니다 (NEW! 도 그때 꺼집니다)
   if (name !== 'gear' && isSlotModalOpen()) closeSlotModal();
   document.body.dataset.tab = name;
+  if (name === 'gear') maybeNamelessTalk();
   for (const b of document.querySelectorAll('#mobileTabs button')) {
     b.classList.toggle('on', b.dataset.tab === name);
   }
@@ -2528,6 +2530,43 @@ function enterGame(slot, fresh) {
 }
 
 // ============================================================
+//  무명의 화신 — 마왕을 처음 꺾은 뒤 전리품 창에 들어서면 말을 걸어옵니다
+// ============================================================
+// 화신 시스템을 알려주고, 진짜 화신을 얻을 때까지 대신 화신이 되어 줍니다 (game.js 의 meetNameless).
+// 누구인지는 말하지 않습니다. 넓은 화면에는 탭이 없으니 마왕을 지난 뒤 처음 그리는 때에 뜹니다.
+const NAMELESS_TALK = [
+  '…들리나. 벽이 깨졌으니 이쪽 말도 닿는 모양이군.',
+  '여기까지 올라온 자는 오랜만이다. 이제부터는 이름을 가진 것들이 길을 막는다. 그중 몇은 — 너를 마음에 들어 할지도 모르지.',
+  '꺾은 상대가 너를 자기 몫으로 삼는 것. 그걸 <b>화신</b>이라 부른다. 아주 드물게, 정말 드물게 일어난다.',
+  '삼은 화신의 이름이 네 이름 앞에 붙는다. 얻는 것도 잃는 것도 한쪽으로 크게 기운다. <b>한 번에 하나</b>만 삼을 수 있고, 싸우는 동안에는 못 바꾼다. 고르는 건 사람 그림 왼쪽 위의 칸에서 한다.',
+  '아직 아무도 너를 고르지 않았으니, 그때까지는 <b>내가 대신 맡아 주지.</b> 이름은 묻지 마라. 없다.',
+  '진짜가 오면 나는 물러난다.'
+];
+let talkIndex = 0;
+
+function maybeNamelessTalk() {
+  const m = State.meta;
+  if (!State.run || m.namelessMet || !wallSeen() || wallPending || fightLocked()) return;
+  if (!$('title').classList.contains('hidden') || !$('tutorial').classList.contains('hidden')) return;
+  if (!$('talk').classList.contains('hidden')) return;
+  if ((m.avatars || []).length) { m.namelessMet = true; save(); return; }   // 이미 곁에 누가 있다
+  talkIndex = 0;
+  $('talk').classList.remove('hidden');
+  renderTalk();
+}
+function renderTalk() {
+  $('talkBody').innerHTML = NAMELESS_TALK[talkIndex];
+  $('talkNext').innerHTML = (talkIndex === NAMELESS_TALK.length - 1 ? '…알겠다' : '다음') + KEY_HINT;
+}
+function nextTalk() {
+  if (talkIndex < NAMELESS_TALK.length - 1) { talkIndex++; renderTalk(); return; }
+  $('talk').classList.add('hidden');
+  meetNameless();
+  Sound.play('equip');
+  render();
+}
+
+// ============================================================
 //  튜토리얼 — 짧게. 나머지는 해보면서 알게 되는 게 낫습니다.
 // ============================================================
 const TUTORIAL = [
@@ -2808,6 +2847,7 @@ function init() {
   for (const b of document.querySelectorAll('[data-closeavatar]')) b.addEventListener('click', closeAvatarModal);
   for (const b of document.querySelectorAll('[data-closeshop]')) b.addEventListener('click', closeShop);
 
+  $('talkNext').addEventListener('click', nextTalk);
   $('tutNext').addEventListener('click', () => {
     if (tutIndex < TUTORIAL.length - 1) { tutIndex++; renderTutorial(); }
     else endTutorial();

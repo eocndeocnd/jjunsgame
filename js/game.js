@@ -215,7 +215,8 @@ const State = {
     bestLevel: 1,
     bestKill: 0,                      // 지금까지 꺾은 가장 높은 레벨
     bestZone: 1,                      // 지금까지 도달한 가장 깊은 지역 (1부터)
-    cleared: false                    // 아자토스를 꺾은 적이 있는가
+    cleared: false,                   // 아자토스를 꺾은 적이 있는가
+    namelessMet: false                // 무명의 화신이 말을 걸어왔는가 (마왕을 처음 꺾은 뒤 전리품 창에서)
   },
   run: null,
   log: []
@@ -546,6 +547,7 @@ function load() {
     State.meta.settings = { ...defaultSettings(), ...(data.settings || {}) };
     for (const k of FIXED_SETTINGS) State.meta.settings[k] = defaultSettings()[k];
     State.meta.tutorialDone = !!data.tutorialDone;
+    State.meta.namelessMet = !!data.namelessMet;
     State.meta.weights = { ...defaultWeights(), ...(data.weights || {}) };
     State.meta.autoAlloc = data.autoAlloc !== false;
     State.meta.stones = { ...stoneZeros(), ...(data.stones || {}) };
@@ -615,7 +617,8 @@ function freshMeta() {
     bestLevel: 1,
     bestKill: 0,
     bestZone: 1,
-    cleared: false
+    cleared: false,
+    namelessMet: false
   };
 }
 
@@ -1045,6 +1048,18 @@ function activeAvatar() {
   return id ? getEnemy(id) : null;
 }
 // 화신을 삼는다 / 벗는다 (null)
+// 무명의 화신이 말을 마치고 곁에 섭니다 — 곁에 아무 화신도 없을 때만 (이미 있으면 말만 했다고 칩니다)
+function meetNameless() {
+  const m = State.meta;
+  m.namelessMet = true;
+  if (!m.avatars.length) {
+    m.avatars.push(NAMELESS_ID);
+    m.avatar = NAMELESS_ID;
+    pushLog('rank', '━━ 무명의 화신이 곁에 섰다 ━━');
+  }
+  save();
+}
+
 function setAvatar(id) {
   if (id && !State.meta.avatars.includes(id)) return;
   State.meta.avatar = id || null;
@@ -1201,7 +1216,10 @@ function engage() {
   let avatarGained = null;
   if (canBecomeAvatar(enemy) && !State.meta.avatars.includes(enemy.id) && Math.random() < avatarChance(enemy)) {
     State.meta.avatars.push(enemy.id);
-    if (!State.meta.avatar) State.meta.avatar = enemy.id;
+    // 무명의 화신은 진짜가 오면 물러납니다
+    const nl = State.meta.avatars.indexOf(NAMELESS_ID);
+    if (nl >= 0) State.meta.avatars.splice(nl, 1);
+    if (!State.meta.avatar || State.meta.avatar === NAMELESS_ID) State.meta.avatar = enemy.id;
     avatarGained = enemy.id;
   }
 

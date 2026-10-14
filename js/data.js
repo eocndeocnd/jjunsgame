@@ -1847,6 +1847,17 @@ for (const [id, name, slot, icon, r, arch, note, gold] of MERCHANT_WARES) {
 // id 로 바로 찾습니다 — 스탯을 셀 때마다 수백 개를 훑지 않게
 const ENEMY_BY_ID = Object.fromEntries(ENEMIES.map(e => [e.id, e]));
 
+// 무명의 화신 — 마왕을 처음 꺾고 전리품 창에 들어서면 말을 걸어오는 이름 없는 존재 (ui.js 의 maybeNamelessTalk).
+// 진짜 화신을 얻을 때까지 대신 화신이 되어 줍니다. 길에서 만나는 적이 아니라서 ENEMIES 에는 없고,
+// 화신 창 · 칭호 · 능력치가 적 하나로 다루는 곳에서 쓰이도록 ENEMY_BY_ID 에만 넣습니다.
+// 누구인지는 말하지 않습니다.
+const NAMELESS_ID = 'nameless';
+ENEMY_BY_ID[NAMELESS_ID] = {
+  id: NAMELESS_ID, name: '무명', title: '이름이 없는 것', icon: '👤',
+  kind: 'normal', arch: 'guard', boss: false, once: false, final: false,
+  level: 0, zoneIndex: -1, rank: RANKS.find(r => r.n === 7)   // 화신이 되는 첫 격 (AVATAR_MIN_RANK — 그 상수는 아래에 있어 여기선 못 씁니다)
+};
+
 // ---------- 화신 — 내가 그들의 화신이 된다 ----------
 // 7격부터의 상대를 꺾으면 아주 드물게(보통 1% · 보스 0.5%) 그 존재가 나를 화신으로 삼습니다.
 // 한 번 얻은 화신은 남고, 한 번에 하나만 삼습니다 (「나」 창에서 고름). 삼은 화신의 이름이 내 칭호가 됩니다.
@@ -1891,6 +1902,8 @@ const AVATAR_SIGNATURE = {
 //   add: critRate 크리 · doubleHit 이중타격 · pierce 관통 · lifesteal 흡혈 · block 막기 · reflect 반사 · regen 재생 · survive 생존
 //        harmTouch 일격 · doubleTurn 연속 턴 · findRate 전리품 · xpRate 경험치 · goldRate 골드 · stoneRate 강화석
 const AVATAR_UNIQUE = {
+  // ── 무명 — 진짜 화신이 올 때까지 ──
+  nameless:      [{ life: 1.25, defense: 1.1, damage: 0.85 }, {}],                                          // 이름이 없는 것
   // ── 7격 · 알렉산드리아 대도서관 ──
   storyteller:   [{ damage: 0.6, dex: 0.7 },               { xpRate: 0.8, findRate: 0.4 }],             // 가장 오래된 목소리
   scribe:        [{ defense: 1.4, dex: 0.4, luck: 0.5 },    { stoneRate: 0.6 }],                         // 베껴 쓰다 눈이 먼
