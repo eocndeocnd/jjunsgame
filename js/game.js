@@ -707,8 +707,8 @@ function simulateBattle(hero, enemy, rng = Math.random, log = null) {
   const hRegen   = num(hero.regen);        // 내 턴마다 생명의 일부 회복
   const hHarm    = num(hero.harmTouch);    // 가끔 10배 — 그 한 방은 크리가 안 터집니다
   const hTurn    = num(hero.doubleTurn);   // 상대가 움직이기 전에 한 번 더
-  const hSurvive = num(hero.survive);      // 쓰러질 한 방을 1 남기고 버팀 (전투당 한 번)
-  let survived = false;
+  const hSurvive = Math.floor(num(hero.survive) + 1e-6);   // 쓰러질 한 방을 1 남기고 버티는 횟수 — 확률이 아니라 딱 그 횟수만큼
+  let survivedN = 0;
 
   // 보스 화신의 고유 능력 (data.js 의 AVATAR_POWERS)
   const P = hero.avatarPower || null;
@@ -800,9 +800,9 @@ function simulateBattle(hero, enemy, rng = Math.random, log = null) {
     if (crit) inc *= fCritDmg;
     inc = Math.max(1, inc);
 
-    // 생존 — 이 한 방에 쓰러질 때만, 전투당 한 번
-    if (heroHp - inc <= 0 && !survived && hSurvive > 0 && rng() < hSurvive) {
-      survived = true;
+    // 생존 — 이 한 방에 쓰러질 때마다, 정해진 횟수만큼 (확률 없음)
+    if (heroHp - inc <= 0 && survivedN < hSurvive) {
+      survivedN += 1;
       inc = heroHp - 1;
       heroHp = 1;
       note('foe', 'hit', inc, { crit });

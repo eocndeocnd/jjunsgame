@@ -509,7 +509,8 @@ const SPECIALS = [
   // ── 원작(Resolute Hero)에 있고 여기엔 없던 넷 ──
   // 유물과 세트 효과로만 얻습니다. 일반 장비의 성격은 이걸 붙여주지 않습니다.
   { id: 'regen',      name: '재생',    side: 'def', unit: '%', base: 2,  cap: 0.10, desc: '내 턴마다 생명의 일부를 회복' },
-  { id: 'survive',    name: '생존',    side: 'def', unit: '%', base: 15, cap: 0.60, desc: '쓰러질 한 방을 생명 1로 버틸 확률 (전투당 한 번)' },
+  // 확률이 아니라 **횟수**입니다 — 수치가 1이면 쓰러질 한 방을 한 번, 2이면 두 번 생명 1로 버팁니다 (전투마다 새로).
+  { id: 'survive',    name: '생존',    side: 'def', unit: '회', base: 1,  cap: 4,    desc: '쓰러질 한 방을 생명 1로 버티는 횟수 (전투마다)' },
   { id: 'harmTouch',  name: '일격',    side: 'atk', unit: '%', base: 3,  cap: 0.15, desc: '10배 피해를 줄 확률 (그 한 방은 크리가 안 터짐)' },
   { id: 'doubleTurn', name: '연속 턴', side: 'atk', unit: '%', base: 8,  cap: 0.35, desc: '상대가 움직이기 전에 한 번 더 움직일 확률' }
 ];
@@ -574,7 +575,7 @@ function isSpecialSlot(slot) { return SPECIAL_SLOT_IDS.includes(slot); }
 const GEM_POWER = 0.12;
 const RELIC_BASE = { critRate: 6, doubleHit: 6, pierce: 10, lifesteal: 4, block: 6, reflect: 10,
                      findRate: 40, xpRate: 50, stoneRate: 30,
-                     regen: 2, survive: 15, harmTouch: 3, doubleTurn: 8 };
+                     regen: 2, harmTouch: 3, doubleTurn: 8 };   // 생존은 횟수라 여기 없습니다 (makeSpecialStats)
 const RELIC_GRADE = { normal: 1, elite: 1.15, hidden: 1.3, boss: 1.3 };
 
 function relicScale(rankN) { return 0.6 + 0.08 * rankN; }
@@ -587,7 +588,9 @@ function makeSpecialStats(opt, level, kind, rankN) {
     out[opt.gem] = Math.max(1, Math.round(GEM_POWER * e[opt.gem] * KINDS[kind].mult));
   }
   for (const key of opt.relic || []) {
-    out[key] = +(RELIC_BASE[key] * relicScale(rankN) * RELIC_GRADE[kind] / 100).toFixed(4);
+    // 생존은 횟수 — 제10격부터 두 번, 그 아래는 한 번 (격 배수 · 등급 배수를 타지 않습니다)
+    out[key] = key === 'survive' ? (rankN >= 10 ? 2 : 1)
+      : +(RELIC_BASE[key] * relicScale(rankN) * RELIC_GRADE[kind] / 100).toFixed(4);
   }
   return out;
 }
@@ -1873,13 +1876,13 @@ const AVATAR_ARCH = {
 
 // 보스는 저마다 따로 — 더 극단적으로
 const AVATAR_SIGNATURE = {
-  yisunsin: { mul: { defense: 2.6, life: 1.5, damage: 0.6, dex: 0.6 }, add: { block: 0.25, survive: 0.4 } },          // 아직 열두 척이 남았다
+  yisunsin: { mul: { defense: 2.6, life: 1.5, damage: 0.6, dex: 0.6 }, add: { block: 0.25, survive: 1 } },          // 아직 열두 척이 남았다
   cheonma:  { mul: { damage: 2.6, life: 0.35, defense: 0.3 },         add: { critRate: 0.25, pierce: 0.3 } },         // 하늘 아래 마는 하나뿐
   imugi:    { mul: { life: 1.6, damage: 0.4, dex: 0.5 },              add: { xpRate: 2.0 } },                         // 천 년을 기다려 오르려는
-  heracles: { mul: { life: 1.8, dex: 0.4, luck: 0.4 },                add: { survive: 0.6, regen: 0.06 } },           // 열두 번 죽고 돌아온
+  heracles: { mul: { life: 1.8, dex: 0.4, luck: 0.4 },                add: { survive: 2, regen: 0.06 } },           // 열두 번 죽고 돌아온
   michael:  { mul: { damage: 0.7, luck: 0.3 },                        add: { reflect: 0.7, block: 0.2 } },            // 용을 떨어뜨린
   lucifer:  { mul: { damage: 2.0, dex: 2.0, life: 0.3, defense: 0.3 }, add: { critRate: 0.2 } },                      // 가장 빛나던 별, 가장 깊이 떨어진
-  hades:    { mul: { life: 1.5, dex: 0.6 },                           add: { lifesteal: 0.3, survive: 0.3, xpRate: -0.5 } }, // 돌아온 자가 없는 문의 주인
+  hades:    { mul: { life: 1.5, dex: 0.6 },                           add: { lifesteal: 0.3, survive: 1, xpRate: -0.5 } }, // 돌아온 자가 없는 문의 주인
   zeus:     { mul: { damage: 1.6, defense: 0.4, life: 0.6 },          add: { harmTouch: 0.1, doubleTurn: 0.2 } }      // 올림포스의 마지막 말
 };
 
@@ -1896,7 +1899,7 @@ const AVATAR_UNIQUE = {
   sunzi:         [{ dex: 1.6, damage: 0.45 },               { block: 0.25, doubleTurn: 0.1 }],           // 싸우지 않고 이기는 법
   davinci:       [{ luck: 1.6, life: 0.6, defense: 0.7 },   { stoneRate: 0.8 }],                         // 다 그리지 못한 설계도
   herodotos:     [{ damage: 0.65, life: 0.75 },             { findRate: 0.6, xpRate: 0.4 }],             // 처음으로 기록한 자
-  joan:          [{ damage: 1.5, defense: 0.5, life: 0.7 }, { survive: 0.3, critRate: 0.1 }],            // 불타는 오를레앙의 처녀
+  joan:          [{ damage: 1.5, defense: 0.5, life: 0.7 }, { survive: 1, critRate: 0.1 }],            // 불타는 오를레앙의 처녀
   spartacus:     [{ damage: 1.6, life: 1.2, defense: 0.4, luck: 0.5 }, { doubleHit: 0.15 }],             // 사슬을 끊은 검투사
   genghis:       [{ dex: 1.7, defense: 0.5, life: 0.8 },    { doubleHit: 0.15, goldRate: 0.5 }],         // 지평선을 국경으로 삼은
   alexander:     [{ damage: 1.7, life: 0.5, luck: 0.6 },    { pierce: 0.25 }],                           // 온 세계가 좁았던 자
@@ -1906,7 +1909,7 @@ const AVATAR_UNIQUE = {
   gaebang:       [{ dex: 1.4, damage: 0.55, defense: 0.7 }, { findRate: 0.7 }],                          // 천하의 소문은 거지가 먼저 안다
   emei:          [{ damage: 1.3, life: 0.55 },              { critRate: 0.2 }],                          // 자비로운 얼굴, 자비 없는 비수
   shaolin:       [{ defense: 2.2, life: 1.3, dex: 0.45, damage: 0.7 }, {}],                              // 쇠를 두드려 몸을 만든
-  dalma:         [{ defense: 1.8, dex: 0.3, damage: 0.6 },  { regen: 0.05, survive: 0.3 }],              // 벽을 보고 아홉 해
+  dalma:         [{ defense: 1.8, dex: 0.3, damage: 0.6 },  { regen: 0.05, survive: 1 }],              // 벽을 보고 아홉 해
   wudang:        [{ dex: 1.4, damage: 0.5 },                { reflect: 0.35 }],                          // 부드러움이 굳셈을 이긴다
   tangga:        [{ life: 0.5, defense: 0.6 },              { pierce: 0.3, doubleHit: 0.12, harmTouch: 0.03 }], // 손끝마다 다른 독
   hwasan:        [{ dex: 1.3, life: 0.6, defense: 0.6 },    { doubleHit: 0.2, critRate: 0.1 }],          // 검 끝에 매화가 핀다
@@ -1920,32 +1923,32 @@ const AVATAR_UNIQUE = {
   sansam:        [{ life: 1.4, damage: 0.45 },              { regen: 0.06, xpRate: 0.3 }],               // 사람 꼴을 하고 뛰어다니는 뿌리
   gumiho:        [{ dex: 1.5, luck: 1.4, defense: 0.45, life: 0.7 }, { lifesteal: 0.2 }],                // 천 년을 채우면 사람이 된다
   bingjam:       [{ defense: 1.5, damage: 0.5, dex: 0.7 },  { block: 0.2 }],                             // 만년설 속에서 실을 토하는 누에
-  ungnyeo:       [{ life: 1.6, dex: 0.4, luck: 0.6 },       { survive: 0.45 }],                          // 쑥과 마늘로 백 일을 버틴 곰
+  ungnyeo:       [{ life: 1.6, dex: 0.4, luck: 0.6 },       { survive: 1 }],                          // 쑥과 마늘로 백 일을 버틴 곰
   sangun:        [{ damage: 1.7, defense: 0.5, luck: 0.5 }, { critRate: 0.15 }],                         // 감히 이름으로 부르지 못하는 호랑이
   geumsijo:      [{ dex: 1.9, life: 0.5, defense: 0.6 },    { doubleTurn: 0.12, pierce: 0.15 }],         // 용을 잡아먹는 금빛 날개
   hwarin:        [{ damage: 1.4, life: 0.6, luck: 0.7 },    { reflect: 0.2 }],                           // 불을 밟고 다니는 기린
   yeonggu:       [{ defense: 2.4, life: 1.5, dex: 0.3, damage: 0.6 }, {}],                               // 만 년을 등에 지고 걷는 거북
   bonghwang:     [{ damage: 0.4 },                          { findRate: 0.8, xpRate: 0.5, regen: 0.03 }], // 태평한 세상에만 내려앉는 새
   // ── 10격 · 엘리시온 평원 ──
-  theseus:       [{ dex: 1.3, damage: 0.7, luck: 0.6 },     { survive: 0.35 }],                          // 돌아오는 길을 아는
+  theseus:       [{ dex: 1.3, damage: 0.7, luck: 0.6 },     { survive: 1 }],                          // 돌아오는 길을 아는
   perseus:       [{ life: 0.6, defense: 0.6 },              { harmTouch: 0.07, critRate: 0.1 }],         // 보지 않고 벤 자
-  odysseus:      [{ luck: 1.5, damage: 0.6 },               { survive: 0.3, findRate: 0.4 }],            // 열 해를 헤매고도 돌아간
+  odysseus:      [{ luck: 1.5, damage: 0.6 },               { survive: 1, findRate: 0.4 }],            // 열 해를 헤매고도 돌아간
   atalanta:      [{ dex: 2.3, life: 0.55, defense: 0.55, damage: 0.8 }, { doubleTurn: 0.1 }],            // 누구보다 빨랐던
   enkidu:        [{ life: 1.9, defense: 1.3, luck: 0.4 },   { xpRate: -0.3 }],                           // 흙으로 빚어진 벗
   gilgamesh:     [{ damage: 1.6, defense: 1.3, life: 0.6, luck: 0.6 }, { goldRate: 0.4 }],               // 영생을 놓친 왕
-  hector:        [{ defense: 1.8, damage: 0.55 },           { block: 0.2, survive: 0.25 }],              // 질 것을 알고도 나선
+  hector:        [{ defense: 1.8, damage: 0.55 },           { block: 0.2, survive: 1 }],              // 질 것을 알고도 나선
   achilles:      [{ defense: 2.6, damage: 1.4, life: 0.4 }, {}],                                         // 발뒤꿈치 하나만 사람인
   cuchulainn:    [{ damage: 1.3, life: 0.5 },               { doubleHit: 0.2, critRate: 0.12 }],         // 빛의 아이
   beowulf:       [{ damage: 1.9, defense: 0.5, dex: 0.7 },  { harmTouch: 0.05 }],                        // 맨손으로 괴물을 찢은
   arjuna:        [{ dex: 0.6, life: 0.7 },                  { critRate: 0.25, pierce: 0.2 }],            // 과녁의 눈만 보이는
   siegfried:     [{ defense: 2.2, luck: 0.4, dex: 0.6 },    { block: 0.15 }],                            // 용의 피를 뒤집어쓴 자
   // ── 11격 · 일곱 번째 하늘 ──
-  guardianangel: [{ damage: 0.5 },                          { survive: 0.4, block: 0.15 }],              // 한 사람 곁에 하나씩
+  guardianangel: [{ damage: 0.5 },                          { survive: 1, block: 0.15 }],              // 한 사람 곁에 하나씩
   principality:  [{ defense: 1.6, life: 1.3, dex: 0.5, luck: 0.6 }, {}],                                 // 나라 하나를 맡은
   powerangel:    [{ damage: 1.6, defense: 0.6, life: 0.8 }, { pierce: 0.25 }],                           // 악을 쫓는 첫 번째 칼
   trumpetangel:  [{ life: 0.55, defense: 0.7 },             { doubleTurn: 0.15, critRate: 0.1 }],        // 일곱 나팔 중 첫째를 부는
   raphael:       [{ life: 1.3, damage: 0.45 },              { regen: 0.07, lifesteal: 0.15 }],           // 신이 고치신다
-  virtueangel:   [{ luck: 1.6, damage: 0.55 },              { findRate: 0.7, survive: 0.2 }],            // 기적을 맡은
+  virtueangel:   [{ luck: 1.6, damage: 0.55 },              { findRate: 0.7, survive: 1 }],            // 기적을 맡은
   dominion:      [{ damage: 1.3, defense: 1.3, life: 1.2, dex: 0.4, luck: 0.4 }, { xpRate: -0.3 }],      // 천사들을 다스리는 천사
   throneangel:   [{ defense: 1.4, damage: 0.35 },           { reflect: 0.45 }],                          // 눈으로 가득한 바퀴
   gabriel:       [{ dex: 1.7, defense: 0.5, life: 0.7 },    { doubleTurn: 0.12, xpRate: 0.5 }],          // 소식을 전하러 내려온
@@ -1969,16 +1972,16 @@ const AVATAR_UNIQUE = {
   anubis:        [{ life: 0.55, dex: 0.7 },                 { harmTouch: 0.07, pierce: 0.2 }],           // 심장의 무게를 재는 자
   artemis:       [{ dex: 1.5, defense: 0.5, life: 0.7 },    { critRate: 0.2 }],                          // 달과 사냥의 주인
   loki:          [{ luck: 2.2, damage: 0.5, defense: 0.6 }, { reflect: 0.3, findRate: 0.5 }],            // 묶여서도 웃는 자
-  susanoo:       [{ damage: 1.7, luck: 0.4, defense: 0.6 }, { survive: 0.2 }],                           // 쫓겨나서 영웅이 된
+  susanoo:       [{ damage: 1.7, luck: 0.4, defense: 0.6 }, { survive: 1 }],                           // 쫓겨나서 영웅이 된
   thor:          [{ damage: 2.0, dex: 0.45, luck: 0.6 },    { harmTouch: 0.05 }],                        // 천둥을 손에 쥔 자
   ares:          [{ damage: 1.6, defense: 0.35, life: 0.7 }, { doubleHit: 0.15, lifesteal: 0.1 }],       // 전쟁 그 자체
   poseidon:      [{ damage: 1.6, life: 1.4, dex: 0.4, luck: 0.5 }, {}],                                  // 땅을 흔드는 자
   amaterasu:     [{ damage: 0.6, dex: 0.7 },                { regen: 0.06, xpRate: 0.5 }],               // 동굴에서 나온 해
-  isis:          [{ damage: 0.5 },                          { survive: 0.4, regen: 0.05, findRate: 0.3 }], // 흩어진 것을 다시 모으는
+  isis:          [{ damage: 0.5 },                          { survive: 1, regen: 0.05, findRate: 0.3 }], // 흩어진 것을 다시 모으는
   // ── 14격 · 올림포스 정상 ──
   titan:         [{ defense: 1.9, life: 1.3, damage: 0.55, dex: 0.35 }, { block: 0.14 }],                   // 신에게 진 자들
-  osiris:        [{ life: 1.4, damage: 0.45, dex: 0.6 },    { survive: 0.55 }],                          // 찢겨서도 다시 맞춰진
-  izanagi:       [{ dex: 1.4, life: 0.6, luck: 0.6 },       { survive: 0.35 }],                          // 황천에서 돌아온 자
+  osiris:        [{ life: 1.4, damage: 0.45, dex: 0.6 },    { survive: 2 }],                          // 찢겨서도 다시 맞춰진
+  izanagi:       [{ dex: 1.4, life: 0.6, luck: 0.6 },       { survive: 1 }],                          // 황천에서 돌아온 자
   ra:            [{ damage: 1.3, defense: 0.6, dex: 0.6 },  { regen: 0.07 }],                            // 매일 세계를 다시 켜는 자
   vishnu:        [{ life: 1.3, damage: 0.6, dex: 0.6 },     { xpRate: 1.0 }],                            // 열 번 세상에 내려온
   indra:         [{ dex: 1.6, life: 0.5, defense: 0.6 },    { critRate: 0.25 }],                         // 천 개의 눈으로 보는 자
@@ -1987,7 +1990,7 @@ const AVATAR_UNIQUE = {
   shiva:         [{ damage: 1.5, life: 0.35, defense: 0.5 }, { harmTouch: 0.1 }],                        // 춤 한 번에 세계를 끝내는
   odin:          [{ luck: 1.5, life: 0.55, dex: 0.7 },      { critRate: 0.2, xpRate: 0.6 }],             // 한쪽 눈으로 모든 것을 본
   quetzalcoatl:  [{ dex: 1.6, defense: 0.5 },               { regen: 0.04, doubleHit: 0.1 }],            // 깃털 달린 뱀
-  ahuramazda:    [{ damage: 1.3, luck: 0.5, dex: 0.6 },     { survive: 0.4 }],                           // 꺼지지 않는 불
+  ahuramazda:    [{ damage: 1.3, luck: 0.5, dex: 0.6 },     { survive: 1 }],                           // 꺼지지 않는 불
   // ── 15격 · 궁극의 혼돈 ──
   dagon:         [{ life: 2.0, dex: 0.4 },                  { lifesteal: 0.12 }],                        // 깊은 곳의 아버지
   yig:           [{ life: 0.55, luck: 0.6 },                { pierce: 0.3, doubleHit: 0.15 }],           // 뱀들의 아버지
@@ -1997,7 +2000,7 @@ const AVATAR_UNIQUE = {
   hastur:        [{ damage: 1.5, life: 0.45, luck: 0.5 },   { critRate: 0.25 }],                         // 세 번 부르면 오는 황의 왕
   tsathoggua:    [{ defense: 2.2, life: 1.6, dex: 0.2, damage: 0.8 }, {}],                               // 움직이기 싫어하는 두꺼비 신
   glaaki:        [{ life: 0.5, defense: 0.6 },              { pierce: 0.4, harmTouch: 0.04 }],           // 가시로 꿈을 꿰는 자
-  cthulhu:       [{ life: 1.5, dex: 0.3, damage: 0.6 },     { survive: 0.6, regen: 0.05 }],              // 죽지 않고 잠들어 있을 뿐인
+  cthulhu:       [{ life: 1.5, dex: 0.3, damage: 0.6 },     { survive: 2, regen: 0.05 }],              // 죽지 않고 잠들어 있을 뿐인
   yogsothoth:    [{ defense: 1.4, damage: 0.4, dex: 0.6 },  { block: 0.25, reflect: 0.3 }],              // 문이자 열쇠이며 문지기인
   abhoth:        [{ damage: 0.5, defense: 0.7 },            { regen: 0.08, xpRate: 0.6 }],               // 끝없이 새것을 게워내는 웅덩이
   voidlord:      [{ damage: 1.7, defense: 0.3, life: 0.55 }, { pierce: 0.4 }],                              // 아무것도 아닌 것의 왕
@@ -2036,7 +2039,7 @@ function avatarProfile(foe) {
     const s = (1 + 0.04 * (foe.rank.n - AVATAR_MIN_RANK)) * (AVATAR_KIND_SCALE[foe.kind] || 1);
     p = { mul: {}, add: {} };
     for (const [k, v] of Object.entries(base.mul)) p.mul[k] = +Math.max(0.1, 1 + (v - 1) * s).toFixed(2);
-    for (const [k, v] of Object.entries(base.add)) p.add[k] = +(v * s).toFixed(3);
+    for (const [k, v] of Object.entries(base.add)) p.add[k] = k === 'survive' ? v : +(v * s).toFixed(3);   // 생존은 횟수라 키우지 않습니다
   }
   // 보여주는 값이 실제와 같도록 — 특수 능력치의 상한을 넘는 몫은 미리 잘라 둡니다
   for (const k of Object.keys(p.add)) if (p.add[k] > 0) p.add[k] = Math.min(SPECIAL_INFO[k].cap, p.add[k]);

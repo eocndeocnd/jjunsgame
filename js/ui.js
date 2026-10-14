@@ -534,6 +534,10 @@ function renderAlloc(run) {
 // value 가 문자열이면 그대로 씁니다 (크리티컬처럼 "27% · ×2.5" 같은 값)
 // 0.078 → "7.8%"
 function pctTxt(v) { return `${(num(v) * 100).toFixed(1)}%`; }
+// 특수 능력치의 값 — 대부분 %, 생존만 횟수 (1회 · 2회)
+function specialTxt(key, v) {
+  return SPECIAL_INFO[key] && SPECIAL_INFO[key].unit === '회' ? `${Math.round(num(v))}회` : pctTxt(v);
+}
 
 // 특수 능력치 한 줄 — 지금 값과 상한. 상한에 닿았으면 눈에 띄게.
 // 0 이어도 보여줍니다 — 무엇을 더 모을 수 있는지가 보여야 하니까요.
@@ -543,7 +547,7 @@ function specialRow(key, value) {
   const capped = v >= info.cap - 1e-9;
   return `<li class="${v > 0 ? '' : 'zero'} ${capped ? 'capped' : ''}" title="${info.desc}">
     <span class="stat-name">${info.name}</span>
-    <span class="stat-value">${pctTxt(v)}<span class="stat-cap">${capped ? '상한' : `/ ${Math.round(info.cap * 100)}%`}</span></span>
+    <span class="stat-value">${specialTxt(key, v)}<span class="stat-cap">${capped ? '상한' : `/ ${info.unit === '회' ? `${info.cap}회` : `${Math.round(info.cap * 100)}%`}`}</span></span>
   </li>`;
 }
 
@@ -564,7 +568,7 @@ function avatarEffectHTML(foe) {
   const name = k => (STAT_INFO.find(s => s.id === k) || SPECIAL_INFO[k] || { name: k }).name;
   const parts = [];
   for (const [k, v] of Object.entries(p.mul)) parts.push({ up: v > 1, t: `${name(k)} ×${v.toFixed(2)}` });
-  for (const [k, v] of Object.entries(p.add)) parts.push({ up: v > 0, t: `${name(k)} ${v > 0 ? '+' : '−'}${pctTxt(Math.abs(v))}` });
+  for (const [k, v] of Object.entries(p.add)) parts.push({ up: v > 0, t: `${name(k)} ${v > 0 ? '+' : '−'}${specialTxt(k, Math.abs(v))}` });
   parts.sort((a, b) => b.up - a.up);
   return parts.map(x => `<span class="${x.up ? 'up' : 'down'}">${x.up ? '▲' : '▼'} ${x.t}</span>`).join('');
 }
@@ -1851,8 +1855,8 @@ function renderSetBonus() {
     const step = setStep(n);
     const next = SET_STEPS[step];
     const text = Object.entries(bonus).map(([k, vals]) => {
-      const now = step ? `${SPECIAL_INFO[k].name} +${pctTxt(vals[step - 1])}` : `${SPECIAL_INFO[k].name} 없음`;
-      return next ? `${now} <em>· ${next}부위면 +${pctTxt(vals[step])}</em>` : now;
+      const now = step ? `${SPECIAL_INFO[k].name} +${specialTxt(k, vals[step - 1])}` : `${SPECIAL_INFO[k].name} 없음`;
+      return next ? `${now} <em>· ${next}부위면 +${specialTxt(k, vals[step])}</em>` : now;
     }).join(' ');
     return `<div class="sb-row ${step ? 'on' : ''}">
       <span class="arch-tag" style="--arch:${a.color}">${a.name}</span>
@@ -2259,7 +2263,7 @@ function itemStatText(item) {
 function itemSpecialText(item) {
   return SPECIAL_KEYS
     .filter(k => item[k])
-    .map(k => `${SPECIAL_INFO[k].name} +${(item[k] * 100).toFixed(1)}%`)
+    .map(k => `${SPECIAL_INFO[k].name} +${specialTxt(k, item[k])}`)
     .join(' · ');
 }
 
@@ -2277,7 +2281,7 @@ function itemDiffText(item, worn, m) {
   for (const k of SPECIAL_KEYS) {
     const d = num(item[k]) - num(worn && worn[k]);
     if (Math.abs(d) < 0.0005) continue;
-    parts.push(`<span class="${d > 0 ? 'up' : 'down'}">${SPECIAL_INFO[k].name} ${d > 0 ? '▲' : '▼'}${pctTxt(Math.abs(d))}</span>`);
+    parts.push(`<span class="${d > 0 ? 'up' : 'down'}">${SPECIAL_INFO[k].name} ${d > 0 ? '▲' : '▼'}${specialTxt(k, Math.abs(d))}</span>`);
   }
   return parts.length ? parts.join('') : '<span class="same">차이 없음</span>';
 }
