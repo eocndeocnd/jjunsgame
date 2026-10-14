@@ -626,15 +626,16 @@ function makeItemStats(slot, level, gradeMult = 1, archetype = null, vital = fal
 //
 // 정예와 보스는 **한 회차에 한 번뿐**입니다. 꺾고 나면 그 여정에선 다시 못 만납니다.
 // 대신 훨씬 좋은 걸 남깁니다 — 그래서 그 자리에 갈지 말지가 매번 고민이 됩니다.
+// energy 는 『격을 삼키는 검』으로 처음 꺾을 때 얻는 에너지 (정예 1 · 히든 2 · 보스 2). 칠죄종은 예외 — devourEnergy.
 const KINDS = {
   // dropChance 는 **전리품 하나하나에 따로** 굴리는 확률입니다.
   // 세 종류를 가진 일반 적이라면 22% 를 세 번 굴리므로
   // 아무것도 못 얻을 확률이 47% 입니다 — 빈손으로 돌아서는 날이 있어야
   // 행운에 투자할 이유가 생깁니다.
   normal: { id: 'normal', name: '일반', mult: 1.0, lifeMult: 1.0,  penalty: 'LOSS_PENALTY',       once: false, energy: 0, dropChance: 0.22, gold: 1 },
-  elite:  { id: 'elite',  name: '정예', mult: 1.4, lifeMult: 1.2,  penalty: 'LOSS_PENALTY_ELITE', once: true,  energy: 2, dropChance: 0.32, gold: 4 },
-  hidden: { id: 'hidden', name: '히든', mult: 1.6, lifeMult: 1.25, penalty: 'LOSS_PENALTY_ELITE', once: true,  energy: 3, dropChance: 1.00, gold: 5 },
-  boss:   { id: 'boss',   name: '격',   mult: 1.8, lifeMult: 1.3,  penalty: 'BOSS_LOSS_PENALTY',  once: true,  energy: 4, dropChance: 0.40, gold: 10 }
+  elite:  { id: 'elite',  name: '정예', mult: 1.4, lifeMult: 1.2,  penalty: 'LOSS_PENALTY_ELITE', once: true,  energy: 1, dropChance: 0.32, gold: 4 },
+  hidden: { id: 'hidden', name: '히든', mult: 1.6, lifeMult: 1.25, penalty: 'LOSS_PENALTY_ELITE', once: true,  energy: 2, dropChance: 1.00, gold: 5 },
+  boss:   { id: 'boss',   name: '격',   mult: 1.8, lifeMult: 1.3,  penalty: 'BOSS_LOSS_PENALTY',  once: true,  energy: 2, dropChance: 0.40, gold: 10 }
 };
 
 function lossPenaltyFor(kind) { return RULES[KINDS[kind].penalty]; }
@@ -1595,6 +1596,13 @@ const ITEMS = [];
 // 등장 순서대로 레벨을 깔아줍니다. 적을 몇 마리 추가하든 알아서 다시 배분됩니다.
 const TOTAL_FOES = ZONES.reduce((n, z) => n + z.enemies.length, 0);
 const LADDER = buildLadder(TOTAL_FOES);
+
+// 『격을 삼키는 검』이 삼킬 수 있는 에너지. 칠죄종 일곱은 정예여도 삼킬 격이 없습니다 — 에너지가 늘지 않습니다.
+const SIN_FOES = new Set(['sinpride', 'sinwrath', 'singreed', 'sinsloth', 'sinenvy', 'sinlust', 'singluttony']);
+function devourEnergy(foe) {
+  if (!foe || SIN_FOES.has(foe.id)) return 0;
+  return KINDS[foe.kind] ? KINDS[foe.kind].energy : 0;
+}
 
 // ---------- 한 화신이 남기는 전리품은 최대 세 종류 ----------
 // EXTRA_DROPS 를 덧붙이면서 쉰한 마리가 네 종류가 됐습니다.

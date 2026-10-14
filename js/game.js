@@ -345,7 +345,7 @@ function bossXpMult() {
 function bankedEnergy() {
   return State.meta.banked.reduce((n, id) => {
     const e = getEnemy(id);
-    return n + (e ? KINDS[e.kind].energy : 0);
+    return n + devourEnergy(e);
   }, 0);
 }
 
@@ -1242,8 +1242,8 @@ function engage() {
   // 『격을 삼키는 검』을 들고 있으면 그 격을 삼켜 에너지로 바꿉니다.
   // 한 번 삼킨 격은 영구히 적립되어, 다음 회차부터 시작 에너지에 얹힙니다.
   let devoured = 0;
-  if (enemy.once && hasDevourer() && !State.meta.banked.includes(enemy.id)) {
-    devoured = KINDS[enemy.kind].energy;
+  if (enemy.once && hasDevourer() && !State.meta.banked.includes(enemy.id) && devourEnergy(enemy) > 0) {
+    devoured = devourEnergy(enemy);
     State.meta.banked.push(enemy.id);
     run.energy += devoured;
     pushLog('devour',
