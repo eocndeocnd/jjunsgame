@@ -996,14 +996,14 @@ const ZONES = [
       { id: 'singreed', name: '칠죄종 · 탐욕', title: '가져도 모자란 것', icon: '💰', kind: 'elite',
         d: [['ring', '탐욕의 반지'], ['necklace', '끝없는 자루']] },
       { id: 'demongeneral', name: '마신장', title: '마왕의 왼팔', icon: '⚔️',
-        d: [['weapon', '마신의 창'], ['helm', '마장의 투구'], ['gloves', '마장의 건틀릿']] },
+        d: [['weapon', '마신의 창'], ['armor', '흑요석 판금', 'retired'], ['helm', '마장의 투구'], ['gloves', '마장의 건틀릿']] },
       // 관측자는 이 검 하나만 남깁니다. 그래서 분해될 일도 없습니다.
       // 검에는 공격력이 아예 없습니다 — 이걸 들면 보스가 확실히 더 어려워져야
       // "에너지를 모을 것인가, 싸울 것인가" 가 진짜 선택이 되니까요.
       { id: 'observer', name: '관측자', title: '처음부터 당신을 보고 있던 것', icon: '👁️', kind: 'hidden',
         d: [['weapon', '격을 삼키는 검', 'none']] },
       { id: 'worldworm', name: '세계수를 먹는 벌레', title: '뿌리부터 갉아먹는', icon: '🐛', kind: 'elite',
-        d: [['necklace', '세계수의 파편'], ['shoulder', '마디 갑각'], ['bracelet', '갉는 팔찌']] },
+        d: [['weapon', '갉는 턱', 'retired'], ['armor', '마디 갑각', 'retired'], ['necklace', '세계수의 파편']] },
       { id: 'apocalypsebeast', name: '종말의 짐승', title: '뿔이 일곱 개인', icon: '🐏',
         d: [['helm', '일곱 뿔의 관'], ['greaves', '짓밟는 각반']] },
       { id: 'demonking', name: '마왕', title: '세계를 끝내러 온 자', icon: '💀', kind: 'boss',
@@ -1251,7 +1251,7 @@ const ZONES = [
       { id: 'osiris', name: '오시리스의 화신', title: '찢겨서도 다시 맞춰진', icon: '🏺',
         d: [['offhand', '갈고리 홀'], ['greaves', '아마포 각반']] },
       // 6격 마계에 있던 것 — 신에게 진 자들은 신화의 정상에 어울립니다
-      { id: 'titan', name: '타이탄', title: '신에게 진 자들', icon: '🗿',
+      { id: 'titanmyth', name: '타이탄', title: '신에게 진 자들', icon: '🗿',
         d: [['greaves', '거인의 각반'], ['offhand', '산을 깎은 방패']] },
       { id: 'izanagi', name: '이자나기의 화신', title: '황천에서 돌아온 자', icon: '🗾',
         d: [['shoulder', '황천의 견갑'], ['boots', '황천을 밟은 신']] },
@@ -1305,7 +1305,7 @@ const ZONES = [
       { id: 'abhoth', name: '아브호스의 화신', title: '끝없이 새것을 게워내는 웅덩이', icon: '🫧',
         d: [['armor', '끓는 진흙 갑주'], ['boots', '녹아내리는 신'], ['bracelet', '갓 태어난 고리']] },
       // 6격 마계에 있던 것 — 마왕보다 높은 격이라 뒤쪽으로 옮겼습니다
-      { id: 'voidlord', name: '공허의 군주', title: '아무것도 아닌 것의 왕', icon: '🕳️',
+      { id: 'voidlordmyth', name: '공허의 군주', title: '아무것도 아닌 것의 왕', icon: '🕳️',
         d: [['weapon', '공허의 낫'], ['armor', '없음의 갑주'], ['bracelet', '빈 고리']] },
       { id: 'nyarlathotep', name: '니알라토텝의 화신', title: '천 개의 가면을 쓴 기어오는 혼돈', icon: '🎭',
         d: [['weapon', '천 개째의 가면'], ['cloak', '검은 파라오의 의복'], ['greaves', '기어오는 각반']] },
@@ -1397,14 +1397,14 @@ const ENEMY_ARCHETYPE = {
   poseidon: 'brutal',   amaterasu: 'ward',     isis: 'growth',       hades: 'thorn',
 
   // 14격 주신 — 올림포스 정상
-  titan: 'guard',       osiris: 'leech',      izanagi: 'pierce',     ra: 'fierce',         vishnu: 'ward',
+  titanmyth: 'guard',   osiris: 'leech',      izanagi: 'pierce',     ra: 'fierce',         vishnu: 'ward',
   indra: 'brutal',      hwanin: 'guard',       jadeemperor: 'guard', shiva: 'pierce',
   odin: 'pierce',       quetzalcoatl: 'swift', ahuramazda: 'thorn',  zeus: 'fierce',
 
   // 15격 외신 — 궁극의 혼돈
   dagon: 'leech',       yig: 'thorn',          ithaqua: 'swift',      chaugnar: 'leech',    shubniggurath: 'ward',
   hastur: 'thorn',      tsathoggua: 'ward',    glaaki: 'growth',     cthulhu: 'brutal',
-  yogsothoth: 'lucky',  abhoth: 'leech',       voidlord: 'pierce',    nyarlathotep: 'swift', azathoth: 'brutal'
+  yogsothoth: 'lucky',  abhoth: 'leech',       voidlordmyth: 'pierce', nyarlathotep: 'swift', azathoth: 'brutal'
 };
 
 // ============================================================
@@ -1445,7 +1445,7 @@ const EXTRA_DROPS = {
   lichking: [['gloves', '서리 건틀릿']],
 
   // 6격 마왕
-  titan: [['belt', '거인의 허리띠']],      elderdragon: [['gloves', '고룡 발톱 장갑']],
+  titanmyth: [['belt', '거인의 허리띠']],      elderdragon: [['gloves', '고룡 발톱 장갑']],
   singreed: [['belt', '탐욕의 전대']],
   demonking: [['belt', '마왕의 허리띠']],
 
@@ -1491,8 +1491,9 @@ const EXTRA_DROPS = {
   banshee: [['cloak', '통곡의 망토']],         demonlord: [['cloak', '지옥 망토']],
   succubus: [['bracelet', '유혹의 팔찌']],     bonedragon: [['bracelet', '뼈 팔찌']],
   // 6격
-  archdemon: [['cloak', '군단장의 망토']],     voidlord: [['cloak', '공허 망토']],
+  archdemon: [['cloak', '군단장의 망토']],     voidlordmyth: [['cloak', '공허 망토']],
   sinpride: [['bracelet', '오만의 팔찌']],
+  worldworm: [['bracelet', '갉는 팔찌'], ['shoulder', '마디 갑각']],
   // 7격
   herodotos: [['cloak', '여행자의 망토']],     alexander: [['cloak', '정복자의 자줏빛 망토']],
   hypatia: [['bracelet', '천문 팔찌']],        spartacus: [['bracelet', '끊어진 쇠고랑']],
@@ -1708,8 +1709,13 @@ ZONES.forEach((zone, zi) => {
       }
       list = list.concat([sp.item]);   // 번호는 맨 뒤에 새로 받습니다 — 빠진 것의 번호를 물려받지 않게
     }
+    // 세 번째가 'retired' 인 것은 빠진 전리품입니다 — 번호만 남기고 만들지 않으며, 가진 저장본은 강화석으로 돌려받습니다.
+    // (같은 번호에 다른 물건을 넣으면 가진 사람의 장비가 몰래 바뀝니다)
+    list.forEach(([slot, name, opt], i) => {
+      if (opt === 'retired') RETIRED_ITEMS[`${e.id}_${i}`] = { slot, grade: kind, rank, name };
+    });
     const cands = list.map((spec, idx) => ({ spec, idx }))
-      .filter(c => c.idx !== retired && !(low && c.spec[0] === 'special'));
+      .filter(c => c.idx !== retired && c.spec[2] !== 'retired' && !(low && c.spec[0] === 'special'));
     const drops = trimDrops(cands, e.id, e.d.length);
     drops.forEach(({ spec: [slot, name, opt], idx: i }) => {
       const noArch = opt === 'none';
@@ -1739,6 +1745,13 @@ ZONES.forEach((zone, zi) => {
     });
   });
 });
+
+// 6격 마계에 있다가 뒤쪽 신화 격으로 옮긴 타이탄 · 공허의 군주 — 옛 id 의 전리품은 빼고, 가진 저장본은 강화석으로 돌려받습니다.
+// (id 를 그대로 두면 가진 사람의 낫 · 갑주가 하루아침에 14~15격 성능이 됩니다)
+for (const [id, slot, name] of [
+  ['titan_0', 'greaves', '거인의 각반'], ['titan_1', 'offhand', '산을 깎은 방패'], ['titan_2', 'belt', '거인의 허리띠'],
+  ['voidlord_0', 'weapon', '공허의 낫'], ['voidlord_1', 'armor', '없음의 갑주'], ['voidlord_2', 'bracelet', '빈 고리']
+]) RETIRED_ITEMS[id] = { slot, grade: 'normal', rank: RANKS.find(r => r.n === 6), name };
 
 // ---------- 부위 희소성 ----------
 // 부위마다 전리품 가짓수가 다릅니다 (무기가 허리띠의 서너 배). 그대로 두면
@@ -1992,7 +2005,7 @@ const AVATAR_UNIQUE = {
   amaterasu:     [{ damage: 0.6, dex: 0.7 },                { regen: 0.06, xpRate: 0.5 }],               // 동굴에서 나온 해
   isis:          [{ damage: 0.5 },                          { survive: 1, regen: 0.05, findRate: 0.3 }], // 흩어진 것을 다시 모으는
   // ── 14격 · 올림포스 정상 ──
-  titan:         [{ defense: 1.9, life: 1.3, damage: 0.55, dex: 0.35 }, { block: 0.14 }],                   // 신에게 진 자들
+  titanmyth:     [{ defense: 1.9, life: 1.3, damage: 0.55, dex: 0.35 }, { block: 0.14 }],                   // 신에게 진 자들
   osiris:        [{ life: 1.4, damage: 0.45, dex: 0.6 },    { survive: 2 }],                          // 찢겨서도 다시 맞춰진
   izanagi:       [{ dex: 1.4, life: 0.6, luck: 0.6 },       { survive: 1 }],                          // 황천에서 돌아온 자
   ra:            [{ damage: 1.3, defense: 0.6, dex: 0.6 },  { regen: 0.07 }],                            // 매일 세계를 다시 켜는 자
@@ -2016,7 +2029,7 @@ const AVATAR_UNIQUE = {
   cthulhu:       [{ life: 1.5, dex: 0.3, damage: 0.6 },     { survive: 2, regen: 0.05 }],              // 죽지 않고 잠들어 있을 뿐인
   yogsothoth:    [{ defense: 1.4, damage: 0.4, dex: 0.6 },  { block: 0.25, reflect: 0.3 }],              // 문이자 열쇠이며 문지기인
   abhoth:        [{ damage: 0.5, defense: 0.7 },            { regen: 0.08, xpRate: 0.6 }],               // 끝없이 새것을 게워내는 웅덩이
-  voidlord:      [{ damage: 1.7, defense: 0.3, life: 0.55 }, { pierce: 0.4 }],                              // 아무것도 아닌 것의 왕
+  voidlordmyth:  [{ damage: 1.7, defense: 0.3, life: 0.55 }, { pierce: 0.4 }],                              // 아무것도 아닌 것의 왕
   nyarlathotep:  [{ luck: 2.0, life: 0.5, defense: 0.5 },   { critRate: 0.15, doubleTurn: 0.1 }]          // 천 개의 가면을 쓴 기어오는 혼돈
 };
 
