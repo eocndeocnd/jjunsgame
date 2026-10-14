@@ -2761,22 +2761,19 @@ body.fight-locked .je-xp { display: none; }
 .doll-icw { position: relative; flex: none; display: block; width: 46px; height: 46px; }
 .doll-badge {
   position: absolute;
-  top: -5px;
-  right: -9px;
+  top: -6px;
+  right: -8px;
   z-index: 2;
-  min-width: 20px;
-  padding: 0 4px;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
-  line-height: 16px;
-  text-align: center;
-  color: var(--cream);
-  background: var(--accent);
-  box-shadow: 0 0 0 2px var(--frame-out);
+  line-height: 1;
+  color: var(--accent);
+  /* 네모칸 없이 글자만 — 바탕이 뭐든 읽히도록 밝은 테두리 */
+  text-shadow: -1px 0 var(--cream), 1px 0 var(--cream), 0 -1px var(--cream), 0 1px var(--cream), 1px 1px var(--cream), -1px -1px var(--cream);
   white-space: nowrap;
 }
-.doll-slot.enh-cell .doll-badge { background: var(--text-dim); }
-.doll-slot.enh-cell.ready .doll-badge { background: var(--energy); }
+.doll-slot.enh-cell .doll-badge { color: var(--text-dim); }
+.doll-slot.enh-cell.ready .doll-badge { color: var(--energy); }
 
 </style>
 </head>
