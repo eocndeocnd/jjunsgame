@@ -2811,3 +2811,7 @@ body.fight-locked .je-xp { display: none; }
 .ag-name { font-size: 17px; font-weight: 700; color: var(--outer, var(--accent)); letter-spacing: 0.02em; }
 .ag-line { margin: 10px 4px 8px; font-size: 14px; line-height: 1.6; word-break: keep-all; }
 .ag-fx { justify-content: center; margin: 0 0 10px; }
+
+/* 결과의 「스탯 분배」 — 줄 모음 오른쪽 아래, 마지막 줄 옆 빈자리 */
+.res-lines { position: relative; }
+.res-lines .res-alloc { position: absolute; right: 0; bottom: 8px; width: auto; margin: 0; padding: 8px 12px; white-space: nowrap; }

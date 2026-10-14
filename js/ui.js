@@ -127,6 +127,7 @@ function paintLevel(lv, pct, done) {
     const a = $('heroLevel'); if (a) a.textContent = 'Lv.' + txt;
     const b = $('jeLv'); if (b) b.textContent = txt;
   }
+  const c = $('resLv'); if (c) c.textContent = done ? c.dataset.final : 'Lv.' + txt;   // 결과의 레벨 줄 — 굴러가다 끝나면 「A → B」
   const p = Math.max(0, Math.min(100, pct));
   for (const id of ['xpFill', 'jeXpFill']) {
     const el = $(id);
@@ -656,7 +657,9 @@ function renderJourney() {
   // 창 둘 — 지역 · 에너지 · 차림을 한 창에, 그 아래 무대. 창 사이로 맨 뒤의 지도가 보입니다.
   // (예전엔 지역과 에너지가 따로 창이었는데, 폰에서 무대가 한 화면에 안 들어와 합쳤습니다)
   // 지역 소개글(zone.flavor)은 data.js 에만 남겨두고 화면에는 안 씁니다 — 이름이면 충분합니다.
-  let html = `
+  // 결과가 뜬 동안에는 이 창을 그리지 않습니다 — 결과 화면이 한 화면에 들어오게 (레벨은 결과의 「레벨」 줄에 있습니다)
+  const showingResult = !!run.lastResult && !(battle && battle.r === run.lastResult);
+  let html = showingResult ? '' : `
     <div class="frame zone-card ${low ? 'low' : ''}">
       <div class="zone-head">
         <span class="rank-chip r${rank.n}">제${rank.n}격 · ${rank.name}<span class="hanja">${rank.hanja}</span></span>
@@ -1257,9 +1260,8 @@ function resultCard(r, run) {
   if (r.win) {
     lines.push(row('경험치', `+${fmt(r.xp)}`, mults.length ? mults.join(' · ') : ''));
     if (r.gold) lines.push(row('골드', `+${fmt(r.gold)}`));
-    lines.push(r.levelsGained > 0
-      ? row('레벨', `Lv.${fmtLevel(r.levelBefore)} → Lv.${fmtLevel(run.level)}`, `+${fmtLevel(r.levelsGained)}`)
-      : row('레벨', `Lv.${fmtLevel(run.level)}`));
+    const lvFinal = r.levelsGained > 0 ? `Lv.${fmtLevel(r.levelBefore)} → Lv.${fmtLevel(run.level)}` : `Lv.${fmtLevel(run.level)}`;
+    lines.push(row('레벨', `<span id="resLv" data-final="${lvFinal}">${lvFinal}</span>`, r.levelsGained > 0 ? `+${fmtLevel(r.levelsGained)}` : ''));
     // 설명 글은 뺐습니다 — 값만 보고 알 수 있게 적습니다 (삼킨 격은 다음 회차부터 붙으니 「시작 에너지」)
     if (r.devoured > 0) lines.push(row('삼킨 격', `시작 에너지 +${r.devoured}`));
     if (r.refund > 0) lines.push(row('되찾은 에너지', `+${r.refund}`));
@@ -1313,12 +1315,11 @@ function resultCard(r, run) {
       ${r.openedPath ? `<div class="res-path">길이 열렸다</div>` : ''}
       ${r.openedPath && foe.id === WALL_BOSS
         ? `<div class="res-path exit ${wallMoments.has(r) ? '' : 'late'}">나가는 길도 열렸다.</div>` : ''}
-      <div class="res-lines">${lines.join('')}</div>
+      <div class="res-lines">${lines.join('')}${run.over ? '' : `<button id="toAllocBtn" class="btn tiny res-alloc">스탯 분배${run.unspent > 0 ? '<span class="alloc-pip on"></span>' : ''}</button>`}</div>
       ${drops}
       <div class="res-actions">
         <button id="continueBtn" class="btn primary thumb">${run.over ? '여정을 마친다' : '계속한다'}${KEY_HINT}</button>
         ${gearJumpButton(r)}
-        ${run.over ? '' : '<button id="toAllocBtn" class="btn">스탯을 다시 나눈다</button>'}
       </div>
     </div>`;
 }
@@ -1553,7 +1554,7 @@ function wireJourney() {
   });   // 소리는 전투 화면이 한 줄씩 냅니다
   on('retreatBtn',   () => { retreat();        Sound.play('retreat');    render(); });
   on('continueBtn',  () => { dismissResult();  render(); });
-  on('toAllocBtn',   () => { dismissResult();  render(); spotlightAlloc(); });
+  on('toAllocBtn',   openAllocHere);   // 결과는 그대로 두고 분배 창만 띄웁니다
   on('toGearBtn',    () => {
     const slot = $('toGearBtn').dataset.goslot;
     dismissResult(); render(); spotlightGear(slot);
