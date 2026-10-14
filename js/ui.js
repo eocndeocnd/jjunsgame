@@ -553,7 +553,7 @@ function statRow(name, value, bonus) {
 }
 
 // ---------- 화신 ----------
-// 얻은 화신이 있을 때만 「나」 창에 나옵니다. 한 번에 하나만 삼고, 언제든 바꿉니다 (싸우는 중에는 못 바꿈).
+// 화신 창에서 고릅니다 (사람 그림 왼쪽 위의 화신 칸). 한 번에 하나만 삼고, 언제든 바꿉니다 (싸우는 중에는 못 바꿈).
 // 화신마다 무엇이 오르고(▲) 무엇이 깎이는지(▼) 그대로 보여줍니다 — 그걸 보고 고르는 게 이 칸의 재미입니다.
 function avatarEffectHTML(foe) {
   const p = avatarProfile(foe);
@@ -564,15 +564,7 @@ function avatarEffectHTML(foe) {
   parts.sort((a, b) => b.up - a.up);
   return parts.map(x => `<span class="${x.up ? 'up' : 'down'}">${x.up ? '▲' : '▼'} ${x.t}</span>`).join('');
 }
-function renderAvatars() {
-  const el = $('avatars');
-  if (el) {
-    const has = (State.meta.avatars || []).length > 0;
-    el.parentElement.hidden = !has;
-    if (has) fillAvatars(el); else el.innerHTML = '';
-  }
-  renderAvatarModal();
-}
+function renderAvatars() { renderAvatarModal(); }   // 화신 목록은 화신 창(사람 그림의 화신 칸)에만 있습니다
 function fillAvatars(el) {
   const list = (State.meta.avatars || []).map(getEnemy).filter(Boolean);
   if (!list.length) { el.innerHTML = ''; return; }
