@@ -2810,6 +2810,24 @@ body.fight-locked .je-xp { display: none; }
   padding: 12px 18px;
 }
 
+/* 화신이 되었을 때 결과창 위의 창 — 그림 칸(나중에 화신 그림이 들어올 자리)과 한마디 */
+.avatar-gain-card { text-align: center; }
+.ag-art {
+  width: 132px;
+  height: 132px;
+  margin: 8px auto 10px;
+  display: grid;
+  place-items: center;
+  font-size: 76px;
+  line-height: 1;
+  background: var(--paper-lo);
+  box-shadow: inset 0 0 0 3px #c7a464, inset 0 0 0 6px var(--paper-hi), 0 0 0 2px var(--frame-out);
+}
+.ag-art img { width: 100%; height: 100%; object-fit: contain; display: block; image-rendering: pixelated; }
+.ag-name { font-size: 17px; font-weight: 700; color: var(--outer, var(--accent)); letter-spacing: 0.02em; }
+.ag-line { margin: 10px 4px 8px; font-size: 14px; line-height: 1.6; word-break: keep-all; }
+.ag-fx { justify-content: center; margin: 0 0 10px; }
+
 </style>
 </head>
 <body data-tab="journey">
@@ -3038,6 +3056,21 @@ body.fight-locked .je-xp { display: none; }
     <p id="talkBody" class="tut-body"></p>
     <div class="tut-actions">
       <button id="talkNext" class="btn primary">다음<kbd>Space</kbd></button>
+    </div>
+  </div>
+</div>
+
+<!-- 싸움이 끝나고 화신을 얻었을 때 결과창 위에 뜨는 창 — 화신의 그림과 한마디 (ui.js 의 avatarMoment).
+     그림 칸(agArt)은 지금 이모티콘 — 나중에 화신 그림이 들어올 자리입니다. -->
+<div id="avatarGain" class="overlay hidden">
+  <div class="overlay-card tutorial-card talk-card avatar-gain-card">
+    <div class="tut-step">화신이 되었다</div>
+    <div class="ag-art" id="agArt"></div>
+    <div class="ag-name" id="agName"></div>
+    <p class="tut-body ag-line" id="agLine"></p>
+    <div class="av-fx ag-fx" id="agFx"></div>
+    <div class="tut-actions">
+      <button id="agOk" class="btn primary">받아들인다<kbd>Space</kbd></button>
     </div>
   </div>
 </div>
@@ -6387,6 +6420,126 @@ const AVATAR_POWERS = {
 };
 
 function canBecomeAvatar(foe) { return !!foe && foe.rank.n >= AVATAR_MIN_RANK && !foe.final; }
+// 화신이 되었을 때 결과창 위에 뜨는 화신의 한마디 (ui.js 의 avatarMoment)
+const AVATAR_LINES = {
+  storyteller: '처음부터 끝까지 들어 줄 사람이 필요했다. 네가 마지막 독자가 되어 다오.',
+  scribe: '눈이 멀 때까지 베껴 썼지. 이번엔 네가 가는 길을 받아 적으마.',
+  archimedes: '발 디딜 곳만 다오. 세계는 네 쪽으로 기울어 움직일 테니.',
+  hypatia: '불타는 서가에서 마지막으로 꺼낸 게 너다. 잘 읽혀라.',
+  sunzi: '싸움은 이미 끝나 있었다. 네가 이긴 쪽에 서 있었을 뿐.',
+  davinci: '설계도는 아직 덜 그렸다. 네 몸으로 마저 그려 보자.',
+  herodotos: '네가 한 일을 있는 그대로 적어 두겠다. 부풀리지는 않는다.',
+  joan: '목소리가 시키는 대로 갔을 뿐이야. 이번엔 네가 가는 길을 따라가지.',
+  spartacus: '사슬은 끊으라고 있는 것이다. 네 사슬도 같이 끊어 주마.',
+  genghis: '지평선 너머가 궁금하지 않나? 말을 내줄 테니 달려라.',
+  alexander: '세계가 좁았다. 네가 가는 곳은 얼마나 넓은지 보고 싶군.',
+  trismegistus: '위에서와 같이 아래에서도. 네가 선 자리가 곧 그 증거다.',
+  yisunsin: '신에게는 아직 열두 척의 배가 남아 있사옵니다. 함께 나아가지요.',
+  nangin: '값은 이미 치렀다. 이제부터 내 칼은 네 것이다.',
+  gaebang: '소문은 거지가 제일 빠르지. 네 소문은 내가 퍼뜨려 주마.',
+  emei: '자비롭게 웃으며 찌를 줄도 안다. 함께 가면 쓸모가 있을 거다.',
+  shaolin: '몸은 쇠처럼, 마음은 물처럼. 맞는 법부터 배워라.',
+  dalma: '…구 년째 벽만 보다가 너를 봤다. 나쁘지 않군.',
+  wudang: '힘을 빼라. 센 것은 부드러운 것에게 진다.',
+  tangga: '손끝이 닿기만 해도 족하다. 네 적에게도 알려 주지.',
+  hwasan: '매화는 눈 속에서 핀다. 네 앞길이 얼어 있을수록 좋지.',
+  zhangsanfeng: '원을 그려 보아라. 끝과 시작이 만나는 곳에 답이 있다.',
+  namgung: '남궁의 검은 하늘을 가른다. 네 앞길도 갈라 주지.',
+  bukhae: '얼음 궁은 춥지만 사람은 따뜻하더군. 오래 곁에 있어도 되겠나.',
+  cheonma: '하늘 아래 마(魔)는 하나뿐이다. 이제 그 하나가 네 안에 산다.',
+  yeongsa: '백 년을 똬리 틀고 기다렸다. 이제 움직일 때가 되었군.',
+  geumjam: '독충을 다 먹고 남은 건 나 하나. 너도 남는 쪽이 되어라.',
+  geumseom: '동전 하나 뱉어 주마. 복이란 건 받는 쪽이 하기 나름이다.',
+  sansam: '캐려고 오는 사람은 많았지. 같이 가자고 한 건 네가 처음이다.',
+  gumiho: '천 년을 채우면 사람이 된다더군. 네 곁이면 채울 만하겠어.',
+  bingjam: '만년설 속에서 실을 뽑았다. 네 길이 끊기지 않게 엮어 주마.',
+  ungnyeo: '백 일을 버텼다. 버티는 법이라면 가르쳐 줄 수 있지.',
+  sangun: '내 이름을 입에 올리는 자는 없었다. 네가 처음이군. 좋다.',
+  geumsijo: '용도 먹고 산 날개다. 높이 나는 법을 알려 주마.',
+  hwarin: '불을 밟고 걸어도 풀 한 포기 안 태운다. 네 발밑도 그렇게 해 주지.',
+  yeonggu: '만 년을 걸었으니 급할 것 없다. 천천히 가도 도착은 한다.',
+  bonghwang: '태평한 세상에만 내려앉는다. 네가 그런 세상을 만들 수 있겠나.',
+  imugi: '천 년을 기다렸다. 용이 되는 날이 오늘이라면 네 덕이다.',
+  theseus: '미궁에서 돌아오는 길을 안다. 실 끝은 내가 쥐고 있지.',
+  perseus: '보지 않고도 벤다. 눈을 감고 따라와라.',
+  odysseus: '열 해를 헤매도 돌아간다. 돌아가는 길이라면 내가 안내하마.',
+  atalanta: '나보다 빠르면 곁을 내주마. …방금 졌군, 내가.',
+  enkidu: '흙에서 나와 흙으로 돌아간다. 그 사이는 벗과 함께면 족하다.',
+  gilgamesh: '영생은 놓쳤다. 그래도 잡을 수 있는 건 아직 많더군.',
+  hector: '질 줄 알면서 나섰다. 너는 이기려고 나서라. 그 차이가 전부다.',
+  achilles: '약점은 하나뿐이다. 그 하나를 네가 지켜 다오.',
+  cuchulainn: '빛의 아이는 쓰러지면서도 선 채로 죽는다. 너도 그리 서라.',
+  beowulf: '괴물은 맨손으로 찢는 거다. 칼은 그다음 일이고.',
+  arjuna: '과녁의 눈만 보인다. 네 눈에도 그것만 보이게 해 주지.',
+  siegfried: '용의 피를 뒤집어썼지만 등 한 곳은 젖지 않았다. 그곳은 네가 맡아라.',
+  heracles: '열두 번 죽고 열두 번 돌아왔다. 열세 번째도 같이 가자.',
+  guardianangel: '한 사람 곁에 하나씩. 이제 네 곁은 내 자리다.',
+  principality: '나라 하나를 맡았던 손이다. 네 하나쯤은 거뜬하지.',
+  powerangel: '악을 쫓는 첫 칼이 여기 있다. 겨눌 곳을 가리켜라.',
+  trumpetangel: '첫 나팔은 아직 불지 않았다. 네가 신호를 줄 때까지.',
+  raphael: '신이 고치신다. 나는 그 손을 빌려줄 뿐이다.',
+  virtueangel: '기적은 드물어서 기적이다. 네 몫으로 한 번쯤 아껴 두마.',
+  dominion: '다스리는 자들을 다스려 왔다. 네 한 몸쯤이야.',
+  throneangel: '수많은 눈이 네 길을 보고 있다. 눈 돌릴 곳이 없을 거다.',
+  gabriel: '소식을 가져왔다 — 이제 네가 소식이다.',
+  cherub: '불칼은 에덴을 지켰다. 이제 네 앞을 지킨다.',
+  seraph: '얼굴을 가린 건 눈부셔서가 아니다. 네가 부끄럽지 않게 하려는 거지.',
+  michael: '용을 떨어뜨린 칼이다. 네가 겨누는 건 무엇이든 떨어지겠지.',
+  legion: '우리의 이름은 군대. 이제 우리 전부가 네 이름이 된다.',
+  moloch: '제단은 늘 배고프다. 네가 바치는 건 승리뿐이면 좋겠군.',
+  baphomet: '녹이고 굳히는 건 내 일이다. 네 약점도 굳혀 주지.',
+  azazel: '칼 벼리는 법을 알려 준 죄로 갇혔다. 네게도 가르쳐 주지, 값은 나중에.',
+  beelzebub: '파리 떼가 네 앞길을 먼저 훑어 줄 거다.',
+  mephisto: '영혼은 값으로 쳐주마. 네 건 아직 받지 않았으니 안심해라.',
+  astaroth: '독사를 타고 왔다. 물리는 쪽은 늘 네 적이 되겠지.',
+  belial: '무가치한 자라 불렸다. 그래서 자유롭다. 너도 그 편이 편할걸.',
+  asmodeus: '솔로몬의 반지도 빼앗았다. 네 앞길의 문쯤이야.',
+  paimon: '서쪽 끝까지 다스렸다. 길을 물으면 대답해 주마.',
+  lilith: '먼저 떠난 자가 길을 안다. 따라와라, 뒤돌아보지 말고.',
+  lucifer: '가장 높이 있었기에 가장 깊이 떨어졌다. 너는 떨어지지 마라.',
+  hermes: '경계를 넘나드는 게 내 일이다. 너를 건너편까지 배달해 주지.',
+  bastet: '집도 전쟁도 지킨다. 어느 쪽이 필요하냐.',
+  anubis: '심장을 달아 보았다. 네 쪽이 더 가볍더군. 좋은 뜻이다.',
+  artemis: '달이 뜨면 사냥을 시작한다. 쫓을 것을 가리켜라.',
+  loki: '묶여서도 웃었지. 웃을 일이 하나 늘었군, 네 덕에.',
+  susanoo: '쫓겨나서 영웅이 됐다. 쫓겨나는 것도 나쁘지 않다.',
+  thor: '천둥은 부르는 것이 아니라 쥐는 것이다. 자, 잡아라.',
+  ares: '전쟁 그 자체다. 싸우고 싶을 때 내 이름을 불러라.',
+  poseidon: '땅이 흔들리면 내가 움직이는 거다. 파도도 네 편이다.',
+  amaterasu: '동굴에서 나온 해다. 네 앞이 어두우면 나를 불러라.',
+  isis: '흩어진 것은 다시 모으면 된다. 네가 흩어져도 마찬가지다.',
+  hades: '돌아온 자가 없는 문이다. 네가 첫 번째가 되겠군.',
+  osiris: '찢겨서도 다시 맞춰졌다. 너도 그렇게 해라.',
+  titanmyth: '신에게 졌다. 그래도 아직 일어서 있다. 너와 함께라면 더 높이도.',
+  izanagi: '황천에서 돌아왔다. 돌아오는 길은 내가 제일 잘 안다.',
+  ra: '매일 세계를 다시 켠다. 네 하루도 내가 켜 주마.',
+  vishnu: '열 번 내려왔다. 열한 번째는 네 곁으로 간다.',
+  indra: '천 개의 눈으로 보고 있다. 네 등 뒤는 걱정 마라.',
+  hwanin: '하늘에서 내려다보았다. 네 걸음은 곧게 가더군.',
+  jadeemperor: '하늘 관청의 도장을 찍어 주마. 이제 네 일은 공식이다.',
+  shiva: '춤 한 번으로 세계를 끝낼 수 있지. 네게는 한 박자만 빌려주마.',
+  odin: '한쪽 눈은 이미 내주었다. 나머지 한쪽으로 너를 지켜보마.',
+  quetzalcoatl: '깃털 달린 뱀이 하늘을 난다. 올라타라.',
+  ahuramazda: '꺼지지 않는 불이다. 어두운 길에는 이걸 들어라.',
+  zeus: '올림포스의 마지막 말은 내가 한다. 네 이름을 불러 주마.',
+  dagon: '깊은 곳에서 올라왔다. 숨이 차면 내 쪽으로 오너라.',
+  yig: '뱀들이 너를 알아본다. 물릴 일은 없을 거다.',
+  ithaqua: '바람을 타고 걷는다. 발자국은 남기지 마라, 쫓아오니까.',
+  chaugnar: '피에 굶주렸지만 오늘은 참아 주마. …오늘만.',
+  shubniggurath: '천 마리 새끼가 너를 따른다. 귀찮으면 말해라.',
+  hastur: '세 번 불러서 왔다. 네 번째는 부르지 마라.',
+  tsathoggua: '움직이기 싫다. 그러니 네가 대신 움직여라. 내 몫까지.',
+  glaaki: '가시로 꿈을 꿰었다. 네 악몽쯤은 한 땀이면 된다.',
+  cthulhu: '죽은 게 아니라 자는 거다. 네가 깨워 주는 날까지.',
+  yogsothoth: '문이자 열쇠다. 어느 쪽이든 필요한 쪽을 쥐어라.',
+  abhoth: '끝없이 새것을 게워 낸다. 낡은 건 내가 먹어 주마.',
+  voidlordmyth: '아무것도 아닌 것의 왕이다. 그러니 잃을 것도 없지. 너처럼.',
+  nyarlathotep: '가면은 천 개다. 네게 보여 줄 얼굴은 아직 고르지 못했다.'
+};
+// 한마디가 없는 화신(나중에 늘어난 것)은 이 말로 갑니다
+function avatarLine(foe) {
+  return AVATAR_LINES[foe.id] || '…나를 꺾은 자여. 이제 내 이름이 네 이름 앞에 붙는다.';
+}
 function avatarTitle(foe) { return /의 화신$/.test(foe.name) ? foe.name : `${foe.name}의 화신`; }
 function avatarChance(foe) { return foe.kind === 'boss' ? AVATAR_CHANCE_BOSS : AVATAR_CHANCE; }
 
@@ -8740,6 +8893,22 @@ function fillAvatars(el) {
   }
 }
 
+// ---------- 화신이 되었을 때 ----------
+// 싸움이 끝나 결과가 뜨면 그 위에 한 번 — 화신의 그림(지금은 이모티콘)과 한마디, 무엇이 달라지는지.
+const avatarShown = new WeakSet();
+function avatarMoment(r) {
+  const el = $('avatarGain');
+  if (!el || !r || !r.avatarGained || avatarShown.has(r)) return;
+  const f = getEnemy(r.avatarGained);
+  if (!f) return;
+  avatarShown.add(r);
+  $('agArt').textContent = f.icon;
+  $('agName').textContent = avatarTitle(f);
+  $('agLine').textContent = `「${avatarLine(f)}」`;
+  $('agFx').innerHTML = avatarEffectHTML(f);
+  el.classList.remove('hidden');
+}
+
 // ---------- 화신 칸 · 화신 창 ----------
 // 마왕을 꺾은 뒤(벽 너머를 본 뒤)부터 사람 그림 왼쪽 위에 화신 칸이 생깁니다 — 화신은 7격부터 얻기 때문입니다.
 // 지금 삼은 화신이 보이고, 누르면 화신 창에서 고릅니다.
@@ -8809,6 +8978,7 @@ function renderJourney() {
   } else if (run.lastResult) {
     html += resultCard(run.lastResult, run);
     resultSounds(run.lastResult, run);
+    avatarMoment(run.lastResult);
     wallMoment(run.lastResult);
     levelMoment(run.lastResult);
   } else if (run.over) {
@@ -9717,7 +9887,7 @@ function spotlightGear(slot) {
 // 「물러선다」와 정예·보스로 향하는 버튼에는 일부러 안 걸었습니다.
 // 그건 고민해서 눌러야 하는 것들이라, 연타로 잘못 누르면 안 되니까요.
 // 싸우는 동안에는 걸리는 버튼이 없어 스페이스가 아무 일도 하지 않습니다 (건너뛰기 없음).
-const PRIMARY_ORDER = ['talkNext', 'tutNext', 'continueBtn', 'engageBtn', 'newRunBtn', 'travelBtn'];
+const PRIMARY_ORDER = ['agOk', 'talkNext', 'tutNext', 'continueBtn', 'engageBtn', 'newRunBtn', 'travelBtn'];
 
 function primaryButton() {
   if (!$('title').classList.contains('hidden')) return null;   // 초기화면에서는 안 씁니다
@@ -10995,6 +11165,8 @@ function init() {
   for (const b of document.querySelectorAll('[data-closeavatar]')) b.addEventListener('click', closeAvatarModal);
   for (const b of document.querySelectorAll('[data-closeshop]')) b.addEventListener('click', closeShop);
 
+  const ago = $('agOk');
+  if (ago) ago.addEventListener('click', () => $('avatarGain').classList.add('hidden'));
   const tn = $('talkNext');
   if (tn) tn.addEventListener('click', nextTalk);   // 옛 html 과 섞여 받아도 초기화면이 죽지 않게
   $('tutNext').addEventListener('click', () => {

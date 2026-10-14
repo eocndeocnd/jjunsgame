@@ -601,6 +601,22 @@ function fillAvatars(el) {
   }
 }
 
+// ---------- 화신이 되었을 때 ----------
+// 싸움이 끝나 결과가 뜨면 그 위에 한 번 — 화신의 그림(지금은 이모티콘)과 한마디, 무엇이 달라지는지.
+const avatarShown = new WeakSet();
+function avatarMoment(r) {
+  const el = $('avatarGain');
+  if (!el || !r || !r.avatarGained || avatarShown.has(r)) return;
+  const f = getEnemy(r.avatarGained);
+  if (!f) return;
+  avatarShown.add(r);
+  $('agArt').textContent = f.icon;
+  $('agName').textContent = avatarTitle(f);
+  $('agLine').textContent = `「${avatarLine(f)}」`;
+  $('agFx').innerHTML = avatarEffectHTML(f);
+  el.classList.remove('hidden');
+}
+
 // ---------- 화신 칸 · 화신 창 ----------
 // 마왕을 꺾은 뒤(벽 너머를 본 뒤)부터 사람 그림 왼쪽 위에 화신 칸이 생깁니다 — 화신은 7격부터 얻기 때문입니다.
 // 지금 삼은 화신이 보이고, 누르면 화신 창에서 고릅니다.
@@ -670,6 +686,7 @@ function renderJourney() {
   } else if (run.lastResult) {
     html += resultCard(run.lastResult, run);
     resultSounds(run.lastResult, run);
+    avatarMoment(run.lastResult);
     wallMoment(run.lastResult);
     levelMoment(run.lastResult);
   } else if (run.over) {
@@ -1578,7 +1595,7 @@ function spotlightGear(slot) {
 // 「물러선다」와 정예·보스로 향하는 버튼에는 일부러 안 걸었습니다.
 // 그건 고민해서 눌러야 하는 것들이라, 연타로 잘못 누르면 안 되니까요.
 // 싸우는 동안에는 걸리는 버튼이 없어 스페이스가 아무 일도 하지 않습니다 (건너뛰기 없음).
-const PRIMARY_ORDER = ['talkNext', 'tutNext', 'continueBtn', 'engageBtn', 'newRunBtn', 'travelBtn'];
+const PRIMARY_ORDER = ['agOk', 'talkNext', 'tutNext', 'continueBtn', 'engageBtn', 'newRunBtn', 'travelBtn'];
 
 function primaryButton() {
   if (!$('title').classList.contains('hidden')) return null;   // 초기화면에서는 안 씁니다
@@ -2856,6 +2873,8 @@ function init() {
   for (const b of document.querySelectorAll('[data-closeavatar]')) b.addEventListener('click', closeAvatarModal);
   for (const b of document.querySelectorAll('[data-closeshop]')) b.addEventListener('click', closeShop);
 
+  const ago = $('agOk');
+  if (ago) ago.addEventListener('click', () => $('avatarGain').classList.add('hidden'));
   const tn = $('talkNext');
   if (tn) tn.addEventListener('click', nextTalk);   // 옛 html 과 섞여 받아도 초기화면이 죽지 않게
   $('tutNext').addEventListener('click', () => {
