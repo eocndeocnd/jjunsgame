@@ -146,8 +146,98 @@ const FX = (() => {
 
   function foeAnimFor(foe) { return (foe && FOE_BY_ARCH[foe.arch]) || 'burst'; }
 
+  // ---------- 주인공 그림 ----------
+  // 전리품 탭 사람 그림 자리에 들어가는 그림. 마왕을 지나면 해진 옷으로 바뀝니다 (ui.js 의 renderDoll).
+  // 이 그림도 배경에 체크무늬가 박혀 있어서 열 때 한 번 걷어냅니다 — 다만 이펙트와 달리
+  // 체크무늬 톤이 더 어둡고(회색 178) 몸 색과 겹치므로, 가장자리에서부터 번져 들어가는 것만 지우고
+  // 다리 사이에 갇힌 것은 정확히 그 두 톤일 때만 지웁니다. 발밑 그림자는 한 가지 반투명 어둠으로 통일합니다.
+  const HEROES = {
+    fresh: 'assets/hero/hunter.webp',
+    worn:  'assets/hero/hunter-worn.webp'
+  };
+  const HERO_CROP = [410, 45, 230, 500];     // 그림(1024×559) 가운데 사람이 선 자리
+  const heroURL = {};                        // 이름 → blob 주소 (다 만들어지면)
+  const heroWaiters = [];
+
+  function keyHero(id, w, h) {
+    const d = id.data;
+    const neutral = (i, minMn, maxSpread) => {
+      const r = d[i * 4], g = d[i * 4 + 1], b = d[i * 4 + 2];
+      const mn = Math.min(r, g, b), mx = Math.max(r, g, b);
+      return mn >= minMn && (mx - mn) <= maxSpread;
+    };
+    const bg = new Uint8Array(w * h);
+    const stack = [];
+    for (let x = 0; x < w; x++) stack.push(x, x + (h - 1) * w);
+    for (let y = 0; y < h; y++) stack.push(y * w, y * w + w - 1);
+    while (stack.length) {
+      const i = stack.pop();
+      if (bg[i] || !neutral(i, 160, 16)) continue;
+      bg[i] = 1;
+      const x = i % w, y = (i / w) | 0;
+      if (x > 0) stack.push(i - 1);
+      if (x < w - 1) stack.push(i + 1);
+      if (y > 0) stack.push(i - w);
+      if (y < h - 1) stack.push(i + w);
+    }
+    for (let i = 0; i < w * h; i++) if (!bg[i] && neutral(i, 170, 10)) bg[i] = 1;   // 몸 사이에 갇힌 것
+    for (let pass = 0; pass < 2; pass++) {                                           // 가장자리 한두 겹
+      const mark = [];
+      for (let i = 0; i < w * h; i++) {
+        if (bg[i]) continue;
+        const x = i % w, y = (i / w) | 0;
+        const near = (x > 0 && bg[i - 1]) || (x < w - 1 && bg[i + 1]) || (y > 0 && bg[i - w]) || (y < h - 1 && bg[i + w]);
+        if (near && neutral(i, 130, 30)) mark.push(i);
+      }
+      for (const i of mark) bg[i] = 1;
+    }
+    for (let i = 0; i < w * h; i++) {
+      if (bg[i]) { d[i * 4 + 3] = 0; continue; }
+      const y = (i / w) | 0;
+      if (y >= 500 && neutral(i, 0, 16) && Math.min(d[i * 4], d[i * 4 + 1], d[i * 4 + 2]) < 165) {
+        d[i * 4] = 24; d[i * 4 + 1] = 14; d[i * 4 + 2] = 8; d[i * 4 + 3] = 100;
+      }
+    }
+  }
+
+  function prepareHero(name) {
+    const im = new Image();
+    im.onload = () => {
+      try {
+        const [cx, cy, cw, ch] = HERO_CROP;
+        const c = document.createElement('canvas');
+        c.width = im.width;
+        c.height = im.height;
+        const g = c.getContext('2d', { willReadFrequently: true });
+        g.drawImage(im, 0, 0);
+        const id = g.getImageData(0, 0, c.width, c.height);
+        keyHero(id, c.width, c.height);
+        g.putImageData(id, 0, 0);
+        const out = document.createElement('canvas');
+        out.width = cw;
+        out.height = ch;
+        out.getContext('2d').drawImage(c, cx, cy, cw, ch, 0, 0, cw, ch);
+        out.toBlob(blob => {
+          if (!blob) return;
+          heroURL[name] = URL.createObjectURL(blob);
+          for (const fn of heroWaiters.splice(0)) fn(name);
+        });
+      } catch (e) { /* 그림을 못 쓰면 예전 실루엣으로 갑니다 */ }
+    };
+    im.src = HEROES[name];
+  }
+
+  // 주인공 그림 주소 — 아직 못 만들었으면 null. 만들어지면 fn 을 한 번 부릅니다.
+  function heroPortrait(name, fn) {
+    if (heroURL[name]) return heroURL[name];
+    if (fn) heroWaiters.push(fn);
+    return null;
+  }
+
   // 첫 전투 전에 미리 잘라둡니다 — 첫 화면을 그리는 데 방해되지 않게 조금 뒤에
   setTimeout(() => { prepare('foe'); prepare('hero'); }, 400);
+  prepareHero('fresh');
+  prepareHero('worn');
 
-  return { play, foeAnimFor, isReady: name => !!ready[name] };
+  return { play, foeAnimFor, heroPortrait, isReady: name => !!ready[name] };
 })();

@@ -45,10 +45,14 @@ function render() {
 // 바뀌는 순간은 연출 뒤로 미룹니다 — 마왕과 싸우는 동안, 그리고 결과가 뜬 뒤 벽이 무너지는 연출의
 // 가장 어두운 때까지는 아직 이쪽입니다 (wallPending).
 let wallPending = false;
+// 지금 화면이 벽 너머의 모습이어야 하는가 — 분위기와 사람 그림(해진 옷)이 같이 따릅니다
+function beyondLook() {
+  if (!State.run || !beyondWall() || wallPending) return false;
+  return !(battle && battle.r.enemy.id === WALL_BOSS);
+}
 function atmosphere() {
   const titleUp = !$('title').classList.contains('hidden');
-  let on = !titleUp && beyondWall() && !wallPending;
-  if (battle && battle.r.enemy.id === WALL_BOSS) on = false;
+  let on = !titleUp && beyondLook();
   document.body.classList.toggle('beyond', on);
   if (typeof Backdrop !== 'undefined') Backdrop.mode(on ? 'beyond' : 'map');
 }
@@ -1747,7 +1751,12 @@ function renderDoll() {
                      sideTop(Math.max(DOLL_LEFT.length, DOLL_RIGHT.length) - 1)) + DOLL_CELL + 8;
   const C = 'left:50%;transform:translateX(-50%)';
 
-  let html = `<div class="doll-body">${dollSilhouette()}</div>`;
+  // 사람 자리의 그림 — 마왕을 지난 여정에서는 해진 옷. 그림이 아직 안 만들어졌으면 예전 실루엣을 깝니다
+  const figName = beyondLook() ? 'worn' : 'fresh';
+  const figURL = FX.heroPortrait(figName, () => { if (!battle) renderDoll(); });
+  let html = `<div class="doll-body">${figURL
+    ? `<img class="doll-fig" src="${figURL}" alt="" draggable="false">`
+    : dollSilhouette()}</div>`;
   DOLL_MID.forEach((id, i)   => html += dollCell(id, `${C};top:${top(i)}px;width:${DOLL_W}%`));
   DOLL_LEFT.forEach((id, i)  => html += dollCell(id, `left:2%;top:${sideTop(i)}px;width:${DOLL_W}%`));
   DOLL_RIGHT.forEach((id, i) => html += dollCell(id, `right:2%;top:${sideTop(i)}px;width:${DOLL_W}%`));

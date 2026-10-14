@@ -2758,3 +2758,7 @@ body.fight-locked .je-xp { display: none; }
 }
 .doll-slot.enh-cell .doll-badge { color: var(--text-dim); }
 .doll-slot.enh-cell.ready .doll-badge { color: var(--energy); }
+
+/* 사람 자리의 주인공 그림 — 칸 뒤에 깔립니다 (가로로 중앙, 칸 영역 높이에 맞춤) */
+.doll-body .doll-fig { display: block; width: 100%; height: 100%; object-fit: contain; object-position: 50% 50%; opacity: 0.95; user-select: none; -webkit-user-select: none; }
+.doll-slot { background: rgba(246, 233, 199, 0.66); }   /* 뒤의 사람 그림이 더 비치게 */
