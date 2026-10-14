@@ -17,10 +17,10 @@ function render() {
   document.body.classList.toggle('fight-locked', locked);
   if (locked) {
     if (isSlotModalOpen()) closeSlotModal();
-    if (isEnhModalOpen()) closeEnhModal();
     if (isSwapModalOpen()) closeSwapModal();
     closeAllocModal();
     enhMode = false;      // 슬롯 강화 중이었다면 칸이 도로 장비 칸으로
+    if (document.body.dataset.tab !== 'journey') showTab('journey');   // 아래 탭 줄이 숨겨지므로 여정에 머뭅니다
   }
   withHeldSpoils(renderRecords);
   withHeldSpoils(renderHero);      // 레벨 · 경험치 · 스탯도 전투가 끝난 뒤에
@@ -214,7 +214,7 @@ function soundEncounter() {
 
 // 누르는 소리. 저마다 소리가 따로 있는 버튼은 뺍니다 (겹치면 지저분합니다)
 const OWN_SOUND = '#travelBtn, #engageBtn, #nextZoneBtn, #retreatBtn, #commitBtn, '
-  + '[data-post], [data-enhance], [data-enhslot], [data-equip], [data-unequip], [data-swap], [data-setpick], [data-jset]';
+  + '[data-post], [data-enhslot], [data-equip], [data-unequip], [data-swap], [data-setpick], [data-jset]';
 function wireClickSound() {
   document.addEventListener('click', ev => {
     const b = ev.target.closest('button');
@@ -1563,7 +1563,6 @@ function wireKeys() {
         if (isSaveModalOpen()) closeSaveModal();
         else if (isAdminOpen()) closeAdmin();
         else if (isSwapModalOpen()) closeSwapModal();    // 교환 창은 강화 창 위에도 뜹니다
-        else if (isEnhModalOpen()) closeEnhModal();      // 강화 창이 부위 창 위에 있으니 먼저
         else if (isShopOpen()) closeShop();
         else if (isSlotModalOpen()) closeSlotModal();
         else if (isRosterModalOpen()) closeRosterModal();
@@ -1680,16 +1679,12 @@ function dollCell(slotId, style) {
   const id = State.meta.equipped[slotId];
   const item = id ? getItem(id) : null;
   const nf = freshCount(slotId);
-  // 강화 단계는 부위 이름 옆에.
-  // 강화석이 모여 지금 올릴 수 있으면 칸 왼쪽 위에 초록 딱지가 붙습니다 (오른쪽 위는 NEW 자리).
-  // 예전엔 이름 옆의 작은 ▲ 하나라 있는지도 몰랐습니다.
+  // 강화 단계는 부위 이름 옆에. 올릴 수 있는 칸이 있다는 표시는 「슬롯 강화」 버튼에 뜹니다.
   const lv = enhanceLevel(slotId);
-  const ready = canEnhance(slotId);
   const enh = lv > 0 ? `<span class="enh-lv">+${lv}</span>` : '';
   return `
-    <button class="doll-slot ${selectedSlot === slotId ? 'sel' : ''} ${item ? 'worn' : 'empty'} ${ready ? 'can-enh' : ''}"
-            data-slot="${slotId}" style="${style}" title="${s.name}${ready ? ' · 강화할 수 있다' : ''}">
-      ${ready ? '<span class="enh-ready">▲강화</span>' : ''}
+    <button class="doll-slot ${selectedSlot === slotId ? 'sel' : ''} ${item ? 'worn' : 'empty'}"
+            data-slot="${slotId}" style="${style}" title="${s.name}">
       ${nf ? `<span class="new-dot">${nf}</span>` : ''}
       <span class="doll-ic">${item ? item.fromIcon : ''}</span>
       <span class="doll-txt">
@@ -1742,9 +1737,10 @@ function renderDoll() {
 
   // 옆 기둥이 반 칸 내려앉아 생긴 위쪽 빈자리 — 오른쪽은 「슬롯 강화」, 슬롯 강화 중이면 왼쪽에 「강화석 교환」
   const btnH = sideTop(0) - 6 - DOLL_GAP;
-  const anyReady = SLOT_IDS.some(canEnhance);
-  html += `<button class="doll-mode ${enhMode ? 'on' : ''} ${!enhMode && anyReady ? 'ready' : ''}" id="dollModeBtn"
-             style="right:2%;top:6px;width:${DOLL_W}%;height:${btnH}px">${enhMode ? '강화 끝' : `${anyReady ? '▲' : ''}슬롯 강화`}</button>`;
+  // 지금 올릴 수 있는 칸이 몇 개인지 — 올릴 게 있다는 표시는 여기 하나에만 뜹니다
+  const readyN = SLOT_IDS.filter(canEnhance).length;
+  html += `<button class="doll-mode ${enhMode ? 'on' : ''} ${!enhMode && readyN ? 'ready' : ''}" id="dollModeBtn"
+             style="right:2%;top:6px;width:${DOLL_W}%;height:${btnH}px">${enhMode ? '강화 끝' : `${readyN ? `<span class="mode-n">${readyN}</span>` : ''}슬롯 강화`}</button>`;
   if (enhMode) {
     html += `<button class="doll-mode swap" id="dollSwapBtn"
                style="left:2%;top:6px;width:${DOLL_W}%;height:${btnH}px">강화석 교환</button>`;
@@ -1854,11 +1850,9 @@ function renderGear() {
   renderSetBonus();
 
   // 고른 부위에 끼운 것 — 여기만 능력치를 전부 펼칩니다.
-  // 강화는 따로 창을 띄웁니다 (부위 창 위의 「강화」 버튼 — renderEnhance).
   const special = isSpecialSlot(selectedSlot);
   const wornId = State.meta.equipped[selectedSlot];
   const wornItem = wornId ? getItem(wornId) : null;
-  renderEnhance(special, wornItem);
   $('equipDetail').innerHTML = (special ? specialPanel(selectedSlot) : '') + (wornItem
     ? `<div class="worn-card">
          <span class="worn-icon">${wornItem.fromIcon}</span>
@@ -1954,19 +1948,6 @@ function renderGear() {
   for (const btn of document.querySelectorAll('[data-unequip]')) {
     btn.addEventListener('click', ev => { ev.stopPropagation(); if (fightLocked()) return; unequip(btn.dataset.unequip); Sound.play('unequip'); render(); });
   }
-  for (const btn of document.querySelectorAll('[data-enhance]')) {
-    btn.addEventListener('click', ev => {
-      ev.stopPropagation();
-      if (fightLocked()) return;
-      const slot = btn.dataset.enhance;
-      const r = tryEnhance(slot);
-      if (r) {
-        lastEnhance = { slot, ...r };
-        Sound.play(r.success ? 'enhanceOk' : 'enhanceFail');
-      }
-      render();
-    });
-  }
   // 슬롯 강화 — 칸을 누를 때마다 한 번
   for (const btn of document.querySelectorAll('[data-enhslot]')) {
     btn.addEventListener('click', () => {
@@ -1984,87 +1965,15 @@ function renderGear() {
   if (mb) mb.addEventListener('click', () => { if (fightLocked()) return; enhMode = !enhMode; render(); });
   const sb = $('dollSwapBtn');
   if (sb) sb.addEventListener('click', () => openSwapModal(null));
-  for (const btn of document.querySelectorAll('#enhBody [data-openswap]')) {
-    btn.addEventListener('click', () => openSwapModal(btn.dataset.openswap));
-  }
   for (const b of document.querySelectorAll('[data-closeslot]')) {
     b.addEventListener('click', closeSlotModal);
   }
-}
-
-// ---------- 부위 강화 ----------
-// 따로 창을 띄웁니다 — 부위 창 머리의 「강화」 버튼으로 열고, 닫으면 부위 창으로 돌아갑니다.
-// 예전엔 부위 창 맨 위에 붙어 있어서, 장비를 고르러 열 때마다 강화 패널이 목록을 밀어냈습니다.
-// 강화는 그 칸에 붙으므로 무엇을 끼고 있든 같은 자리에서 합니다.
-// 방금 누른 결과(성공/실패)는 강화 창을 보는 동안만 남겨둡니다.
-let lastEnhance = null;
-
-function renderEnhance(special, wornItem) {
-  // 부위 창 머리의 버튼. 지금 올릴 수 있으면 초록에 ▲ — 사람 그림 칸의 딱지와 같은 뜻입니다.
-  const btn = $('enhOpenBtn');
-  if (btn) {
-    const lv = special ? 0 : enhanceLevel(selectedSlot);
-    const ready = !special && canEnhance(selectedSlot);
-    btn.hidden = special;
-    btn.classList.toggle('ready', ready);
-    btn.textContent = `${ready ? '▲' : ''}강화${lv > 0 ? ` +${lv}` : ''}`;
-  }
-  // 특수장비 칸에는 강화가 없습니다
-  if (special) { closeEnhModal(); return; }
-  $('enhTitle').textContent = `${SLOT_NAMES[selectedSlot]} 강화`;
-  $('enhBody').innerHTML = enhancePanel(selectedSlot, wornItem);
-}
-
-function enhancePanel(slot, item) {
-  const lv = enhanceLevel(slot);
-  const nx = nextEnhance(slot);
-  const stones = stonesOf(slot);
-  const now = Math.round(enhanceBonus(lv) * 100);
-  const mine = lastEnhance && lastEnhance.slot === slot ? lastEnhance : null;
-
-  const last = mine
-    ? `<div class="enh-last ${mine.success ? 'ok' : 'fail'}">${mine.success
-        ? `성공 — +${mine.level}`
-        : `실패 — 강화석 ${fmt(mine.cost)}개가 부서졌다`}</div>`
-    : '';
-
-  // 맨 위 — 무엇을 올리는지(지금 이 칸에 낀 것)와 몇 단계에서 몇 단계로.
-  // 강화는 칸에 붙으므로 비어 있어도 올릴 수 있습니다.
-  // 그림은 방금 누른 결과에 따라 한 번 번쩍입니다 — 성공은 초록, 실패는 붉게 흔들림.
-  const top = `<div class="enh-top">
-      <span class="enh-art ${mine ? (mine.success ? 'ok' : 'fail') : ''}">${item ? item.fromIcon : ''}</span>
-      <span class="enh-item ${item ? '' : 'empty'}">${item ? `${itemTag(item)}${item.name}` : '비어 있음'}</span>
-      <span class="enh-step">+${lv}${nx ? `<em>▶</em>+${lv + 1}` : '<em>최대</em>'}</span>
-    </div>`;
-
-  if (!nx) {
-    return `<div class="enh-panel maxed">${top}
-      <div class="enh-info"><span>핵심 스탯 <b>+${now}%</b></span><span>강화석 ${fmt(stones)}</span></div>
-      ${last}
-    </div>`;
-  }
-
-  const chance = enhanceChance(slot);
-  const can = stones >= nx.cost;
-  return `<div class="enh-panel">${top}
-    <div class="enh-info">
-      <span>핵심 스탯 <b>+${now}%</b> → <b>+${Math.round(nx.bonus * 100)}%</b></span>
-      <span>강화석 <b class="${can ? 'enough' : ''}">${fmt(stones)}</b> / ${fmt(nx.cost)}</span>
-      <span>성공 ${Math.round(chance * 100)}%</span>
-    </div>
-    <button class="btn primary enh-btn" data-enhance="${slot}" ${can ? '' : 'disabled'}>
-      ${can ? `강화한다 · 강화석 ${fmt(nx.cost)}` : `강화석이 ${fmt(nx.cost - stones)}개 모자라다`}
-    </button>
-    ${last}
-    ${swapSources(slot).length ? `<button class="btn enh-swap-open" data-openswap="${slot}">강화석 교환</button>` : ''}
-  </div>`;
 }
 
 // ---------- 강화석 교환 ----------
 // 창 하나에서 전부 합니다 — 내는 것과 받는 것을 고르고, 모자란 만큼 · 절반 · 전부.
 // 다른 부위(또는 특수장비)의 강화석을 받는 부위의 강화석으로 — 절반이 사라집니다.
 // 아래 목록은 열세 부위의 강화석과 다음 강화에 드는 수 — 누르면 그 부위가 받는 쪽이 됩니다.
-// 예전엔 강화 창 안에 붙어 있어서, 지금 고른 부위로 받는 것만 할 수 있었습니다.
 let swapFrom = null;    // 내는 것. 창을 새로 열면 다시 고릅니다
 let swapTo = null;      // 받는 것
 let lastSwap = null;    // 방금 바꾼 결과 — 창을 보는 동안만 남겨둡니다
@@ -2160,7 +2069,7 @@ function renderSwap() {
   for (const b of document.querySelectorAll('#swapBody [data-swap]')) {
     b.addEventListener('click', () => {
       const r = exchangeStones(swapFrom, swapTo, Number(b.dataset.swap));
-      if (r) { lastSwap = r; lastEnhance = null; Sound.play('stone'); }
+      if (r) { lastSwap = r; Sound.play('stone'); }
       render();
     });
   }
@@ -2171,18 +2080,15 @@ function renderSwap() {
 // 열두 칸을 오가며 비교할 때마다 화면이 위아래로 튀어서 창으로 바꿨습니다.
 function openSlotModal(slotId) {
   selectedSlot = slotId;
-  lastEnhance = null;
   lastSwap = null;
   swapFrom = null;
   showLocked = !!State.meta.settings.showLocked;   // 설정을 따릅니다
-  closeEnhModal();
   render();
   const m = $('slotModal');
   if (m) m.classList.remove('hidden');
 }
 
 function closeSlotModal() {
-  closeEnhModal();
   const m = $('slotModal');
   if (m) m.classList.add('hidden');
   // 창을 닫을 때 비로소 NEW! 를 끕니다 — 열어보는 동안에는 남아 있어야
@@ -2278,25 +2184,6 @@ function renderShop() {
   }
 }
 
-// ---------- 강화 창 ----------
-// 부위 창 위에 한 겹 더 뜹니다. 닫으면 밑에 있던 부위 창이 그대로 보입니다.
-// 지난번 결과는 지우고 엽니다 — 다시 열었는데 아까의 「실패」가 남아 있으면 헷갈립니다.
-function openEnhModal() {
-  if (isSpecialSlot(selectedSlot) || fightLocked()) return;
-  lastEnhance = null;
-  lastSwap = null;
-  $('enhModal').classList.remove('hidden');
-  render();
-}
-function closeEnhModal() {
-  const m = $('enhModal');
-  if (m) m.classList.add('hidden');
-}
-function isEnhModalOpen() {
-  const m = $('enhModal');
-  return !!m && !m.classList.contains('hidden');
-}
-
 // ---------- 스탯 분배 창 ----------
 // 분배판은 「나」 패널 맨 아래에 있어서 한 번 찍으려면 매번 스크롤해야 했습니다.
 // 레벨 바로 옆 버튼으로 띄웁니다.
@@ -2322,7 +2209,7 @@ function isAllocModalOpen() {
   const m = $('allocModal');
   return !!m && !m.classList.contains('hidden');
 }
-function isAnyModalOpen() { return isSlotModalOpen() || isEnhModalOpen() || isSwapModalOpen() || isShopOpen() || isAllocModalOpen() || isRosterModalOpen() || isSaveModalOpen() || isAdminOpen(); }
+function isAnyModalOpen() { return isSlotModalOpen() || isSwapModalOpen() || isShopOpen() || isAllocModalOpen() || isRosterModalOpen() || isSaveModalOpen() || isAdminOpen(); }
 
 // 그 부위의 강화를 반영한 실제 수치를 보여줍니다 — 장부상 수치가 아니라 몸에 붙는 값.
 // 강화는 부위에 붙으므로, 목록에 있는 것 무엇을 끼든 이 값이 됩니다.
@@ -2881,8 +2768,6 @@ function init() {
   $('logToggle').addEventListener('click', () => { logOpen = !logOpen; renderLog(); });
   $('toTitleBtn').addEventListener('click', () => { currentSlot = 0; showTitle(); });
   for (const b of document.querySelectorAll('[data-closesave]')) b.addEventListener('click', closeSaveModal);
-  $('enhOpenBtn').addEventListener('click', openEnhModal);
-  for (const b of document.querySelectorAll('[data-closeenh]')) b.addEventListener('click', closeEnhModal);
   for (const b of document.querySelectorAll('[data-closeswap]')) b.addEventListener('click', closeSwapModal);
   for (const b of document.querySelectorAll('[data-closeshop]')) b.addEventListener('click', closeShop);
 
