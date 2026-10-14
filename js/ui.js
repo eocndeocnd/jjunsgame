@@ -1691,6 +1691,7 @@ const DOLL_RIGHT = ['shoulder', 'ring', 'belt', 'offhand'];
 
 const DOLL_CELL = 86;   // 칸 높이 (아이콘 58 + 한 줄 + 여백)
 const DOLL_GAP  = 10;
+const DOLL_SIDE = 6.5;  // 옆 기둥이 바깥 가장자리에서 떨어진 %. 가운데 칸(36.5~63.5%)과의 틈이 3%만 남게 안쪽으로 붙입니다
 const DOLL_W    = 27;   // 칸 폭 %. 가운데 칸과 옆 칸이 맞닿지 않는 한계가 32% 입니다
                         // (옆 칸 오른끝 2+w, 가운데 칸 왼끝 50−w/2).
 
@@ -1758,20 +1759,20 @@ function renderDoll() {
     ? `<img class="doll-fig" src="${figURL}" alt="" draggable="false">`
     : dollSilhouette()}</div>`;
   DOLL_MID.forEach((id, i)   => html += dollCell(id, `${C};top:${top(i)}px;width:${DOLL_W}%`));
-  DOLL_LEFT.forEach((id, i)  => html += dollCell(id, `left:2%;top:${sideTop(i)}px;width:${DOLL_W}%`));
-  DOLL_RIGHT.forEach((id, i) => html += dollCell(id, `right:2%;top:${sideTop(i)}px;width:${DOLL_W}%`));
+  DOLL_LEFT.forEach((id, i)  => html += dollCell(id, `left:${DOLL_SIDE}%;top:${sideTop(i)}px;width:${DOLL_W}%`));
+  DOLL_RIGHT.forEach((id, i) => html += dollCell(id, `right:${DOLL_SIDE}%;top:${sideTop(i)}px;width:${DOLL_W}%`));
 
   // 옆 기둥이 반 칸 내려앉아 생긴 위쪽 빈자리 — 오른쪽은 「슬롯 강화」, 슬롯 강화 중이면 왼쪽에 「강화석 교환」
   const btnH = sideTop(0) - 6 - DOLL_GAP;
   // 지금 올릴 수 있는 칸이 몇 개인지 — 올릴 게 있다는 표시는 여기 하나에만 뜹니다
   const readyN = SLOT_IDS.filter(canEnhance).length;
   html += `<button class="doll-mode ${enhMode ? 'on' : ''} ${!enhMode && readyN ? 'ready' : ''}" id="dollModeBtn"
-             style="right:2%;top:6px;width:${DOLL_W}%;height:${btnH}px">${enhMode ? '강화 끝' : `${readyN ? `<span class="mode-n">${readyN}</span>` : ''}슬롯 강화`}</button>`;
+             style="right:${DOLL_SIDE}%;top:6px;width:${DOLL_W}%;height:${btnH}px">${enhMode ? '강화 끝' : `${readyN ? `<span class="mode-n">${readyN}</span>` : ''}슬롯 강화`}</button>`;
   if (enhMode) {
     html += `<button class="doll-mode swap" id="dollSwapBtn"
-               style="left:2%;top:6px;width:${DOLL_W}%;height:${btnH}px">강화석 교환</button>`;
+               style="left:${DOLL_SIDE}%;top:6px;width:${DOLL_W}%;height:${btnH}px">강화석 교환</button>`;
   } else if (wallSeen()) {
-    html += avatarCell(`left:2%;top:6px;width:${DOLL_W}%;height:${btnH}px`);
+    html += avatarCell(`left:${DOLL_SIDE}%;top:6px;width:${DOLL_W}%;height:${btnH}px`);
   }
 
   const el = $('equipSlots');
