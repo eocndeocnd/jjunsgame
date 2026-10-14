@@ -1689,9 +1689,9 @@ const DOLL_MID   = ['helm', 'necklace', 'armor', 'greaves', 'boots'];
 const DOLL_LEFT  = ['cloak', 'bracelet', 'gloves', 'weapon'];
 const DOLL_RIGHT = ['shoulder', 'ring', 'belt', 'offhand'];
 
-const DOLL_CELL = 86;   // 칸 높이 (아이콘 46 + 두 줄 + 여백)
+const DOLL_CELL = 86;   // 칸 높이 (아이콘 58 + 한 줄 + 여백)
 const DOLL_GAP  = 10;
-const DOLL_W    = 31;   // 칸 폭 %. 가운데 칸과 옆 칸이 맞닿지 않는 한계가 32% 입니다
+const DOLL_W    = 27;   // 칸 폭 %. 가운데 칸과 옆 칸이 맞닿지 않는 한계가 32% 입니다
                         // (옆 칸 오른끝 2+w, 가운데 칸 왼끝 50−w/2).
 
 function dollCell(slotId, style) {

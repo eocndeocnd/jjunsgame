@@ -2779,6 +2779,12 @@ body.fight-locked .je-xp { display: none; }
 .doll-body .doll-fig { display: block; width: 100%; height: 100%; object-fit: contain; object-position: 50% 50%; opacity: 0.95; user-select: none; -webkit-user-select: none; }
 .doll-slot { background: rgba(246, 233, 199, 0.66); }   /* 뒤의 사람 그림이 더 비치게 */
 
+/* 사람 그림 — 흑백으로 눌러 바탕색과 섞습니다 (multiply 라 종이 색이 배어 나옵니다) */
+.doll-body .doll-fig { filter: grayscale(1) contrast(1.1); mix-blend-mode: multiply; opacity: 0.6; }
+/* 그림 칸을 키웁니다 */
+.doll-icw { width: 58px; height: 58px; }
+.doll-ic { width: 58px; height: 58px; font-size: 34px; }
+
 </style>
 </head>
 <body data-tab="journey">
@@ -9715,9 +9721,9 @@ const DOLL_MID   = ['helm', 'necklace', 'armor', 'greaves', 'boots'];
 const DOLL_LEFT  = ['cloak', 'bracelet', 'gloves', 'weapon'];
 const DOLL_RIGHT = ['shoulder', 'ring', 'belt', 'offhand'];
 
-const DOLL_CELL = 86;   // 칸 높이 (아이콘 46 + 두 줄 + 여백)
+const DOLL_CELL = 86;   // 칸 높이 (아이콘 58 + 한 줄 + 여백)
 const DOLL_GAP  = 10;
-const DOLL_W    = 31;   // 칸 폭 %. 가운데 칸과 옆 칸이 맞닿지 않는 한계가 32% 입니다
+const DOLL_W    = 27;   // 칸 폭 %. 가운데 칸과 옆 칸이 맞닿지 않는 한계가 32% 입니다
                         // (옆 칸 오른끝 2+w, 가운데 칸 왼끝 50−w/2).
 
 function dollCell(slotId, style) {
