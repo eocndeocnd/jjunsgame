@@ -1829,14 +1829,13 @@ function renderSpecialSlots() {
     <div class="sp-row">${SPECIAL_SLOT_IDS.map((id, i) => {
       if (i >= open) {
         return `<div class="sp-slot locked" title="숨어 있는 것을 꺾으면 열린다">
-                  <span class="sp-ic">🔒</span><span class="sp-k">${SLOT_NAMES[id]}</span>
+                  <span class="sp-ic">🔒</span>
                   <span class="sp-item">닫혀 있음</span></div>`;
       }
       const item = getItem(State.meta.equipped[id]);
       return `<button class="sp-slot ${selectedSlot === id ? 'sel' : ''} ${item ? 'worn' : 'empty'}" data-slot="${id}">
                 ${i === 0 && nf ? `<span class="new-dot">${nf}</span>` : ''}
                 <span class="sp-ic">${item ? item.fromIcon : ''}</span>
-                <span class="sp-k">${SLOT_NAMES[id]}</span>
                 <span class="sp-item">${item ? item.name : '비어 있음'}</span>
               </button>`;
     }).join('')}</div>`;

@@ -2768,3 +2768,6 @@ body.fight-locked .je-xp { display: none; }
 /* 그림 칸을 키웁니다 */
 .doll-icw { width: 58px; height: 58px; }
 .doll-ic { width: 58px; height: 58px; font-size: 34px; }
+
+/* 전리품 탭 — 사람 그림 창과 특수장비 창을 붙입니다 (창 테두리가 위아래로 맞닿게) */
+.gear-panel { gap: 6px; }
