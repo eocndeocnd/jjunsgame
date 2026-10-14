@@ -1304,8 +1304,9 @@ function resultCard(r, run) {
     : '';
 
   return `
-    <div class="result ${r.win ? 'win' : 'lose'}">
+    <div class="result ${r.win ? 'win' : 'lose'} ${run.over ? '' : 'has-alloc'}">
       <div class="res-head">${r.win ? '승리' : '패배'}</div>
+      ${run.over ? '' : `<button id="toAllocBtn" class="btn tiny res-alloc">스탯 분배${run.unspent > 0 ? '<span class="alloc-pip on"></span>' : ''}</button>`}
       <div class="res-foe">
         <span class="res-icon">${foe.icon}</span>
         ${r.aura ? `<span class="aura-tag" style="--aura:${r.aura.color}">${r.aura.name}</span>` : ''}
@@ -1317,7 +1318,7 @@ function resultCard(r, run) {
       ${r.openedPath ? `<div class="res-path">길이 열렸다</div>` : ''}
       ${r.openedPath && foe.id === WALL_BOSS
         ? `<div class="res-path exit ${wallMoments.has(r) ? '' : 'late'}">나가는 길도 열렸다.</div>` : ''}
-      <div class="res-lines">${lines.join('')}${run.over ? '' : `<button id="toAllocBtn" class="btn tiny res-alloc">스탯 분배${run.unspent > 0 ? '<span class="alloc-pip on"></span>' : ''}</button>`}</div>
+      <div class="res-lines">${lines.join('')}</div>
       ${drops}
       <div class="res-actions">
         <button id="continueBtn" class="btn primary thumb">${run.over ? '여정을 마친다' : '계속한다'}${KEY_HINT}</button>

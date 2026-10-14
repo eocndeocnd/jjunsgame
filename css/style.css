@@ -2812,11 +2812,13 @@ body.fight-locked .je-xp { display: none; }
 .ag-line { margin: 10px 4px 8px; font-size: 14px; line-height: 1.6; word-break: keep-all; }
 .ag-fx { justify-content: center; margin: 0 0 10px; }
 
-/* 결과의 「스탯 분배」 — 줄 모음 오른쪽 아래, 마지막 줄 옆 빈자리 */
-.res-lines { position: relative; }
-.res-lines .res-alloc { position: absolute; right: 0; bottom: 8px; width: auto; margin: 0; padding: 8px 12px; white-space: nowrap; }
 
-/* 결과의 경험치 바 — 레벨 줄 바로 아래 */
-.res-lines .res-xp { height: 6px; margin: 2px 0 10px; background: var(--paper-lo); box-shadow: 0 0 0 1px var(--line-soft); }
+/* 결과의 경험치 바 — 레벨 줄 바로 아래. 굵게 */
+.res-lines .res-xp { height: 12px; margin: 4px 0 12px; background: var(--paper-lo); box-shadow: 0 0 0 1px var(--line-soft); }
 .res-lines .res-xp .je-xp-fill { height: 100%; background: repeating-linear-gradient(135deg, #2b74ad 0 3px, #1d5f8f 3px 6px); transition: width 0.25s ease; }
 body.lv-rolling .res-xp .je-xp-fill { transition: none; transform-origin: left center; will-change: transform; }
+
+/* 결과의 「스탯 분배」 — 오른쪽 위 모서리, 「승리」 밑 (그 줄의 상대 이름이 겹치지 않게 오른쪽을 비웁니다) */
+.result { position: relative; }
+.result > .res-alloc { position: absolute; right: 0; top: 46px; width: auto; margin: 0; padding: 7px 11px; white-space: nowrap; z-index: 2; }
+.result.has-alloc .res-foe { padding-right: 96px; }
