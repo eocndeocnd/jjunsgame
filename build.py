@@ -28,6 +28,17 @@ def read(p):
     # 알아서 걷어내기 때문에 합친 파일에서만 터집니다.
     return (ROOT / p).read_text(encoding="utf-8-sig")
 
+# 쪽지 — index.html 이 가리키는 css · js 주소에 빌드마다 ?v=시각 을 붙입니다.
+# 깃허브 페이지는 파일마다 따로 캐시(약 10분)를 해서, 새로 올린 직후 폰이 **옛 index.html + 새 js** 를 섞어 받는 일이
+# 있었습니다 (새 js 가 찾는 요소가 옛 html 에 없어 초기화면이 안 뜨고 탭이 죽음). 주소가 버전마다 다르면
+# 옛 html 은 옛 js 를, 새 html 은 새 js 를 받아서 섞이지 않습니다.
+import time
+VER = time.strftime("%Y%m%d%H%M%S")
+_raw = (ROOT / "index.html").read_text(encoding="utf-8")
+_stamped = re.sub(r'((?:src|href)="(?:js|css)/[^"?]+)(?:\?v=\d+)?"', lambda m: f'{m.group(1)}?v={VER}"', _raw)
+if _stamped != _raw:
+    (ROOT / "index.html").write_text(_stamped, encoding="utf-8")
+
 html = read("index.html")
 
 # <link rel="stylesheet" href="..."> → <style>...</style>
@@ -42,7 +53,7 @@ def inline_css(m):
         n_kept += 1
         return m.group(0)
     n_css += 1
-    return "<style>\n" + read(href) + "\n</style>"
+    return "<style>\n" + read(href.split("?")[0]) + "\n</style>"
 
 html = re.sub(
     r'<link[^>]*rel=["\']stylesheet["\'][^>]*href=["\']([^"\']+)["\'][^>]*>',
@@ -65,7 +76,7 @@ def inline_asset(m):
 
 # <script src="..."></script> → <script>...</script>
 def inline_js(m):
-    src = m.group(1)
+    src = m.group(1).split("?")[0]
     code = read(src)
     code = re.sub(r'([\'"])(assets/[^\'"]+\.(?:webp|png|jpe?g|gif))\1', inline_asset, code)
     # 혹시 코드 안에 </script> 문자열이 있으면 파서가 거기서 끊깁니다

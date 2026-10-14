@@ -2545,10 +2545,11 @@ function maybeNamelessTalk() {
   const m = State.meta;
   if (!State.run || m.namelessMet || !wallSeen() || wallPending || fightLocked()) return;
   if (!$('title').classList.contains('hidden') || !$('tutorial').classList.contains('hidden')) return;
-  if (!$('talk').classList.contains('hidden')) return;
+  const talk = $('talk');
+  if (!talk || !talk.classList.contains('hidden')) return;
   if ((m.avatars || []).length) { m.namelessMet = true; save(); return; }   // 이미 곁에 누가 있다
   talkIndex = 0;
-  $('talk').classList.remove('hidden');
+  talk.classList.remove('hidden');
   renderTalk();
 }
 function renderTalk() {
@@ -2844,7 +2845,8 @@ function init() {
   for (const b of document.querySelectorAll('[data-closeavatar]')) b.addEventListener('click', closeAvatarModal);
   for (const b of document.querySelectorAll('[data-closeshop]')) b.addEventListener('click', closeShop);
 
-  $('talkNext').addEventListener('click', nextTalk);
+  const tn = $('talkNext');
+  if (tn) tn.addEventListener('click', nextTalk);   // 옛 html 과 섞여 받아도 초기화면이 죽지 않게
   $('tutNext').addEventListener('click', () => {
     if (tutIndex < TUTORIAL.length - 1) { tutIndex++; renderTutorial(); }
     else endTutorial();
