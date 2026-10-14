@@ -18,6 +18,7 @@ function render() {
   if (locked) {
     if (isSlotModalOpen()) closeSlotModal();
     if (isSwapModalOpen()) closeSwapModal();
+    if (isAvatarModalOpen()) closeAvatarModal();
     closeAllocModal();
     enhMode = false;      // 슬롯 강화 중이었다면 칸이 도로 장비 칸으로
     if (document.body.dataset.tab !== 'journey') showTab('journey');   // 아래 탭 줄이 숨겨지므로 여정에 머뭅니다
@@ -565,9 +566,15 @@ function avatarEffectHTML(foe) {
 }
 function renderAvatars() {
   const el = $('avatars');
-  if (!el) return;
+  if (el) {
+    const has = (State.meta.avatars || []).length > 0;
+    el.parentElement.hidden = !has;
+    if (has) fillAvatars(el); else el.innerHTML = '';
+  }
+  renderAvatarModal();
+}
+function fillAvatars(el) {
   const list = (State.meta.avatars || []).map(getEnemy).filter(Boolean);
-  el.parentElement.hidden = !list.length;
   if (!list.length) { el.innerHTML = ''; return; }
   const cur = State.meta.avatar;
   el.innerHTML = `<div class="av-head">화신 <span class="count">${list.length}</span></div>` + list.map(f => `
@@ -578,19 +585,39 @@ function renderAvatars() {
         ${AVATAR_POWERS[f.id] ? `<span class="av-power">${AVATAR_POWERS[f.id].name}</span>` : ''}
         ${f.id === cur
           ? '<button class="btn tiny" data-avatar="">벗는다</button>'
-          : `<button class="btn tiny" data-avatar="${f.id}" ${battle ? 'disabled' : ''}>삼는다</button>`}
+          : `<button class="btn tiny" data-avatar="${f.id}" ${battle || fightLocked() ? 'disabled' : ''}>삼는다</button>`}
       </div>
       ${AVATAR_POWERS[f.id] ? `<div class="av-power-desc">${AVATAR_POWERS[f.id].desc}</div>` : ''}
       <div class="av-fx">${avatarEffectHTML(f)}</div>
     </div>`).join('');
   for (const b of el.querySelectorAll('[data-avatar]')) {
     b.addEventListener('click', () => {
-      if (battle) return;
+      if (battle || fightLocked()) return;
       setAvatar(b.dataset.avatar || null);
       Sound.play(b.dataset.avatar ? 'equip' : 'unequip');
       render();
     });
   }
+}
+
+// ---------- 화신 칸 · 화신 창 ----------
+// 마왕을 꺾은 뒤(벽 너머를 본 뒤)부터 사람 그림 왼쪽 위에 화신 칸이 생깁니다 — 화신은 7격부터 얻기 때문입니다.
+// 지금 삼은 화신이 보이고, 누르면 화신 창에서 고릅니다.
+function avatarCell(style) {
+  const f = getEnemy(State.meta.avatar);
+  return `<button class="doll-avatar ${f ? 'worn' : 'empty'}" id="dollAvatarBtn" style="${style}">
+      <span class="da-ic">${f ? f.icon : ''}</span>
+      <span class="da-txt"><span class="da-k">화신</span><span class="da-n">${f ? f.name.replace(/의 화신$/, '') : '비어 있음'}</span></span>
+    </button>`;
+}
+function openAvatarModal() { $('avatarModal').classList.remove('hidden'); renderAvatarModal(); }
+function closeAvatarModal() { const m = $('avatarModal'); if (m) m.classList.add('hidden'); }
+function isAvatarModalOpen() { const m = $('avatarModal'); return !!m && !m.classList.contains('hidden'); }
+function renderAvatarModal() {
+  if (!isAvatarModalOpen()) return;
+  const body = $('avatarBody');
+  if (!(State.meta.avatars || []).length) { body.innerHTML = '<p class="hint">아직 얻은 화신이 없다</p>'; return; }
+  fillAvatars(body);
 }
 
 // ---------- 여정 ----------
@@ -1447,7 +1474,6 @@ function journeySets() {
     <div class="journey-sets">
       ${Array.from({ length: SET_COUNT }, (_, n) => {
         const on = isSetActive(n);
-        const filled = setFilled(n);
         // 이름만 — 입는 중인 것은 붉게. 한 줄에 넷(세트 셋 + 스탯 분배)이 폰에서도 들어가게
         return `<button class="js-set ${on ? 'on' : ''}" data-jset="${n}" ${on ? 'disabled' : ''}>
                   세트 ${n + 1}
@@ -1562,6 +1588,7 @@ function wireKeys() {
         ev.preventDefault();
         if (isSaveModalOpen()) closeSaveModal();
         else if (isAdminOpen()) closeAdmin();
+        else if (isAvatarModalOpen()) closeAvatarModal();
         else if (isSwapModalOpen()) closeSwapModal();    // 교환 창은 강화 창 위에도 뜹니다
         else if (isShopOpen()) closeShop();
         else if (isSlotModalOpen()) closeSlotModal();
@@ -1625,12 +1652,10 @@ let showLocked = false;      // 못 얻은 ???? 를 펼쳐 볼 것인가
 // 카드를 누르면 그 세트로 갈아입고, 지금 입은 세트를 고치면 그 세트가 곧 그렇게 됩니다.
 function renderSets() {
   $('gearSets').innerHTML = Array.from({ length: SET_COUNT }, (_, n) => {
-    const filled = setFilled(n);
     const on = isSetActive(n);
     return `
       <button class="gset ${on ? 'on' : ''}" data-setpick="${n}" ${on ? 'disabled' : ''}>
         <span class="gset-n">세트 ${n + 1}</span>
-        <span class="gset-info">${on ? '입는 중' : (filled ? `${filled}부위` : '비어 있음')}</span>
       </button>`;
   }).join('');
 
@@ -1744,6 +1769,8 @@ function renderDoll() {
   if (enhMode) {
     html += `<button class="doll-mode swap" id="dollSwapBtn"
                style="left:2%;top:6px;width:${DOLL_W}%;height:${btnH}px">강화석 교환</button>`;
+  } else if (wallSeen()) {
+    html += avatarCell(`left:2%;top:6px;width:${DOLL_W}%;height:${btnH}px`);
   }
 
   const el = $('equipSlots');
@@ -1965,6 +1992,8 @@ function renderGear() {
   if (mb) mb.addEventListener('click', () => { if (fightLocked()) return; enhMode = !enhMode; render(); });
   const sb = $('dollSwapBtn');
   if (sb) sb.addEventListener('click', () => openSwapModal(null));
+  const ab = $('dollAvatarBtn');
+  if (ab) ab.addEventListener('click', openAvatarModal);
   for (const b of document.querySelectorAll('[data-closeslot]')) {
     b.addEventListener('click', closeSlotModal);
   }
@@ -2209,7 +2238,7 @@ function isAllocModalOpen() {
   const m = $('allocModal');
   return !!m && !m.classList.contains('hidden');
 }
-function isAnyModalOpen() { return isSlotModalOpen() || isSwapModalOpen() || isShopOpen() || isAllocModalOpen() || isRosterModalOpen() || isSaveModalOpen() || isAdminOpen(); }
+function isAnyModalOpen() { return isAvatarModalOpen() || isSlotModalOpen() || isSwapModalOpen() || isShopOpen() || isAllocModalOpen() || isRosterModalOpen() || isSaveModalOpen() || isAdminOpen(); }
 
 // 그 부위의 강화를 반영한 실제 수치를 보여줍니다 — 장부상 수치가 아니라 몸에 붙는 값.
 // 강화는 부위에 붙으므로, 목록에 있는 것 무엇을 끼든 이 값이 됩니다.
@@ -2770,6 +2799,7 @@ function init() {
   $('toTitleBtn').addEventListener('click', () => { currentSlot = 0; showTitle(); });
   for (const b of document.querySelectorAll('[data-closesave]')) b.addEventListener('click', closeSaveModal);
   for (const b of document.querySelectorAll('[data-closeswap]')) b.addEventListener('click', closeSwapModal);
+  for (const b of document.querySelectorAll('[data-closeavatar]')) b.addEventListener('click', closeAvatarModal);
   for (const b of document.querySelectorAll('[data-closeshop]')) b.addEventListener('click', closeShop);
 
   $('tutNext').addEventListener('click', () => {

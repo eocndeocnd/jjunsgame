@@ -1335,16 +1335,6 @@ kbd {
 .gset.on { background: var(--wax); border-color: var(--wax-lo); box-shadow: none; cursor: default; }
 .gset-n { display: block; font-size: 12px; font-weight: 700; color: var(--text-dim); }
 .gset.on .gset-n { color: var(--cream); }
-.gset-info {
-  display: block;
-  margin-top: 2px;
-  font-size: 10px;
-  color: var(--text-faint);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.gset.on .gset-info { color: #f3c9b0; }
 
 /* ---------- 사람 위의 열세 칸 ----------
    예전엔 2열 격자로 나열했습니다. 어디가 어느 부위인지 글자를 읽어야 알았고
@@ -2722,3 +2712,30 @@ body.fight-locked .je-xp { display: none; }
   body.fight-locked .thumb-bar { bottom: calc(18px + env(safe-area-inset-bottom)); }
   body.fight-locked[data-tab="journey"] .journey-panel { padding-bottom: 110px; }
 }
+
+/* 사람 그림 왼쪽 위의 화신 칸 — 마왕을 꺾은 뒤에 생깁니다. 지금 삼은 화신이 보입니다 */
+.doll-avatar {
+  position: absolute;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 5px;
+  font: inherit;
+  color: var(--text);
+  text-align: left;
+  background: rgba(246, 233, 199, 0.85);
+  border: 2px solid #6b4320;
+  cursor: pointer;
+  overflow: hidden;
+}
+.doll-avatar.empty { border-color: var(--line); }
+.doll-avatar:hover { border-color: var(--accent); }
+.da-ic { flex: none; width: 26px; height: 26px; display: grid; place-items: center; font-size: 18px; background: var(--paper-lo); box-shadow: inset 0 0 0 2px #c7a464; }
+.doll-avatar.empty .da-ic { background: rgba(216, 191, 134, 0.45); }
+.da-txt { min-width: 0; display: flex; flex-direction: column; line-height: 1.25; }
+.da-k { font-size: 9px; color: var(--outer, var(--text-faint)); letter-spacing: 0.04em; }
+.da-n { font-size: 10px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.doll-avatar.empty .da-n { font-weight: 400; color: var(--text-faint); }
+.modal-card .avatars { overflow-y: auto; flex: 1; min-height: 0; padding: 2px; }
+#avatarBody .av-head { display: none; }   /* 창 제목이 이미 「화신」 */

@@ -69,7 +69,6 @@
   <!-- 오른쪽: 장비 -->
   <section class="panel gear-panel">
     <div class="frame">
-      <h3>장비 세트</h3>
       <div id="gearSets" class="gear-sets"></div>
       <!-- 사람 그림이 뒤에 깔리고, 그 위 부위 자리마다 칸이 올라갑니다 -->
       <div id="equipSlots" class="equip-slots"></div>
@@ -96,6 +95,18 @@
     </div>
     <div id="equipDetail"></div>
     <div id="inventory" class="inventory"></div>
+  </div>
+</div>
+
+<!-- 화신 창. 사람 그림 왼쪽 위의 화신 칸으로 엽니다 (마왕을 꺾은 뒤). 목록은 ui.js 의 fillAvatars. -->
+<div id="avatarModal" class="modal enh-modal hidden">
+  <div class="modal-back" data-closeavatar></div>
+  <div class="modal-card">
+    <div class="modal-head">
+      <h3>화신</h3>
+      <button class="btn tiny" data-closeavatar>닫기</button>
+    </div>
+    <div id="avatarBody" class="avatars"></div>
   </div>
 </div>
 
