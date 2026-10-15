@@ -114,8 +114,14 @@ if _node:
     if r.returncode != 0:
         sys.stderr.write(r.stderr)
         raise SystemExit("빌드를 멈춥니다 — 위 전리품 번호 문제를 먼저 해결하세요.")
+    # 전리품 분포 검사 — 몬스터마다 개수 규칙 · 격마다 열세 부위 · 전체 예산 (tools/loot-check.js)
+    r = subprocess.run([_node, str(ROOT / "tools" / "cli.js"), "check-loot"], capture_output=True, text=True, encoding="utf-8")
+    sys.stdout.write(r.stdout)
+    if r.returncode != 0:
+        sys.stderr.write(r.stderr)
+        raise SystemExit("빌드를 멈춥니다 — 위 전리품 분포 문제를 먼저 해결하세요.")
 else:
-    print("  ⚠ node 가 없어 문법 검사 · 전리품 번호 검사를 건너뜁니다 (괄호 짝만 셉니다). 설치하면 빌드할 때마다 자동으로 돕니다.")
+    print("  ⚠ node 가 없어 문법 검사 · 전리품 번호 · 분포 검사를 건너뜁니다 (괄호 짝만 셉니다). 설치하면 빌드할 때마다 자동으로 돕니다.")
     # node 가 없으면 최소한 괄호 짝이라도 셉니다
     for f in ("js/backdrop.js", "js/sound.js", "js/fx.js", "js/data.js", "js/game.js", "js/ui.js"):
         src = read(f)

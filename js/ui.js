@@ -716,7 +716,7 @@ function renderJourney() {
 let rosterAll = false;
 
 function rosterRow(foe, hero, sims) {
-  const chance = winChance(hero, foe, sims);
+  const chance = winChanceMemo(hero, foe, sims);
   const down = foe.once && isDowned(foe.id);
   const seen = isSeen(foe.id);
   return `
@@ -1012,6 +1012,11 @@ function powerLine(e, foeName, v) {
     case 'lucifer':  return `${n} — 지금이 가장 빛난다`;
     case 'hades':    return `${n} — ${foeName}${josa(foeName, '을', '를')} 데려갔다`;
     case 'zeus':     return `${n}! ${foeName}에게 ${v}`;
+    case 'arthur':      return `${n} — 검이 빗나가지 않는다`;
+    case 'merlin':      return `${n} — 상대의 눈이 흐려졌다`;
+    case 'sanctdragon': return `${n} — 비늘이 피해를 받아 낸다`;
+    case 'tiamat':      return `${n} — 바다가 차오른다`;
+    case 'cthulhu':     return `${n} — 다시 깨어났다`;
   }
   return n;
 }
@@ -1188,7 +1193,7 @@ function battleFx(e) {
           fxAnim(box, FX_SHAKE, 300, 'steps(5, end)');
         } else if (e.p === 'hades') {
           fxHit(foeEl, true); fxAnim(box, FX_SHAKE, 360, 'steps(6, end)');
-        } else if (e.p === 'heracles') {
+        } else if (e.p === 'heracles' || e.p === 'cthulhu') {
           fxFloat(heroEl, '다시', 'heal');
         }
         fxBanner(`${n}!`);
@@ -1407,6 +1412,18 @@ function encounterCard(foe, isBoss, hero, aura) {
     </div>`;
 }
 
+// 승률을 한 번 재면 같은 상대 · 같은 몸(스탯이 그대로)인 동안은 다시 굴리지 않습니다.
+// 정예 묶음이 들어오며 한 지역의 정해진 자리가 열셋까지 늘어, 그릴 때마다 자리마다 200판씩 돌리면 폰이 버벅입니다.
+const chanceMemo = new Map();
+function winChanceMemo(hero, foe, samples) {
+  const key = `${foe.id}|${samples || 200}|${JSON.stringify(hero)}`;
+  if (chanceMemo.has(key)) return chanceMemo.get(key);
+  if (chanceMemo.size > 400) chanceMemo.clear();
+  const c = winChance(hero, foe, samples);
+  chanceMemo.set(key, c);
+  return c;
+}
+
 // 아무도 없을 때 — 떠날 것인가, 정해진 자리로 갈 것인가, 다음 지역으로 갈 것인가
 function crossroads(boss, hero, run) {
   const max = startEnergy();
@@ -1417,7 +1434,7 @@ function crossroads(boss, hero, run) {
   // 정예·히든·보스 — 정해진 자리에 서 있고, 한 여정에 한 번뿐
   const posts = visiblePosts(run.zoneIndex).map(foe => {
     const down = isDowned(foe.id);
-    const c = winChance(hero, foe);
+    const c = winChanceMemo(hero, foe);
     const left = dropTable(foe.id).filter(i => !owns(i.id)).length;
     const K = KINDS[foe.kind];
     const seen = isSeen(foe.id);
@@ -1429,7 +1446,7 @@ function crossroads(boss, hero, run) {
           <div class="post-name">
             <span class="grade-tag ${foe.kind}">${K.name}</span>${seen ? foe.name : '???'}<span class="lv">Lv.${fmtLevel(foe.level)}</span>
           </div>
-          ${!down && seen && left > 0 ? `<div class="post-desc">못 얻은 것 ${left}</div>` : ''}
+          ${seen && (foe.set || (!down && left > 0)) ? `<div class="post-desc">${[foe.set ? ELITE_SETS[foe.set].name : '', !down && left > 0 ? `못 얻은 것 ${left}` : ''].filter(Boolean).join(' · ')}</div>` : ''}
         </div>
         ${down
           ? `<span class="post-done">꺾음</span>`

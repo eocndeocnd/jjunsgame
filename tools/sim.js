@@ -14,6 +14,8 @@
 //    - 보스를 꺾었으면 다음 지역 첫 상대에게 MOVE_MIN 이상일 때 넘어간다
 //    - 강화가 있으면 강화석이 모이는 대로 가장 낮은 부위부터 강화한다
 //      (특수장비 강화석과 +15 를 다 채운 부위의 강화석은 가장 낮은 부위로 바꿔 몰아준다)
+//    - 회차가 끝나면 그 회차에 막힌 보스를 상대로 가장 센 화신(화신 없이 가는 것도 후보)을 고른다
+//      (예전엔 처음 얻은 화신을 끝까지 썼습니다 — 처음 화신이 싸움에 약한 것이면 그 시드만 수백 회차 막혔습니다)
 // ============================================================
 
 const SIM = {
@@ -64,6 +66,29 @@ function simEnhance() {
   }
 }
 
+// 상대를 기준으로 한 몸의 세기 — 버티는 턴 ÷ 눕히는 턴 (클수록 셉니다)
+function simPowerVs(foe) {
+  const h = heroStats();
+  const kill = foe.life / Math.max(1e-9, expectedTurnDamage(h, foe));
+  const die = h.life / Math.max(1e-9, expectedTurnDamage(foe, h));
+  return die / kill;
+}
+
+// 회차가 끝난 자리(그 회차의 레벨 · 장비)에서, 그 지역 보스를 상대로 가장 센 화신을 고릅니다
+function simChooseAvatar() {
+  const m = State.meta;
+  if (!m.avatars || !m.avatars.length || typeof avatarProfile !== 'function') return;
+  const target = zoneBoss(State.run.zoneIndex);
+  if (!target) return;
+  let best = m.avatar, bestP = -1;
+  for (const id of [null].concat(m.avatars)) {
+    m.avatar = id;
+    const p = simPowerVs(target);
+    if (p > bestP) { bestP = p; best = id; }
+  }
+  m.avatar = best;
+}
+
 // 정해진 자리 하나와 싸웁니다. 삼키는 검이 있고 아직 안 삼킨 자리면 검으로 바꿔 듭니다.
 function simFightPost(foe) {
   const meta = State.meta;
@@ -88,7 +113,8 @@ function simPlayRun(stat) {
     simEnhance();
 
     // 1. 길이 열렸고 다음 지역이 감당할 만하면 넘어갑니다
-    if (run.zoneCleared && ZONES[run.zoneIndex + 1] && run.energy >= RULES.ZONE_MOVE_COST) {
+    // (지역을 넘어가는 데는 이제 에너지가 들지 않습니다 — 예전 ZONE_MOVE_COST 가 사라져 시뮬이 넘어가지 못하던 것을 고쳤습니다)
+    if (run.zoneCleared && ZONES[run.zoneIndex + 1] && run.energy >= (RULES.ZONE_MOVE_COST || 0)) {
       const first = zoneNormals(run.zoneIndex + 1)[0];
       if (simWin(first) >= SIM.MOVE_MIN) { moveToNextZone(); continue; }
     }
@@ -139,6 +165,7 @@ function simStart(seed = 1, onDone) {
     const stat = { fights: 0, losses: 0, retreats: 0 };
     simPlayRun(stat);
     const run = State.run;
+    simChooseAvatar();
     const zone = run.zoneIndex + 1;
     if (!out.firstZone[zone]) out.firstZone[zone] = State.meta.runCount;
     // 마지막 지역에 처음 닿았을 때 부위 강화가 평균 몇이었나

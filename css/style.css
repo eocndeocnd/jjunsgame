@@ -55,18 +55,23 @@
   --r1:  #6b6152;         /* 잡졸 — 흙먼지 */
   --r2:  #4f6b30;         /* 마물 — 이끼 */
   --r3:  #7a4f2a;         /* 마수 — 무두질한 가죽 */
-  --r4:  #2f6e66;         /* 환수 — 성역의 물빛 */
+  --r4:  #5c6570;         /* 거인 — 고개의 바위 */
   --r5:  #5e3a72;         /* 마족 — 시든 보라 */
   --r6:  #8c1f24;         /* 마왕 — 핏빛 */
   --r7:  #76643a;         /* 설화 — 바랜 두루마리 */
-  --r8:  #a9411c;         /* 무림 — 주홍 */
-  --r9:  #2a7350;         /* 영물 — 옥빛 */
-  --r10: #8a4f1c;         /* 영웅 — 청동 */
-  --r11: #f3ead0;  --r11-ink: #7a5a10;   /* 천사 — 흰 금 */
-  --r12: #5a0f2a;         /* 악마 — 검붉은 */
-  --r13: #1f5a96;         /* 신격 — 푸른 빛 */
-  --r14: #c9982a;  --r14-ink: #3a2312;   /* 주신 — 금 */
-  --r15: #4a2370;         /* 외신 — 바깥의 보라 */
+  --r8:  #4a6278;         /* 기사 — 강철 */
+  --r9:  #8a2f6e;         /* 마도 — 마나 */
+  --r10: #a9411c;         /* 무림 — 주홍 */
+  --r11: #2a7350;         /* 영물 — 옥빛 */
+  --r12: #2f6e66;         /* 환수 — 성역의 물빛 */
+  --r13: #8a4f1c;         /* 영웅 — 청동 */
+  --r14: #f3ead0;  --r14-ink: #7a5a10;   /* 천사 — 흰 금 */
+  --r15: #5a0f2a;         /* 악마 — 검붉은 */
+  --r16: #1f5a96;         /* 신격 — 푸른 빛 */
+  --r17: #16505e;         /* 태초 — 깊은 바다 */
+  --r18: #c9982a;  --r18-ink: #3a2312;   /* 주신 — 금 */
+  --r19: #2f4a2e;         /* 고신 — 가라앉은 초록 */
+  --r20: #4a2370;         /* 외신 — 바깥의 보라 */
 
   --radius: 0;
 
@@ -341,8 +346,13 @@ h3::before { content: '◆ '; color: var(--wax); }
 .rank-chip.r13, .rank-dot.r13 { --rc: var(--r13); }
 .rank-chip.r14, .rank-dot.r14 { --rc: var(--r14); }
 .rank-chip.r15, .rank-dot.r15 { --rc: var(--r15); }
-.rank-chip.r11 { color: var(--r11-ink); }
+.rank-chip.r16, .rank-dot.r16 { --rc: var(--r16); }
+.rank-chip.r17, .rank-dot.r17 { --rc: var(--r17); }
+.rank-chip.r18, .rank-dot.r18 { --rc: var(--r18); }
+.rank-chip.r19, .rank-dot.r19 { --rc: var(--r19); }
+.rank-chip.r20, .rank-dot.r20 { --rc: var(--r20); }
 .rank-chip.r14 { color: var(--r14-ink); }
+.rank-chip.r18 { color: var(--r18-ink); }
 
 .hero-rank { margin-bottom: 14px; padding-left: 2px; }
 .rank-next {

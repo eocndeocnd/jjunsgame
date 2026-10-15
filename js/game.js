@@ -11,6 +11,37 @@ const runKey  = n => `${saveKey(n)}.run`;   // 진행 중인 회차 — 아래 �
 
 let currentSlot = 0;               // 0 = 아직 안 고름 (초기화면)
 
+// ---------- 격 재편 (15격 → 20격) 전의 저장본 ----------
+// 그때의 저장본은 지역 번호가 예전 순서입니다. 지역 id 로 새 번호를 찾아 옮깁니다.
+// 옮겨 간 지역에 있던 회차는 그 자리에 새로 들어선 지역에서 이어집니다 —
+// 옛 4격(잊혀진 성역 → 12격)은 새 4격(거인의 고개)에서, 옛 15격(궁극의 혼돈)은 그 앞쪽인 19격(가라앉은 르뤼에)에서.
+const LAYOUT_VERSION = 2;
+const OLD_ZONE_ORDER = ['sewer', 'forest', 'ruins', 'sanctuary', 'necropolis', 'abyss', 'rank1',
+  'murim', 'yeongmul', 'rank2', 'heaven', 'hell', 'rank3', 'rank4', 'rank5'];
+const OLD_ZONE_SEAT = { sanctuary: 'giantpass', rank5: 'rlyeh' };
+function newZoneIndex(oldIndex) {
+  const id = OLD_ZONE_ORDER[oldIndex];
+  const i = id ? ZONES.findIndex(z => z.id === (OLD_ZONE_SEAT[id] || id)) : -1;
+  return i >= 0 ? i : Math.max(0, Math.min(ZONES.length - 1, oldIndex | 0));
+}
+// bestZone 은 1부터 세는 「닿은 지역 수」입니다. 끝까지 깬 저장본은 새 지역까지 다 본 것으로 칩니다.
+function newBestZone(best, cleared) {
+  return cleared ? ZONES.length : newZoneIndex(Math.max(1, best | 0) - 1) + 1;
+}
+// 저장된 회차(예전 형식 v1)를 새 번호로. 마주한 상대가 이제 다른 지역의 것이면 그 만남은 없던 일로 하고 쓴 에너지를 돌려줍니다.
+function migrateRunLayout(d) {
+  d.zoneIndex = newZoneIndex(d.zoneIndex);
+  if (d.merchant && Number.isInteger(d.merchant.zone)) d.merchant.zone = newZoneIndex(d.merchant.zone);
+  const foe = d.encounter ? getEnemy(d.encounter) : null;
+  if (d.encounter && (!foe || foe.zoneIndex !== d.zoneIndex)) {
+    d.energy = (Number(d.energy) || 0) + RULES.TRAVEL_COST;
+    d.encounter = null;
+    d.onBoss = false;
+    d.aura = null;
+  }
+  d.v = RUN_SAVE_VERSION;
+}
+
 // 각 슬롯에 뭐가 들었는지 — 초기화면에 보여줄 요약
 function slotSummary(n) {
   try {
@@ -26,6 +57,7 @@ function slotSummary(n) {
 function runSummary(n) {
   try {
     const d = JSON.parse(localStorage.getItem(runKey(n)) || 'null');
+    if (d && d.v === 1) migrateRunLayout(d);   // 보여주기만 — 저장은 그 칸을 열 때
     if (!d || d.v !== RUN_SAVE_VERSION || d.over || !ZONES[d.zoneIndex]) return null;
     return { zone: d.zoneIndex + 1, level: d.level, energy: d.energy };
   } catch (e) { return null; }
@@ -37,7 +69,7 @@ function summarizeMeta(d) {
   return {
     runCount: d.runCount || 0,
     bestLevel: d.bestLevel || 1,
-    bestZone: d.bestZone || 1,
+    bestZone: d.layout >= LAYOUT_VERSION ? (d.bestZone || 1) : newBestZone(d.bestZone || 1, !!d.cleared),
     owned,
     bosses: (d.bossesBeaten || []).length,
     cleared: !!d.cleared
@@ -489,7 +521,7 @@ function save() {
 // 저장되므로, 다시 열면 결과를 닫은 자리(갈림길)에서 이어집니다 — 진 판을 되돌릴 수 없습니다.
 // 마주한 상대와 그 기운은 그대로 돌아옵니다 — 다시 열어서 다른 상대를 뽑을 수도 없습니다.
 // 끝난 회차도 저장해 둡니다. 다시 열면 끝 화면이 뜨고, 거기서 새 회차를 시작합니다.
-const RUN_SAVE_VERSION = 1;
+const RUN_SAVE_VERSION = 2;   // 2 — 격 재편 뒤의 지역 번호 (1 은 불러올 때 옮깁니다)
 
 function saveRun() {
   const run = State.run;
@@ -504,6 +536,7 @@ function loadRun() {
     const raw = currentSlot ? localStorage.getItem(runKey(currentSlot)) : null;
     if (!raw) return false;
     const d = JSON.parse(raw);
+    if (d && d.v === 1) migrateRunLayout(d);
     if (!d || d.v !== RUN_SAVE_VERSION || !ZONES[d.zoneIndex]) return false;
     if (d.encounter && !getEnemy(d.encounter)) return false;
 
@@ -534,6 +567,9 @@ function load() {
     if (!raw) return;
     const data = JSON.parse(raw);
     State.meta = { ...freshMeta(), ...data };
+    // 격 재편 전의 저장본 — 닿은 지역 수를 새 번호로
+    if (!(data.layout >= LAYOUT_VERSION)) State.meta.bestZone = newBestZone(num(data.bestZone) || 1, !!data.cleared);
+    State.meta.layout = LAYOUT_VERSION;
     State.meta.equipped = { ...emptyEquipped(), ...(data.equipped || {}) };
     State.meta.bossesBeaten = Array.isArray(data.bossesBeaten) ? data.bossesBeaten : [];
     State.meta.banked = Array.isArray(data.banked) ? data.banked : [];
@@ -581,6 +617,10 @@ function load() {
     for (const slot of ALL_SLOT_IDS) {
       if (!owns(State.meta.equipped[slot])) State.meta.equipped[slot] = null;
     }
+    // 「새로 얻음」 표시에서 이제 없는 전리품(강화석으로 돌려받은 것)은 뺍니다
+    for (const s of Object.keys(State.meta.fresh)) {
+      State.meta.fresh[s] = Array.isArray(State.meta.fresh[s]) ? State.meta.fresh[s].filter(owns) : [];
+    }
 
     // 예전 저장본에는 activeSet 이 없습니다. 그때는 세트가 "저장해뒀다 꺼내 쓰는"
     // 물건이라 입고 있던 것이 어느 세트인지가 없었습니다.
@@ -618,7 +658,8 @@ function freshMeta() {
     bestKill: 0,
     bestZone: 1,
     cleared: false,
-    namelessMet: false
+    namelessMet: false,
+    layout: LAYOUT_VERSION            // 저장본의 지역 번호 순서 (격 재편 뒤 = 2)
   };
 }
 
@@ -695,9 +736,12 @@ function simulateBattle(hero, enemy, rng = Math.random, log = null) {
   let foeHp = enemy.life;
   const MAX_TURNS = 3000; // 무한루프 방지
 
+  // 보스 화신의 고유 능력 (data.js 의 AVATAR_POWERS)
+  const P = hero.avatarPower || null;
+
   // 전투 내내 바뀌지 않는 값들은 미리 계산해둡니다
-  const hHit = hitChance(hero.dex, enemy.dex);
-  const fHit = hitChance(enemy.dex, hero.dex);
+  const hHit = P === 'arthur' ? 1 : hitChance(hero.dex, enemy.dex);                   // 바위의 검 — 빗나가지 않습니다
+  const fHit = hitChance(enemy.dex, hero.dex) * (P === 'merlin' ? 0.7 : 1);           // 꿈의 안개 — 상대 명중 ×0.7
   const hCrit = critChance(hero.dex, hero.luck, hero.critRate), hCritDmg = critDamage(hero.dex);
   const fCrit = critChance(enemy.dex, enemy.luck, 0),           fCritDmg = critDamage(enemy.dex);
   const hBase = damageFormula(hero.damage, piercedDefense(enemy.defense, hero.pierce));
@@ -713,11 +757,9 @@ function simulateBattle(hero, enemy, rng = Math.random, log = null) {
   const hSurvive = Math.floor(num(hero.survive) + 1e-6);   // 쓰러질 한 방을 1 남기고 버티는 횟수 — 확률이 아니라 딱 그 횟수만큼
   let survivedN = 0;
 
-  // 보스 화신의 고유 능력 (data.js 의 AVATAR_POWERS)
-  const P = hero.avatarPower || null;
   const bigFoe = P === 'michael' && enemy.life > hero.life;              // 용 떨어뜨리기 — 나보다 큰 상대
   const fBaseDragon = P === 'imugi' ? damageFormula(enemy.damage, hero.defense * 2) : 0;
-  let opened = false, lastStand = false, dragon = false, firstStrike = P === 'cheonma', revives = 0;
+  let opened = false, lastStand = false, dragon = false, firstStrike = P === 'cheonma', revives = 0, woke = false;
   const lowHp = () => P === 'yisunsin' && heroHp < hero.life * 0.3;    // 배수진
   const powerMult = () => {
     let m = 1;
@@ -725,6 +767,7 @@ function simulateBattle(hero, enemy, rng = Math.random, log = null) {
     if (dragon) m *= 2;
     if (bigFoe) m *= 2;
     if (P === 'lucifer') m *= Math.max(0.5, 3 - 0.25 * (turn - 1));   // 추락하는 별 — ×3 에서 턴마다 0.25씩
+    if (P === 'tiamat') m *= Math.min(3, 1 + 0.1 * (turn - 1));        // 태초의 바다 — 턴마다 +10%, ×3 까지
     return m;
   };
 
@@ -742,7 +785,7 @@ function simulateBattle(hero, enemy, rng = Math.random, log = null) {
       if (!opened) {
         opened = true;
         if (bigFoe) note('hero', 'power', 0, { p: 'michael' });
-        if (P === 'lucifer') note('hero', 'power', 0, { p: 'lucifer' });
+        if (P === 'lucifer' || P === 'arthur' || P === 'merlin' || P === 'sanctdragon' || P === 'tiamat') note('hero', 'power', 0, { p: P });
       }
       if (P === 'imugi' && !dragon && turn > 10) { dragon = true; note('hero', 'power', 0, { p: 'imugi' }); }
       if (P === 'yisunsin' && !lastStand && lowHp()) { lastStand = true; note('hero', 'power', 0, { p: 'yisunsin' }); }
@@ -801,6 +844,7 @@ function simulateBattle(hero, enemy, rng = Math.random, log = null) {
     let inc = (dragon ? fBaseDragon : fBase) * roll();
     const crit = rng() < fCrit;
     if (crit) inc *= fCritDmg;
+    if (P === 'sanctdragon') inc *= 0.7;                                // 천 년의 비늘 — 받는 피해 −30%
     inc = Math.max(1, inc);
 
     // 생존 — 이 한 방에 쓰러질 때마다, 정해진 횟수만큼 (확률 없음)
@@ -826,6 +870,12 @@ function simulateBattle(hero, enemy, rng = Math.random, log = null) {
       revives++;
       heroHp = hero.life * 0.2;
       note('hero', 'power', 0, { p: 'heracles', n: revives });
+    }
+    // 죽지 않는 잠 — 한 싸움에 한 번, 생명을 모두 채우고 다시 깨어납니다
+    if (heroHp <= 0 && P === 'cthulhu' && !woke) {
+      woke = true;
+      heroHp = hero.life;
+      note('hero', 'power', 0, { p: 'cthulhu' });
     }
     if (heroHp <= 0) return { win: false, turns: turn, heroHpLeft: 0 };
   }
@@ -1567,7 +1617,7 @@ function rankXpMult(rank) {
 // 이 적에게서 전리품 하나가 떨어질 확률
 //   기본(등급) × 격에 따른 인색함 × 행운 배수 × 장비의 전리품 확률 × 기운
 function dropChanceFor(foe, auraMult = 1, stats = null) {
-  const base = KINDS[foe ? foe.kind : 'normal'].dropChance;
+  const base = foe && foe.set ? RULES.SET_ELITE_DROP : KINDS[foe ? foe.kind : 'normal'].dropChance;   // 묶음 정예는 하나뿐인 물건이라 따로
   const h = stats || heroStats();
   const rank = foe && foe.rank ? foe.rank.n : 1;
   const once = !!(foe && foe.once);   // 정예·히든·보스 — 회차당 한 번뿐인 상대
@@ -1686,9 +1736,9 @@ function josa(word, withJong, withoutJong) {
   return ((c - 0xAC00) % 28) !== 0 ? withJong : withoutJong;
 }
 
-// 큰 숫자를 읽기 쉽게. 레벨이 1,000만까지 가고 경험치는 그보다 훨씬 커집니다.
-// 레벨 100조의 누적 경험치가 10²⁸ 쯤이라 Oc(10²⁷)까지 둡니다.
-const UNITS = [[1e30, 'No'], [1e27, 'Oc'], [1e24, 'Sp'], [1e21, 'Sx'], [1e18, 'Qi'],
+// 큰 숫자를 읽기 쉽게. 레벨이 수백 경까지 가고 경험치는 그보다 훨씬 커집니다.
+// 레벨 380경의 누적 경험치가 10³⁷ 쯤이라 Ud(10³⁶)까지 둡니다.
+const UNITS = [[1e36, 'Ud'], [1e33, 'Dc'], [1e30, 'No'], [1e27, 'Oc'], [1e24, 'Sp'], [1e21, 'Sx'], [1e18, 'Qi'],
                [1e15, 'Qa'], [1e12, 'T'], [1e9, 'B'], [1e6, 'M'], [1e3, 'K']];
 
 function fmt(n) {
@@ -1700,7 +1750,12 @@ function fmt(n) {
 }
 
 // 레벨은 자릿수를 그대로 보여줍니다 — 1,000만은 눈으로 봐야 맛이 나니까.
+// 다만 1억부터는 폰의 지역 창에 다 안 들어가서 「35.7억 · 400조 · 322경」처럼 우리말 단위로 줄입니다.
+const LEVEL_UNITS = [[1e16, '경'], [1e12, '조'], [1e8, '억']];
 function fmtLevel(n) {
   if (!isFinite(n)) return '-';
+  for (const [v, s] of LEVEL_UNITS) {
+    if (n >= v) return `${(n / v).toLocaleString('ko-KR', { maximumSignificantDigits: 3 })}${s}`;
+  }
   return Math.round(n).toLocaleString('ko-KR');
 }

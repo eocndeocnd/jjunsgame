@@ -11,9 +11,9 @@
 // ---------- 기본 규칙 ----------
 const RULES = {
   START_ENERGY: 30,       // 맨몸으로 시작할 때의 에너지.
-                          // 이것만으로는 열다섯 개 지역을 절대 관통하지 못합니다.
+                          // 이것만으로는 스무 개 지역을 절대 관통하지 못합니다.
                           // 『격을 삼키는 검』으로 격을 삼켜 적립해야 끝까지 갑니다
-                          // (전부 삼키면 +91). 그게 그 검의 존재 이유입니다.
+                          // (전부 삼키면 +83 — 묶음 정예는 삼킬 격이 없습니다). 그게 그 검의 존재 이유입니다.
   TRAVEL_COST: 1,         // 길을 떠날 때 (그리고 보스에게 향할 때) 드는 에너지
                           // 예전엔 공짜였습니다 — "이미 보스를 꺾어서 산 길" 이라는
                           // 이유였는데, 그러면 깊이 들어가는 데 아무 대가가 없어서
@@ -36,7 +36,9 @@ const RULES = {
   // 첫 회차에 장비를 갈아끼우고 강화해보는 걸 겪어봐야 게임이 뭔지 알게 됩니다.
   // 예전엔 제1격도 31% 라 에너지가 바닥날 때까지 일곱 개밖에 못 모았고,
   // 그래서 첫 회차가 제1격 안에서 끝났습니다.
-  RANK_DROP_EARLY: 1.2,
+  RANK_DROP_EARLY: 1.6,   // 격 재편 때 1.2 → 1.6 (격마다 전리품 가짓수가 줄어 초반 장비가 늦게 모여서)
+  // 묶음 정예(칠죄종 · 일곱 대천사 …)의 전리품 확률. 그 존재를 대표하는 물건 하나뿐이라 잘 떨어지게 둡니다.
+  SET_ELITE_DROP: 0.8,
   // 경험치 쪽 초반 보너스. 1 + 값/격² 이라 훨씬 빨리 사그라듭니다 —
   // 제1격 ×3.0, 제2격 ×1.5, 제3격 ×1.22, 제5격 이후로는 사실상 없습니다.
   // 제1격에서 보스를 잡을 힘이 붙는 게 24번째 싸움이었는데 에너지가 30뿐이라,
@@ -275,8 +277,9 @@ function enemyStats(level, lifeMult = 1) {
 //                            0.16 → 104회차 (95~110, 4판) — 후반 벽이 지역당 10회차 안팎으로
 //                            0.17 + 초반(제3~6격) 10% 약하게 → 101회차 (99~104, 4판)   ← 지금
 //   (그 뒤 세트 · 도감 · 새 능력치가 들어오면서 줄어든 만큼은 경험치 계수로 되돌렸습니다 — enemyBaseXp)
-const RANK_TOUGHNESS = 0.17;
-const TOUGH_FROM_RANK = 7;     // 제7격 ×1.17, 제10격 ×1.68, 제15격 ×2.53
+const RANK_TOUGHNESS = 0.17;        // 제7격의 단단함 (×1.17)
+const RANK_TOUGHNESS_LATE = 0.17;   // 제8격부터 한 격마다 더 붙는 단단함
+const TOUGH_FROM_RANK = 7;
 
 // 앞쪽은 거꾸로 — 제3~6격(마수 · 환수 · 마족 · 마왕)은 같은 레벨이어도 10% 약합니다.
 // 정예·보스 전리품 배수를 낮춘 뒤로 초반에 끼울 만한 장비가 약해져서,
@@ -290,7 +293,8 @@ const SOFT_RANKS = [3, 6];
 
 function rankToughness(n) {
   if (n >= SOFT_RANKS[0] && n <= SOFT_RANKS[1]) return 1 - EARLY_SOFTEN;
-  return 1 + RANK_TOUGHNESS * Math.max(0, n - TOUGH_FROM_RANK + 1);
+  if (n < TOUGH_FROM_RANK) return 1;
+  return 1 + RANK_TOUGHNESS + RANK_TOUGHNESS_LATE * (n - TOUGH_FROM_RANK);
 }
 
 function toughen(s, rankN, isFinal) {
@@ -475,7 +479,10 @@ const VITAL_FOES = new Set([
   'raphael',      // 이름 자체가 "신이 고치신다"
   'isis',         // 앙크 — 되살리는 여신
   'shubniggurath',// 천의 새끼를 낳는 숲의 검은 염소
-  'abhoth'        // 끝없이 새끼를 낳는 샘
+  'abhoth',       // 끝없이 새끼를 낳는 샘
+  'galahad',      // 성배의 빛 — 상처를 낫게 하는 잔
+  'ymir',         // 그 몸으로 세계가 지어진 거인
+  'tiamat'        // 신들을 낳은 바다
 ]);
 
 // ---------- 특수 능력치 ----------
@@ -588,8 +595,8 @@ function makeSpecialStats(opt, level, kind, rankN) {
     out[opt.gem] = Math.max(1, Math.round(GEM_POWER * e[opt.gem] * KINDS[kind].mult));
   }
   for (const key of opt.relic || []) {
-    // 생존은 횟수 — 제10격부터 두 번, 그 아래는 한 번 (격 배수 · 등급 배수를 타지 않습니다)
-    out[key] = key === 'survive' ? (rankN >= 10 ? 2 : 1)
+    // 생존은 횟수 — 영웅의 격부터 두 번, 그 아래는 한 번 (격 배수 · 등급 배수를 타지 않습니다)
+    out[key] = key === 'survive' ? (rankN >= RANK_N['영웅'] ? 2 : 1)
       : +(RELIC_BASE[key] * relicScale(rankN) * RELIC_GRADE[kind] / 100).toFixed(4);
   }
   return out;
@@ -632,11 +639,13 @@ function makeItemStats(slot, level, gradeMult = 1, archetype = null, vital = fal
 // energy 는 『격을 삼키는 검』으로 처음 꺾을 때 얻는 에너지 (정예 1 · 히든 2 · 보스 2). 칠죄종은 예외 — devourEnergy.
 const KINDS = {
   // dropChance 는 **전리품 하나하나에 따로** 굴리는 확률입니다.
-  // 세 종류를 가진 일반 적이라면 22% 를 세 번 굴리므로
-  // 아무것도 못 얻을 확률이 47% 입니다 — 빈손으로 돌아서는 날이 있어야
+  // 두 종류를 가진 일반 적이라면 31% 를 두 번 굴리므로
+  // 아무것도 못 얻을 확률이 48% 입니다 — 빈손으로 돌아서는 날이 있어야
   // 행운에 투자할 이유가 생깁니다.
-  normal: { id: 'normal', name: '일반', mult: 1.0, lifeMult: 1.0,  penalty: 'LOSS_PENALTY',       once: false, energy: 0, dropChance: 0.22, gold: 1 },
-  elite:  { id: 'elite',  name: '정예', mult: 1.4, lifeMult: 1.2,  penalty: 'LOSS_PENALTY_ELITE', once: true,  energy: 1, dropChance: 0.32, gold: 4 },
+  // (격 재편 때 몬스터마다 전리품이 대개 셋 → 둘로 줄어, 한 번 잡을 때 떨어지는 양이 같도록
+  //  일반 22 → 31% · 정예 32 → 48% 로 올렸습니다. 묶음 정예는 RULES.SET_ELITE_DROP)
+  normal: { id: 'normal', name: '일반', mult: 1.0, lifeMult: 1.0,  penalty: 'LOSS_PENALTY',       once: false, energy: 0, dropChance: 0.31, gold: 1 },
+  elite:  { id: 'elite',  name: '정예', mult: 1.4, lifeMult: 1.2,  penalty: 'LOSS_PENALTY_ELITE', once: true,  energy: 1, dropChance: 0.48, gold: 4 },
   hidden: { id: 'hidden', name: '히든', mult: 1.6, lifeMult: 1.25, penalty: 'LOSS_PENALTY_ELITE', once: true,  energy: 2, dropChance: 1.00, gold: 5 },
   boss:   { id: 'boss',   name: '격',   mult: 1.8, lifeMult: 1.3,  penalty: 'BOSS_LOSS_PENALTY',  once: true,  energy: 2, dropChance: 0.40, gold: 10 }
 };
@@ -727,30 +736,40 @@ const DEVOURER_ID = 'observer_0';
 // ============================================================
 //  격(格)
 // ============================================================
-// 아래에서 위로 올라가는 열다섯 계단입니다.
+// 아래에서 위로 올라가는 스무 계단입니다.
 // 앞의 여섯은 마물 — 던전에서 시작해 마왕까지.
-// 뒤의 아홉은 화신 — 인간의 이야기에서 시작해 바깥의 것까지.
-//   설화 → 무림 · 영물   사람의 이야기, 사람을 넘으려 한 자들, 그들이 쫓는 천 년 묵은 것
-//   영웅 → 천사 · 악마   신의 피를 이은 자, 하늘의 뜻을 전하는 것, 하늘에 등을 돌린 것
-//   신격 → 주신 → 외신
+// 뒤의 열넷은 화신 — 인간의 이야기에서 시작해 바깥의 것까지.
+//   설화 → 기사 · 마도 · 무림   이야기가 남은 인간, 그리고 사람을 넘는 세 갈래 (검 · 마법 · 내공)
+//   영물 · 환수 → 영웅          하늘을 넘보는 짐승과 신화의 짐승, 그 짐승들을 꺾은 영웅
+//   천사 · 악마 → 신격          하늘의 뜻을 전하는 것, 하늘에 등을 돌린 것, 이름을 가진 신
+//   태초 → 주신                 신들이 세계를 얻으려 꺾은 것, 그것을 꺾고 왕이 된 신들
+//   고신 → 외신                 별이 바로 서면 깨어나는 옛 지배자들, 그리고 바깥의 것
+// 급은 「꺾은 쪽 · 세운 쪽이 위」로 정했습니다 (docs/RANK-PLAN.md).
 // minLevel 은 지역 데이터에서 자동으로 채워집니다.
 const RANKS = [
   { n: 1,  name: '잡졸', hanja: '雜卒', desc: '이름조차 없는 것' },
   { n: 2,  name: '마물', hanja: '魔物', desc: '이름이 붙은 것' },
   { n: 3,  name: '마수', hanja: '魔獸', desc: '전설이 된 짐승' },
-  { n: 4,  name: '환수', hanja: '幻獸', desc: '신화에 걸친 짐승' },
+  { n: 4,  name: '거인', hanja: '巨人', desc: '멀리서도 보이는 것' },
   { n: 5,  name: '마족', hanja: '魔族', desc: '스스로 생각하는 것' },
   { n: 6,  name: '마왕', hanja: '魔王', desc: '세계를 위협하는 것' },
   { n: 7,  name: '설화', hanja: '說話', desc: '이야기가 남은 인간' },
-  { n: 8,  name: '무림', hanja: '武林', desc: '사람의 몸으로 하늘에 닿으려 한 자' },
-  { n: 9,  name: '영물', hanja: '靈物', desc: '천 년을 묵어 하늘을 넘보는 것' },
-  { n: 10, name: '영웅', hanja: '英雄', desc: '신의 피를 이은 자' },
-  { n: 11, name: '천사', hanja: '天使', desc: '하늘의 뜻을 전하는 것' },
-  { n: 12, name: '악마', hanja: '惡魔', desc: '하늘에 등을 돌린 것' },
-  { n: 13, name: '신격', hanja: '神格', desc: '이름을 가진 신' },
-  { n: 14, name: '주신', hanja: '主神', desc: '신들을 다스리는 자' },
-  { n: 15, name: '외신', hanja: '外神', desc: '바깥에서 온 것' }
+  { n: 8,  name: '기사', hanja: '騎士', desc: '검에 오러를 두른 자' },
+  { n: 9,  name: '마도', hanja: '魔導', desc: '마나로 세계를 고쳐 쓰려 한 자' },
+  { n: 10, name: '무림', hanja: '武林', desc: '사람의 몸으로 하늘에 닿으려 한 자' },
+  { n: 11, name: '영물', hanja: '靈物', desc: '천 년을 묵어 하늘을 넘보는 것' },
+  { n: 12, name: '환수', hanja: '幻獸', desc: '신화에 걸친 짐승' },
+  { n: 13, name: '영웅', hanja: '英雄', desc: '신의 피를 이은 자' },
+  { n: 14, name: '천사', hanja: '天使', desc: '하늘의 뜻을 전하는 것' },
+  { n: 15, name: '악마', hanja: '惡魔', desc: '하늘에 등을 돌린 것' },
+  { n: 16, name: '신격', hanja: '神格', desc: '이름을 가진 신' },
+  { n: 17, name: '태초', hanja: '太初', desc: '신들이 세계를 얻으려 꺾은 것' },
+  { n: 18, name: '주신', hanja: '主神', desc: '신들을 다스리는 자' },
+  { n: 19, name: '고신', hanja: '古神', desc: '별이 제자리에 오면 깨어나는 것' },
+  { n: 20, name: '외신', hanja: '外神', desc: '바깥에서 온 것' }
 ];
+// 격 이름 → 번호. 격이 늘거나 순서가 바뀌어도 「영웅부터」 같은 기준이 따라가게 이름으로 찾습니다.
+const RANK_N = Object.fromEntries(RANKS.map(r => [r.name, r.n]));
 
 function rankOf(level) {
   let r = RANKS[0];
@@ -759,22 +778,37 @@ function rankOf(level) {
 }
 
 // ============================================================
-//  레벨 사다리
+//  레벨 사다리 — 격마다 폭을 정해 둡니다
 // ============================================================
-// 적의 레벨은 손으로 적지 않습니다. 등장 순서만 정하면 1 부터 상한까지
-// 기하급수로 자동 배치됩니다.
+// 적의 레벨은 손으로 적지 않습니다. 격마다 레벨의 폭(그 격의 시작 ~ 다음 격의 시작)을 정해 두고,
+// 그 격의 적을 등장 순서대로 폭 안에 고르게(기하급수로) 깝니다.
 //
-// 그래서 적을 중간에 끼워 넣기만 해도 사다리가 저절로 촘촘해집니다.
-// 촘촘할수록 "아슬아슬한 상대"가 많아지고, 승률이 0%/100% 로만 갈리지 않습니다.
-// 지금은 183마리라 한 칸이 약 1.19배입니다.
+// 예전엔 191마리 전체를 한 줄로 세워 한 칸에 약 1.18배씩 깔았습니다. 그러면 적을 넣을 때마다
+// 그 뒤 격이 전부 밀려 게임이 길어집니다 (7격에 정예 다섯을 넣으면 보스 이순신이 2.3배 세집니다).
+// 이제 몬스터가 많은 격은 칸이 촘촘해질 뿐 길어지지 않습니다. 촘촘할수록 아슬아슬한 상대가 많아집니다.
+// 게임 길이는 몬스터 수가 아니라 격 수로 정해집니다.
 //
-// 격을 열한 개에서 열다섯 개로 늘리면서 상한도 100억에서 100조로 올렸습니다.
-// 상한을 그대로 두고 쉰 마리를 끼워 넣으면 한 칸이 1.13배로 좁아질 뿐,
-// 올라가야 할 거리는 그대로라 게임이 길어지지 않습니다.
-// 한 칸의 폭(≈1.19배)을 지키고 사다리를 위로 늘려야 늘어난 격만큼 길이가 붙습니다.
-const LEVEL_CAP = 1e14;  // 100조 — 아자토스의 레벨
-const LADDER_FLAT = 8;          // 맨 아래 여덟 칸은 1,2,…,8 로 손으로 깝니다
-                                // (안 그러면 저레벨이 전부 Lv.1 로 뭉개집니다)
+// 1~8격의 시작은 예전 사다리 그대로라, 지금 저장본의 1~7격 레벨은 거의 그대로입니다
+// (명단이 그대로인 격은 똑같고, 정예가 늘어난 5 · 7격은 10% 안쪽으로만 달라집니다).
+// 8격부터는 예전 화신 격들의 평균 폭(한 격에 약 8배)으로 이어 갑니다.
+const OLD_LADDER_STEP = Math.pow(1e14 / 8, 1 / (191 - 8));   // 예전 사다리(191마리 · 상한 100조)의 한 칸
+const LADDER_FLAT = 8;                                        // 맨 아래 여덟 칸은 1,2,…,8 (안 그러면 저레벨이 전부 Lv.1 로 뭉개집니다)
+const OLD_RANK_START = [0, 12, 24, 37, 49, 62, 77, 90];      // 예전 사다리에서 1~8격 첫 적이 섰던 자리
+const RANK_SPAN = 8;                                          // 8격부터 한 격의 폭
+
+function oldLadderAt(i) {
+  return i < LADDER_FLAT ? i + 1 : LADDER_FLAT * Math.pow(OLD_LADDER_STEP, i - LADDER_FLAT + 1);
+}
+
+// RANK_START[n] = 제n격 첫 적의 레벨 (반올림 전). RANK_START[격 수 + 1] 이 상한입니다.
+const RANK_START = (() => {
+  const out = [];
+  for (let n = 1; n <= RANKS.length + 1; n++) {
+    out[n] = n <= OLD_RANK_START.length ? oldLadderAt(OLD_RANK_START[n - 1]) : out[n - 1] * RANK_SPAN;
+  }
+  return out;
+})();
+const LEVEL_CAP = RANK_START[RANKS.length + 1];   // 아자토스 바로 위 (약 380경) — 관리자 도구가 씁니다
 
 // 읽기 좋게 유효숫자 세 자리로 자릅니다 — Lv.4,663 보다 Lv.4,660 이 낫습니다
 function roundSig(n, digits = 3) {
@@ -783,29 +817,28 @@ function roundSig(n, digits = 3) {
   return Math.round(n / m) * m;
 }
 
-function buildLadder(total) {
-  const steps = total - LADDER_FLAT;
-  const r = Math.pow(LEVEL_CAP / LADDER_FLAT, 1 / steps);
-  const out = [];
-  for (let i = 0; i < total; i++) {
-    out.push(i < LADDER_FLAT
-      ? i + 1
-      : roundSig(LADDER_FLAT * Math.pow(r, i - LADDER_FLAT + 1)));
-  }
-  return out;
+// 제n격의 적 count 마리 중 i 번째(0부터)의 레벨
+function rankLevel(n, i, count) {
+  if (n === 1) return roundSig(oldLadderAt(i));   // 1격은 예전 사다리 그대로 (맨 아래 1,2,…,8 이 깔린 자리)
+  const a = RANK_START[n], b = RANK_START[n + 1];
+  return roundSig(a * Math.pow(b / a, i / count));
 }
 
 // ============================================================
 //  지역과 화신
 // ============================================================
-// 지역 하나가 격 하나이고, 지역마다 화신 열두 명 — 일반 아홉, 정예 둘, 보스 하나.
-// 레벨은 1 에서 100조까지, 한 칸이 약 1.19배씩입니다.
-// (칸이 촘촘할수록 "아슬아슬한 상대"가 많아집니다. 승률이 0/100 으로만
-//  갈리지 않으려면 사다리도 촘촘해야 합니다.)
+// 지역 하나가 격 하나입니다. 격마다 대개 일반 아홉 · 정예 둘 · 보스 하나이고,
+// 숫자 · 속성으로 묶이는 것(칠죄종 · 일곱 대천사 · 올림포스 12신 …)은 정예로 늘렸습니다 (아래 ELITE_SETS).
+// 일반에서 정예로 올린 자리는 채우지 않아서, 그 격은 구역(일반 종류)이 적습니다.
 //
-// d 는 떨어뜨리는 전리품: [부위, 이름] 을 1~3개.
-// 화신마다 부위 조합이 다릅니다 — 알렉산드로스는 투구·신발·반지를 남기고,
-// 손자는 병법서와 각반을 남기는 식으로.
+// d 는 떨어뜨리는 전리품 [부위, 이름, 세 번째(선택)] — 대부분 둘, 종종 하나, 보스는 셋.
+//   'retired' — 빠진 전리품. 자리(번호)만 남고 만들어지지 않으며, 가진 저장본은 강화석으로 돌려받습니다.
+//   'none'    — 성격 없이 맨 스탯만 (격을 삼키는 검처럼 특별한 것).
+//   { relic } · { gem } — 특수장비.
+// 전리품 id 는 `적id_자리` 입니다 (itemKey 가 있으면 `itemKey_자리`). 자리를 옮기면 가진 사람의 장비가
+// 몰래 바뀌므로, 빼는 것은 'retired' 로 자리를 지키고 새것은 맨 뒤에 붙입니다.
+// 격을 옮긴 적(옛 4격 짐승들 · 8격 뒤로 밀린 화신들)은 itemKey 로 번호를 새로 받았습니다 — 옛 번호는 LEGACY_ITEMS.
+// 격마다 열세 부위가 모두 나오고 한 부위는 많아야 셋입니다 (tools/loot-check.js 가 빌드할 때 검사합니다).
 const ZONES = [
   // ───────────────────────── 마물 구간 ─────────────────────────
   {
@@ -814,27 +847,27 @@ const ZONES = [
     flavor: '누구나 여기서 시작한다. 여기서 끝나는 자도 많다.',
     enemies: [
       { id: 'slime', name: '슬라임', title: '가장 만만한 것', icon: '🟢',
-        d: [['weapon', '녹슨 단검'], ['armor', '점액 묻은 천옷']] },
+        d: [['weapon', '녹슨 단검'], ['armor', '점액 묻은 천옷', 'retired']] },
       { id: 'giantrat', name: '자이언트 랫', title: '수로에 사는 것', icon: '🐀',
         d: [['boots', '쥐가죽 신'], ['ring', '이빨 목걸이']] },
       { id: 'goblin', name: '고블린', title: '떼로 몰려다니는', icon: '👺',
-        d: [['weapon', '고블린 손도끼'], ['helm', '찌그러진 투구']] },
+        d: [['weapon', '고블린 손도끼'], ['helm', '찌그러진 투구'], ['gloves', '고블린 손싸개', 'retired']] },
       { id: 'kobold', name: '코볼트', title: '함정을 파는 것', icon: '🦎',
-        d: [['gloves', '조잡한 덫'], ['greaves', '비늘 각반']] },
+        d: [['gloves', '조잡한 덫', 'retired'], ['greaves', '비늘 각반'], ['belt', '코볼트 허리끈']] },
       { id: 'goblinchief', name: '고블린 족장', title: '제일 큰 몽둥이를 든 자', icon: '🪓', kind: 'elite',
-        d: [['shoulder', '족장의 어깨뼈'], ['armor', '전리품 누더기'], ['necklace', '해골 목걸이']] },
+        d: [['shoulder', '족장의 어깨뼈'], ['armor', '전리품 누더기'], ['necklace', '해골 목걸이', 'retired']] },
       { id: 'skeleton', name: '스켈레톤', title: '부서져도 다시 모이는', icon: '☠️',
-        d: [['shoulder', '갈비뼈 견갑'], ['helm', '해골 투구']] },
+        d: [['shoulder', '갈비뼈 견갑'], ['helm', '해골 투구'], ['belt', '뼈 허리띠', 'retired']] },
       { id: 'zombie', name: '좀비', title: '느리지만 멈추지 않는', icon: '🧟',
-        d: [['armor', '썩은 가죽'], ['greaves', '무거운 발']] },
+        d: [['armor', '썩은 가죽'], ['greaves', '무거운 발'], ['gloves', '썩은 손', 'retired']] },
       { id: 'cavespider', name: '자이언트 스파이더', title: '천장에서 내려오는', icon: '🕷️',
-        d: [['boots', '거미줄 신'], ['ring', '독니 반지']] },
+        d: [['boots', '거미줄 신', 'retired'], ['ring', '독니 반지'], ['bracelet', '거미줄 팔찌']] },
       { id: 'mimic', name: '미믹', title: '보물인 척하는 것', icon: '🧰', kind: 'elite',
-        d: [['gloves', '이빨 달린 상자'], ['necklace', '가짜 금화'], ['ring', '미끼 반지']] },
+        d: [['gloves', '이빨 달린 상자'], ['necklace', '가짜 금화'], ['ring', '미끼 반지', 'retired']] },
       { id: 'imp', name: '임프', title: '작고 귀찮은 악마', icon: '😈',
-        d: [['offhand', '작은 삼지창'], ['necklace', '유황 조각']] },
+        d: [['offhand', '작은 삼지창'], ['necklace', '유황 조각', 'retired'], ['cloak', '박쥐날개 망토']] },
       { id: 'darkwolf', name: '다크 울프', title: '어둠 속에서 눈만 보이는', icon: '🐕‍🦺',
-        d: [['armor', '늑대가죽 갑옷'], ['boots', '발자국 없는 신']] },
+        d: [['armor', '늑대가죽 갑옷', 'retired'], ['boots', '발자국 없는 신'], ['gloves', '늑대발 장갑']] },
       { id: 'dungeonguardian', name: '던전 가디언', title: '문을 지키라는 명령만 남은', icon: '🛡️', kind: 'boss',
         d: [['weapon', '수호자의 대검'], ['armor', '고철 판금'], ['necklace', '지하수로의 열쇠']] }
     ]
@@ -845,29 +878,29 @@ const ZONES = [
     flavor: '길은 있다. 다만 누가 냈는지는 아무도 모른다.',
     enemies: [
       { id: 'orc', name: '오크 전사', title: '힘으로만 밀어붙이는', icon: '🐗',
-        d: [['weapon', '오크 대검'], ['armor', '가죽 흉갑']] },
+        d: [['weapon', '오크 대검', 'retired'], ['armor', '가죽 흉갑'], ['gloves', '오크 손등가리개']] },
       { id: 'hobgoblin', name: '홉고블린', title: '줄을 맞춰 싸우는 고블린', icon: '👹',
-        d: [['offhand', '군용 방패'], ['helm', '지휘관의 투구']] },
+        d: [['offhand', '군용 방패'], ['helm', '지휘관의 투구', 'retired'], ['belt', '군용 허리띠']] },
       { id: 'lizardman', name: '리저드맨', title: '늪에서 기어나온', icon: '🐊',
-        d: [['weapon', '뼈 삼지창'], ['greaves', '늪지 각반']] },
+        d: [['weapon', '뼈 삼지창', 'retired'], ['greaves', '늪지 각반']] },
       { id: 'harpy', name: '하피', title: '노래로 홀리는 것', icon: '🪽',
-        d: [['boots', '깃털 신'], ['ring', '홀리는 목소리']] },
+        d: [['boots', '깃털 신'], ['ring', '홀리는 목소리', 'retired'], ['cloak', '깃털 망토']] },
       { id: 'orcgeneral', name: '오크 장군', title: '천 명을 이끌었던', icon: '🪖', kind: 'elite',
-        d: [['shoulder', '장군의 견장'], ['armor', '전장의 판금'], ['helm', '뿔 달린 투구']] },
+        d: [['shoulder', '장군의 견장'], ['armor', '전장의 판금', 'retired'], ['helm', '뿔 달린 투구']] },
       { id: 'ogre', name: '오우거', title: '나무를 뽑아 휘두르는', icon: '🪨',
         d: [['shoulder', '통나무 어깨받이'], ['greaves', '두꺼운 각반']] },
       { id: 'darkelf', name: '다크 엘프 자객', title: '뒤에서만 나타나는', icon: '🌑',
-        d: [['weapon', '독 바른 단검'], ['boots', '그림자 신'], ['ring', '암살자의 인장']] },
+        d: [['weapon', '독 바른 단검', 'retired'], ['boots', '그림자 신'], ['ring', '암살자의 인장']] },
       { id: 'treant', name: '트렌트', title: '걷는 나무', icon: '🌳',
-        d: [['armor', '나무껍질 갑옷'], ['offhand', '뿌리 방패']] },
+        d: [['armor', '나무껍질 갑옷', 'retired'], ['offhand', '뿌리 방패'], ['belt', '덩굴 허리띠']] },
       { id: 'forestwitch', name: '숲의 마녀', title: '길 잃은 자만 만나는', icon: '🧙', kind: 'elite',
-        d: [['weapon', '뒤틀린 지팡이'], ['necklace', '저주받은 부적'], ['ring', '마녀의 고리']] },
+        d: [['weapon', '뒤틀린 지팡이'], ['necklace', '저주받은 부적', 'retired'], ['ring', '마녀의 고리']] },
       { id: 'gargoyle', name: '가고일', title: '낮에는 돌인 것', icon: '🗿',
-        d: [['armor', '석상 갑주'], ['helm', '돌 뿔']] },
+        d: [['armor', '석상 갑주', 'retired'], ['helm', '돌 뿔'], ['bracelet', '돌 팔찌']] },
       { id: 'basilisk', name: '바실리스크', title: '눈을 마주치면 끝', icon: '🐍',
-        d: [['necklace', '석화의 눈'], ['greaves', '비늘 정강이']] },
+        d: [['necklace', '석화의 눈'], ['greaves', '비늘 정강이', 'retired'], ['bracelet', '석화의 팔찌']] },
       { id: 'trollking', name: '트롤 킹', title: '베어도 다시 붙는 자', icon: '🧌', kind: 'boss',
-        d: [['weapon', '재생의 곤봉'], ['armor', '트롤가죽 갑주'], ['necklace', '숲의 심장']] }
+        d: [['weapon', '재생의 곤봉'], ['armor', '트롤가죽 갑주'], ['necklace', '숲의 심장'], ['gloves', '재생하는 손', 'retired'], ['special', '트롤의 심장', 'retired']] }
     ]
   },
   {
@@ -876,63 +909,63 @@ const ZONES = [
     flavor: '왕은 없고 왕관만 굴러다닌다.',
     enemies: [
       { id: 'minotaur', name: '미노타우로스', title: '미궁의 주인', icon: '🐂',
-        d: [['weapon', '미궁의 전투도끼'], ['helm', '황소 투구']] },
+        d: [['weapon', '미궁의 전투도끼'], ['helm', '황소 투구', 'retired'], ['belt', '미궁의 허리띠'], ['special', '미궁의 뿔', 'retired']] },
       { id: 'wyvern', name: '와이번', title: '용은 아니지만 하늘을 나는', icon: '🦇',
-        d: [['boots', '날개막 신'], ['armor', '와이번 가죽']] },
+        d: [['boots', '날개막 신'], ['armor', '와이번 가죽', 'retired'], ['cloak', '와이번 가죽 망토'], ['special', '와이번의 날개막', 'retired']] },
       { id: 'chimera', name: '키메라', title: '셋을 억지로 붙여놓은', icon: '🦁',
         d: [['shoulder', '세 짐승의 어깨'], ['necklace', '뒤섞인 심장']] },
       { id: 'manticore', name: '만티코어', title: '꼬리에 독침이 달린', icon: '🦂',
-        d: [['weapon', '독침 채찍'], ['ring', '만티코어의 송곳니']] },
+        d: [['weapon', '독침 채찍', 'retired'], ['ring', '만티코어의 송곳니'], ['cloak', '만티코어 망토']] },
       { id: 'griffinlord', name: '그리핀 로드', title: '하늘의 왕관을 쓴', icon: '🦅', kind: 'elite',
-        d: [['boots', '창공의 발톱'], ['armor', '깃털 흉갑'], ['necklace', '왕의 깃털']] },
+        d: [['boots', '창공의 발톱'], ['armor', '깃털 흉갑'], ['necklace', '왕의 깃털', 'retired']] },
       { id: 'stonegolem', name: '스톤 골렘', title: '명령 하나만 기억하는', icon: '🪆',
-        d: [['armor', '화강암 갑주'], ['greaves', '돌기둥 각반']] },
+        d: [['armor', '화강암 갑주', 'retired'], ['greaves', '돌기둥 각반'], ['belt', '화강암 띠']] },
       { id: 'irongolem', name: '아이언 골렘', title: '녹슬지 않는 병사', icon: '⚒️',
-        d: [['offhand', '강철 방패'], ['helm', '무쇠 투구']] },
+        d: [['offhand', '강철 방패'], ['helm', '무쇠 투구', 'retired'], ['gloves', '무쇠 손']] },
       { id: 'harpyqueen', name: '하피 퀸', title: '노래를 멈추지 않는', icon: '🎶',
-        d: [['ring', '여왕의 깃털'], ['boots', '바람 타는 신']] },
+        d: [['ring', '여왕의 깃털'], ['boots', '바람 타는 신', 'retired'], ['bracelet', '여왕의 팔찌']] },
       { id: 'hydra', name: '히드라', title: '하나 자르면 둘이 되는', icon: '🐲', kind: 'elite',
-        d: [['weapon', '아홉 머리의 이빨'], ['armor', '재생하는 비늘'], ['necklace', '불멸의 독']] },
+        d: [['weapon', '아홉 머리의 이빨'], ['armor', '재생하는 비늘'], ['necklace', '불멸의 독', 'retired']] },
       { id: 'cockatrice', name: '코카트리스', title: '닭처럼 생겼지만', icon: '🐓',
-        d: [['greaves', '석화 방지 각반'], ['ring', '볏의 고리']] },
+        d: [['greaves', '석화 방지 각반'], ['ring', '볏의 고리', 'retired']] },
       { id: 'darkknight', name: '다크 나이트', title: '투구 안이 비어 있는', icon: '🖤',
-        d: [['shoulder', '흑철 견갑'], ['armor', '흑기사 판금'], ['helm', '빈 투구']] },
-      // 특수장비 칸을 여는 히든 — 그 지역 보스를 한 번 꺾으면 모습을 드러냅니다
+        d: [['shoulder', '흑철 견갑'], ['armor', '흑기사 판금', 'retired'], ['helm', '빈 투구']] },
       { id: 'carbuncle', name: '카벙클', title: '무너진 왕국의 홍옥을 이마에 박은', icon: '💎', kind: 'hidden', opens: true,
-        d: [['special', '카벙클의 홍옥', { gem: 'damage' }], ['special', '세공사의 돋보기', { relic: ['stoneRate'] }]] },
+        d: [['special', '카벙클의 홍옥', 'retired'], ['special', '세공사의 돋보기', 'retired']] },
       { id: 'fallenking', name: '몰락한 왕', title: '아직도 옥좌에 앉아 있는', icon: '🤴', kind: 'boss',
         d: [['weapon', '왕의 세검'], ['helm', '녹슨 왕관'], ['necklace', '무너진 옥새']] }
     ]
   },
+  // 짐승이 아니라 사람 꼴이라 첫 공간 옆에 있어도 어색하지 않고, 덩치만 봐도 아직 못 이긴다는 게 보입니다. 거인왕이 5 · 6격으로 가는 고개를 막습니다.
   {
-    id: 'sanctuary', rank: 4,
-    name: '잊혀진 성역',
-    flavor: '신화에 이름이 실린 짐승들이 여기 숨어 있다.',
+    id: 'giantpass', rank: 4,
+    name: '거인의 고개',
+    flavor: '첫 들판에서도 저 너머로 머리가 보인다. 고개를 넘었다는 사람은 아직 없다.',
     enemies: [
-      { id: 'unicorn', name: '유니콘', title: '순수한 자에게만 보이는', icon: '🦄',
-        d: [['weapon', '일각수의 뿔'], ['necklace', '정화의 물방울']] },
-      { id: 'pegasus', name: '페가수스', title: '땅을 딛지 않는 말', icon: '🐴',
-        d: [['boots', '구름을 딛는 편자'], ['bracelet', '날개의 고리']] },
-      { id: 'phoenix', name: '피닉스', title: '타 죽어야 사는 새', icon: '🔥',
-        d: [['cloak', '재에서 난 깃옷'], ['necklace', '불멸의 잿불']] },
-      { id: 'cerberus', name: '케르베로스', title: '문을 지키는 세 머리', icon: '🐕',
-        d: [['helm', '세 머리의 투구'], ['greaves', '지옥문 각반']] },
-      { id: 'sphinx', name: '스핑크스', title: '답하지 못하면 잡아먹는', icon: '🐈‍⬛', kind: 'elite',
-        d: [['necklace', '풀리지 않는 수수께끼'], ['helm', '사자의 관'], ['bracelet', '정답의 고리']] },
-      { id: 'leviathan', name: '리바이어던', title: '바다를 통째로 삼킨', icon: '🐋',
-        d: [['armor', '심해 비늘 갑주'], ['shoulder', '해일의 지느러미']] },
-      { id: 'behemoth', name: '베히모스', title: '땅을 통째로 눌러앉은', icon: '🦏',
-        d: [['greaves', '대지의 각반'], ['offhand', '뿔 방패']] },
-      { id: 'ziz', name: '지즈', title: '하늘을 가리는 날개', icon: '🕊️',
-        d: [['boots', '하늘 덮는 신'], ['bracelet', '깃대의 고리']] },
-      { id: 'kraken', name: '크라켄', title: '배를 통째로 끌고 내려가는', icon: '🦑', kind: 'elite',
-        d: [['shoulder', '거대 촉수'], ['armor', '흡반 갑피'], ['necklace', '심연의 먹물']] },
-      { id: 'salamander', name: '샐러맨더', title: '불 속에서만 사는', icon: '🦎',
-        d: [['weapon', '불꽃 꼬리'], ['greaves', '용암 각반']] },
-      { id: 'sylph', name: '실프', title: '만질 수 없는 것', icon: '💨',
-        d: [['boots', '바람의 신'], ['bracelet', '공기의 고리']] },
-      { id: 'sanctdragon', name: '성역의 수호룡', title: '천 년을 한 자리에서', icon: '🐉', kind: 'boss',
-        d: [['weapon', '용의 송곳니 검'], ['armor', '고룡 비늘 갑주'], ['necklace', '성역의 인장']] }
+      { id: 'hillgiant', name: '언덕 거인', title: '바위를 공깃돌 삼는', icon: '🪨',
+        d: [['weapon', '뽑아 든 통바위'], ['shoulder', '바위를 지는 어깨받이']] },
+      { id: 'cyclops', name: '사이클롭스', title: '눈이 하나뿐인 대장장이', icon: '🔨',
+        d: [['helm', '외눈 투구'], ['gloves', '벼락을 벼리던 손']] },
+      { id: 'stonegiant', name: '돌 거인', title: '가만히 있으면 바위산인', icon: '🗻', kind: 'elite', set: 'elementGiants',
+        d: [['armor', '바위산 갑주']] },
+      { id: 'ettin', name: '에틴', title: '머리 둘이 늘 서로 다투는', icon: '🗣️',
+        d: [['offhand', '두 머리가 다투는 방패'], ['belt', '둘이 나눠 맨 허리띠']] },
+      { id: 'frostgiant', name: '서리 거인', title: '숨만 쉬어도 서리가 내리는', icon: '🥶', kind: 'elite', set: 'elementGiants',
+        d: [['greaves', '서리 내린 각반']] },
+      { id: 'goliath', name: '골리앗', title: '아직 돌팔매를 맞지 않은', icon: '💪', kind: 'elite',
+        d: [['weapon', '베틀채 같은 창'], ['armor', '청동 비늘 갑옷']] },
+      { id: 'yeti', name: '설인', title: '눈보라 속에 발자국만 남기는', icon: '🦍',
+        d: [['boots', '큰 발자국 털신'], ['cloak', '눈보라 털가죽']] },
+      { id: 'firegiant', name: '불의 거인', title: '용암에 발을 담그고 사는', icon: '🔥', kind: 'elite', set: 'elementGiants',
+        d: [['gloves', '용암을 주무르는 손']] },
+      { id: 'roc', name: '로크', title: '코끼리를 채 가는 새', icon: '🦅',
+        d: [['necklace', '로크의 알 껍데기']] },
+      { id: 'cloudgiant', name: '구름 거인', title: '구름 위에 성을 짓는', icon: '☁️', kind: 'elite', set: 'elementGiants',
+        d: [['ring', '구름 성의 열쇠고리']] },
+      { id: 'daidarabotchi', name: '다이다라봇치', title: '발자국이 호수가 된', icon: '🏞️', kind: 'elite',
+        d: [['greaves', '호수가 된 발자국'], ['bracelet', '산을 빚은 흙 팔찌']] },
+      { id: 'giantking', name: '거인왕', title: '고개를 막고 앉아 아무도 넘기지 않는', icon: '👑', kind: 'boss',
+        d: [['weapon', '고개를 막은 대검'], ['helm', '산맥의 왕관'], ['special', '고개의 쐐기돌', { relic: ['block'] }]] }
     ]
   },
   {
@@ -941,32 +974,39 @@ const ZONES = [
     flavor: '여기 사는 것들은 죽는 법을 잊었다.',
     enemies: [
       { id: 'ghoul', name: '구울', title: '무덤을 파헤치는', icon: '🧟‍♂️',
-        d: [['gloves', '갈퀴손'], ['greaves', '흙투성이 각반']] },
+        d: [['gloves', '갈퀴손'], ['greaves', '흙투성이 각반', 'retired'], ['belt', '수의 허리끈']] },
       { id: 'wraith', name: '레이스', title: '만질 수 없는 원한', icon: '👻',
         d: [['cloak', '안개 수의'], ['bracelet', '원한의 고리']] },
       { id: 'vampire', name: '뱀파이어', title: '초대받아야 들어오는', icon: '🧛',
-        d: [['weapon', '흡혈 레이피어'], ['cloak', '귀족의 망토'], ['necklace', '피의 성배']] },
+        d: [['weapon', '흡혈 레이피어', 'retired'], ['cloak', '귀족의 망토'], ['necklace', '피의 성배', 'retired'], ['gloves', '귀족의 흰 장갑', 'retired'], ['special', '흡혈귀의 송곳니', { relic: ['lifesteal'] }]] },
+      { id: 'whitehorse', name: '흰 말의 기사', title: '이기고 또 이기려는', icon: '🏹', kind: 'elite', set: 'horsemen',
+        d: [['helm', '승리의 면류관']] },
       { id: 'banshee', name: '밴시', title: '죽음을 미리 알리는 울음', icon: '😱',
-        d: [['helm', '통곡의 두건'], ['bracelet', '예고의 고리']] },
+        d: [['helm', '통곡의 두건'], ['bracelet', '예고의 고리'], ['cloak', '통곡의 망토', 'retired']] },
       { id: 'deathknight', name: '데스 나이트', title: '충성만 남은 시체', icon: '⚰️', kind: 'elite',
-        d: [['weapon', '서약의 대검'], ['armor', '사자의 판금'], ['helm', '맹세의 투구']] },
+        d: [['weapon', '서약의 대검'], ['armor', '사자의 판금'], ['helm', '맹세의 투구', 'retired']] },
       { id: 'bonedragon', name: '본 드래곤', title: '살이 없어도 나는', icon: '🦴',
-        d: [['armor', '뼈 갑주'], ['boots', '해골 발톱']] },
+        d: [['armor', '뼈 갑주'], ['boots', '해골 발톱'], ['bracelet', '뼈 팔찌', 'retired']] },
+      { id: 'redhorse', name: '붉은 말의 기사', title: '땅에서 평화를 거두는', icon: '🗡️', kind: 'elite', set: 'horsemen',
+        d: [['weapon', '평화를 거두는 큰 칼']] },
       { id: 'succubus', name: '서큐버스', title: '꿈으로 들어오는', icon: '💋',
-        d: [['ring', '유혹의 반지'], ['necklace', '훔친 꿈']] },
+        d: [['ring', '유혹의 반지'], ['necklace', '훔친 꿈'], ['bracelet', '유혹의 팔찌', 'retired']] },
       { id: 'incubus', name: '인큐버스', title: '깨어나면 사라지는', icon: '🩸',
-        d: [['shoulder', '악몽의 어깨'], ['boots', '꿈을 걷는 신']] },
+        d: [['shoulder', '악몽의 어깨'], ['boots', '꿈을 걷는 신', 'retired']] },
       { id: 'lich', name: '리치', title: '심장을 항아리에 넣어둔', icon: '📕', kind: 'elite',
-        d: [['weapon', '생명을 먹는 지팡이'], ['necklace', '성물함'], ['helm', '학자의 관']] },
+        d: [['weapon', '생명을 먹는 지팡이', 'retired'], ['necklace', '성물함'], ['helm', '학자의 관']] },
+      { id: 'blackhorse', name: '검은 말의 기사', title: '손에 저울을 든', icon: '⚖️', kind: 'elite', set: 'horsemen',
+        d: [['offhand', '기근의 저울']] },
       { id: 'demonlord', name: '데몬 로드', title: '계약서를 들고 오는', icon: '👿',
-        d: [['shoulder', '계약의 낙인'], ['armor', '지옥 판금'], ['ring', '피로 쓴 서명']] },
+        d: [['shoulder', '계약의 낙인'], ['armor', '지옥 판금', 'retired'], ['ring', '피로 쓴 서명']] },
       { id: 'balrog', name: '발록', title: '불과 그림자', icon: '🌋',
-        d: [['weapon', '불꽃 채찍'], ['greaves', '용암 정강이'], ['offhand', '그림자 방패']] },
-      // 특수장비 칸을 여는 히든
+        d: [['weapon', '불꽃 채찍', 'retired'], ['greaves', '용암 정강이'], ['offhand', '그림자 방패']] },
+      { id: 'palehorse', name: '창백한 말의 기사', title: '그 이름은 죽음', icon: '💀', kind: 'elite', set: 'horsemen',
+        d: [['cloak', '죽음이 걸친 창백한 망토']] },
       { id: 'ravenking', name: '까마귀 왕', title: '반짝이는 것이면 죽은 자의 것이라도 물어 가는', icon: '🐦', kind: 'hidden', opens: true,
         d: [['special', '까마귀가 물어 온 청옥', { gem: 'defense' }], ['special', '검은 깃 부적', { relic: ['doubleHit'] }]] },
       { id: 'lichking', name: '불사의 왕', title: '죽음을 신하로 부리는', icon: '👑', kind: 'boss',
-        d: [['weapon', '서리한'], ['armor', '불사의 판금'], ['necklace', '왕의 성물함']] }
+        d: [['weapon', '서리한'], ['armor', '불사의 판금'], ['necklace', '왕의 성물함', 'retired'], ['gloves', '서리 건틀릿', 'retired'], ['special', '죽지 않는 성물함', { relic: ['survive'] }]] }
     ]
   },
   {
@@ -975,42 +1015,37 @@ const ZONES = [
     flavor: '세계를 끝내겠다고 말하는 것들이 여기 모여 있다.',
     enemies: [
       { id: 'archdemon', name: '아크데몬', title: '군단을 거느린 것', icon: '😈',
-        d: [['weapon', '심연의 대검'], ['armor', '마계 판금']] },
+        d: [['weapon', '심연의 대검'], ['armor', '마계 판금', 'retired'], ['cloak', '군단장의 망토']] },
       { id: 'abysstentacle', name: '심연의 촉수', title: '바닥이 없는 곳에서 올라온', icon: '🦑',
-        d: [['shoulder', '끝없는 촉수'], ['boots', '바닥 없는 신']] },
-      // 칠죄종 일곱은 전부 정예 — 일반 적은 다섯으로 줄였습니다
-      { id: 'sinsloth', name: '칠죄종 · 나태', title: '일어나기 싫은 것', icon: '😴', kind: 'elite',
-        d: [['boots', '끌려가는 신'], ['offhand', '졸음의 방패'], ['bracelet', '멈춘 맥박의 고리']] },
-      { id: 'sinenvy', name: '칠죄종 · 질투', title: '남의 것이 더 좋아 보이는', icon: '💚', kind: 'elite',
-        d: [['gloves', '훔쳐 낀 장갑'], ['cloak', '남의 것을 두른 망토'], ['bracelet', '질투의 팔찌']] },
+        d: [['shoulder', '끝없는 촉수', 'retired'], ['boots', '바닥 없는 신']] },
+      { id: 'sinsloth', name: '칠죄종 · 나태', title: '일어나기 싫은 것', icon: '😴', kind: 'elite', set: 'sins',
+        d: [['boots', '끌려가는 신', 'retired'], ['offhand', '졸음의 방패'], ['bracelet', '멈춘 맥박의 고리', 'retired']] },
+      { id: 'sinenvy', name: '칠죄종 · 질투', title: '남의 것이 더 좋아 보이는', icon: '💚', kind: 'elite', set: 'sins',
+        d: [['gloves', '훔쳐 낀 장갑'], ['cloak', '남의 것을 두른 망토', 'retired'], ['bracelet', '질투의 팔찌', 'retired']] },
       { id: 'elderdragon', name: '고대룡', title: '신화보다 오래된 비늘', icon: '🐲',
-        d: [['weapon', '고룡의 송곳니'], ['armor', '고룡의 비늘'], ['necklace', '용의 심장']] },
-      { id: 'sinlust', name: '칠죄종 · 색욕', title: '눈을 떼지 못하게 하는', icon: '💋', kind: 'elite',
-        d: [['cloak', '비단 망토'], ['belt', '유혹의 허리띠'], ['ring', '맹세를 깨는 고리']] },
-      { id: 'singluttony', name: '칠죄종 · 폭식', title: '먹어도 허기진 것', icon: '🍖', kind: 'elite',
-        d: [['belt', '부푼 허리띠'], ['gloves', '기름진 손'], ['offhand', '바닥 없는 접시']] },
-      { id: 'sinpride', name: '칠죄종 · 오만', title: '무릎 꿇는 법을 모르는', icon: '🪞', kind: 'elite',
-        d: [['helm', '오만의 관'], ['armor', '굽히지 않는 갑주'], ['ring', '자만의 고리']] },
-      { id: 'sinwrath', name: '칠죄종 · 분노', title: '식지 않는 것', icon: '🔥', kind: 'elite',
-        d: [['shoulder', '분노의 견갑'], ['greaves', '타오르는 각반']] },
-      { id: 'singreed', name: '칠죄종 · 탐욕', title: '가져도 모자란 것', icon: '💰', kind: 'elite',
-        d: [['ring', '탐욕의 반지'], ['necklace', '끝없는 자루']] },
+        d: [['weapon', '고룡의 송곳니', 'retired'], ['armor', '고룡의 비늘'], ['necklace', '용의 심장', 'retired'], ['gloves', '고룡 발톱 장갑', 'retired'], ['special', '고룡의 심장석', { gem: 'life' }]] },
+      { id: 'sinlust', name: '칠죄종 · 색욕', title: '눈을 떼지 못하게 하는', icon: '💋', kind: 'elite', set: 'sins',
+        d: [['cloak', '비단 망토'], ['belt', '유혹의 허리띠', 'retired'], ['ring', '맹세를 깨는 고리', 'retired']] },
+      { id: 'singluttony', name: '칠죄종 · 폭식', title: '먹어도 허기진 것', icon: '🍖', kind: 'elite', set: 'sins',
+        d: [['belt', '부푼 허리띠'], ['gloves', '기름진 손', 'retired'], ['offhand', '바닥 없는 접시', 'retired']] },
+      { id: 'sinpride', name: '칠죄종 · 오만', title: '무릎 꿇는 법을 모르는', icon: '🪞', kind: 'elite', set: 'sins',
+        d: [['helm', '오만의 관'], ['armor', '굽히지 않는 갑주', 'retired'], ['ring', '자만의 고리', 'retired']] },
+      { id: 'sinwrath', name: '칠죄종 · 분노', title: '식지 않는 것', icon: '🔥', kind: 'elite', set: 'sins',
+        d: [['shoulder', '분노의 견갑'], ['greaves', '타오르는 각반', 'retired'], ['gloves', '식지 않는 주먹', 'retired']] },
+      { id: 'singreed', name: '칠죄종 · 탐욕', title: '가져도 모자란 것', icon: '💰', kind: 'elite', set: 'sins',
+        d: [['ring', '탐욕의 반지'], ['necklace', '끝없는 자루', 'retired'], ['belt', '탐욕의 전대', 'retired']] },
       { id: 'demongeneral', name: '마신장', title: '마왕의 왼팔', icon: '⚔️',
-        d: [['weapon', '마신의 창'], ['armor', '흑요석 판금', 'retired'], ['helm', '마장의 투구'], ['gloves', '마장의 건틀릿']] },
-      // 관측자는 이 검 하나만 남깁니다. 그래서 분해될 일도 없습니다.
-      // 검에는 공격력이 아예 없습니다 — 이걸 들면 보스가 확실히 더 어려워져야
-      // "에너지를 모을 것인가, 싸울 것인가" 가 진짜 선택이 되니까요.
+        d: [['weapon', '마신의 창', 'retired'], ['armor', '흑요석 판금', 'retired'], ['helm', '마장의 투구'], ['gloves', '마장의 건틀릿']] },
       { id: 'observer', name: '관측자', title: '처음부터 당신을 보고 있던 것', icon: '👁️', kind: 'hidden',
         d: [['weapon', '격을 삼키는 검', 'none']] },
       { id: 'worldworm', name: '세계수를 먹는 벌레', title: '뿌리부터 갉아먹는', icon: '🐛', kind: 'elite',
-        d: [['weapon', '갉는 턱', 'retired'], ['armor', '마디 갑각', 'retired'], ['necklace', '세계수의 파편']] },
+        d: [['weapon', '갉는 턱', 'retired'], ['armor', '마디 갑각', 'retired'], ['necklace', '세계수의 파편'], ['bracelet', '갉는 팔찌'], ['shoulder', '마디 갑각', 'retired']] },
       { id: 'apocalypsebeast', name: '종말의 짐승', title: '뿔이 일곱 개인', icon: '🐏',
         d: [['helm', '일곱 뿔의 관'], ['greaves', '짓밟는 각반']] },
       { id: 'demonking', name: '마왕', title: '세계를 끝내러 온 자', icon: '💀', kind: 'boss',
         d: [['weapon', '마왕의 검'], ['armor', '마왕의 갑주'], ['necklace', '마왕의 관']] }
     ]
   },
-
   // ───────────────────────── 화신 구간 ─────────────────────────
   {
     id: 'rank1', rank: 7,
@@ -1018,299 +1053,530 @@ const ZONES = [
     flavor: '불탄 줄 알았던 두루마리들이 아직 여기서 숨을 쉰다.',
     enemies: [
       { id: 'storyteller', name: '이름 없는 이야기꾼', title: '가장 오래된 목소리', icon: '📖',
-        d: [['weapon', '닳아버린 붓'], ['cloak', '이야기꾼의 해진 외투']] },
+        d: [['weapon', '닳아버린 붓', 'retired'], ['cloak', '이야기꾼의 해진 외투'], ['belt', '천 하룻밤의 띠']] },
       { id: 'scribe', name: '필경사의 화신', title: '베껴 쓰다 눈이 먼', icon: '🪶',
-        d: [['offhand', '마르지 않는 뿔병'], ['boots', '필경사의 낡은 샌들']] },
+        d: [['offhand', '마르지 않는 뿔병'], ['boots', '필경사의 낡은 샌들', 'retired'], ['gloves', '잉크 물든 장갑']] },
+      { id: 'guanyu', name: '관우의 화신', title: '다섯 관문을 지나 천 리를 홀로 간', icon: '🧔', kind: 'elite', set: 'tigers',
+        d: [['weapon', '청룡언월도']] },
       { id: 'archimedes', name: '아르키메데스의 화신', title: '지렛대를 든 자', icon: '⚙️',
-        d: [['weapon', '움직이지 않는 지렛대'], ['ring', '유레카의 원']] },
+        d: [['weapon', '움직이지 않는 지렛대', 'retired'], ['ring', '유레카의 원']] },
       { id: 'hypatia', name: '히파티아의 화신', title: '마지막 도서관장', icon: '🔭',
-        d: [['offhand', '천구의'], ['necklace', '아스트롤라베']] },
+        d: [['offhand', '천구의'], ['necklace', '아스트롤라베', 'retired'], ['bracelet', '천문 팔찌']] },
       { id: 'sunzi', name: '손자의 화신', title: '싸우지 않고 이기는 법', icon: '📜', kind: 'elite',
-        d: [['weapon', '병법의 죽간'], ['greaves', '그림자 각반'], ['helm', '허를 찌르는 투구']] },
+        d: [['weapon', '병법의 죽간'], ['greaves', '그림자 각반'], ['helm', '허를 찌르는 투구', 'retired']] },
       { id: 'davinci', name: '레오나르도 다 빈치의 화신', title: '다 그리지 못한 설계도', icon: '🎨',
-        d: [['offhand', '날개 설계도'], ['boots', '비행 장치']] },
+        d: [['offhand', '날개 설계도', 'retired'], ['boots', '비행 장치'], ['greaves', '설계도 각반']] },
+      { id: 'zhangfei', name: '장비의 화신', title: '다리 위의 호통 한 번으로 대군을 멈춘', icon: '🍶', kind: 'elite', set: 'tigers',
+        d: [['belt', '술 호리병 허리띠']] },
       { id: 'herodotos', name: '헤로도토스의 화신', title: '처음으로 기록한 자', icon: '🗺️',
-        d: [['helm', '기록자의 두건'], ['necklace', '역사의 첫 장']] },
+        d: [['helm', '기록자의 두건'], ['necklace', '역사의 첫 장', 'retired'], ['cloak', '여행자의 망토']] },
       { id: 'joan', name: '잔 다르크의 화신', title: '불타는 오를레앙의 처녀', icon: '⚜️',
-        d: [['shoulder', '성녀의 견갑'], ['armor', '오를레앙의 흰 갑주'], ['necklace', '재가 되지 않는 심장']] },
+        d: [['shoulder', '성녀의 견갑'], ['armor', '오를레앙의 흰 갑주', 'retired'], ['necklace', '재가 되지 않는 심장']] },
+      { id: 'zhaoyun', name: '조운의 화신', title: '어린 주군을 품고 대군을 홀로 뚫은', icon: '🛡️', kind: 'elite', set: 'tigers',
+        d: [['armor', '아두를 품은 흉갑']] },
       { id: 'spartacus', name: '스파르타쿠스의 화신', title: '사슬을 끊은 검투사', icon: '⛓️', kind: 'elite',
-        d: [['weapon', '부러진 글라디우스'], ['offhand', '검투사의 방패'], ['bracelet', '끊어진 족쇄']] },
+        d: [['weapon', '부러진 글라디우스', 'retired'], ['offhand', '검투사의 방패'], ['bracelet', '끊어진 족쇄']] },
       { id: 'genghis', name: '칭기즈 칸의 화신', title: '지평선을 국경으로 삼은', icon: '🏇',
-        d: [['shoulder', '초원의 어깨가리개'], ['boots', '천리마의 등자'], ['ring', '칸의 인장']] },
+        d: [['shoulder', '초원의 어깨가리개'], ['boots', '천리마의 등자'], ['ring', '칸의 인장', 'retired']] },
+      { id: 'machao', name: '마초의 화신', title: '사자 투구를 쓴 서량의 금마초', icon: '🦁', kind: 'elite', set: 'tigers',
+        d: [['helm', '사자 투구']] },
       { id: 'alexander', name: '알렉산드로스의 화신', title: '온 세계가 좁았던 자', icon: '🐎',
-        d: [['helm', '정복자의 투구'], ['armor', '마케도니아 흉갑'], ['ring', '고르디우스의 매듭']] },
-      // 특수장비 칸을 여는 히든
+        d: [['helm', '정복자의 투구'], ['armor', '마케도니아 흉갑', 'retired'], ['ring', '고르디우스의 매듭', 'retired'], ['cloak', '정복자의 자줏빛 망토', 'retired'], ['special', '칼로 끊은 매듭', { relic: ['pierce'] }]] },
+      { id: 'huangzhong', name: '황충의 화신', title: '일흔에도 활을 놓지 않은 노장', icon: '🏹', kind: 'elite', set: 'tigers',
+        d: [['ring', '노장의 깍지']] },
       { id: 'trismegistus', name: '헤르메스 트리스메기스투스의 화신', title: '위에서와 같이 아래에서도', icon: '⚗️', kind: 'hidden', opens: true,
         d: [['special', '에메랄드 서판', { relic: ['xpRate'] }], ['special', '현자의 돌', { gem: 'luck' }]] },
       { id: 'yisunsin', name: '이순신의 화신', title: '아직 열두 척이 남았다', icon: '⚓', kind: 'boss',
         d: [['weapon', '쌍룡검'], ['armor', '두정갑'], ['necklace', '난중일기']] }
     ]
   },
-  // ───────────────────────── 무림 · 영물 ─────────────────────────
-  // 설화(이야기가 남은 인간) 다음 계단. 사람의 몸으로 하늘에 닿으려 한 자들과,
-  // 그들이 평생을 걸고 쫓는 천 년 묵은 것들.
+  // 서양 RPG의 검 쪽 — 오러를 두른 기사와 원탁. 아서왕이 엑스칼리버를 남깁니다.
   {
-    id: 'murim', rank: 8,
+    id: 'camelot', rank: 8,
+    name: '원탁의 성 카멜롯',
+    flavor: '검에 이름을 붙인 자들이 원탁에 모인다. 빈자리 하나는 아직 주인이 없다.',
+    enemies: [
+      { id: 'auraknight', name: '오러 기사', title: '검 끝에 오러를 세운', icon: '⚔️',
+        d: [['gloves', '오러를 쥔 건틀릿'], ['armor', '오러가 밴 흉갑']] },
+      { id: 'paladin', name: '성기사', title: '기도로 검을 벼린', icon: '🔆',
+        d: [['offhand', '기도문을 새긴 방패'], ['necklace', '축성된 성표']] },
+      { id: 'lancelot', name: '랜슬롯의 화신', title: '원탁에서 가장 뛰어났던', icon: '🗡️', kind: 'elite', set: 'roundTable',
+        d: [['weapon', '아론다이트']] },
+      { id: 'templar', name: '템플 기사', title: '성지를 지키다 이단이 된', icon: '🏰',
+        d: [['helm', '붉은 십자 투구'], ['cloak', '흰 성전 망토']] },
+      { id: 'dragonknight', name: '용기사', title: '용을 타고 내려오는', icon: '🐉',
+        d: [['shoulder', '용비늘 견갑'], ['boots', '하늘을 딛는 용의 등자']] },
+      { id: 'gawain', name: '가웨인의 화신', title: '해가 높을수록 세지는', icon: '☀️', kind: 'elite', set: 'roundTable',
+        d: [['ring', '정오의 고리']] },
+      { id: 'berserker', name: '광전사', title: '곰가죽을 쓰고 고통을 잊은', icon: '🐻',
+        d: [['shoulder', '곰가죽 어깨덮개'], ['bracelet', '곰 발톱 팔찌']] },
+      { id: 'galahad', name: '갤러해드의 화신', title: '성배에 닿은 단 한 사람', icon: '🏆', kind: 'elite', set: 'roundTable',
+        d: [['necklace', '성배의 한 줄기 빛']] },
+      { id: 'greenknight', name: '녹색 기사', title: '목을 베여도 제 머리를 주워 드는', icon: '🌿',
+        d: [['belt', '초록 허리띠']] },
+      { id: 'tristan', name: '트리스탄의 화신', title: '바다 건너 슬픈 사랑을 한', icon: '🎻', kind: 'elite', set: 'roundTable',
+        d: [['bracelet', '이졸데의 팔찌']] },
+      { id: 'roland', name: '롤랑의 화신', title: '뿔나팔을 너무 늦게 분', icon: '📯',
+        d: [['weapon', '뒤랑달'], ['belt', '론세스바예스의 허리띠']] },
+      { id: 'percival', name: '퍼시벌의 화신', title: '숲에서 자라 성배를 찾아 나선', icon: '🌲', kind: 'elite', set: 'roundTable',
+        d: [['greaves', '숲에서 온 투박한 각반']] },
+      { id: 'elcid', name: '엘 시드의 화신', title: '죽어서도 말에 올라 싸운', icon: '🏇',
+        d: [['boots', '바비에카를 몬 박차'], ['greaves', '마지막 출정의 각반']] },
+      { id: 'bedivere', name: '베디비어의 화신', title: '마지막까지 왕 곁에 남은', icon: '🌊', kind: 'elite', set: 'roundTable',
+        d: [['gloves', '검을 호수에 던진 손']] },
+      { id: 'robinhood', name: '로빈 후드의 화신', title: '부자의 것을 털어 숲에 숨은 명궁', icon: '🏹',
+        d: [['cloak', '링컨 그린 두건'], ['ring', '화살을 가른 깍지']] },
+      { id: 'mordred', name: '모드레드의 화신', title: '왕을 찌른 원탁의 마지막 자리', icon: '🩸', kind: 'elite', set: 'roundTable',
+        d: [['helm', '배신자의 투구']] },
+      { id: 'ladyofthelake', name: '호수의 여인', title: '엑스칼리버를 건네고 다시 받아 간', icon: '🧜‍♀️', kind: 'hidden',
+        d: [['special', '아발론의 칼집', { relic: ['regen'] }]] },
+      { id: 'arthur', name: '아서왕의 화신', title: '바위에서 검을 뽑은 왕', icon: '👑', kind: 'boss',
+        d: [['weapon', '엑스칼리버'], ['armor', '펜드래건의 갑주'], ['offhand', '프리드웬']] }
+    ]
+  },
+  // 서양 RPG의 마법 쪽 — 마나를 다루는 마법사들. 멀린이 아서를 왕으로 세웠으니 기사보다 위입니다.
+  {
+    id: 'avalon', rank: 9,
+    name: '안개 너머의 아발론',
+    flavor: '안개 너머의 사과 섬. 마나가 짙어 숨만 쉬어도 주문이 된다.',
+    enemies: [
+      { id: 'archmage', name: '대마법사', title: '마나로 별을 떨어뜨리는', icon: '☄️',
+        d: [['weapon', '별을 부르는 지팡이'], ['helm', '마나가 고인 고깔모자']] },
+      { id: 'elementalist', name: '원소술사', title: '불과 얼음을 한 손에 쥔', icon: '🪄',
+        d: [['gloves', '네 원소를 쥔 손'], ['bracelet', '불과 얼음의 팔찌']] },
+      { id: 'salamander', name: '샐러맨더', title: '불 속에서만 사는', icon: '🦎', kind: 'elite', set: 'elementals', itemKey: 'salamander2',
+        d: [['gloves', '화염 손']] },
+      { id: 'summoner', name: '소환술사', title: '이름을 불러 다른 세계의 것을 끌어오는', icon: '🌌',
+        d: [['offhand', '이름을 적은 마도서'], ['ring', '계약의 인장']] },
+      { id: 'runemage', name: '룬 마법사', title: '돌에 새긴 글자로 싸우는', icon: '💠',
+        d: [['shoulder', '룬을 새긴 견갑'], ['necklace', '룬 뼈 목걸이']] },
+      { id: 'undine', name: '운디네', title: '사랑을 잃으면 물로 돌아가는', icon: '💧', kind: 'elite', set: 'elementals',
+        d: [['necklace', '사랑을 잃은 물방울']] },
+      { id: 'alchemist', name: '연금술사', title: '납을 금으로 바꾸려다 자신을 바꾼', icon: '⚗️',
+        d: [['armor', '얼룩진 연금 앞치마'], ['belt', '약병을 꽂은 허리띠']] },
+      { id: 'druid', name: '드루이드', title: '떡갈나무에게 말을 거는', icon: '🍃',
+        d: [['cloak', '겨우살이 두건'], ['greaves', '떡갈나무 껍질 각반']] },
+      { id: 'faust', name: '파우스트의 화신', title: '악마에게 영혼을 걸고 모든 것을 안', icon: '📚', kind: 'elite',
+        d: [['cloak', '박사의 검은 가운'], ['bracelet', '되찾은 젊음의 팔찌']] },
+      { id: 'sylph', name: '실프', title: '만질 수 없는 것', icon: '💨', kind: 'elite', set: 'elementals', itemKey: 'sylph2',
+        d: [['boots', '바람의 신']] },
+      { id: 'warlock', name: '흑마법사', title: '금지된 책을 끝까지 읽은', icon: '🌘',
+        d: [['offhand', '끝까지 읽은 금지된 책'], ['armor', '그림자 로브']] },
+      { id: 'babayaga', name: '바바 야가의 화신', title: '닭다리 오두막에 사는 숲의 마녀', icon: '🛖',
+        d: [['weapon', '절구공이'], ['belt', '해골 등불 허리띠']] },
+      { id: 'gnome', name: '노움', title: '땅속을 헤엄치듯 다니는', icon: '⛏️', kind: 'elite', set: 'elementals',
+        d: [['greaves', '땅속을 걷는 각반']] },
+      { id: 'circe', name: '키르케의 화신', title: '사람을 돼지로 바꾸는 섬의 마녀', icon: '🐖',
+        d: [['shoulder', '베틀에서 짠 숄']] },
+      { id: 'morgan', name: '모르간 르 페이의 화신', title: '아발론을 다스리는 마녀', icon: '🍎', kind: 'elite',
+        d: [['cloak', '아발론의 안개 망토'], ['ring', '요정 여왕의 반지']] },
+      { id: 'merlin', name: '멀린의 화신', title: '왕을 만든 마법사', icon: '🧙', kind: 'boss',
+        d: [['weapon', '꿈을 꾸는 지팡이'], ['helm', '은자의 두건'], ['necklace', '탑에 갇힌 수정']] }
+    ]
+  },
+  {
+    id: 'murim', rank: 10,
     name: '천하제일 비무대',
     flavor: '강호에 이름 석 자를 남기려는 자들이 오른다. 걸어서 내려간 자는 손에 꼽는다.',
     enemies: [
-      { id: 'nangin', name: '흑도 낭인', title: '값만 맞으면 누구든 벤다', icon: '🗡️',
-        d: [['weapon', '이 빠진 박도'], ['boots', '떠돌이 짚신']] },
-      { id: 'gaebang', name: '개방 장로', title: '천하의 소문은 거지가 먼저 안다', icon: '🥢',
-        d: [['weapon', '타구봉'], ['belt', '아홉 매듭 띠']] },
-      { id: 'emei', name: '아미파 사태', title: '자비로운 얼굴, 자비 없는 비수', icon: '📿',
-        d: [['offhand', '아미자'], ['bracelet', '백팔 염주']] },
-      { id: 'shaolin', name: '소림 나한', title: '쇠를 두드려 몸을 만든', icon: '🙏',
+      { id: 'nangin', name: '흑도 낭인', title: '값만 맞으면 누구든 벤다', icon: '🗡️', itemKey: 'nangin2',
+        d: [['boots', '떠돌이 짚신']] },
+      { id: 'gaebang', name: '개방 장로', title: '천하의 소문은 거지가 먼저 안다', icon: '🥢', itemKey: 'gaebang2',
+        d: [['belt', '아홉 매듭 띠'], ['offhand', '동냥 바가지']] },
+      { id: 'namgung', name: '남궁세가 가주', title: '창공을 가르는 세가의 검', icon: '🏯', kind: 'elite', set: 'clans', itemKey: 'namgung2',
+        d: [['necklace', '세가의 옥패']] },
+      { id: 'emei', name: '아미파 사태', title: '자비로운 얼굴, 자비 없는 비수', icon: '📿', itemKey: 'emei2',
+        d: [['ring', '아미자'], ['bracelet', '백팔 염주']] },
+      { id: 'shaolin', name: '소림 나한', title: '쇠를 두드려 몸을 만든', icon: '🙏', itemKey: 'shaolin2',
         d: [['gloves', '금강 권갑'], ['armor', '철포삼']] },
-      { id: 'dalma', name: '달마의 화신', title: '벽을 보고 아홉 해', icon: '🧘', kind: 'elite',
-        d: [['offhand', '세수경'], ['necklace', '면벽의 염주'], ['cloak', '갈대 한 줄기 가사']] },
-      { id: 'wudang', name: '무당 도사', title: '부드러움이 굳셈을 이긴다', icon: '☯️',
+      { id: 'tangga', name: '사천당가 독수', title: '손끝마다 다른 독', icon: '🧪', kind: 'elite', set: 'clans', itemKey: 'tangga2',
+        d: [['shoulder', '암기 견대']] },
+      { id: 'dalma', name: '달마의 화신', title: '벽을 보고 아홉 해', icon: '🧘', kind: 'elite', itemKey: 'dalma2',
+        d: [['offhand', '세수경'], ['necklace', '면벽의 염주']] },
+      { id: 'wudang', name: '무당 도사', title: '부드러움이 굳셈을 이긴다', icon: '☯️', itemKey: 'wudang2',
         d: [['weapon', '송문고검'], ['cloak', '태극 도포']] },
-      { id: 'tangga', name: '사천당가 독수', title: '손끝마다 다른 독', icon: '🧪',
-        d: [['ring', '독침 반지'], ['shoulder', '암기 견대']] },
-      { id: 'hwasan', name: '화산파 매화검수', title: '검 끝에 매화가 핀다', icon: '🌸',
+      { id: 'moyong', name: '모용세가 공자', title: '받은 수를 그대로 돌려주는', icon: '🪞', kind: 'elite', set: 'clans',
+        d: [['gloves', '되돌리는 손']] },
+      { id: 'hwasan', name: '화산파 매화검수', title: '검 끝에 매화가 핀다', icon: '🌸', itemKey: 'hwasan2',
         d: [['helm', '매화 두건'], ['boots', '암향 신']] },
-      { id: 'zhangsanfeng', name: '장삼봉의 화신', title: '태극을 처음 그린 자', icon: '⛰️', kind: 'elite',
-        d: [['weapon', '진무검'], ['bracelet', '태극 팔찌'], ['greaves', '구름 위를 걷는 각반']] },
-      { id: 'namgung', name: '남궁세가 가주', title: '창공을 가르는 세가의 검', icon: '🏯',
-        d: [['necklace', '세가의 옥패'], ['greaves', '창궁 각반']] },
-      { id: 'bukhae', name: '북해빙궁 무사', title: '얼음 궁에서 내려온', icon: '🧊',
+      { id: 'jegal', name: '제갈세가 군사', title: '진법과 기관으로 싸우는', icon: '🪭', kind: 'elite', set: 'clans',
+        d: [['offhand', '백우선']] },
+      { id: 'zhangsanfeng', name: '장삼봉의 화신', title: '태극을 처음 그린 자', icon: '⛰️', kind: 'elite', itemKey: 'zhangsanfeng2',
+        d: [['bracelet', '태극 팔찌'], ['greaves', '구름 위를 걷는 각반']] },
+      { id: 'bukhae', name: '북해빙궁 무사', title: '얼음 궁에서 내려온', icon: '🧊', itemKey: 'bukhae2',
         d: [['armor', '한빙 갑의'], ['helm', '서리 투구']] },
-      { id: 'cheonma', name: '천마', title: '하늘 아래 마(魔)는 하나뿐', icon: '🌑', kind: 'boss',
-        d: [['weapon', '천마검'], ['armor', '천마흑포'], ['helm', '천마관']] }
+      { id: 'paeng', name: '하북팽가 도객', title: '도 한 자루로 하북을 지킨', icon: '🔪', kind: 'elite', set: 'clans',
+        d: [['weapon', '팽가의 대도']] },
+      { id: 'cheonma', name: '천마', title: '하늘 아래 마(魔)는 하나뿐', icon: '🌑', kind: 'boss', itemKey: 'cheonma2',
+        d: [['weapon', '천마검'], ['armor', '천마흑포'], ['special', '천마의 비급', { relic: ['critRate'] }]] }
     ]
   },
   {
-    id: 'yeongmul', rank: 9,
+    id: 'yeongmul', rank: 11,
     name: '만년설 덮인 천산',
     flavor: '무림인이 평생을 걸고 찾는 내단의 주인들이 산다. 대개는 찾는 쪽이 먹힌다.',
     enemies: [
-      { id: 'yeongsa', name: '백년 영사', title: '내단을 품고 똬리를 튼', icon: '🐍',
+      { id: 'yeongsa', name: '백년 영사', title: '내단을 품고 똬리를 튼', icon: '🐍', itemKey: 'yeongsa2',
         d: [['necklace', '영사의 내단'], ['boots', '허물 벗은 신']] },
-      { id: 'geumjam', name: '금잠고', title: '독충을 다 잡아먹고 남은 하나', icon: '🐛',
+      { id: 'geumjam', name: '금잠고', title: '독충을 다 잡아먹고 남은 하나', icon: '🐛', itemKey: 'geumjam2',
         d: [['ring', '금잠 반지'], ['gloves', '금사 장갑']] },
-      { id: 'geumseom', name: '세 발 금두꺼비', title: '물고 있던 동전을 뱉으면 복이 온다', icon: '🐸',
+      { id: 'azuredragon', name: '청룡', title: '동쪽 하늘을 지키는 푸른 용', icon: '🐲', kind: 'elite', set: 'fourSymbols',
+        d: [['belt', '청룡의 비늘 허리띠']] },
+      { id: 'geumseom', name: '세 발 금두꺼비', title: '물고 있던 동전을 뱉으면 복이 온다', icon: '🐸', itemKey: 'geumseom2',
         d: [['bracelet', '금섬 팔찌'], ['offhand', '금전표']] },
-      { id: 'sansam', name: '천년 산삼 동자', title: '사람 꼴을 하고 산을 뛰어다니는 뿌리', icon: '🌱',
+      { id: 'sansam', name: '천년 산삼 동자', title: '사람 꼴을 하고 산을 뛰어다니는 뿌리', icon: '🌱', itemKey: 'sansam2',
         d: [['belt', '산삼 뿌리 띠'], ['bracelet', '천년 삼 팔찌']] },
-      { id: 'gumiho', name: '구미호', title: '천 년을 채우면 사람이 된다', icon: '🦊', kind: 'elite',
-        d: [['necklace', '여우 구슬'], ['ring', '홀리는 반지'], ['cloak', '아홉 꼬리 목도리']] },
-      { id: 'bingjam', name: '빙잠', title: '만년설 속에서 실을 토하는 누에', icon: '🪱',
+      { id: 'gumiho', name: '구미호', title: '천 년을 채우면 사람이 된다', icon: '🦊', kind: 'elite', itemKey: 'gumiho2',
+        d: [['necklace', '여우 구슬'], ['cloak', '아홉 꼬리 목도리']] },
+      { id: 'bingjam', name: '빙잠', title: '만년설 속에서 실을 토하는 누에', icon: '🪱', itemKey: 'bingjam2',
         d: [['armor', '천잠보의'], ['cloak', '빙잠사 망토']] },
-      { id: 'ungnyeo', name: '웅녀', title: '쑥과 마늘로 백 일을 버틴 곰', icon: '🐻',
+      { id: 'whitetiger', name: '백호', title: '서쪽 하늘을 지키는 흰 범', icon: '🐯', kind: 'elite', set: 'fourSymbols',
+        d: [['gloves', '흰 범의 발톱']] },
+      { id: 'ungnyeo', name: '웅녀', title: '쑥과 마늘로 백 일을 버틴 곰', icon: '🐻', itemKey: 'ungnyeo2',
         d: [['helm', '쑥 화관'], ['greaves', '곰 발 각반']] },
-      { id: 'sangun', name: '산군', title: '감히 이름으로 부르지 못하는 호랑이', icon: '🐅',
-        d: [['shoulder', '산군의 어깨'], ['weapon', '호랑이 발톱']] },
-      { id: 'geumsijo', name: '금시조', title: '용을 잡아먹는 금빛 날개', icon: '🦚', kind: 'elite',
-        d: [['weapon', '용을 찢는 발톱'], ['shoulder', '금빛 깃 견갑'], ['boots', '바람을 딛는 발']] },
-      { id: 'hwarin', name: '화린', title: '불을 밟고 다니는 기린', icon: '🦌',
+      { id: 'sangun', name: '산군', title: '감히 이름으로 부르지 못하는 호랑이', icon: '🐅', itemKey: 'sangun2',
+        d: [['shoulder', '산군의 어깨']] },
+      { id: 'vermilionbird', name: '주작', title: '남쪽 하늘을 지키는 붉은 새', icon: '🪶', kind: 'elite', set: 'fourSymbols',
+        d: [['ring', '주작의 불씨 반지']] },
+      { id: 'geumsijo', name: '금시조', title: '용을 잡아먹는 금빛 날개', icon: '🦚', kind: 'elite', itemKey: 'geumsijo2',
+        d: [['weapon', '용을 찢는 발톱'], ['shoulder', '금빛 깃 견갑']] },
+      { id: 'hwarin', name: '화린', title: '불을 밟고 다니는 기린', icon: '🦌', itemKey: 'hwarin2',
         d: [['weapon', '화린 뿔창'], ['boots', '불을 밟는 신']] },
-      { id: 'yeonggu', name: '금강영구', title: '만 년을 등에 지고 걷는 거북', icon: '🐢',
+      { id: 'blacktortoise', name: '현무', title: '북쪽 하늘을 지키는 거북과 뱀', icon: '🐢', kind: 'elite', set: 'fourSymbols',
+        d: [['greaves', '뱀이 감긴 각반']] },
+      { id: 'yeonggu', name: '금강영구', title: '만 년을 등에 지고 걷는 거북', icon: '🐢', itemKey: 'yeonggu2',
         d: [['offhand', '만년 귀갑'], ['helm', '거북 등 투구']] },
-      // 특수장비 칸을 여는 히든 — 대나무 열매만 먹고 태평한 세상에만 내려앉습니다
-      { id: 'bonghwang', name: '봉황', title: '태평한 세상에만 내려앉는 새', icon: '🎋', kind: 'hidden', opens: true,
+      { id: 'bonghwang', name: '봉황', title: '태평한 세상에만 내려앉는 새', icon: '🎋', kind: 'hidden', opens: true, itemKey: 'bonghwang2',
         d: [['special', '봉황의 비취', { gem: 'dex' }], ['special', '태평의 깃', { relic: ['findRate'] }]] },
-      { id: 'imugi', name: '이무기', title: '천 년을 기다려 하늘로 오르려는', icon: '🐉', kind: 'boss',
-        d: [['weapon', '승천하지 못한 뿔'], ['armor', '역린 갑주'], ['necklace', '여의주']] }
+      { id: 'imugi', name: '이무기', title: '천 년을 기다려 하늘로 오르려는', icon: '🐉', kind: 'boss', itemKey: 'imugi2',
+        d: [['weapon', '승천하지 못한 뿔'], ['armor', '역린 갑주'], ['special', '이무기의 여의주', { gem: 'luck' }]] }
+    ]
+  },
+  // 옛 4격 — 첫 공간 옆에 있기엔 신화의 짐승이라 영웅 바로 아래로 옮겼습니다. 헤라클레스(13격 보스)가 열두 과업에서 꺾은 짐승들이 모여 있습니다.
+  {
+    id: 'sanctuary', rank: 12,
+    name: '잊혀진 성역',
+    flavor: '신화에 이름이 실린 짐승들이 여기 숨어 있다.',
+    enemies: [
+      { id: 'unicorn', name: '유니콘', title: '순수한 자에게만 보이는', icon: '🦄', itemKey: 'unicorn2',
+        d: [['weapon', '일각수의 뿔'], ['bracelet', '정화의 팔찌']] },
+      { id: 'nemeanlion', name: '네메아의 사자', title: '어떤 칼도 들지 않는 가죽', icon: '🦁', kind: 'elite', set: 'labors',
+        d: [['shoulder', '칼이 들지 않는 갈기']] },
+      { id: 'pegasus', name: '페가수스', title: '땅을 딛지 않는 말', icon: '🐴', itemKey: 'pegasus2',
+        d: [['boots', '구름을 딛는 편자'], ['bracelet', '날개의 고리']] },
+      { id: 'ceryneianhind', name: '케리네이아의 사슴', title: '황금 뿔에 청동 발굽을 단', icon: '🦌', kind: 'elite', set: 'labors',
+        d: [['boots', '청동 발굽']] },
+      { id: 'sphinx', name: '스핑크스', title: '답하지 못하면 잡아먹는', icon: '🐈‍⬛', kind: 'elite', itemKey: 'sphinx2',
+        d: [['necklace', '풀리지 않는 수수께끼'], ['helm', '사자의 관']] },
+      { id: 'erymanthianboar', name: '에리만토스의 멧돼지', title: '산을 갈아엎고 내려온', icon: '🐗', kind: 'elite', set: 'labors',
+        d: [['greaves', '멧돼지 엄니 각반']] },
+      { id: 'phoenix', name: '피닉스', title: '타 죽어야 사는 새', icon: '🔥', itemKey: 'phoenix2',
+        d: [['cloak', '재에서 난 깃옷'], ['special', '다시 타오르는 잿불', { relic: ['regen'] }]] },
+      { id: 'stymphalianbirds', name: '스팀팔로스의 새', title: '청동 깃을 화살처럼 쏘는', icon: '🐦', kind: 'elite', set: 'labors',
+        d: [['ring', '청동 깃 반지']] },
+      { id: 'cretanbull', name: '크레타의 황소', title: '바다에서 올라와 섬을 짓밟은', icon: '🐂', kind: 'elite', set: 'labors',
+        d: [['offhand', '황소 뿔 방패']] },
+      { id: 'hippogriff', name: '히포그리프', title: '그리핀이 암말을 사랑해서 난', icon: '🐎',
+        d: [['gloves', '그리핀의 앞발']] },
+      { id: 'kraken', name: '크라켄', title: '배를 통째로 끌고 내려가는', icon: '🦑', kind: 'elite', itemKey: 'kraken2',
+        d: [['shoulder', '거대 촉수'], ['armor', '흡반 갑피']] },
+      { id: 'mares', name: '디오메데스의 말', title: '사람을 먹고 자란', icon: '🐴', kind: 'elite', set: 'labors',
+        d: [['belt', '쇠사슬 고삐']] },
+      { id: 'geryon', name: '게리온', title: '몸 셋이 한 허리에 붙은 거인', icon: '🐄', kind: 'elite', set: 'labors',
+        d: [['armor', '세 몸을 두른 갑주']] },
+      { id: 'cerberus', name: '케르베로스', title: '문을 지키는 세 머리', icon: '🐕', kind: 'elite', set: 'labors', itemKey: 'cerberus2',
+        d: [['helm', '세 머리의 투구']] },
+      { id: 'ladon', name: '라돈', title: '황금 사과나무를 감고 잠들지 않는', icon: '🐍', kind: 'elite', set: 'labors',
+        d: [['necklace', '라돈의 비늘 목걸이']] },
+      { id: 'sanctdragon', name: '성역의 수호룡', title: '천 년을 한 자리에서', icon: '🐉', kind: 'boss', itemKey: 'sanctdragon2',
+        d: [['weapon', '용의 송곳니 검'], ['armor', '고룡 비늘 갑주'], ['special', '성역의 수호석', { relic: ['block'] }]] }
     ]
   },
   {
-    id: 'rank2', rank: 10,
+    id: 'rank2', rank: 13,
     name: '엘리시온 평원',
     flavor: '죽어서도 영웅인 자들만 이 들판을 걷는다.',
     enemies: [
-      { id: 'theseus', name: '테세우스의 화신', title: '돌아오는 길을 아는', icon: '🧵',
-        d: [['shoulder', '아테네의 견갑'], ['necklace', '아리아드네의 실타래']] },
-      { id: 'perseus', name: '페르세우스의 화신', title: '보지 않고 벤 자', icon: '🪞',
-        d: [['offhand', '거울 방패'], ['boots', '날개 달린 신']] },
-      { id: 'odysseus', name: '오디세우스의 화신', title: '열 해를 헤매고도 돌아간', icon: '⛵',
-        d: [['gloves', '열두 도끼를 꿰뚫은 손'], ['cloak', '거지 행색의 누더기']] },
-      { id: 'atalanta', name: '아탈란테의 화신', title: '누구보다 빨랐던', icon: '🏹',
-        d: [['weapon', '칼리돈의 활'], ['boots', '멈추지 않는 발'], ['ring', '황금 사과']] },
-      { id: 'enkidu', name: '엔키두의 화신', title: '흙으로 빚어진 벗', icon: '🌿',
+      { id: 'theseus', name: '테세우스의 화신', title: '돌아오는 길을 아는', icon: '🧵', itemKey: 'theseus2',
+        d: [['necklace', '아리아드네의 실타래'], ['belt', '미궁의 실 허리띠']] },
+      { id: 'perseus', name: '페르세우스의 화신', title: '보지 않고 벤 자', icon: '🪞', itemKey: 'perseus2',
+        d: [['offhand', '거울 방패'], ['cloak', '보이지 않는 망토']] },
+      { id: 'odysseus', name: '오디세우스의 화신', title: '열 해를 헤매고도 돌아간', icon: '⛵', itemKey: 'odysseus2',
+        d: [['gloves', '열두 도끼를 꿰뚫은 손']] },
+      { id: 'atalanta', name: '아탈란테의 화신', title: '누구보다 빨랐던', icon: '🏹', itemKey: 'atalanta2',
+        d: [['boots', '멈추지 않는 발'], ['ring', '황금 사과']] },
+      { id: 'enkidu', name: '엔키두의 화신', title: '흙으로 빚어진 벗', icon: '🌿', itemKey: 'enkidu2',
         d: [['armor', '들짐승의 가죽'], ['greaves', '야생의 각반']] },
-      { id: 'gilgamesh', name: '길가메시의 화신', title: '영생을 놓친 왕', icon: '🗿', kind: 'elite',
-        d: [['shoulder', '하늘 황소의 어깨'], ['helm', '우루크의 왕관'], ['necklace', '시들어버린 영생초']] },
-      { id: 'hector', name: '헥토르의 화신', title: '질 것을 알고도 나선', icon: '🏛️',
-        d: [['offhand', '트로이의 방패'], ['greaves', '성벽의 각반']] },
-      { id: 'achilles', name: '아킬레우스의 화신', title: '발뒤꿈치 하나만 사람인', icon: '🛡️',
-        d: [['weapon', '펠리온의 물푸레 창'], ['armor', '불멸의 청동 갑주'], ['boots', '테티스가 잡았던 발목']] },
-      { id: 'cuchulainn', name: '쿠 훌린의 화신', title: '빛의 아이', icon: '🔱',
-        d: [['weapon', '게 불그'], ['greaves', '뒤틀림의 각반']] },
-      { id: 'beowulf', name: '베오울프의 화신', title: '맨손으로 괴물을 찢은', icon: '🐻', kind: 'elite',
-        d: [['gloves', '그렌델의 팔'], ['helm', '곰가죽 투구'], ['bracelet', '흐룬팅의 고리']] },
-      { id: 'arjuna', name: '아르주나의 화신', title: '과녁의 눈만 보이는', icon: '🎯',
-        d: [['weapon', '간디바'], ['bracelet', '집중의 고리'], ['boots', '전차의 발판']] },
-      { id: 'siegfried', name: '지그프리트의 화신', title: '용의 피를 뒤집어쓴 자', icon: '🗡️',
-        d: [['weapon', '마검 그람'], ['armor', '용피 갑주'], ['necklace', '파프니르의 심장']] },
-      { id: 'heracles', name: '헤라클레스의 화신', title: '열두 번 죽고 열두 번 돌아온', icon: '🦁', kind: 'boss',
-        d: [['weapon', '올리브 몽둥이'], ['armor', '네메아 사자의 가죽'], ['necklace', '열두 과업의 증표']] }
+      { id: 'gilgamesh', name: '길가메시의 화신', title: '영생을 놓친 왕', icon: '🗿', kind: 'elite', itemKey: 'gilgamesh2',
+        d: [['shoulder', '하늘 황소의 어깨'], ['helm', '우루크의 왕관']] },
+      { id: 'hector', name: '헥토르의 화신', title: '질 것을 알고도 나선', icon: '🏛️', itemKey: 'hector2',
+        d: [['offhand', '트로이의 방패'], ['helm', '빛나는 투구']] },
+      { id: 'achilles', name: '아킬레우스의 화신', title: '발뒤꿈치 하나만 사람인', icon: '🛡️', itemKey: 'achilles2',
+        d: [['armor', '불멸의 청동 갑주'], ['boots', '테티스가 잡았던 발목']] },
+      { id: 'cuchulainn', name: '쿠 훌린의 화신', title: '빛의 아이', icon: '🔱', itemKey: 'cuchulainn2',
+        d: [['greaves', '뒤틀림의 각반'], ['bracelet', '뒤틀림의 팔찌']] },
+      { id: 'beowulf', name: '베오울프의 화신', title: '맨손으로 괴물을 찢은', icon: '🐻', kind: 'elite', itemKey: 'beowulf2',
+        d: [['gloves', '그렌델의 팔'], ['bracelet', '흐룬팅의 고리']] },
+      { id: 'arjuna', name: '아르주나의 화신', title: '과녁의 눈만 보이는', icon: '🎯', itemKey: 'arjuna2',
+        d: [['weapon', '간디바'], ['cloak', '전차병의 망토']] },
+      { id: 'siegfried', name: '지그프리트의 화신', title: '용의 피를 뒤집어쓴 자', icon: '🗡️', itemKey: 'siegfried2',
+        d: [['weapon', '마검 그람'], ['special', '파프니르의 피', { gem: 'life' }]] },
+      { id: 'heracles', name: '헤라클레스의 화신', title: '열두 번 죽고 열두 번 돌아온', icon: '🦁', kind: 'boss', itemKey: 'heracles2',
+        d: [['weapon', '올리브 몽둥이'], ['armor', '네메아 사자의 가죽'], ['special', '네메아를 꺾은 주먹', { relic: ['harmTouch'] }]] }
     ]
   },
-  // ───────────────────────── 천사 · 악마 ─────────────────────────
-  // 영웅(신의 피를 이은 자) 다음 계단. 하늘의 뜻을 전하는 것들과,
-  // 그 하늘에 등을 돌린 것들. 이 둘을 넘어야 이름을 가진 신들이 나온다.
   {
-    id: 'heaven', rank: 11,
+    id: 'heaven', rank: 14,
     name: '일곱 번째 하늘',
     flavor: '노래가 한 번도 멈춘 적 없는 곳. 아홉 겹의 성가대가 문을 지킨다.',
     enemies: [
-      { id: 'guardianangel', name: '수호천사', title: '한 사람 곁에 하나씩', icon: '😇',
+      { id: 'guardianangel', name: '수호천사', title: '한 사람 곁에 하나씩', icon: '😇', itemKey: 'guardianangel2',
         d: [['cloak', '깃털 한 장의 망토'], ['ring', '지켜보는 반지']] },
-      { id: 'principality', name: '권천사', title: '나라 하나를 맡은', icon: '🛐',
+      { id: 'principality', name: '권천사', title: '나라 하나를 맡은', icon: '🛐', itemKey: 'principality2',
         d: [['helm', '나라를 맡은 관'], ['belt', '홀을 찬 띠']] },
-      { id: 'powerangel', name: '능천사', title: '악을 쫓는 첫 번째 칼', icon: '🔆',
+      { id: 'raphael', name: '라파엘의 화신', title: '신이 고치신다', icon: '⚕️', kind: 'elite', set: 'archangels', itemKey: 'raphael2',
+        d: [['necklace', '토비트의 물고기']] },
+      { id: 'powerangel', name: '능천사', title: '악을 쫓는 첫 번째 칼', icon: '🔆', itemKey: 'powerangel2',
         d: [['weapon', '악을 쫓는 창'], ['shoulder', '능천사의 견갑']] },
-      { id: 'trumpetangel', name: '나팔의 천사', title: '일곱 나팔 중 첫째를 부는', icon: '🎺',
+      { id: 'trumpetangel', name: '나팔의 천사', title: '일곱 나팔 중 첫째를 부는', icon: '🎺', itemKey: 'trumpetangel2',
         d: [['offhand', '첫째 나팔'], ['boots', '구름 디딤 신']] },
-      { id: 'raphael', name: '라파엘의 화신', title: '신이 고치신다', icon: '⚕️', kind: 'elite',
-        d: [['bracelet', '치유의 팔찌'], ['necklace', '토비트의 물고기'], ['belt', '나그네의 띠']] },
-      { id: 'virtueangel', name: '역천사', title: '기적을 맡은', icon: '✨',
+      { id: 'uriel', name: '우리엘의 화신', title: '신의 불꽃이라는 이름의', icon: '🔥', kind: 'elite', set: 'archangels',
+        d: [['gloves', '불꽃을 쥔 손']] },
+      { id: 'virtueangel', name: '역천사', title: '기적을 맡은', icon: '✨', itemKey: 'virtueangel2',
         d: [['bracelet', '기적의 팔찌'], ['gloves', '기적을 행하는 손']] },
-      { id: 'dominion', name: '주천사', title: '천사들을 다스리는 천사', icon: '🕊️',
+      { id: 'dominion', name: '주천사', title: '천사들을 다스리는 천사', icon: '🕊️', itemKey: 'dominion2',
         d: [['armor', '다스림의 흉갑'], ['necklace', '주권의 목걸이']] },
-      { id: 'throneangel', name: '좌천사', title: '눈으로 가득한 바퀴', icon: '🛞',
+      { id: 'raguel', name: '라구엘의 화신', title: '천사들의 잘못을 따지는', icon: '⚖️', kind: 'elite', set: 'archangels',
+        d: [['bracelet', '빛을 다스리는 팔찌']] },
+      { id: 'throneangel', name: '좌천사', title: '눈으로 가득한 바퀴', icon: '🛞', itemKey: 'throneangel2',
         d: [['greaves', '바퀴 속의 바퀴'], ['helm', '눈으로 가득한 관']] },
-      { id: 'gabriel', name: '가브리엘의 화신', title: '소식을 전하러 내려온', icon: '📯', kind: 'elite',
-        d: [['offhand', '마지막 나팔'], ['ring', '백합 반지'], ['helm', '전령의 관']] },
-      { id: 'cherub', name: '지품천사', title: '에덴의 동쪽에서 불칼을 든', icon: '🦁',
+      { id: 'gabriel', name: '가브리엘의 화신', title: '소식을 전하러 내려온', icon: '📯', kind: 'elite', set: 'archangels', itemKey: 'gabriel2',
+        d: [['offhand', '마지막 나팔']] },
+      { id: 'cherub', name: '지품천사', title: '에덴의 동쪽에서 불칼을 든', icon: '🦁', itemKey: 'cherub2',
         d: [['weapon', '두루 도는 불칼'], ['shoulder', '네 얼굴의 견갑']] },
-      { id: 'seraph', name: '치품천사', title: '여섯 날개로 얼굴을 가린', icon: '🌞',
-        d: [['cloak', '여섯 날개'], ['gloves', '숯불 집게']] },
-      { id: 'michael', name: '미카엘의 화신', title: '용을 하늘에서 떨어뜨린', icon: '⚖️', kind: 'boss',
-        d: [['weapon', '용을 떨어뜨린 검'], ['armor', '천군의 갑주'], ['offhand', '영혼의 저울']] }
+      { id: 'sariel', name: '사리엘의 화신', title: '달의 길을 가르친', icon: '🌗', kind: 'elite', set: 'archangels',
+        d: [['boots', '달의 길을 걷는 신']] },
+      { id: 'seraph', name: '치품천사', title: '여섯 날개로 얼굴을 가린', icon: '🌞', itemKey: 'seraph2',
+        d: [['cloak', '여섯 날개']] },
+      { id: 'remiel', name: '레미엘의 화신', title: '다시 일어날 자들을 지키는', icon: '🌄', kind: 'elite', set: 'archangels',
+        d: [['greaves', '일으켜 세우는 각반']] },
+      { id: 'michael', name: '미카엘의 화신', title: '용을 하늘에서 떨어뜨린', icon: '⚖️', kind: 'boss', itemKey: 'michael2',
+        d: [['weapon', '용을 떨어뜨린 검'], ['armor', '천군의 갑주'], ['special', '미카엘의 저울', { relic: ['reflect'] }]] }
     ]
   },
   {
-    id: 'hell', rank: 12,
+    id: 'hell', rank: 15,
     name: '얼어붙은 코키토스',
     flavor: '지옥의 맨 밑바닥은 불이 아니라 얼음이다. 등을 돌린 자들이 거기 얼어 있다.',
     enemies: [
-      { id: 'legion', name: '레기온', title: '우리의 이름은 군대, 우리는 많다', icon: '👥',
+      { id: 'legion', name: '레기온', title: '우리의 이름은 군대, 우리는 많다', icon: '👥', itemKey: 'legion2',
         d: [['armor', '이천 마리 돼지가죽'], ['ring', '많은 이름의 반지']] },
-      { id: 'moloch', name: '몰록의 화신', title: '불타는 제단 위의 황소', icon: '🐂',
+      { id: 'bael', name: '바엘의 화신', title: '세 머리로 말하는 지옥의 첫 왕', icon: '🐸', kind: 'elite', set: 'goetiaKings',
+        d: [['gloves', '보이지 않게 하는 손']] },
+      { id: 'moloch', name: '몰록의 화신', title: '불타는 제단 위의 황소', icon: '🐂', itemKey: 'moloch2',
         d: [['helm', '황소 머리 투구'], ['gloves', '제단 불에 그을린 손']] },
-      { id: 'baphomet', name: '바포메트의 화신', title: '녹이고 굳히는 염소 머리 우상', icon: '🐐',
+      { id: 'baphomet', name: '바포메트의 화신', title: '녹이고 굳히는 염소 머리 우상', icon: '🐐', itemKey: 'baphomet2',
         d: [['offhand', '염소 머리 우상'], ['bracelet', '녹이고 굳히는 팔찌']] },
-      { id: 'azazel', name: '아자젤의 화신', title: '사람에게 칼 벼리는 법을 가르친', icon: '⚒️',
+      { id: 'asmodeus', name: '아스모데우스의 화신', title: '솔로몬의 반지를 빼앗은', icon: '💍', kind: 'elite', set: 'goetiaKings', itemKey: 'asmodeus2',
+        d: [['ring', '솔로몬의 반지']] },
+      { id: 'azazel', name: '아자젤의 화신', title: '사람에게 칼 벼리는 법을 가르친', icon: '⚒️', itemKey: 'azazel2',
         d: [['weapon', '처음 벼린 칼'], ['shoulder', '감시자의 견갑']] },
-      { id: 'beelzebub', name: '벨제부브의 화신', title: '파리 떼의 왕', icon: '🪰', kind: 'elite',
-        d: [['helm', '파리 떼의 관'], ['armor', '파리 날개 갑의'], ['gloves', '배를 채우지 못하는 손']] },
-      { id: 'mephisto', name: '메피스토펠레스의 화신', title: '영혼을 값으로 쳐주는 상인', icon: '🎩',
+      { id: 'beleth', name: '벨레트의 화신', title: '나팔 소리 속에 창백한 말을 타고 오는', icon: '🎺', kind: 'elite', set: 'goetiaKings',
+        d: [['boots', '창백한 말의 박차']] },
+      { id: 'beelzebub', name: '벨제부브의 화신', title: '파리 떼의 왕', icon: '🪰', kind: 'elite', itemKey: 'beelzebub2',
+        d: [['helm', '파리 떼의 관'], ['armor', '파리 날개 갑의']] },
+      { id: 'mephisto', name: '메피스토펠레스의 화신', title: '영혼을 값으로 쳐주는 상인', icon: '🎩', itemKey: 'mephisto2',
         d: [['necklace', '피로 쓴 계약서'], ['cloak', '진홍 외투']] },
-      { id: 'astaroth', name: '아스타로트의 화신', title: '독사를 타고 오는 공작', icon: '🦎',
+      { id: 'paimon', name: '파이몬의 화신', title: '서쪽을 다스리는 지옥의 왕', icon: '🐪', kind: 'elite', set: 'goetiaKings', itemKey: 'paimon2',
+        d: [['offhand', '모든 학문의 책']] },
+      { id: 'astaroth', name: '아스타로트의 화신', title: '독사를 타고 오는 공작', icon: '🦎', itemKey: 'astaroth2',
         d: [['boots', '독사를 탄 신'], ['belt', '독사 허리띠']] },
-      { id: 'belial', name: '벨리알의 화신', title: '불의 전차를 탄 무가치한 자', icon: '🕯️',
-        d: [['weapon', '무가치의 검'], ['greaves', '불의 전차 각반']] },
-      { id: 'asmodeus', name: '아스모데우스의 화신', title: '솔로몬의 반지를 빼앗은', icon: '💍', kind: 'elite',
-        d: [['ring', '솔로몬의 반지'], ['necklace', '세 머리의 목걸이'], ['boots', '불타는 발굽']] },
-      { id: 'paimon', name: '파이몬의 화신', title: '서쪽을 다스리는 지옥의 왕', icon: '🐪',
-        d: [['helm', '파이몬의 왕관'], ['offhand', '모든 학문의 책']] },
-      { id: 'lilith', name: '릴리스의 화신', title: '에덴을 먼저 떠난 자', icon: '🌒',
-        d: [['necklace', '밤의 목걸이'], ['bracelet', '첫 아내의 팔찌']] },
-      { id: 'lucifer', name: '루시퍼의 화신', title: '가장 빛나던 별, 가장 깊이 떨어진', icon: '🌠', kind: 'boss',
-        d: [['weapon', '새벽별의 검'], ['armor', '얼어붙은 날개 갑주'], ['cloak', '빛을 잃은 여섯 날개']] }
+      { id: 'purson', name: '푸르손의 화신', title: '사자 얼굴로 곰을 타고 오는', icon: '🐻', kind: 'elite', set: 'goetiaKings',
+        d: [['shoulder', '곰을 탄 왕의 견갑']] },
+      { id: 'belial', name: '벨리알의 화신', title: '불의 전차를 탄 무가치한 자', icon: '🕯️', kind: 'elite', set: 'goetiaKings', itemKey: 'belial2',
+        d: [['greaves', '불의 전차 각반']] },
+      { id: 'lilith', name: '릴리스의 화신', title: '에덴을 먼저 떠난 자', icon: '🌒', itemKey: 'lilith2',
+        d: [['bracelet', '첫 아내의 팔찌']] },
+      { id: 'vine', name: '바인의 화신', title: '폭풍을 부르고 탑을 허무는', icon: '🌩️', kind: 'elite', set: 'goetiaKings',
+        d: [['greaves', '탑을 허무는 각반']] },
+      { id: 'balam', name: '발람의 화신', title: '세 머리로 지나간 일과 올 일을 말하는', icon: '🐃', kind: 'elite', set: 'goetiaKings',
+        d: [['necklace', '앞일을 말하는 목걸이']] },
+      { id: 'zagan', name: '자간의 화신', title: '쇠를 금화로, 물을 포도주로 바꾸는', icon: '🍷', kind: 'elite', set: 'goetiaKings',
+        d: [['belt', '쇠를 금화로 바꾸는 띠']] },
+      { id: 'lucifer', name: '루시퍼의 화신', title: '가장 빛나던 별, 가장 깊이 떨어진', icon: '🌠', kind: 'boss', itemKey: 'lucifer2',
+        d: [['weapon', '새벽별의 검'], ['cloak', '빛을 잃은 여섯 날개'], ['special', '새벽별 조각', { relic: ['critRate'] }]] }
     ]
   },
   {
-    id: 'rank3', rank: 13,
+    id: 'rank3', rank: 16,
     name: '이그드라실의 가지',
     flavor: '아홉 세계가 이 나무 하나에 매달려 있다. 어느 신화든 여기서 만난다.',
     enemies: [
-      { id: 'hermes', name: '헤르메스의 화신', title: '경계를 넘나드는 전령', icon: '🪽',
-        d: [['boots', '날개 달린 샌들'], ['offhand', '카두케우스']] },
-      { id: 'bastet', name: '바스테트의 화신', title: '집과 전쟁을 함께 지키는', icon: '🐈',
+      { id: 'bastet', name: '바스테트의 화신', title: '집과 전쟁을 함께 지키는', icon: '🐈', itemKey: 'bastet2',
         d: [['ring', '고양이의 눈'], ['greaves', '소리 없는 각반']] },
-      { id: 'anubis', name: '아누비스의 화신', title: '심장의 무게를 재는 자', icon: '🐺',
-        d: [['shoulder', '방부사의 어깨띠'], ['helm', '재칼의 가면'], ['necklace', '마아트의 저울']] },
-      { id: 'artemis', name: '아르테미스의 화신', title: '달과 사냥의 주인', icon: '🌙',
-        d: [['weapon', '초승달 활'], ['boots', '사슴가죽 신']] },
-      { id: 'loki', name: '로키의 화신', title: '묶여서도 웃는 자', icon: '🦊', kind: 'elite',
-        d: [['offhand', '거짓의 단검'], ['bracelet', '뒤바뀐 반지'], ['necklace', '슬레이프니르의 갈기']] },
-      { id: 'susanoo', name: '스사노오의 화신', title: '쫓겨나서 영웅이 된', icon: '🌪️',
-        d: [['weapon', '아메노하바키리'], ['cloak', '폭풍의 겉옷']] },
-      { id: 'thor', name: '토르의 화신', title: '천둥을 손에 쥔 자', icon: '⚡',
-        d: [['weapon', '묠니르'], ['gloves', '야른그레이프르'], ['belt', '메긴교르드']] },
-      { id: 'ares', name: '아레스의 화신', title: '전쟁 그 자체', icon: '⚔️',
-        d: [['shoulder', '전화(戰禍)의 견갑'], ['armor', '전화(戰禍)의 갑주'], ['helm', '포보스의 투구']] },
-      { id: 'poseidon', name: '포세이돈의 화신', title: '땅을 흔드는 자', icon: '🌊', kind: 'elite',
-        d: [['weapon', '삼지창'], ['boots', '파도를 딛는 신'], ['necklace', '심해의 진주']] },
-      { id: 'amaterasu', name: '아마테라스의 화신', title: '동굴에서 나온 해', icon: '🌅',
-        d: [['cloak', '하늘 옷'], ['helm', '야타의 관'], ['ring', '야사카니의 곡옥']] },
-      { id: 'isis', name: '이시스의 화신', title: '흩어진 것을 다시 모으는', icon: '🪬',
-        d: [['gloves', '생명의 매듭'], ['belt', '아마포 감개'], ['necklace', '앙크']] },
-      { id: 'hades', name: '하데스의 화신', title: '돌아온 자가 없는 문의 주인', icon: '💀', kind: 'boss',
+      { id: 'hera', name: '헤라의 화신', title: '신들의 여왕', icon: '👸', kind: 'elite', set: 'olympians',
+        d: [['shoulder', '공작 깃 견갑']] },
+      { id: 'anubis', name: '아누비스의 화신', title: '심장의 무게를 재는 자', icon: '🐺', itemKey: 'anubis2',
+        d: [['shoulder', '방부사의 어깨띠'], ['helm', '재칼의 가면']] },
+      { id: 'hermes', name: '헤르메스의 화신', title: '경계를 넘나드는 전령', icon: '🪽', kind: 'elite', set: 'olympians', itemKey: 'hermes2',
+        d: [['special', '전령의 날개', { relic: ['doubleTurn'] }]] },
+      { id: 'susanoo', name: '스사노오의 화신', title: '쫓겨나서 영웅이 된', icon: '🌪️', itemKey: 'susanoo2',
+        d: [['cloak', '폭풍의 겉옷'], ['bracelet', '폭풍 팔찌']] },
+      { id: 'athena', name: '아테나의 화신', title: '지혜와 싸움을 함께 쥔', icon: '🦉', kind: 'elite', set: 'olympians',
+        d: [['offhand', '고르곤의 머리를 단 방패']] },
+      { id: 'poseidon', name: '포세이돈의 화신', title: '땅을 흔드는 자', icon: '🌊', kind: 'elite', set: 'olympians', itemKey: 'poseidon2',
+        d: [['weapon', '삼지창']] },
+      { id: 'apollo', name: '아폴론의 화신', title: '빛과 음악과 활의 신', icon: '🎼', kind: 'elite', set: 'olympians',
+        d: [['gloves', '리라를 켜는 손']] },
+      { id: 'thor', name: '토르의 화신', title: '천둥을 손에 쥔 자', icon: '⚡', itemKey: 'thor2',
+        d: [['weapon', '묠니르'], ['special', '메긴교르드의 고리', { gem: 'damage' }]] },
+      { id: 'artemis', name: '아르테미스의 화신', title: '달과 사냥의 주인', icon: '🌙', kind: 'elite', set: 'olympians', itemKey: 'artemis2',
+        d: [['boots', '사슴가죽 신']] },
+      { id: 'aphrodite', name: '아프로디테의 화신', title: '바다 거품에서 태어난', icon: '🐚', kind: 'elite', set: 'olympians',
+        d: [['belt', '케스토스']] },
+      { id: 'amaterasu', name: '아마테라스의 화신', title: '동굴에서 나온 해', icon: '🌅', itemKey: 'amaterasu2',
+        d: [['cloak', '하늘 옷'], ['ring', '야사카니의 곡옥']] },
+      { id: 'loki', name: '로키의 화신', title: '묶여서도 웃는 자', icon: '🦊', kind: 'elite', itemKey: 'loki2',
+        d: [['offhand', '거짓의 단검'], ['bracelet', '뒤바뀐 반지']] },
+      { id: 'hephaestus', name: '헤파이스토스의 화신', title: '올림포스의 대장장이', icon: '⚒️', kind: 'elite', set: 'olympians',
+        d: [['gloves', '불에 그을린 대장장이 손']] },
+      { id: 'ares', name: '아레스의 화신', title: '전쟁 그 자체', icon: '⚔️', kind: 'elite', set: 'olympians', itemKey: 'ares2',
+        d: [['armor', '전화(戰禍)의 갑주']] },
+      { id: 'isis', name: '이시스의 화신', title: '흩어진 것을 다시 모으는', icon: '🪬', itemKey: 'isis2',
+        d: [['necklace', '앙크']] },
+      { id: 'demeter', name: '데메테르의 화신', title: '곡식과 대지의 어머니', icon: '🌾', kind: 'elite', set: 'olympians',
+        d: [['greaves', '보리 이삭을 엮은 각반']] },
+      { id: 'dionysus', name: '디오니소스의 화신', title: '포도주와 광기의 신', icon: '🍇', kind: 'elite', set: 'olympians',
+        d: [['armor', '표범 가죽 옷']] },
+      { id: 'hades', name: '하데스의 화신', title: '돌아온 자가 없는 문의 주인', icon: '💀', kind: 'boss', itemKey: 'hades2',
         d: [['weapon', '명계의 이지창'], ['helm', '보이지 않게 하는 투구'], ['necklace', '케르베로스의 사슬']] }
     ]
   },
+  // 신들의 왕은 대개 이것들을 꺾고 왕이 됐습니다 — 그래서 주신(18격) 바로 아래입니다.
   {
-    id: 'rank4', rank: 14,
-    name: '올림포스 정상',
-    flavor: '어느 신화의 주신이든, 결국 정상에서는 마주치게 된다.',
+    id: 'primordial', rank: 17,
+    name: '태초의 바다',
+    flavor: '신들이 처음으로 칼을 뽑은 곳. 여기서 진 것들의 몸으로 땅과 하늘이 지어졌다.',
     enemies: [
-      { id: 'osiris', name: '오시리스의 화신', title: '찢겨서도 다시 맞춰진', icon: '🏺',
-        d: [['offhand', '갈고리 홀'], ['greaves', '아마포 각반']] },
-      // 6격 마계에 있던 것 — 신에게 진 자들은 신화의 정상에 어울립니다
-      { id: 'titanmyth', name: '타이탄', title: '신에게 진 자들', icon: '🗿',
-        d: [['greaves', '거인의 각반'], ['offhand', '산을 깎은 방패']] },
-      { id: 'izanagi', name: '이자나기의 화신', title: '황천에서 돌아온 자', icon: '🗾',
-        d: [['shoulder', '황천의 견갑'], ['boots', '황천을 밟은 신']] },
-      { id: 'ra', name: '라의 화신', title: '매일 세계를 다시 켜는 자', icon: '☀️',
-        d: [['shoulder', '태양의 견갑'], ['armor', '황금 태양원반'], ['ring', '우라에우스의 뱀']] },
-      { id: 'vishnu', name: '비슈누의 화신', title: '열 번 세상에 내려온', icon: '🪷',
-        d: [['offhand', '수다르샤나 원반'], ['necklace', '연꽃의 씨']] },
-      { id: 'indra', name: '인드라의 화신', title: '천 개의 눈으로 보는 자', icon: '🐘', kind: 'elite',
-        d: [['weapon', '금강저 바즈라'], ['armor', '아이라바타의 비늘'], ['helm', '천 개의 눈']] },
-      { id: 'hwanin', name: '환인의 화신', title: '하늘에서 내려다본 자', icon: '🏔️',
-        d: [['helm', '천부인의 관'], ['greaves', '태백의 각반'], ['necklace', '신단수의 가지']] },
-      { id: 'jadeemperor', name: '옥황상제의 화신', title: '하늘 관청의 주인', icon: '🐲',
-        d: [['cloak', '자미원의 곤룡포'], ['ring', '옥새']] },
-      { id: 'shiva', name: '시바의 화신', title: '춤 한 번에 세계를 끝내는', icon: '🕉️',
-        d: [['weapon', '트리슐라'], ['greaves', '재를 밟는 각반'], ['necklace', '제3의 눈']] },
-      { id: 'odin', name: '오딘의 화신', title: '한쪽 눈으로 모든 것을 본', icon: '🦅', kind: 'elite',
-        d: [['weapon', '빗나가지 않는 창 궁니르'], ['cloak', '회색 나그네의 망토'], ['necklace', '미미르의 눈']] },
-      { id: 'quetzalcoatl', name: '케찰코아틀의 화신', title: '깃털 달린 뱀', icon: '🐍',
-        d: [['offhand', '깃털 방패'], ['boots', '창공을 딛는 신'], ['greaves', '깃털 각반']] },
-      { id: 'ahuramazda', name: '아후라 마즈다의 화신', title: '꺼지지 않는 불', icon: '🔥',
-        d: [['helm', '성화의 관'], ['cloak', '빛의 겉옷'], ['bracelet', '진리의 고리']] },
-      { id: 'zeus', name: '제우스의 화신', title: '올림포스의 마지막 말', icon: '⛈️', kind: 'boss',
-        d: [['weapon', '케라우노스'], ['offhand', '아이기스'], ['necklace', '올림포스의 인장']] }
+      { id: 'titanmyth', name: '타이탄', title: '신에게 진 자들', icon: '🗿', itemKey: 'titanmyth2',
+        d: [['offhand', '산을 깎은 방패'], ['greaves', '거인의 각반']] },
+      { id: 'behemoth', name: '베히모스', title: '땅을 통째로 눌러앉은', icon: '🦏', kind: 'elite', set: 'primordialBeasts', itemKey: 'behemoth2',
+        d: [['greaves', '대지의 각반']] },
+      { id: 'jormungandr', name: '요르문간드', title: '세계를 한 바퀴 감고 제 꼬리를 문', icon: '🐍',
+        d: [['belt', '세계를 감은 비늘 띠'], ['ring', '제 꼬리를 문 고리']] },
+      { id: 'fenrir', name: '펜리르', title: '끊어지지 않는 끈에 묶여 때를 기다리는', icon: '🐺',
+        d: [['weapon', '신을 삼킬 송곳니'], ['bracelet', '글레이프니르 족쇄']] },
+      { id: 'leviathan', name: '리바이어던', title: '바다를 통째로 삼킨', icon: '🐋', kind: 'elite', set: 'primordialBeasts', itemKey: 'leviathan2',
+        d: [['shoulder', '해일의 지느러미']] },
+      { id: 'apophis', name: '아포피스', title: '밤마다 해를 삼키려는 뱀', icon: '🌑',
+        d: [['cloak', '해를 가리는 비늘 망토'], ['helm', '밤을 삼키는 뱀 머리']] },
+      { id: 'typhon', name: '티폰', title: '괴물들의 아버지', icon: '🌋', kind: 'elite',
+        d: [['helm', '백 개의 뱀 머리 투구'], ['gloves', '제우스의 힘줄을 끊은 손']] },
+      { id: 'vritra', name: '브리트라', title: '세상의 물을 가둔 용', icon: '🐊',
+        d: [['armor', '물을 가둔 비늘'], ['gloves', '강을 막은 발톱']] },
+      { id: 'ziz', name: '지즈', title: '하늘을 가리는 날개', icon: '🕊️', kind: 'elite', set: 'primordialBeasts', itemKey: 'ziz2',
+        d: [['boots', '하늘 덮는 신']] },
+      { id: 'orochi', name: '야마타노오로치', title: '여덟 골짜기를 덮은 여덟 머리', icon: '🐉',
+        d: [['weapon', '꼬리에서 나온 구사나기']] },
+      { id: 'ymir', name: '이미르', title: '주검으로 세계가 지어진 거인', icon: '❄️', kind: 'elite',
+        d: [['shoulder', '산맥이 된 어깨'], ['necklace', '서리 거인의 심장']] },
+      { id: 'tiamat', name: '티아마트의 화신', title: '신들을 낳고 신들에게 갈라진 바다', icon: '🌊', kind: 'boss',
+        d: [['armor', '갈라진 바다의 갑주'], ['necklace', '운명의 서판'], ['bracelet', '열한 괴물의 팔찌']] }
     ]
   },
   {
-    id: 'rank5', rank: 15,
+    id: 'rank4', rank: 18,
+    name: '올림포스 정상',
+    flavor: '어느 신화의 주신이든, 결국 정상에서는 마주치게 된다.',
+    enemies: [
+      { id: 'osiris', name: '오시리스의 화신', title: '찢겨서도 다시 맞춰진', icon: '🏺', itemKey: 'osiris2',
+        d: [['offhand', '갈고리 홀'], ['belt', '아마포 허리띠']] },
+      { id: 'brahma', name: '브라흐마의 화신', title: '네 얼굴로 세계를 지은', icon: '🌺', kind: 'elite', set: 'trimurti',
+        d: [['gloves', '네 팔의 장갑']] },
+      { id: 'izanagi', name: '이자나기의 화신', title: '황천에서 돌아온 자', icon: '🗾', itemKey: 'izanagi2',
+        d: [['shoulder', '황천의 견갑'], ['special', '황천의 복숭아', { relic: ['survive'] }]] },
+      { id: 'ra', name: '라의 화신', title: '매일 세계를 다시 켜는 자', icon: '☀️', itemKey: 'ra2',
+        d: [['armor', '황금 태양원반'], ['ring', '우라에우스의 뱀']] },
+      { id: 'vishnu', name: '비슈누의 화신', title: '열 번 세상에 내려온', icon: '🪷', kind: 'elite', set: 'trimurti', itemKey: 'vishnu2',
+        d: [['offhand', '수다르샤나 원반']] },
+      { id: 'indra', name: '인드라의 화신', title: '천 개의 눈으로 보는 자', icon: '🐘', kind: 'elite', itemKey: 'indra2',
+        d: [['weapon', '금강저 바즈라'], ['helm', '천 개의 눈']] },
+      { id: 'hwanin', name: '환인의 화신', title: '하늘에서 내려다본 자', icon: '🏔️', itemKey: 'hwanin2',
+        d: [['helm', '천부인의 관'], ['necklace', '신단수의 가지']] },
+      { id: 'shiva', name: '시바의 화신', title: '춤 한 번에 세계를 끝내는', icon: '🕉️', kind: 'elite', set: 'trimurti', itemKey: 'shiva2',
+        d: [['special', '시바의 셋째 눈', { relic: ['pierce'] }]] },
+      { id: 'jadeemperor', name: '옥황상제의 화신', title: '하늘 관청의 주인', icon: '🐲', itemKey: 'jadeemperor2',
+        d: [['cloak', '자미원의 곤룡포'], ['ring', '옥새']] },
+      { id: 'odin', name: '오딘의 화신', title: '한쪽 눈으로 모든 것을 본', icon: '🦅', kind: 'elite', itemKey: 'odin2',
+        d: [['weapon', '빗나가지 않는 창 궁니르'], ['cloak', '회색 나그네의 망토']] },
+      { id: 'quetzalcoatl', name: '케찰코아틀의 화신', title: '깃털 달린 뱀', icon: '🐍', itemKey: 'quetzalcoatl2',
+        d: [['boots', '창공을 딛는 신'], ['greaves', '깃털 각반']] },
+      { id: 'ahuramazda', name: '아후라 마즈다의 화신', title: '꺼지지 않는 불', icon: '🔥', itemKey: 'ahuramazda2',
+        d: [['bracelet', '진리의 고리']] },
+      { id: 'zeus', name: '제우스의 화신', title: '올림포스의 마지막 말', icon: '⛈️', kind: 'boss', itemKey: 'zeus2',
+        d: [['weapon', '케라우노스'], ['offhand', '아이기스'], ['necklace', '올림포스의 인장']] }
+    ]
+  },
+  // 옛 15격의 앞쪽 — 크툴루 같은 옛 지배자들. 그 위(20격)에 바깥의 신이 있습니다.
+  {
+    id: 'rlyeh', rank: 19,
+    name: '가라앉은 르뤼에',
+    flavor: '별이 제자리에 올 때까지 이 도시는 물 밑에서 꿈을 꾼다.',
+    enemies: [
+      { id: 'yig', name: '이그의 화신', title: '뱀들의 아버지', icon: '🐍', itemKey: 'yig2',
+        d: [['belt', '방울뱀 허리띠'], ['ring', '저주의 고리']] },
+      { id: 'dagon', name: '다곤의 화신', title: '깊은 곳의 아버지', icon: '🐟', kind: 'elite', set: 'elementalOldOnes', itemKey: 'dagon2',
+        d: [['gloves', '물갈퀴 장갑']] },
+      { id: 'ithaqua', name: '이타콰의 화신', title: '바람을 타고 걷는 자', icon: '❄️', itemKey: 'ithaqua2',
+        d: [['boots', '눈을 밟지 않는 신'], ['cloak', '바람의 망토']] },
+      { id: 'chaugnar', name: '차우그나르 파우근의 화신', title: '피를 빠는 코끼리 신', icon: '🦣', itemKey: 'chaugnar2',
+        d: [['shoulder', '상아 어깨뼈'], ['bracelet', '상아 팔찌']] },
+      { id: 'hastur', name: '하스터의 화신', title: '세 번 부르면 오는 황의 왕', icon: '👑', kind: 'elite', set: 'elementalOldOnes', itemKey: 'hastur2',
+        d: [['cloak', '누더기 황의']] },
+      { id: 'glaaki', name: '글라아키의 화신', title: '가시로 꿈을 꿰는 자', icon: '🪲', itemKey: 'glaaki2',
+        d: [['helm', '녹슨 관'], ['greaves', '호수 바닥의 각반']] },
+      { id: 'shoggoth', name: '쇼고스', title: '주인을 삼키고 남은 원형질', icon: '🦠',
+        d: [['armor', '형체 없는 원형질 갑옷'], ['gloves', '테켈리리 하고 우는 손']] },
+      { id: 'cthugha', name: '크투가의 화신', title: '포말하우트에서 타오르는 불', icon: '🔥', kind: 'elite', set: 'elementalOldOnes',
+        d: [['weapon', '포말하우트의 불꽃']] },
+      { id: 'migo', name: '미-고', title: '유고스에서 날아온 균류', icon: '🍄',
+        d: [['offhand', '뇌를 담은 원통']] },
+      { id: 'tsathoggua', name: '츠아토구아의 화신', title: '움직이기 싫어하는 두꺼비 신', icon: '🦥', kind: 'elite', set: 'elementalOldOnes', itemKey: 'tsathoggua2',
+        d: [['bracelet', '잠의 팔찌']] },
+      { id: 'atlachnacha', name: '아틀락-나챠의 화신', title: '다 짜면 세상이 끝나는 거미줄을 치는', icon: '🕸️',
+        d: [['necklace', '거미줄에 걸린 꿈'], ['belt', '심연에 걸친 실']] },
+      { id: 'cthulhu', name: '크툴루의 화신', title: '죽지 않고 잠들어 있을 뿐인', icon: '🐙', kind: 'boss', itemKey: 'cthulhu2',
+        d: [['weapon', '르뤼에의 촉수'], ['armor', '심해의 갑각'], ['special', '잠든 신의 우상', { relic: ['doubleHit'] }]] }
+    ]
+  },
+  {
+    id: 'rank5', rank: 20,
     name: '궁극의 혼돈',
     flavor: '여기엔 위도 아래도 없다. 신화도 없다. 신화는 인간의 것이니까.',
     enemies: [
-      { id: 'dagon', name: '다곤의 화신', title: '깊은 곳의 아버지', icon: '🐟',
-        d: [['greaves', '심해 비늘 각반'], ['boots', '물갈퀴 신']] },
-      { id: 'yig', name: '이그의 화신', title: '뱀들의 아버지', icon: '🐍',
-        d: [['belt', '방울뱀 허리띠'], ['ring', '저주의 고리']] },
-      { id: 'ithaqua', name: '이타콰의 화신', title: '바람을 타고 걷는 자', icon: '❄️',
-        d: [['boots', '눈을 밟지 않는 신'], ['necklace', '얼어붙은 발자국']] },
-      { id: 'chaugnar', name: '차우그나르 파우근의 화신', title: '피를 빠는 코끼리 신', icon: '🦣',
-        d: [['shoulder', '상아 어깨뼈'], ['armor', '돌가죽 갑주']] },
-      { id: 'shubniggurath', name: '슈브니구라스의 화신', title: '천 마리 새끼를 거느린 검은 염소', icon: '🐐',
-        d: [['helm', '뿔난 관'], ['bracelet', '새끼의 고리'], ['greaves', '검은 털 각반']] },
-      { id: 'hastur', name: '하스터의 화신', title: '세 번 부르면 오는 황의 왕', icon: '👑', kind: 'elite',
-        d: [['weapon', '황색 징표의 검'], ['cloak', '누더기 황의'], ['necklace', '카르코사의 열쇠']] },
-      { id: 'tsathoggua', name: '츠아토구아의 화신', title: '움직이기 싫어하는 두꺼비 신', icon: '🦥',
-        d: [['offhand', '잠의 부적'], ['boots', '늪을 걷는 신']] },
-      { id: 'glaaki', name: '글라아키의 화신', title: '가시로 꿈을 꿰는 자', icon: '🪲',
-        d: [['shoulder', '꿰뚫는 금속 가시'], ['helm', '녹슨 관'], ['greaves', '호수 바닥의 각반']] },
-      { id: 'cthulhu', name: '크툴루의 화신', title: '죽지 않고 잠들어 있을 뿐인', icon: '🐙',
-        d: [['weapon', '르뤼에의 촉수'], ['armor', '심해의 갑각'], ['helm', '촉수관']] },
-      { id: 'yogsothoth', name: '요그소토스의 화신', title: '문이자 열쇠이며 문지기인', icon: '🔮', kind: 'elite',
-        d: [['offhand', '열리는 문'], ['ring', '모든 문의 열쇠'], ['necklace', '구체 속의 구체']] },
-      { id: 'abhoth', name: '아브호스의 화신', title: '끝없이 새것을 게워내는 웅덩이', icon: '🫧',
-        d: [['armor', '끓는 진흙 갑주'], ['boots', '녹아내리는 신'], ['bracelet', '갓 태어난 고리']] },
-      // 6격 마계에 있던 것 — 마왕보다 높은 격이라 뒤쪽으로 옮겼습니다
-      { id: 'voidlordmyth', name: '공허의 군주', title: '아무것도 아닌 것의 왕', icon: '🕳️',
-        d: [['weapon', '공허의 낫'], ['armor', '없음의 갑주'], ['bracelet', '빈 고리']] },
-      { id: 'nyarlathotep', name: '니알라토텝의 화신', title: '천 개의 가면을 쓴 기어오는 혼돈', icon: '🎭',
-        d: [['weapon', '천 개째의 가면'], ['cloak', '검은 파라오의 의복'], ['greaves', '기어오는 각반']] },
-      { id: 'azathoth', name: '아자토스', title: '중심에서 잠든 눈먼 백치 신 · 화신을 갖지 못한 유일한 것',
-        icon: '🌀', kind: 'boss', final: true,
+      { id: 'shubniggurath', name: '슈브니구라스의 화신', title: '천 마리 새끼를 거느린 검은 염소', icon: '🐐', itemKey: 'shubniggurath2',
+        d: [['helm', '뿔난 관'], ['greaves', '검은 털 각반']] },
+      { id: 'ubbosathla', name: '우보-사틀라의 화신', title: '머리도 팔다리도 없는, 모든 것의 처음이자 끝', icon: '🧬',
+        d: [['belt', '처음이자 끝인 진흙 띠'], ['gloves', '모든 것을 빚은 손']] },
+      { id: 'abhoth', name: '아브호스의 화신', title: '끝없이 새것을 게워내는 웅덩이', icon: '🫧', itemKey: 'abhoth2',
+        d: [['armor', '끓는 진흙 갑주'], ['boots', '녹아내리는 신']] },
+      { id: 'daoloth', name: '다올로스의 화신', title: '장막을 찢는 자', icon: '🌫️',
+        d: [['shoulder', '장막을 찢는 견갑'], ['offhand', '찢어진 장막']] },
+      { id: 'yogsothoth', name: '요그소토스의 화신', title: '문이자 열쇠이며 문지기인', icon: '🔮', kind: 'elite', itemKey: 'yogsothoth2',
+        d: [['ring', '모든 문의 열쇠'], ['necklace', '구체 속의 구체']] },
+      { id: 'voidlordmyth', name: '공허의 군주', title: '아무것도 아닌 것의 왕', icon: '🕳️', itemKey: 'voidlordmyth2',
+        d: [['weapon', '공허의 낫'], ['bracelet', '빈 고리']] },
+      { id: 'tulzscha', name: '툴주샤의 화신', title: '백치 신의 궁정에서 타는 초록 불꽃', icon: '❇️',
+        d: [['ring', '초록 불꽃의 반지'], ['gloves', '불꽃으로 춤추는 손']] },
+      { id: 'yibbtstll', name: '이브-츠틀의 화신', title: '시간 바깥에서 참고 기다리는 자', icon: '⏳',
+        d: [['cloak', '시간을 덮는 망토'], ['bracelet', '시간을 세는 팔찌']] },
+      { id: 'nyarlathotep', name: '니알라토텝의 화신', title: '천 개의 가면을 쓴 기어오는 혼돈', icon: '🎭', kind: 'elite', itemKey: 'nyarlathotep2',
+        d: [['cloak', '검은 파라오의 의복'], ['helm', '천 개째의 가면']] },
+      { id: 'ghroth', name: '그로스의 화신', title: '별을 깨우며 떠도는 행성', icon: '🪐',
+        d: [['shoulder', '떠도는 별의 견갑'], ['boots', '별을 깨우며 걷는 신']] },
+      { id: 'pipers', name: '아자토스의 피리꾼', title: '백치 신 곁에서 피리를 멈추지 않는', icon: '🎶',
+        d: [['offhand', '멈추지 않는 피리']] },
+      { id: 'azathoth', name: '아자토스', title: '중심에서 잠든 눈먼 백치 신 · 화신을 갖지 못한 유일한 것', icon: '🌀', kind: 'boss', final: true, itemKey: 'azathoth2',
         d: [['weapon', '만물을 가르는 칼날'], ['armor', '무(無)의 갑주'], ['necklace', '백치의 왕관']] }
     ]
   }
@@ -1319,245 +1585,162 @@ const ZONES = [
 // ============================================================
 //  적마다의 성격
 // ============================================================
-// 그 적이 남기는 전리품의 성격입니다. 생김새·설화와 어울리게 붙였습니다.
+// 그 적이 남기는 전리품의 성격입니다. 생김새 · 설화와 어울리게 붙였습니다.
 // 이웃한 적끼리는 일부러 다른 성격을 줬습니다 — 바로 윗레벨에서 같은 부위가
-// 또 나와도 "갈아끼울까 말까" 가 고민이 되도록.
+// 또 나와도 「갈아끼울까 말까」 가 고민이 되도록.
 // 『행운』과 『성장』은 **일부러 드뭅니다.** 싸움을 포기하고 갈아입는 물건이라
 // 흔하면 갈아입는 일이 특별하지 않게 됩니다. 격마다 하나씩만 두세요.
-//   행운(전리품) — 미믹 · 하피퀸 · 서큐버스 · 이야기꾼 · 개방 장로 · 금두꺼비
-//                  · 역천사 · 메피스토펠레스 · 로키 · 요그소토스
-//   성장(경험치) — 임프 · 피닉스 · 아르키메데스 · 달마 · 웅녀 · 가브리엘
-//                  · 바포메트 · 이시스 · 글라아키
 const ENEMY_ARCHETYPE = {
-  // 1격 잡졸 — 지하수로
-  slime: 'ward',        giantrat: 'swift',     goblin: 'fierce',     kobold: 'guard',
-  goblinchief: 'brutal', skeleton: 'pierce',   zombie: 'ward',       cavespider: 'leech',
-  mimic: 'lucky',       imp: 'growth',         darkwolf: 'swift',    dungeonguardian: 'guard',
+  // 1격 — 초심자의 지하수로
+  slime: 'ward',  giantrat: 'swift',  goblin: 'fierce',  kobold: 'guard',
+  goblinchief: 'brutal',  skeleton: 'pierce',  zombie: 'ward',  cavespider: 'leech',
+  mimic: 'lucky',  imp: 'growth',  darkwolf: 'swift',  dungeonguardian: 'guard',
 
-  // 2격 마물 — 숲길
-  orc: 'brutal',        hobgoblin: 'guard',    lizardman: 'pierce',  harpy: 'swift',
-  orcgeneral: 'fierce', ogre: 'brutal',        darkelf: 'leech',     treant: 'thorn',
-  forestwitch: 'leech', gargoyle: 'guard',     basilisk: 'pierce',   trollking: 'ward',
+  // 2격 — 이끼 낀 숲길
+  orc: 'brutal',  hobgoblin: 'guard',  lizardman: 'pierce',  harpy: 'swift',
+  orcgeneral: 'fierce',  ogre: 'brutal',  darkelf: 'leech',  treant: 'thorn',
+  forestwitch: 'leech',  gargoyle: 'guard',  basilisk: 'pierce',  trollking: 'ward',
 
-  // 3격 마수 — 무너진 왕국
-  minotaur: 'brutal',   wyvern: 'swift',       chimera: 'fierce',    manticore: 'pierce',
-  griffinlord: 'swift', stonegolem: 'guard',   irongolem: 'thorn',   harpyqueen: 'lucky',
-  hydra: 'ward',        cockatrice: 'pierce',  darkknight: 'fierce', fallenking: 'guard',
+  // 3격 — 무너진 왕국
+  minotaur: 'brutal',  wyvern: 'swift',  chimera: 'fierce',  manticore: 'pierce',
+  griffinlord: 'swift',  stonegolem: 'guard',  irongolem: 'thorn',  harpyqueen: 'lucky',
+  hydra: 'ward',  cockatrice: 'pierce',  darkknight: 'fierce',  fallenking: 'guard',
 
-  // 4격 환수 — 잊혀진 성역
-  unicorn: 'ward',      pegasus: 'swift',      phoenix: 'growth',    cerberus: 'fierce',
-  sphinx: 'ward',       leviathan: 'brutal',   behemoth: 'guard',    ziz: 'swift',
-  kraken: 'leech',      salamander: 'fierce',  sylph: 'swift',       sanctdragon: 'thorn',
+  // 4격 — 거인의 고개
+  hillgiant: 'brutal',  cyclops: 'pierce',  stonegiant: 'guard',  ettin: 'fierce',
+  frostgiant: 'ward',  goliath: 'brutal',  yeti: 'swift',  firegiant: 'fierce',
+  roc: 'swift',  cloudgiant: 'lucky',  daidarabotchi: 'growth',  giantking: 'thorn',
 
-  // 5격 마족 — 시체가 걷는 도시
-  ghoul: 'leech',       wraith: 'swift',       vampire: 'leech',     banshee: 'fierce',
-  deathknight: 'guard', bonedragon: 'pierce',  succubus: 'lucky',    incubus: 'leech',
-  lich: 'pierce',       demonlord: 'brutal',   balrog: 'fierce',     lichking: 'ward',
+  // 5격 — 시체가 걷는 도시
+  ghoul: 'leech',  wraith: 'swift',  vampire: 'leech',  whitehorse: 'pierce',
+  banshee: 'fierce',  deathknight: 'guard',  bonedragon: 'pierce',  redhorse: 'brutal',
+  succubus: 'lucky',  incubus: 'leech',  lich: 'pierce',  blackhorse: 'leech',
+  demonlord: 'brutal',  balrog: 'fierce',  palehorse: 'thorn',  lichking: 'ward',
 
-  // 6격 마왕 — 마계의 왕좌
-  archdemon: 'fierce',  elderdragon: 'brutal', abysstentacle: 'leech',
-  sinpride: 'thorn',    sinwrath: 'fierce',    singreed: 'leech',    demongeneral: 'pierce',
-  sinsloth: 'guard',    sinenvy: 'swift',      sinlust: 'leech',     singluttony: 'ward',
-  observer: 'swift',    worldworm: 'leech',    apocalypsebeast: 'brutal',
-  demonking: 'fierce',
+  // 6격 — 마계의 왕좌
+  archdemon: 'fierce',  abysstentacle: 'leech',  sinsloth: 'guard',  sinenvy: 'swift',
+  elderdragon: 'brutal',  sinlust: 'leech',  singluttony: 'ward',  sinpride: 'thorn',
+  sinwrath: 'fierce',  singreed: 'leech',  demongeneral: 'pierce',  observer: 'swift',
+  worldworm: 'leech',  apocalypsebeast: 'brutal',  demonking: 'fierce',
 
-  // 7격 설화 — 알렉산드리아 대도서관
-  storyteller: 'lucky', scribe: 'swift',       archimedes: 'growth', hypatia: 'swift',
-  sunzi: 'guard',       davinci: 'swift',      herodotos: 'ward',    joan: 'fierce',
-  spartacus: 'brutal',  genghis: 'swift',      alexander: 'fierce',  yisunsin: 'guard',
+  // 7격 — 알렉산드리아 대도서관
+  storyteller: 'lucky',  scribe: 'swift',  guanyu: 'brutal',  archimedes: 'growth',
+  hypatia: 'swift',  sunzi: 'guard',  davinci: 'swift',  zhangfei: 'fierce',
+  herodotos: 'ward',  joan: 'fierce',  zhaoyun: 'guard',  spartacus: 'brutal',
+  genghis: 'swift',  machao: 'leech',  alexander: 'fierce',  huangzhong: 'pierce',
+  yisunsin: 'guard',
 
-  // 8격 무림 — 천하제일 비무대
-  nangin: 'fierce',     gaebang: 'lucky',      emei: 'pierce',       shaolin: 'guard',
-  dalma: 'growth',      wudang: 'ward',        tangga: 'leech',      hwasan: 'swift',
-  zhangsanfeng: 'thorn', namgung: 'brutal',    bukhae: 'guard',      cheonma: 'fierce',
+  // 8격 — 원탁의 성 카멜롯
+  auraknight: 'fierce',  paladin: 'ward',  lancelot: 'pierce',  templar: 'guard',
+  dragonknight: 'swift',  gawain: 'brutal',  berserker: 'leech',  galahad: 'ward',
+  greenknight: 'growth',  tristan: 'swift',  roland: 'guard',  percival: 'lucky',
+  elcid: 'fierce',  bedivere: 'guard',  robinhood: 'pierce',  mordred: 'leech',
+  ladyofthelake: 'ward',  arthur: 'guard',
 
-  // 9격 영물 — 만년설 덮인 천산
-  yeongsa: 'leech',     geumjam: 'pierce',     geumseom: 'lucky',    sansam: 'ward',
-  gumiho: 'leech',      bingjam: 'guard',      ungnyeo: 'growth',    sangun: 'fierce',
-  geumsijo: 'swift',    hwarin: 'pierce',      yeonggu: 'guard',     imugi: 'brutal',
+  // 9격 — 안개 너머의 아발론
+  archmage: 'fierce',  elementalist: 'brutal',  salamander: 'fierce',  summoner: 'guard',
+  runemage: 'ward',  undine: 'thorn',  alchemist: 'growth',  druid: 'ward',
+  faust: 'lucky',  sylph: 'swift',  warlock: 'leech',  babayaga: 'pierce',
+  gnome: 'guard',  circe: 'leech',  morgan: 'fierce',  merlin: 'ward',
 
-  // 10격 영웅 — 엘리시온 평원
-  theseus: 'pierce',    perseus: 'swift',      odysseus: 'pierce',   atalanta: 'swift',    enkidu: 'ward',
-  gilgamesh: 'brutal',  hector: 'guard',       achilles: 'fierce',   cuchulainn: 'brutal',
-  beowulf: 'thorn',     arjuna: 'pierce',      siegfried: 'leech',   heracles: 'brutal',
+  // 10격 — 천하제일 비무대
+  nangin: 'fierce',  gaebang: 'lucky',  namgung: 'brutal',  emei: 'pierce',
+  shaolin: 'guard',  tangga: 'leech',  dalma: 'growth',  wudang: 'ward',
+  moyong: 'thorn',  hwasan: 'swift',  jegal: 'guard',  zhangsanfeng: 'thorn',
+  bukhae: 'guard',  paeng: 'brutal',  cheonma: 'fierce',
 
-  // 11격 천사 — 일곱 번째 하늘
-  guardianangel: 'ward', principality: 'guard', powerangel: 'fierce', trumpetangel: 'swift',
-  raphael: 'ward',      virtueangel: 'lucky',  dominion: 'brutal',   throneangel: 'thorn',
-  gabriel: 'growth',    cherub: 'guard',       seraph: 'fierce',     michael: 'brutal',
+  // 11격 — 만년설 덮인 천산
+  yeongsa: 'leech',  geumjam: 'pierce',  azuredragon: 'thorn',  geumseom: 'lucky',
+  sansam: 'ward',  gumiho: 'leech',  bingjam: 'guard',  whitetiger: 'fierce',
+  ungnyeo: 'growth',  sangun: 'fierce',  vermilionbird: 'brutal',  geumsijo: 'swift',
+  hwarin: 'pierce',  blacktortoise: 'ward',  yeonggu: 'guard',  imugi: 'brutal',
 
-  // 12격 악마 — 얼어붙은 코키토스
-  legion: 'brutal',     moloch: 'fierce',      baphomet: 'growth',   azazel: 'pierce',
-  beelzebub: 'leech',   mephisto: 'lucky',     astaroth: 'swift',    belial: 'thorn',
-  asmodeus: 'fierce',   paimon: 'guard',       lilith: 'leech',      lucifer: 'pierce',
+  // 12격 — 잊혀진 성역
+  unicorn: 'ward',  nemeanlion: 'guard',  pegasus: 'swift',  ceryneianhind: 'lucky',
+  sphinx: 'ward',  erymanthianboar: 'brutal',  phoenix: 'growth',  stymphalianbirds: 'pierce',
+  cretanbull: 'fierce',  hippogriff: 'swift',  kraken: 'leech',  mares: 'brutal',
+  geryon: 'guard',  cerberus: 'fierce',  ladon: 'ward',  sanctdragon: 'thorn',
 
-  // 13격 신격 — 이그드라실의 가지
-  hermes: 'swift',      bastet: 'swift',       anubis: 'pierce',     artemis: 'swift',
-  loki: 'lucky',        susanoo: 'fierce',     thor: 'brutal',       ares: 'fierce',
-  poseidon: 'brutal',   amaterasu: 'ward',     isis: 'growth',       hades: 'thorn',
+  // 13격 — 엘리시온 평원
+  theseus: 'pierce',  perseus: 'swift',  odysseus: 'pierce',  atalanta: 'swift',
+  enkidu: 'ward',  gilgamesh: 'brutal',  hector: 'guard',  achilles: 'fierce',
+  cuchulainn: 'brutal',  beowulf: 'thorn',  arjuna: 'pierce',  siegfried: 'leech',
+  heracles: 'brutal',
 
-  // 14격 주신 — 올림포스 정상
-  titanmyth: 'guard',   osiris: 'leech',      izanagi: 'pierce',     ra: 'fierce',         vishnu: 'ward',
-  indra: 'brutal',      hwanin: 'guard',       jadeemperor: 'guard', shiva: 'pierce',
-  odin: 'pierce',       quetzalcoatl: 'swift', ahuramazda: 'thorn',  zeus: 'fierce',
+  // 14격 — 일곱 번째 하늘
+  guardianangel: 'ward',  principality: 'guard',  raphael: 'ward',  powerangel: 'fierce',
+  trumpetangel: 'swift',  uriel: 'pierce',  virtueangel: 'lucky',  dominion: 'brutal',
+  raguel: 'guard',  throneangel: 'thorn',  gabriel: 'growth',  cherub: 'guard',
+  sariel: 'swift',  seraph: 'fierce',  remiel: 'ward',  michael: 'brutal',
 
-  // 15격 외신 — 궁극의 혼돈
-  dagon: 'leech',       yig: 'thorn',          ithaqua: 'swift',      chaugnar: 'leech',    shubniggurath: 'ward',
-  hastur: 'thorn',      tsathoggua: 'ward',    glaaki: 'growth',     cthulhu: 'brutal',
-  yogsothoth: 'lucky',  abhoth: 'leech',       voidlordmyth: 'pierce', nyarlathotep: 'swift', azathoth: 'brutal'
+  // 15격 — 얼어붙은 코키토스
+  legion: 'brutal',  bael: 'swift',  moloch: 'fierce',  baphomet: 'growth',
+  asmodeus: 'fierce',  azazel: 'pierce',  beleth: 'brutal',  beelzebub: 'leech',
+  mephisto: 'lucky',  paimon: 'guard',  astaroth: 'swift',  purson: 'ward',
+  belial: 'thorn',  lilith: 'leech',  vine: 'fierce',  balam: 'guard',
+  zagan: 'thorn',  lucifer: 'pierce',
+
+  // 16격 — 이그드라실의 가지
+  bastet: 'swift',  hera: 'thorn',  anubis: 'pierce',  hermes: 'swift',
+  susanoo: 'fierce',  athena: 'guard',  poseidon: 'brutal',  apollo: 'ward',
+  thor: 'brutal',  artemis: 'swift',  aphrodite: 'leech',  amaterasu: 'ward',
+  loki: 'lucky',  hephaestus: 'guard',  ares: 'fierce',  isis: 'growth',
+  demeter: 'ward',  dionysus: 'leech',  hades: 'thorn',
+
+  // 17격 — 태초의 바다
+  titanmyth: 'guard',  behemoth: 'ward',  jormungandr: 'leech',  fenrir: 'fierce',
+  leviathan: 'brutal',  apophis: 'pierce',  typhon: 'fierce',  vritra: 'guard',
+  ziz: 'swift',  orochi: 'brutal',  ymir: 'growth',  tiamat: 'thorn',
+
+  // 18격 — 올림포스 정상
+  osiris: 'leech',  brahma: 'growth',  izanagi: 'pierce',  ra: 'fierce',
+  vishnu: 'ward',  indra: 'brutal',  hwanin: 'guard',  shiva: 'pierce',
+  jadeemperor: 'lucky',  odin: 'pierce',  quetzalcoatl: 'swift',  ahuramazda: 'thorn',
+  zeus: 'fierce',
+
+  // 19격 — 가라앉은 르뤼에
+  yig: 'thorn',  dagon: 'leech',  ithaqua: 'swift',  chaugnar: 'leech',
+  hastur: 'thorn',  glaaki: 'growth',  shoggoth: 'ward',  cthugha: 'fierce',
+  migo: 'pierce',  tsathoggua: 'ward',  atlachnacha: 'guard',  cthulhu: 'brutal',
+
+  // 20격 — 궁극의 혼돈
+  shubniggurath: 'ward',  ubbosathla: 'growth',  abhoth: 'leech',  daoloth: 'pierce',
+  yogsothoth: 'lucky',  voidlordmyth: 'pierce',  tulzscha: 'fierce',  yibbtstll: 'guard',
+  nyarlathotep: 'swift',  ghroth: 'thorn',  pipers: 'ward',  azathoth: 'brutal'
 };
 
 // ============================================================
-//  덧붙이는 전리품
+//  정예 묶음
 // ============================================================
-// 허리띠·망토·장갑·팔찌를 나중에 추가하면서 부위만 만들고 아이템을 못 채웠습니다.
-// (허리띠 2종, 장갑 6종뿐이었습니다.)
-// 위의 ZONES 를 다시 건드리면 실수가 나기 쉬워서, 여기서 id 로 덧붙입니다.
-//
-// ⚠ 여기 덧붙인다고 그 화신의 전리품이 네 종류가 되지는 않습니다.
-//   한 화신은 **최대 세 종류**까지만 남기고, 넘치면 흔한 부위부터 잘라냅니다
-//   (아래 trimDrops 참고). 드롭은 종류마다 따로 굴리기 때문에, 네 종류를
-//   허용하면 그 화신만 한 번에 떨어지는 양이 3분의 1 많아집니다.
-const EXTRA_DROPS = {
-  // 1격 잡졸
-  goblin: [['gloves', '고블린 손싸개']],   kobold: [['belt', '코볼트 허리끈']],
-  skeleton: [['belt', '뼈 허리띠']],       zombie: [['gloves', '썩은 손']],
-  darkwolf: [['gloves', '늑대발 장갑']],   dungeonguardian: [['belt', '수호자의 띠']],
-
-  // 2격 마물
-  orc: [['gloves', '오크 손등가리개']],    hobgoblin: [['belt', '군용 허리띠']],
-  darkelf: [['gloves', '암살자의 장갑']],  treant: [['belt', '덩굴 허리띠']],
-  trollking: [['gloves', '재생하는 손']],
-
-  // 3격 마수
-  minotaur: [['belt', '미궁의 허리띠']],   stonegolem: [['belt', '화강암 띠']],
-  irongolem: [['gloves', '무쇠 손']],      darkknight: [['gloves', '흑철 건틀릿']],
-  fallenking: [['belt', '왕의 허리띠']],
-
-  // 4격 환수
-  phoenix: [['gloves', '불티 장갑']],      behemoth: [['belt', '대지의 허리띠']],
-  kraken: [['gloves', '흡반 장갑']],       salamander: [['gloves', '화염 손']],
-  sanctdragon: [['belt', '용비늘 허리띠']],
-
-  // 5격 마족
-  vampire: [['gloves', '귀족의 흰 장갑']], deathknight: [['belt', '서약의 허리띠']],
-  lich: [['gloves', '마른 손']],           balrog: [['belt', '불꽃 허리띠']],
-  lichking: [['gloves', '서리 건틀릿']],
-
-  // 6격 마왕
-  titanmyth: [['belt', '거인의 허리띠']],      elderdragon: [['gloves', '고룡 발톱 장갑']],
-  singreed: [['belt', '탐욕의 전대']],
-  demonking: [['belt', '마왕의 허리띠']],
-
-  // 7격 설화
-  scribe: [['gloves', '잉크 물든 장갑']],  sunzi: [['belt', '병법가의 띠']],
-  joan: [['gloves', '성녀의 장갑']],       genghis: [['belt', '초원의 허리띠']],
-  yisunsin: [['gloves', '수군의 손싸개']],
-
-  // 10격 영웅
-  theseus: [['belt', '미궁의 실 허리띠']], gilgamesh: [['belt', '우루크의 띠']],
-  achilles: [['gloves', '청동 손목받이']], beowulf: [['gloves', '맨손의 장갑']],
-  heracles: [['belt', '히폴리테의 띠']],
-
-  // 13격 신격
-  hermes: [['belt', '전령의 띠']],         anubis: [['gloves', '방부사의 장갑']],
-  ares: [['belt', '전쟁의 허리띠']],       amaterasu: [['gloves', '해의 장갑']],
-  hades: [['belt', '명계의 띠']],
-
-  // 14격 주신
-  osiris: [['belt', '아마포 허리띠']],     ra: [['gloves', '태양의 장갑']],
-  shiva: [['belt', '재의 허리띠']],        odin: [['gloves', '룬 새긴 장갑']],
-  zeus: [['belt', '올림포스의 띠']],
-
-  // 15격 외신
-  dagon: [['gloves', '물갈퀴 장갑']],      hastur: [['belt', '황색 허리띠']],
-  cthulhu: [['gloves', '촉수 장갑']],      nyarlathotep: [['belt', '가면의 띠']],
-  azathoth: [['gloves', '무(無)의 장갑']],
-
-  // ── 망토와 팔찌 ──
-  // 1격
-  imp: [['cloak', '박쥐날개 망토']],           goblinchief: [['cloak', '족장의 털가죽 망토']],
-  cavespider: [['bracelet', '거미줄 팔찌']],   mimic: [['bracelet', '가짜 보석 팔찌']],
-  // 2격
-  harpy: [['cloak', '깃털 망토']],             forestwitch: [['cloak', '마녀의 검은 망토']],
-  basilisk: [['bracelet', '석화의 팔찌']],     gargoyle: [['bracelet', '돌 팔찌']],
-  // 3격
-  wyvern: [['cloak', '와이번 가죽 망토']],     manticore: [['cloak', '만티코어 망토']],
-  harpyqueen: [['bracelet', '여왕의 팔찌']],   hydra: [['bracelet', '재생의 팔찌']],
-  // 4격
-  ziz: [['cloak', '하늘 덮는 망토']],          sphinx: [['cloak', '수수께끼의 베일']],
-  unicorn: [['bracelet', '정화의 팔찌']],      sylph: [['bracelet', '바람 팔찌']],
-  // 5격
-  banshee: [['cloak', '통곡의 망토']],         demonlord: [['cloak', '지옥 망토']],
-  succubus: [['bracelet', '유혹의 팔찌']],     bonedragon: [['bracelet', '뼈 팔찌']],
-  // 6격
-  archdemon: [['cloak', '군단장의 망토']],     voidlordmyth: [['cloak', '공허 망토']],
-  sinpride: [['bracelet', '오만의 팔찌']],
-  worldworm: [['bracelet', '갉는 팔찌'], ['shoulder', '마디 갑각']],
-  // 7격
-  herodotos: [['cloak', '여행자의 망토']],     alexander: [['cloak', '정복자의 자줏빛 망토']],
-  hypatia: [['bracelet', '천문 팔찌']],        spartacus: [['bracelet', '끊어진 쇠고랑']],
-  // 10격
-  perseus: [['cloak', '보이지 않는 망토']],    arjuna: [['cloak', '전차병의 망토']],
-  enkidu: [['bracelet', '흙으로 빚은 팔찌']],  cuchulainn: [['bracelet', '뒤틀림의 팔찌']],
-  // 13격
-  artemis: [['cloak', '달빛 망토']],           loki: [['cloak', '변신의 망토']],
-  bastet: [['bracelet', '고양이 팔찌']],       susanoo: [['bracelet', '폭풍 팔찌']],
-  // 14격
-  izanagi: [['cloak', '황천의 망토']],         vishnu: [['cloak', '열 화신의 망토']],
-  indra: [['bracelet', '천둥 팔찌']],          ahuramazda: [['bracelet', '불의 팔찌']],
-  // 15격
-  ithaqua: [['cloak', '바람의 망토']],         yogsothoth: [['cloak', '문 너머의 장막']],
-  tsathoggua: [['bracelet', '잠의 팔찌']],     chaugnar: [['bracelet', '상아 팔찌']],
-
-  // ── 지역마다 빠진 부위 채우기 ──
-  // 강화석은 부위마다 따로 모입니다. 어느 지역의 일반 화신이 그 부위를 하나도
-  // 안 남기면, 그 지역에서 오래 머무는 동안 그 부위만 강화가 멈춥니다.
-  // 그래서 지역마다 일반 화신만으로 열세 부위가 다 나오게 채웠습니다.
-  // (빈자리가 없던 영웅·외신 지역에는 오디세우스·이그를 새로 세웠습니다.)
-  cerberus: [['ring', '세 목줄의 고리']],       // 4격 — 반지
-  ghoul: [['belt', '수의 허리끈']],             // 5격 — 허리띠
-  sinwrath: [['gloves', '식지 않는 주먹']],     // 6격 — 장갑
-  storyteller: [['belt', '천 하룻밤의 띠']],    // 7격 — 허리띠
-  davinci: [['greaves', '설계도 각반']],        // 7격 — 각반
-  hector: [['helm', '빛나는 투구']],            // 10격 — 투구
-  jadeemperor: [['gloves', '옥황의 장갑']]      // 14격 — 장갑
+// 칠죄종처럼 숫자 · 속성으로 묶이는 정예들입니다. 묶음 정예는 전리품이 하나 — 그 존재를 대표하는 물건입니다.
+// 『격을 삼키는 검』이 삼킬 격이 없습니다 (devourEnergy) — 다 삼킬 수 있게 하면 묶음 정예가 여든다섯이라
+// 시작 에너지가 기본 30에 그만큼 더 붙습니다.
+// 맵에서는 6격의 칠죄종 홀처럼 묶음을 한곳에 모아 세웁니다 (docs/MAP-REFERENCE-PLAN.md).
+const ELITE_SETS = {
+  elementGiants: { name: '원소 거인 넷', members: ['stonegiant', 'frostgiant', 'firegiant', 'cloudgiant'] },
+  horsemen: { name: '묵시록의 네 기사', members: ['whitehorse', 'redhorse', 'blackhorse', 'palehorse'] },
+  sins: { name: '칠죄종', members: ['sinsloth', 'sinenvy', 'sinlust', 'singluttony', 'sinpride', 'sinwrath', 'singreed'] },
+  tigers: { name: '오호대장군', members: ['guanyu', 'zhangfei', 'zhaoyun', 'machao', 'huangzhong'] },
+  roundTable: { name: '원탁의 기사', members: ['lancelot', 'gawain', 'galahad', 'tristan', 'percival', 'bedivere', 'mordred'] },
+  elementals: { name: '4대 정령', members: ['salamander', 'undine', 'sylph', 'gnome'] },
+  clans: { name: '오대세가', members: ['namgung', 'tangga', 'moyong', 'jegal', 'paeng'] },
+  fourSymbols: { name: '사신수', members: ['azuredragon', 'whitetiger', 'vermilionbird', 'blacktortoise'] },
+  labors: { name: '헤라클레스의 열두 과업', members: ['nemeanlion', 'ceryneianhind', 'erymanthianboar', 'stymphalianbirds', 'cretanbull', 'mares', 'geryon', 'cerberus', 'ladon'] },
+  archangels: { name: '일곱 대천사', members: ['raphael', 'uriel', 'raguel', 'gabriel', 'sariel', 'remiel'] },
+  goetiaKings: { name: '솔로몬 72 마신의 아홉 왕', members: ['bael', 'asmodeus', 'beleth', 'paimon', 'purson', 'belial', 'vine', 'balam', 'zagan'] },
+  olympians: { name: '올림포스 12신', members: ['hera', 'hermes', 'athena', 'poseidon', 'apollo', 'artemis', 'aphrodite', 'hephaestus', 'ares', 'demeter', 'dionysus'] },
+  primordialBeasts: { name: '땅 · 바다 · 하늘의 세 짐승', members: ['behemoth', 'leviathan', 'ziz'] },
+  trimurti: { name: '트리무르티', members: ['brahma', 'vishnu', 'shiva'] },
+  elementalOldOnes: { name: '원소별 옛 지배자', members: ['dagon', 'hastur', 'cthugha', 'tsathoggua'] }
 };
 
 // ============================================================
-//  특수장비를 남기는 화신
+//  특수장비 · 빠진 전리품
 // ============================================================
-// 칸을 여는 히든 넷 말고도 몇몇 일반 화신과 보스가 특수장비를 남깁니다.
-// 한 화신이 남기는 건 그대로 세 종류까지라, **원래 남기던 것 하나를 빼고** 그 자리에 넣습니다.
-//   replace — 빼는 부위. 일반 화신은 그 지역의 다른 일반 화신이 같은 부위를 남기는 것만 뺐습니다
-//             (지역마다 열세 부위가 다 나와야 강화석이 고르게 모입니다).
-// 빠진 전리품을 이미 가진 저장본은 불러올 때 그 부위의 강화석으로 돌려받습니다 (RETIRED_ITEMS).
-const SPECIAL_DROPS = {
-  sanctdragon: { replace: 'necklace', item: ['special', '성역의 수호석',   { relic: ['block'] }] },     // 4격 보스
-  vampire:     { replace: 'necklace', item: ['special', '흡혈귀의 송곳니', { relic: ['lifesteal'] }] }, // 5격
-  elderdragon: { replace: 'necklace', item: ['special', '고룡의 심장석',   { gem: 'life' }] },          // 6격
-  alexander:   { replace: 'ring',     item: ['special', '칼로 끊은 매듭',  { relic: ['pierce'] }] },    // 7격 — 고르디우스의 매듭을 풀지 않고 베어버린
-  cheonma:     { replace: 'helm',     item: ['special', '천마의 비급',     { relic: ['critRate'] }] },  // 8격 보스
-  imugi:       { replace: 'necklace', item: ['special', '이무기의 여의주', { gem: 'luck' }] },          // 9격 보스
-  siegfried:   { replace: 'necklace', item: ['special', '파프니르의 피',   { gem: 'life' }] },          // 10격
-  michael:     { replace: 'offhand',  item: ['special', '미카엘의 저울',   { relic: ['reflect'] }] },   // 11격 보스
-  lucifer:     { replace: 'armor',    item: ['special', '새벽별 조각',     { relic: ['critRate'] }] },  // 12격 보스
-  thor:        { replace: 'belt',     item: ['special', '메긴교르드의 고리', { gem: 'damage' }] },      // 13격 — 힘을 두 배로 만드는 띠의 고리
-  shiva:       { replace: 'necklace', item: ['special', '시바의 셋째 눈',  { relic: ['pierce'] }] },    // 14격
-  cthulhu:     { replace: 'helm',     item: ['special', '잠든 신의 우상',  { relic: ['doubleHit'] }] }, // 15격
-
-  // ── 원작의 네 능력치 (재생 · 생존 · 일격 · 연속 턴) — 이른 격 하나, 늦은 격 하나씩 ──
-  trollking:   { replace: 'necklace', item: ['special', '트롤의 심장',        { relic: ['regen'] }] },      // 2격 보스 — 베어도 다시 붙는
-  minotaur:    { replace: 'belt',     item: ['special', '미궁의 뿔',          { relic: ['harmTouch'] }] },  // 3격
-  wyvern:      { replace: 'cloak',    item: ['special', '와이번의 날개막',    { relic: ['doubleTurn'] }] }, // 3격
-  phoenix:     { replace: 'necklace', item: ['special', '다시 타오르는 잿불', { relic: ['regen'] }] },      // 4격 — 타 죽어야 사는 새
-  lichking:    { replace: 'necklace', item: ['special', '죽지 않는 성물함',   { relic: ['survive'] }] },    // 5격 보스
-  heracles:    { replace: 'necklace', item: ['special', '네메아를 꺾은 주먹', { relic: ['harmTouch'] }] },  // 10격 보스
-  hermes:      { replace: 'belt',     item: ['special', '전령의 날개',        { relic: ['doubleTurn'] }] }, // 13격
-  izanagi:     { replace: 'cloak',    item: ['special', '황천의 복숭아',      { relic: ['survive'] }] }     // 14격 — 황천에서 도망치며 던진
-};
-
-// 특수장비에 자리를 내준 전리품. 저장본에 남아 있으면 그 부위의 강화석으로 바꿔 드립니다.
+// 예전엔 허리띠 · 망토 · 장갑 · 팔찌를 덧붙이는 표(EXTRA_DROPS)와, 몇몇 화신의 전리품 하나를
+// 특수장비로 바꾸는 표(SPECIAL_DROPS)가 따로 있었습니다. 격 재편 때 전리품 수를 「대부분 둘 · 종종 하나 ·
+// 보스 셋」으로 갈아엎으면서 전부 각 적의 d 에 합쳤습니다 — 자리(번호)는 그대로라 남긴 장비는 그대로입니다.
+// 빠진 전리품을 가진 저장본은 불러올 때 그 부위의 강화석으로 돌려받습니다 (RETIRED_ITEMS).
 const RETIRED_ITEMS = {};
 
 // 특수장비가 떨어지는 가장 낮은 격. 그 아래(1~3격)의 화신은 특수장비를 남기지 않습니다 —
@@ -1597,71 +1780,21 @@ const COLLECTION_BONUS = 0.01;
 const ENEMIES = [];
 const ITEMS = [];
 
-// 등장 순서대로 레벨을 깔아줍니다. 적을 몇 마리 추가하든 알아서 다시 배분됩니다.
-const TOTAL_FOES = ZONES.reduce((n, z) => n + z.enemies.length, 0);
-const LADDER = buildLadder(TOTAL_FOES);
-
-// 『격을 삼키는 검』이 삼킬 수 있는 에너지. 칠죄종 일곱은 정예여도 삼킬 격이 없습니다 — 에너지가 늘지 않습니다.
-const SIN_FOES = new Set(['sinpride', 'sinwrath', 'singreed', 'sinsloth', 'sinenvy', 'sinlust', 'singluttony']);
+// 『격을 삼키는 검』이 삼킬 수 있는 에너지. 묶음 정예(칠죄종 · 일곱 대천사 …)는 정예여도 삼킬 격이 없습니다.
+const SET_FOES = new Set(Object.values(ELITE_SETS).flatMap(s => s.members));
 function devourEnergy(foe) {
-  if (!foe || SIN_FOES.has(foe.id)) return 0;
+  if (!foe || SET_FOES.has(foe.id)) return 0;
   return KINDS[foe.kind] ? KINDS[foe.kind].energy : 0;
 }
 
-// ---------- 한 화신이 남기는 전리품은 최대 세 종류 ----------
-// EXTRA_DROPS 를 덧붙이면서 쉰한 마리가 네 종류가 됐습니다.
-// 위 EXTRA_DROPS 주석에 "개수를 늘려도 한 번에 떨어지는 양은 그대로" 라고
-// 적혀 있었는데 **틀린 말이었습니다.** 드롭은 종류마다 따로 굴리므로
-// 네 종류는 곧 한 번 잡을 때 떨어지는 양이 3분의 1 늘어난다는 뜻입니다.
-//
-// 버릴 것은 **나중에 덧댄 것(EXTRA_DROPS)부터** 고릅니다.
-// 처음엔 "흔한 부위부터" 버리게 했는데, 무기가 전체에서 제일 흔한 부위라
-// **열한 보스가 전부 무기를 잃었습니다** — 아자토스의 『만물을 가르는 칼날』까지요.
-// 손으로 쓴 e.d 목록은 그 화신의 정체이고 EXTRA_DROPS 는 부위 수를 채우려고
-// 덧댄 것이니, 양보해야 하는 쪽은 덧댄 쪽입니다.
-// 덧댄 것끼리는 흔한 부위부터, 같은 부위가 두 번 붙은 것은 무조건 먼저 버립니다.
-const MAX_DROPS_PER_ENEMY = 3;
-
-const SLOT_TALLY = {};
-for (const z of ZONES) {
-  for (const e of z.enemies) {
-    for (const [slot] of e.d.concat(EXTRA_DROPS[e.id] || [])) {
-      SLOT_TALLY[slot] = (SLOT_TALLY[slot] || 0) + 1;
-    }
-  }
-}
-
-// 남길 것들을 **원래 자리 번호와 함께** 돌려줍니다.
-// 전리품 id 가 `적id_순번` 이라, 잘라내고 번호를 다시 매기면 저장해둔
-// 전리품이 엉뚱한 물건으로 바뀝니다. 그래서 번호는 원래 것을 그대로 씁니다.
-// (특수장비에 자리를 내준 것은 넘어오기 전에 이미 빠져 있습니다 — 번호만 비워둡니다.)
-function trimDrops(withIdx, enemyId, baseCount) {
-  if (withIdx.length <= MAX_DROPS_PER_ENEMY) return withIdx;
-
-  const seen = new Set();
-  const scored = withIdx.map(({ spec, idx }) => {
-    const slot = spec[0];
-    const dupe = seen.has(slot);
-    seen.add(slot);
-    let score = (dupe ? 100000 : 0)                    // 같은 부위 중복이 가장 먼저
-              + (idx >= baseCount ? 1000 : 0)          // 그다음이 덧댄 것
-              + (SLOT_TALLY[slot] || 0);               // 같은 조건이면 흔한 부위부터
-    if (`${enemyId}_${idx}` === DEVOURER_ID) score = -1;   // 격을 삼키는 검은 절대 안 버립니다
-    if (slot === 'special') score = -1;                    // 특수장비도 — 이미 하나를 빼고 넣은 자리입니다
-    return { spec, idx, score };
-  });
-  scored.sort((a, b) => a.score - b.score || a.idx - b.idx);
-  return scored.slice(0, MAX_DROPS_PER_ENEMY).sort((a, b) => a.idx - b.idx);
-}
-
-let ladderIndex = 0;
 ZONES.forEach((zone, zi) => {
   const rank = RANKS.find(r => r.n === zone.rank);
+  const count = zone.enemies.length;
 
   zone.enemies.forEach((e, ei) => {
     const kind = e.kind || 'normal';
     const K = KINDS[kind];
-    const level = LADDER[ladderIndex++];
+    const level = rankLevel(rank.n, ei, count);
     const arch = e.a || ENEMY_ARCHETYPE[e.id] || 'guard';
 
     // 각 격의 시작 레벨 = 그 지역 첫 적의 레벨
@@ -1679,6 +1812,7 @@ ZONES.forEach((zone, zi) => {
       once: K.once,               // 한 회차에 한 번만 만날 수 있는가
       opens: !!e.opens,           // 처음 꺾으면 특수장비 칸이 하나 열리는가
       final: !!e.final,
+      set: e.set || null,         // 묶음 정예라면 그 묶음 (ELITE_SETS)
       zoneIndex: zi,
       zoneId: zone.id,
       zoneName: zone.name,
@@ -1688,39 +1822,17 @@ ZONES.forEach((zone, zi) => {
     });
 
     // [부위, 이름] 뒤에 숫자를 붙이면 그 전리품만 성능 배수를 따로 줍니다.
-    // 세 번째가 'none' 이면 성격 없이 맨 스탯만 (격을 삼키는 검처럼 특별한 것).
-    // 부위가 'special' 이면 특수장비 — 세 번째에 { gem } 또는 { relic } 이 옵니다.
-    // 특수장비는 4격부터만 떨어집니다 (SPECIAL_MIN_RANK). 그 아래 격에 붙어 있던 특수장비는 빼고,
-    // 이미 가진 저장본은 특수장비 강화석으로 돌려받습니다 (RETIRED_ITEMS).
+    // 특수장비는 4격부터만 떨어집니다 (SPECIAL_MIN_RANK) — 그 아래 격의 특수장비 자리는 빠진 것으로 칩니다.
     const low = rank.n < SPECIAL_MIN_RANK;
-    const sp = low ? null : SPECIAL_DROPS[e.id];
-    let list = e.d.concat(EXTRA_DROPS[e.id] || []);
-    if (low && SPECIAL_DROPS[e.id]) {
-      RETIRED_ITEMS[`${e.id}_${list.length}`] = { slot: 'special', grade: kind, rank, name: SPECIAL_DROPS[e.id].item[1] };
-    }
-    if (low) list.forEach(([slot, name], i) => {
-      if (slot === 'special') RETIRED_ITEMS[`${e.id}_${i}`] = { slot: 'special', grade: kind, rank, name };
-    });
-    let retired = -1;
-    if (sp) {
-      retired = list.findIndex(x => x[0] === sp.replace);
-      if (retired >= 0) {
-        RETIRED_ITEMS[`${e.id}_${retired}`] = { slot: sp.replace, grade: kind, rank, name: list[retired][1] };
+    const key = e.itemKey || e.id;
+    e.d.forEach(([slot, name, opt], i) => {
+      const id = `${key}_${i}`;
+      if (opt === 'retired' || (low && slot === 'special')) {
+        RETIRED_ITEMS[id] = { slot, grade: kind, rank, name };
+        return;
       }
-      list = list.concat([sp.item]);   // 번호는 맨 뒤에 새로 받습니다 — 빠진 것의 번호를 물려받지 않게
-    }
-    // 세 번째가 'retired' 인 것은 빠진 전리품입니다 — 번호만 남기고 만들지 않으며, 가진 저장본은 강화석으로 돌려받습니다.
-    // (같은 번호에 다른 물건을 넣으면 가진 사람의 장비가 몰래 바뀝니다)
-    list.forEach(([slot, name, opt], i) => {
-      if (opt === 'retired') RETIRED_ITEMS[`${e.id}_${i}`] = { slot, grade: kind, rank, name };
-    });
-    const cands = list.map((spec, idx) => ({ spec, idx }))
-      .filter(c => c.idx !== retired && c.spec[2] !== 'retired' && !(low && c.spec[0] === 'special'));
-    const drops = trimDrops(cands, e.id, e.d.length);
-    drops.forEach(({ spec: [slot, name, opt], idx: i }) => {
       const noArch = opt === 'none';
       const isSpecial = slot === 'special';
-      const id = `${e.id}_${i}`;
       const stats = noArch ? {}
         : isSpecial ? makeSpecialStats(opt, level, kind, rank.n)
         : makeItemStats(slot, level, (typeof opt === 'number' ? opt : K.mult), arch, VITAL_FOES.has(e.id));
@@ -1752,6 +1864,326 @@ for (const [id, slot, name] of [
   ['titan_0', 'greaves', '거인의 각반'], ['titan_1', 'offhand', '산을 깎은 방패'], ['titan_2', 'belt', '거인의 허리띠'],
   ['voidlord_0', 'weapon', '공허의 낫'], ['voidlord_1', 'armor', '없음의 갑주'], ['voidlord_2', 'bracelet', '빈 고리']
 ]) RETIRED_ITEMS[id] = { slot, grade: 'normal', rank: RANKS.find(r => r.n === 6), name };
+
+// 옛 번호 — 격 재편 때 격을 옮긴 적(옛 4격 짐승들 · 8격 뒤로 밀린 화신들)의 옛 전리품처럼, 지금 데이터에 없는 번호.
+// 가진 저장본은 불러올 때 그 부위의 강화석으로 돌려받습니다. 예전 data.js 와 견줘 뽑은 표입니다 — 손으로 고치지 마세요.
+//   id: [부위, 이름, 등급, 옛 격 번호]
+const LEGACY_ITEMS = {
+  'unicorn_0': ['weapon', '일각수의 뿔', 'normal', 4],
+  'unicorn_1': ['necklace', '정화의 물방울', 'normal', 4],
+  'unicorn_2': ['bracelet', '정화의 팔찌', 'normal', 4],
+  'pegasus_0': ['boots', '구름을 딛는 편자', 'normal', 4],
+  'pegasus_1': ['bracelet', '날개의 고리', 'normal', 4],
+  'phoenix_0': ['cloak', '재에서 난 깃옷', 'normal', 4],
+  'phoenix_2': ['gloves', '불티 장갑', 'normal', 4],
+  'phoenix_3': ['special', '다시 타오르는 잿불', 'normal', 4],
+  'cerberus_0': ['helm', '세 머리의 투구', 'normal', 4],
+  'cerberus_1': ['greaves', '지옥문 각반', 'normal', 4],
+  'cerberus_2': ['ring', '세 목줄의 고리', 'normal', 4],
+  'sphinx_0': ['necklace', '풀리지 않는 수수께끼', 'elite', 4],
+  'sphinx_1': ['helm', '사자의 관', 'elite', 4],
+  'sphinx_2': ['bracelet', '정답의 고리', 'elite', 4],
+  'leviathan_0': ['armor', '심해 비늘 갑주', 'normal', 4],
+  'leviathan_1': ['shoulder', '해일의 지느러미', 'normal', 4],
+  'behemoth_0': ['greaves', '대지의 각반', 'normal', 4],
+  'behemoth_1': ['offhand', '뿔 방패', 'normal', 4],
+  'behemoth_2': ['belt', '대지의 허리띠', 'normal', 4],
+  'ziz_0': ['boots', '하늘 덮는 신', 'normal', 4],
+  'ziz_1': ['bracelet', '깃대의 고리', 'normal', 4],
+  'ziz_2': ['cloak', '하늘 덮는 망토', 'normal', 4],
+  'kraken_0': ['shoulder', '거대 촉수', 'elite', 4],
+  'kraken_1': ['armor', '흡반 갑피', 'elite', 4],
+  'kraken_2': ['necklace', '심연의 먹물', 'elite', 4],
+  'salamander_0': ['weapon', '불꽃 꼬리', 'normal', 4],
+  'salamander_1': ['greaves', '용암 각반', 'normal', 4],
+  'salamander_2': ['gloves', '화염 손', 'normal', 4],
+  'sylph_0': ['boots', '바람의 신', 'normal', 4],
+  'sylph_1': ['bracelet', '공기의 고리', 'normal', 4],
+  'sylph_2': ['bracelet', '바람 팔찌', 'normal', 4],
+  'sanctdragon_0': ['weapon', '용의 송곳니 검', 'boss', 4],
+  'sanctdragon_1': ['armor', '고룡 비늘 갑주', 'boss', 4],
+  'sanctdragon_4': ['special', '성역의 수호석', 'boss', 4],
+  'nangin_0': ['weapon', '이 빠진 박도', 'normal', 8],
+  'nangin_1': ['boots', '떠돌이 짚신', 'normal', 8],
+  'gaebang_0': ['weapon', '타구봉', 'normal', 8],
+  'gaebang_1': ['belt', '아홉 매듭 띠', 'normal', 8],
+  'emei_0': ['offhand', '아미자', 'normal', 8],
+  'emei_1': ['bracelet', '백팔 염주', 'normal', 8],
+  'shaolin_0': ['gloves', '금강 권갑', 'normal', 8],
+  'shaolin_1': ['armor', '철포삼', 'normal', 8],
+  'dalma_0': ['offhand', '세수경', 'elite', 8],
+  'dalma_1': ['necklace', '면벽의 염주', 'elite', 8],
+  'dalma_2': ['cloak', '갈대 한 줄기 가사', 'elite', 8],
+  'wudang_0': ['weapon', '송문고검', 'normal', 8],
+  'wudang_1': ['cloak', '태극 도포', 'normal', 8],
+  'tangga_0': ['ring', '독침 반지', 'normal', 8],
+  'tangga_1': ['shoulder', '암기 견대', 'normal', 8],
+  'hwasan_0': ['helm', '매화 두건', 'normal', 8],
+  'hwasan_1': ['boots', '암향 신', 'normal', 8],
+  'zhangsanfeng_0': ['weapon', '진무검', 'elite', 8],
+  'zhangsanfeng_1': ['bracelet', '태극 팔찌', 'elite', 8],
+  'zhangsanfeng_2': ['greaves', '구름 위를 걷는 각반', 'elite', 8],
+  'namgung_0': ['necklace', '세가의 옥패', 'normal', 8],
+  'namgung_1': ['greaves', '창궁 각반', 'normal', 8],
+  'bukhae_0': ['armor', '한빙 갑의', 'normal', 8],
+  'bukhae_1': ['helm', '서리 투구', 'normal', 8],
+  'cheonma_0': ['weapon', '천마검', 'boss', 8],
+  'cheonma_1': ['armor', '천마흑포', 'boss', 8],
+  'cheonma_3': ['special', '천마의 비급', 'boss', 8],
+  'yeongsa_0': ['necklace', '영사의 내단', 'normal', 9],
+  'yeongsa_1': ['boots', '허물 벗은 신', 'normal', 9],
+  'geumjam_0': ['ring', '금잠 반지', 'normal', 9],
+  'geumjam_1': ['gloves', '금사 장갑', 'normal', 9],
+  'geumseom_0': ['bracelet', '금섬 팔찌', 'normal', 9],
+  'geumseom_1': ['offhand', '금전표', 'normal', 9],
+  'sansam_0': ['belt', '산삼 뿌리 띠', 'normal', 9],
+  'sansam_1': ['bracelet', '천년 삼 팔찌', 'normal', 9],
+  'gumiho_0': ['necklace', '여우 구슬', 'elite', 9],
+  'gumiho_1': ['ring', '홀리는 반지', 'elite', 9],
+  'gumiho_2': ['cloak', '아홉 꼬리 목도리', 'elite', 9],
+  'bingjam_0': ['armor', '천잠보의', 'normal', 9],
+  'bingjam_1': ['cloak', '빙잠사 망토', 'normal', 9],
+  'ungnyeo_0': ['helm', '쑥 화관', 'normal', 9],
+  'ungnyeo_1': ['greaves', '곰 발 각반', 'normal', 9],
+  'sangun_0': ['shoulder', '산군의 어깨', 'normal', 9],
+  'sangun_1': ['weapon', '호랑이 발톱', 'normal', 9],
+  'geumsijo_0': ['weapon', '용을 찢는 발톱', 'elite', 9],
+  'geumsijo_1': ['shoulder', '금빛 깃 견갑', 'elite', 9],
+  'geumsijo_2': ['boots', '바람을 딛는 발', 'elite', 9],
+  'hwarin_0': ['weapon', '화린 뿔창', 'normal', 9],
+  'hwarin_1': ['boots', '불을 밟는 신', 'normal', 9],
+  'yeonggu_0': ['offhand', '만년 귀갑', 'normal', 9],
+  'yeonggu_1': ['helm', '거북 등 투구', 'normal', 9],
+  'bonghwang_0': ['special', '봉황의 비취', 'hidden', 9],
+  'bonghwang_1': ['special', '태평의 깃', 'hidden', 9],
+  'imugi_0': ['weapon', '승천하지 못한 뿔', 'boss', 9],
+  'imugi_1': ['armor', '역린 갑주', 'boss', 9],
+  'imugi_3': ['special', '이무기의 여의주', 'boss', 9],
+  'theseus_0': ['shoulder', '아테네의 견갑', 'normal', 10],
+  'theseus_1': ['necklace', '아리아드네의 실타래', 'normal', 10],
+  'theseus_2': ['belt', '미궁의 실 허리띠', 'normal', 10],
+  'perseus_0': ['offhand', '거울 방패', 'normal', 10],
+  'perseus_1': ['boots', '날개 달린 신', 'normal', 10],
+  'perseus_2': ['cloak', '보이지 않는 망토', 'normal', 10],
+  'odysseus_0': ['gloves', '열두 도끼를 꿰뚫은 손', 'normal', 10],
+  'odysseus_1': ['cloak', '거지 행색의 누더기', 'normal', 10],
+  'atalanta_0': ['weapon', '칼리돈의 활', 'normal', 10],
+  'atalanta_1': ['boots', '멈추지 않는 발', 'normal', 10],
+  'atalanta_2': ['ring', '황금 사과', 'normal', 10],
+  'enkidu_0': ['armor', '들짐승의 가죽', 'normal', 10],
+  'enkidu_1': ['greaves', '야생의 각반', 'normal', 10],
+  'enkidu_2': ['bracelet', '흙으로 빚은 팔찌', 'normal', 10],
+  'gilgamesh_0': ['shoulder', '하늘 황소의 어깨', 'elite', 10],
+  'gilgamesh_1': ['helm', '우루크의 왕관', 'elite', 10],
+  'gilgamesh_2': ['necklace', '시들어버린 영생초', 'elite', 10],
+  'hector_0': ['offhand', '트로이의 방패', 'normal', 10],
+  'hector_1': ['greaves', '성벽의 각반', 'normal', 10],
+  'hector_2': ['helm', '빛나는 투구', 'normal', 10],
+  'achilles_0': ['weapon', '펠리온의 물푸레 창', 'normal', 10],
+  'achilles_1': ['armor', '불멸의 청동 갑주', 'normal', 10],
+  'achilles_2': ['boots', '테티스가 잡았던 발목', 'normal', 10],
+  'cuchulainn_0': ['weapon', '게 불그', 'normal', 10],
+  'cuchulainn_1': ['greaves', '뒤틀림의 각반', 'normal', 10],
+  'cuchulainn_2': ['bracelet', '뒤틀림의 팔찌', 'normal', 10],
+  'beowulf_0': ['gloves', '그렌델의 팔', 'elite', 10],
+  'beowulf_1': ['helm', '곰가죽 투구', 'elite', 10],
+  'beowulf_2': ['bracelet', '흐룬팅의 고리', 'elite', 10],
+  'arjuna_0': ['weapon', '간디바', 'normal', 10],
+  'arjuna_1': ['bracelet', '집중의 고리', 'normal', 10],
+  'arjuna_2': ['boots', '전차의 발판', 'normal', 10],
+  'siegfried_0': ['weapon', '마검 그람', 'normal', 10],
+  'siegfried_1': ['armor', '용피 갑주', 'normal', 10],
+  'siegfried_3': ['special', '파프니르의 피', 'normal', 10],
+  'heracles_0': ['weapon', '올리브 몽둥이', 'boss', 10],
+  'heracles_1': ['armor', '네메아 사자의 가죽', 'boss', 10],
+  'heracles_4': ['special', '네메아를 꺾은 주먹', 'boss', 10],
+  'guardianangel_0': ['cloak', '깃털 한 장의 망토', 'normal', 11],
+  'guardianangel_1': ['ring', '지켜보는 반지', 'normal', 11],
+  'principality_0': ['helm', '나라를 맡은 관', 'normal', 11],
+  'principality_1': ['belt', '홀을 찬 띠', 'normal', 11],
+  'powerangel_0': ['weapon', '악을 쫓는 창', 'normal', 11],
+  'powerangel_1': ['shoulder', '능천사의 견갑', 'normal', 11],
+  'trumpetangel_0': ['offhand', '첫째 나팔', 'normal', 11],
+  'trumpetangel_1': ['boots', '구름 디딤 신', 'normal', 11],
+  'raphael_0': ['bracelet', '치유의 팔찌', 'elite', 11],
+  'raphael_1': ['necklace', '토비트의 물고기', 'elite', 11],
+  'raphael_2': ['belt', '나그네의 띠', 'elite', 11],
+  'virtueangel_0': ['bracelet', '기적의 팔찌', 'normal', 11],
+  'virtueangel_1': ['gloves', '기적을 행하는 손', 'normal', 11],
+  'dominion_0': ['armor', '다스림의 흉갑', 'normal', 11],
+  'dominion_1': ['necklace', '주권의 목걸이', 'normal', 11],
+  'throneangel_0': ['greaves', '바퀴 속의 바퀴', 'normal', 11],
+  'throneangel_1': ['helm', '눈으로 가득한 관', 'normal', 11],
+  'gabriel_0': ['offhand', '마지막 나팔', 'elite', 11],
+  'gabriel_1': ['ring', '백합 반지', 'elite', 11],
+  'gabriel_2': ['helm', '전령의 관', 'elite', 11],
+  'cherub_0': ['weapon', '두루 도는 불칼', 'normal', 11],
+  'cherub_1': ['shoulder', '네 얼굴의 견갑', 'normal', 11],
+  'seraph_0': ['cloak', '여섯 날개', 'normal', 11],
+  'seraph_1': ['gloves', '숯불 집게', 'normal', 11],
+  'michael_0': ['weapon', '용을 떨어뜨린 검', 'boss', 11],
+  'michael_1': ['armor', '천군의 갑주', 'boss', 11],
+  'michael_3': ['special', '미카엘의 저울', 'boss', 11],
+  'legion_0': ['armor', '이천 마리 돼지가죽', 'normal', 12],
+  'legion_1': ['ring', '많은 이름의 반지', 'normal', 12],
+  'moloch_0': ['helm', '황소 머리 투구', 'normal', 12],
+  'moloch_1': ['gloves', '제단 불에 그을린 손', 'normal', 12],
+  'baphomet_0': ['offhand', '염소 머리 우상', 'normal', 12],
+  'baphomet_1': ['bracelet', '녹이고 굳히는 팔찌', 'normal', 12],
+  'azazel_0': ['weapon', '처음 벼린 칼', 'normal', 12],
+  'azazel_1': ['shoulder', '감시자의 견갑', 'normal', 12],
+  'beelzebub_0': ['helm', '파리 떼의 관', 'elite', 12],
+  'beelzebub_1': ['armor', '파리 날개 갑의', 'elite', 12],
+  'beelzebub_2': ['gloves', '배를 채우지 못하는 손', 'elite', 12],
+  'mephisto_0': ['necklace', '피로 쓴 계약서', 'normal', 12],
+  'mephisto_1': ['cloak', '진홍 외투', 'normal', 12],
+  'astaroth_0': ['boots', '독사를 탄 신', 'normal', 12],
+  'astaroth_1': ['belt', '독사 허리띠', 'normal', 12],
+  'belial_0': ['weapon', '무가치의 검', 'normal', 12],
+  'belial_1': ['greaves', '불의 전차 각반', 'normal', 12],
+  'asmodeus_0': ['ring', '솔로몬의 반지', 'elite', 12],
+  'asmodeus_1': ['necklace', '세 머리의 목걸이', 'elite', 12],
+  'asmodeus_2': ['boots', '불타는 발굽', 'elite', 12],
+  'paimon_0': ['helm', '파이몬의 왕관', 'normal', 12],
+  'paimon_1': ['offhand', '모든 학문의 책', 'normal', 12],
+  'lilith_0': ['necklace', '밤의 목걸이', 'normal', 12],
+  'lilith_1': ['bracelet', '첫 아내의 팔찌', 'normal', 12],
+  'lucifer_0': ['weapon', '새벽별의 검', 'boss', 12],
+  'lucifer_2': ['cloak', '빛을 잃은 여섯 날개', 'boss', 12],
+  'lucifer_3': ['special', '새벽별 조각', 'boss', 12],
+  'hermes_0': ['boots', '날개 달린 샌들', 'normal', 13],
+  'hermes_1': ['offhand', '카두케우스', 'normal', 13],
+  'hermes_3': ['special', '전령의 날개', 'normal', 13],
+  'bastet_0': ['ring', '고양이의 눈', 'normal', 13],
+  'bastet_1': ['greaves', '소리 없는 각반', 'normal', 13],
+  'bastet_2': ['bracelet', '고양이 팔찌', 'normal', 13],
+  'anubis_0': ['shoulder', '방부사의 어깨띠', 'normal', 13],
+  'anubis_1': ['helm', '재칼의 가면', 'normal', 13],
+  'anubis_2': ['necklace', '마아트의 저울', 'normal', 13],
+  'artemis_0': ['weapon', '초승달 활', 'normal', 13],
+  'artemis_1': ['boots', '사슴가죽 신', 'normal', 13],
+  'artemis_2': ['cloak', '달빛 망토', 'normal', 13],
+  'loki_0': ['offhand', '거짓의 단검', 'elite', 13],
+  'loki_1': ['bracelet', '뒤바뀐 반지', 'elite', 13],
+  'loki_2': ['necklace', '슬레이프니르의 갈기', 'elite', 13],
+  'susanoo_0': ['weapon', '아메노하바키리', 'normal', 13],
+  'susanoo_1': ['cloak', '폭풍의 겉옷', 'normal', 13],
+  'susanoo_2': ['bracelet', '폭풍 팔찌', 'normal', 13],
+  'thor_0': ['weapon', '묠니르', 'normal', 13],
+  'thor_1': ['gloves', '야른그레이프르', 'normal', 13],
+  'thor_3': ['special', '메긴교르드의 고리', 'normal', 13],
+  'ares_0': ['shoulder', '전화(戰禍)의 견갑', 'normal', 13],
+  'ares_1': ['armor', '전화(戰禍)의 갑주', 'normal', 13],
+  'ares_2': ['helm', '포보스의 투구', 'normal', 13],
+  'poseidon_0': ['weapon', '삼지창', 'elite', 13],
+  'poseidon_1': ['boots', '파도를 딛는 신', 'elite', 13],
+  'poseidon_2': ['necklace', '심해의 진주', 'elite', 13],
+  'amaterasu_0': ['cloak', '하늘 옷', 'normal', 13],
+  'amaterasu_1': ['helm', '야타의 관', 'normal', 13],
+  'amaterasu_2': ['ring', '야사카니의 곡옥', 'normal', 13],
+  'isis_0': ['gloves', '생명의 매듭', 'normal', 13],
+  'isis_1': ['belt', '아마포 감개', 'normal', 13],
+  'isis_2': ['necklace', '앙크', 'normal', 13],
+  'hades_0': ['weapon', '명계의 이지창', 'boss', 13],
+  'hades_1': ['helm', '보이지 않게 하는 투구', 'boss', 13],
+  'hades_2': ['necklace', '케르베로스의 사슬', 'boss', 13],
+  'osiris_0': ['offhand', '갈고리 홀', 'normal', 14],
+  'osiris_1': ['greaves', '아마포 각반', 'normal', 14],
+  'osiris_2': ['belt', '아마포 허리띠', 'normal', 14],
+  'titanmyth_0': ['greaves', '거인의 각반', 'normal', 14],
+  'titanmyth_1': ['offhand', '산을 깎은 방패', 'normal', 14],
+  'titanmyth_2': ['belt', '거인의 허리띠', 'normal', 14],
+  'izanagi_0': ['shoulder', '황천의 견갑', 'normal', 14],
+  'izanagi_1': ['boots', '황천을 밟은 신', 'normal', 14],
+  'izanagi_3': ['special', '황천의 복숭아', 'normal', 14],
+  'ra_0': ['shoulder', '태양의 견갑', 'normal', 14],
+  'ra_1': ['armor', '황금 태양원반', 'normal', 14],
+  'ra_2': ['ring', '우라에우스의 뱀', 'normal', 14],
+  'vishnu_0': ['offhand', '수다르샤나 원반', 'normal', 14],
+  'vishnu_1': ['necklace', '연꽃의 씨', 'normal', 14],
+  'vishnu_2': ['cloak', '열 화신의 망토', 'normal', 14],
+  'indra_0': ['weapon', '금강저 바즈라', 'elite', 14],
+  'indra_1': ['armor', '아이라바타의 비늘', 'elite', 14],
+  'indra_2': ['helm', '천 개의 눈', 'elite', 14],
+  'hwanin_0': ['helm', '천부인의 관', 'normal', 14],
+  'hwanin_1': ['greaves', '태백의 각반', 'normal', 14],
+  'hwanin_2': ['necklace', '신단수의 가지', 'normal', 14],
+  'jadeemperor_0': ['cloak', '자미원의 곤룡포', 'normal', 14],
+  'jadeemperor_1': ['ring', '옥새', 'normal', 14],
+  'jadeemperor_2': ['gloves', '옥황의 장갑', 'normal', 14],
+  'shiva_0': ['weapon', '트리슐라', 'normal', 14],
+  'shiva_1': ['greaves', '재를 밟는 각반', 'normal', 14],
+  'shiva_4': ['special', '시바의 셋째 눈', 'normal', 14],
+  'odin_0': ['weapon', '빗나가지 않는 창 궁니르', 'elite', 14],
+  'odin_1': ['cloak', '회색 나그네의 망토', 'elite', 14],
+  'odin_2': ['necklace', '미미르의 눈', 'elite', 14],
+  'quetzalcoatl_0': ['offhand', '깃털 방패', 'normal', 14],
+  'quetzalcoatl_1': ['boots', '창공을 딛는 신', 'normal', 14],
+  'quetzalcoatl_2': ['greaves', '깃털 각반', 'normal', 14],
+  'ahuramazda_0': ['helm', '성화의 관', 'normal', 14],
+  'ahuramazda_1': ['cloak', '빛의 겉옷', 'normal', 14],
+  'ahuramazda_2': ['bracelet', '진리의 고리', 'normal', 14],
+  'zeus_0': ['weapon', '케라우노스', 'boss', 14],
+  'zeus_1': ['offhand', '아이기스', 'boss', 14],
+  'zeus_2': ['necklace', '올림포스의 인장', 'boss', 14],
+  'dagon_0': ['greaves', '심해 비늘 각반', 'normal', 15],
+  'dagon_1': ['boots', '물갈퀴 신', 'normal', 15],
+  'dagon_2': ['gloves', '물갈퀴 장갑', 'normal', 15],
+  'yig_0': ['belt', '방울뱀 허리띠', 'normal', 15],
+  'yig_1': ['ring', '저주의 고리', 'normal', 15],
+  'ithaqua_0': ['boots', '눈을 밟지 않는 신', 'normal', 15],
+  'ithaqua_1': ['necklace', '얼어붙은 발자국', 'normal', 15],
+  'ithaqua_2': ['cloak', '바람의 망토', 'normal', 15],
+  'chaugnar_0': ['shoulder', '상아 어깨뼈', 'normal', 15],
+  'chaugnar_1': ['armor', '돌가죽 갑주', 'normal', 15],
+  'chaugnar_2': ['bracelet', '상아 팔찌', 'normal', 15],
+  'shubniggurath_0': ['helm', '뿔난 관', 'normal', 15],
+  'shubniggurath_1': ['bracelet', '새끼의 고리', 'normal', 15],
+  'shubniggurath_2': ['greaves', '검은 털 각반', 'normal', 15],
+  'hastur_0': ['weapon', '황색 징표의 검', 'elite', 15],
+  'hastur_1': ['cloak', '누더기 황의', 'elite', 15],
+  'hastur_2': ['necklace', '카르코사의 열쇠', 'elite', 15],
+  'tsathoggua_0': ['offhand', '잠의 부적', 'normal', 15],
+  'tsathoggua_1': ['boots', '늪을 걷는 신', 'normal', 15],
+  'tsathoggua_2': ['bracelet', '잠의 팔찌', 'normal', 15],
+  'glaaki_0': ['shoulder', '꿰뚫는 금속 가시', 'normal', 15],
+  'glaaki_1': ['helm', '녹슨 관', 'normal', 15],
+  'glaaki_2': ['greaves', '호수 바닥의 각반', 'normal', 15],
+  'cthulhu_0': ['weapon', '르뤼에의 촉수', 'normal', 15],
+  'cthulhu_1': ['armor', '심해의 갑각', 'normal', 15],
+  'cthulhu_4': ['special', '잠든 신의 우상', 'normal', 15],
+  'yogsothoth_0': ['offhand', '열리는 문', 'elite', 15],
+  'yogsothoth_1': ['ring', '모든 문의 열쇠', 'elite', 15],
+  'yogsothoth_2': ['necklace', '구체 속의 구체', 'elite', 15],
+  'abhoth_0': ['armor', '끓는 진흙 갑주', 'normal', 15],
+  'abhoth_1': ['boots', '녹아내리는 신', 'normal', 15],
+  'abhoth_2': ['bracelet', '갓 태어난 고리', 'normal', 15],
+  'voidlordmyth_0': ['weapon', '공허의 낫', 'normal', 15],
+  'voidlordmyth_1': ['armor', '없음의 갑주', 'normal', 15],
+  'voidlordmyth_2': ['bracelet', '빈 고리', 'normal', 15],
+  'nyarlathotep_0': ['weapon', '천 개째의 가면', 'normal', 15],
+  'nyarlathotep_1': ['cloak', '검은 파라오의 의복', 'normal', 15],
+  'nyarlathotep_2': ['greaves', '기어오는 각반', 'normal', 15],
+  'azathoth_0': ['weapon', '만물을 가르는 칼날', 'boss', 15],
+  'azathoth_1': ['armor', '무(無)의 갑주', 'boss', 15],
+  'azathoth_2': ['necklace', '백치의 왕관', 'boss', 15],
+  'phoenix_1': ['necklace', '불멸의 잿불', 'normal', 4],
+  'sanctdragon_2': ['necklace', '성역의 인장', 'boss', 4],
+  'cheonma_2': ['helm', '천마관', 'boss', 8],
+  'imugi_2': ['necklace', '여의주', 'boss', 9],
+  'siegfried_2': ['necklace', '파프니르의 심장', 'normal', 10],
+  'heracles_2': ['necklace', '열두 과업의 증표', 'boss', 10],
+  'michael_2': ['offhand', '영혼의 저울', 'boss', 11],
+  'lucifer_1': ['armor', '얼어붙은 날개 갑주', 'boss', 12],
+  'hermes_2': ['belt', '전령의 띠', 'normal', 13],
+  'thor_2': ['belt', '메긴교르드', 'normal', 13],
+  'izanagi_2': ['cloak', '황천의 망토', 'normal', 14],
+  'shiva_2': ['necklace', '제3의 눈', 'normal', 14],
+  'cthulhu_2': ['helm', '촉수관', 'normal', 15]
+};
+for (const [id, [slot, name, grade, rankN]] of Object.entries(LEGACY_ITEMS)) {
+  if (!RETIRED_ITEMS[id]) RETIRED_ITEMS[id] = { slot, grade, rank: RANKS.find(r => r.n === rankN), name };
+}
 
 // ---------- 부위 희소성 ----------
 // 부위마다 전리품 가짓수가 다릅니다 (무기가 허리띠의 서너 배). 그대로 두면
@@ -1794,7 +2226,10 @@ const GOLD_ITEMS = {
   '금섬 팔찌': 30, '금전표': 30,                                   // 세 발 금두꺼비 — 동전을 뱉으면 복이 온다
   '칸의 인장': 25, '황금 사과': 30,
   '피로 쓴 계약서': 40,                                            // 메피스토펠레스 — 영혼을 값으로 쳐주는 상인
-  '황금 태양원반': 35, '옥새': 40
+  '황금 태양원반': 35, '옥새': 40,
+  '구름 성의 열쇠고리': 20,                                       // 구름 거인 — 황금 알을 낳는 거위가 사는 성
+  '동냥 바가지': 20,                                              // 개방 장로 — 천하의 동냥이 모이는 바가지
+  '쇠를 금화로 바꾸는 띠': 30                                      // 자간 — 쇠를 금화로 바꾸는 왕
 };
 for (const it of ITEMS) {
   if (GOLD_ITEMS[it.name]) it.goldRate = +(GOLD_ITEMS[it.name] / 100).toFixed(4);
@@ -1907,7 +2342,13 @@ const AVATAR_SIGNATURE = {
   michael:  { mul: { damage: 0.7, luck: 0.3 },                        add: { reflect: 0.7, block: 0.2 } },            // 용을 떨어뜨린
   lucifer:  { mul: { damage: 2.0, dex: 2.0, life: 0.3, defense: 0.3 }, add: { critRate: 0.2 } },                      // 가장 빛나던 별, 가장 깊이 떨어진
   hades:    { mul: { life: 1.5, dex: 0.6 },                           add: { lifesteal: 0.3, survive: 1, xpRate: -0.5 } }, // 돌아온 자가 없는 문의 주인
-  zeus:     { mul: { damage: 1.6, defense: 0.4, life: 0.6 },          add: { harmTouch: 0.1, doubleTurn: 0.2 } }      // 올림포스의 마지막 말
+  zeus:     { mul: { damage: 1.6, defense: 0.4, life: 0.6 },          add: { harmTouch: 0.1, doubleTurn: 0.2 } },     // 올림포스의 마지막 말
+  // ── 격 재편으로 들어온 보스 ──
+  arthur:      { mul: { defense: 1.6, damage: 1.5, dex: 0.5, luck: 0.6 },        add: { block: 0.15 } },             // 바위에서 검을 뽑은 왕
+  merlin:      { mul: { damage: 0.5, life: 0.7 },                                add: { xpRate: 1.2, reflect: 0.3 } }, // 왕을 만든 마법사
+  sanctdragon: { mul: { defense: 2.4, life: 1.6, dex: 0.4, damage: 0.6 },        add: { reflect: 0.25 } },           // 천 년을 한 자리에서
+  tiamat:      { mul: { life: 2.2, damage: 1.2, dex: 0.35, luck: 0.4 },          add: { regen: 0.05 } },             // 신들을 낳고 신들에게 갈라진 바다
+  cthulhu:     { mul: { life: 1.8, damage: 1.4, dex: 0.3, defense: 0.6 },        add: { regen: 0.04 } }              // 죽지 않고 잠들어 있을 뿐인
 };
 
 // 하나하나 따로 — 칭호와 어울리게. [mul(배수), add(+)] — 격 · 종류에 따라 조금 더 극단으로 (avatarProfile)
@@ -1930,7 +2371,7 @@ const AVATAR_UNIQUE = {
   genghis:       [{ dex: 1.7, defense: 0.5, life: 0.8 },    { doubleHit: 0.15, goldRate: 0.5 }],         // 지평선을 국경으로 삼은
   alexander:     [{ damage: 1.7, life: 0.5, luck: 0.6 },    { pierce: 0.25 }],                           // 온 세계가 좁았던 자
   trismegistus:  [{ damage: 0.5, dex: 0.6 },                { reflect: 0.35, lifesteal: 0.12, regen: 0.03 }], // 위에서와 같이 아래에서도
-  // ── 8격 · 천하제일 비무대 ──
+  // ── 10격 · 천하제일 비무대 ──
   nangin:        [{ damage: 1.5, defense: 0.55, life: 0.8 }, { critRate: 0.12, goldRate: 0.4 }],        // 값만 맞으면 누구든 벤다
   gaebang:       [{ dex: 1.4, damage: 0.55, defense: 0.7 }, { findRate: 0.7 }],                          // 천하의 소문은 거지가 먼저 안다
   emei:          [{ damage: 1.3, life: 0.55 },              { critRate: 0.2 }],                          // 자비로운 얼굴, 자비 없는 비수
@@ -1942,7 +2383,7 @@ const AVATAR_UNIQUE = {
   zhangsanfeng:  [{ damage: 0.55, luck: 0.6 },              { block: 0.2, reflect: 0.25, lifesteal: 0.1 }], // 태극을 처음 그린 자
   namgung:       [{ damage: 1.8, dex: 0.6, luck: 0.5, defense: 0.7 }, {}],                               // 창공을 가르는 세가의 검
   bukhae:        [{ defense: 1.7, dex: 0.5, damage: 0.75 }, { block: 0.12 }],                            // 얼음 궁에서 내려온
-  // ── 9격 · 만년설 덮인 천산 ──
+  // ── 11격 · 만년설 덮인 천산 ──
   yeongsa:       [{ life: 1.8, dex: 0.5, damage: 0.7 },     { regen: 0.04 }],                            // 내단을 품고 똬리를 튼
   geumjam:       [{ life: 0.5, luck: 0.6 },                 { lifesteal: 0.2, pierce: 0.2 }],            // 독충을 다 잡아먹고 남은 하나
   geumseom:      [{ luck: 1.6, damage: 0.5, dex: 0.6 },     { goldRate: 1.5 }],                          // 동전을 뱉으면 복이 온다
@@ -1955,7 +2396,7 @@ const AVATAR_UNIQUE = {
   hwarin:        [{ damage: 1.4, life: 0.6, luck: 0.7 },    { reflect: 0.2 }],                           // 불을 밟고 다니는 기린
   yeonggu:       [{ defense: 2.4, life: 1.5, dex: 0.3, damage: 0.6 }, {}],                               // 만 년을 등에 지고 걷는 거북
   bonghwang:     [{ damage: 0.4 },                          { findRate: 0.8, xpRate: 0.5, regen: 0.03 }], // 태평한 세상에만 내려앉는 새
-  // ── 10격 · 엘리시온 평원 ──
+  // ── 13격 · 엘리시온 평원 ──
   theseus:       [{ dex: 1.3, damage: 0.7, luck: 0.6 },     { survive: 1 }],                          // 돌아오는 길을 아는
   perseus:       [{ life: 0.6, defense: 0.6 },              { harmTouch: 0.07, critRate: 0.1 }],         // 보지 않고 벤 자
   odysseus:      [{ luck: 1.5, damage: 0.6 },               { survive: 1, findRate: 0.4 }],            // 열 해를 헤매고도 돌아간
@@ -1968,7 +2409,7 @@ const AVATAR_UNIQUE = {
   beowulf:       [{ damage: 1.9, defense: 0.5, dex: 0.7 },  { harmTouch: 0.05 }],                        // 맨손으로 괴물을 찢은
   arjuna:        [{ dex: 0.6, life: 0.7 },                  { critRate: 0.25, pierce: 0.2 }],            // 과녁의 눈만 보이는
   siegfried:     [{ defense: 2.2, luck: 0.4, dex: 0.6 },    { block: 0.15 }],                            // 용의 피를 뒤집어쓴 자
-  // ── 11격 · 일곱 번째 하늘 ──
+  // ── 14격 · 일곱 번째 하늘 ──
   guardianangel: [{ damage: 0.5 },                          { survive: 1, block: 0.15 }],              // 한 사람 곁에 하나씩
   principality:  [{ defense: 1.6, life: 1.3, dex: 0.5, luck: 0.6 }, {}],                                 // 나라 하나를 맡은
   powerangel:    [{ damage: 1.6, defense: 0.6, life: 0.8 }, { pierce: 0.25 }],                           // 악을 쫓는 첫 번째 칼
@@ -1980,7 +2421,7 @@ const AVATAR_UNIQUE = {
   gabriel:       [{ dex: 1.7, defense: 0.5, life: 0.7 },    { doubleTurn: 0.12, xpRate: 0.5 }],          // 소식을 전하러 내려온
   cherub:        [{ damage: 1.5, dex: 0.6, luck: 0.5 },     { block: 0.15 }],                            // 에덴의 동쪽에서 불칼을 든
   seraph:        [{ dex: 1.4, damage: 0.5 },                { block: 0.25, reflect: 0.15 }],             // 여섯 날개로 얼굴을 가린
-  // ── 12격 · 얼어붙은 코키토스 ──
+  // ── 15격 · 얼어붙은 코키토스 ──
   legion:        [{ damage: 0.7, defense: 0.6 },            { doubleHit: 0.25, doubleTurn: 0.08 }],      // 우리는 많다
   moloch:        [{ damage: 1.8, life: 0.45 },              { goldRate: 0.5 }],                          // 불타는 제단 위의 황소
   baphomet:      [{ damage: 0.55, life: 0.7 },              { xpRate: 1.0, stoneRate: 0.5 }],            // 녹이고 굳히는 염소 머리 우상
@@ -1992,7 +2433,7 @@ const AVATAR_UNIQUE = {
   asmodeus:      [{ luck: 2.0, defense: 0.45, life: 0.7 },  { findRate: 0.6, critRate: 0.1 }],           // 솔로몬의 반지를 빼앗은
   paimon:        [{ defense: 1.6, damage: 1.3, dex: 0.45 }, { xpRate: -0.3 }],                           // 서쪽을 다스리는 지옥의 왕
   lilith:        [{ dex: 1.8, defense: 0.45, life: 0.7 },   { lifesteal: 0.15 }],                        // 에덴을 먼저 떠난 자
-  // ── 13격 · 이그드라실의 가지 ──
+  // ── 16격 · 이그드라실의 가지 ──
   hermes:        [{ dex: 2.0, life: 0.5, defense: 0.6 },    { doubleTurn: 0.15, goldRate: 0.5 }],        // 경계를 넘나드는 전령
   bastet:        [{ dex: 1.4, damage: 1.2, life: 0.6, luck: 0.7 }, { block: 0.2 }],                      // 집과 전쟁을 함께 지키는
   anubis:        [{ life: 0.55, dex: 0.7 },                 { harmTouch: 0.07, pierce: 0.2 }],           // 심장의 무게를 재는 자
@@ -2004,7 +2445,7 @@ const AVATAR_UNIQUE = {
   poseidon:      [{ damage: 1.6, life: 1.4, dex: 0.4, luck: 0.5 }, {}],                                  // 땅을 흔드는 자
   amaterasu:     [{ damage: 0.6, dex: 0.7 },                { regen: 0.06, xpRate: 0.5 }],               // 동굴에서 나온 해
   isis:          [{ damage: 0.5 },                          { survive: 1, regen: 0.05, findRate: 0.3 }], // 흩어진 것을 다시 모으는
-  // ── 14격 · 올림포스 정상 ──
+  // ── 18격 · 올림포스 정상 (타이탄은 이제 17격 태초) ──
   titanmyth:     [{ defense: 1.9, life: 1.3, damage: 0.55, dex: 0.35 }, { block: 0.14 }],                   // 신에게 진 자들
   osiris:        [{ life: 1.4, damage: 0.45, dex: 0.6 },    { survive: 2 }],                          // 찢겨서도 다시 맞춰진
   izanagi:       [{ dex: 1.4, life: 0.6, luck: 0.6 },       { survive: 1 }],                          // 황천에서 돌아온 자
@@ -2017,7 +2458,7 @@ const AVATAR_UNIQUE = {
   odin:          [{ luck: 1.5, life: 0.55, dex: 0.7 },      { critRate: 0.2, xpRate: 0.6 }],             // 한쪽 눈으로 모든 것을 본
   quetzalcoatl:  [{ dex: 1.6, defense: 0.5 },               { regen: 0.04, doubleHit: 0.1 }],            // 깃털 달린 뱀
   ahuramazda:    [{ damage: 1.3, luck: 0.5, dex: 0.6 },     { survive: 1 }],                           // 꺼지지 않는 불
-  // ── 15격 · 궁극의 혼돈 ──
+  // ── 19 · 20격 · 가라앉은 르뤼에와 궁극의 혼돈 ──
   dagon:         [{ life: 2.0, dex: 0.4 },                  { lifesteal: 0.12 }],                        // 깊은 곳의 아버지
   yig:           [{ life: 0.55, luck: 0.6 },                { pierce: 0.3, doubleHit: 0.15 }],           // 뱀들의 아버지
   ithaqua:       [{ dex: 2.2, defense: 0.4, life: 0.7 },    { doubleTurn: 0.12 }],                       // 바람을 타고 걷는 자
@@ -2026,11 +2467,121 @@ const AVATAR_UNIQUE = {
   hastur:        [{ damage: 1.5, life: 0.45, luck: 0.5 },   { critRate: 0.25 }],                         // 세 번 부르면 오는 황의 왕
   tsathoggua:    [{ defense: 2.2, life: 1.6, dex: 0.2, damage: 0.8 }, {}],                               // 움직이기 싫어하는 두꺼비 신
   glaaki:        [{ life: 0.5, defense: 0.6 },              { pierce: 0.4, harmTouch: 0.04 }],           // 가시로 꿈을 꿰는 자
-  cthulhu:       [{ life: 1.5, dex: 0.3, damage: 0.6 },     { survive: 2, regen: 0.05 }],              // 죽지 않고 잠들어 있을 뿐인
   yogsothoth:    [{ defense: 1.4, damage: 0.4, dex: 0.6 },  { block: 0.25, reflect: 0.3 }],              // 문이자 열쇠이며 문지기인
   abhoth:        [{ damage: 0.5, defense: 0.7 },            { regen: 0.08, xpRate: 0.6 }],               // 끝없이 새것을 게워내는 웅덩이
   voidlordmyth:  [{ damage: 1.7, defense: 0.3, life: 0.55 }, { pierce: 0.4 }],                              // 아무것도 아닌 것의 왕
-  nyarlathotep:  [{ luck: 2.0, life: 0.5, defense: 0.5 },   { critRate: 0.15, doubleTurn: 0.1 }]          // 천 개의 가면을 쓴 기어오는 혼돈
+  nyarlathotep:  [{ luck: 2.0, life: 0.5, defense: 0.5 },   { critRate: 0.15, doubleTurn: 0.1 }],          // 천 개의 가면을 쓴 기어오는 혼돈
+  // ── 격 재편으로 들어온 화신 ──
+  // 7격 · 오호대장군
+  guanyu:        [{ damage: 1.8, defense: 1.2, dex: 0.5, luck: 0.5 }, { critRate: 0.12 }],               // 다섯 관문을 지나 천 리를 홀로 간
+  zhangfei:      [{ damage: 1.9, life: 1.2, defense: 0.45, luck: 0.4 }, { harmTouch: 0.04 }],            // 다리 위의 호통 한 번
+  zhaoyun:       [{ dex: 1.6, defense: 1.4, damage: 0.6 },    { block: 0.15, survive: 1 }],              // 어린 주군을 품고 대군을 뚫은
+  machao:        [{ dex: 1.7, damage: 1.3, defense: 0.4, life: 0.7 }, { lifesteal: 0.1 }],               // 사자 투구를 쓴 서량의 금마초
+  huangzhong:    [{ damage: 1.2, dex: 0.5, life: 0.7 },       { critRate: 0.2, pierce: 0.15 }],            // 일흔에도 활을 놓지 않은
+  // 8격 · 원탁의 성 카멜롯
+  auraknight:    [{ damage: 1.7, defense: 0.6, luck: 0.6 },   { critRate: 0.15 }],                         // 검 끝에 오러를 세운
+  paladin:       [{ defense: 1.6, life: 1.4, damage: 0.55, dex: 0.6 }, { regen: 0.03 }],                 // 기도로 검을 벼린
+  lancelot:      [{ damage: 1.6, dex: 1.4, luck: 0.4, defense: 0.6 }, { doubleHit: 0.12 }],             // 원탁에서 가장 뛰어났던
+  templar:       [{ defense: 1.8, damage: 0.8, dex: 0.5, luck: 0.5 }, { block: 0.12, goldRate: 0.3 }],  // 성지를 지키다 이단이 된 (기사단은 돈도 맡았습니다)
+  dragonknight:  [{ dex: 1.8, damage: 1.2, life: 0.6, defense: 0.5 }, { doubleTurn: 0.08 }],             // 용을 타고 내려오는
+  gawain:        [{ damage: 2.0, life: 0.6, dex: 0.6 },       { harmTouch: 0.05 }],                        // 해가 높을수록 세지는
+  berserker:     [{ damage: 2.1, life: 1.2, defense: 0.3, luck: 0.4 }, { lifesteal: 0.12 }],             // 곰가죽을 쓰고 고통을 잊은
+  galahad:       [{ defense: 1.5, life: 1.3, damage: 0.5, luck: 1.3 }, { regen: 0.04 }],                 // 성배에 닿은 단 한 사람
+  greenknight:   [{ life: 1.8, damage: 0.6, dex: 0.6 },       { survive: 1, xpRate: 0.4 }],              // 목을 베여도 제 머리를 주워 드는
+  tristan:       [{ dex: 1.5, luck: 1.3, defense: 0.5, life: 0.6 }, { doubleHit: 0.12 }],                // 바다 건너 슬픈 사랑을 한
+  roland:        [{ defense: 1.9, life: 1.3, dex: 0.4, luck: 0.4 }, { block: 0.2 }],                     // 뿔나팔을 너무 늦게 분
+  percival:      [{ luck: 2.0, damage: 0.55, defense: 0.6 },  { findRate: 0.7 }],                          // 숲에서 자라 성배를 찾아 나선
+  elcid:         [{ damage: 1.5, defense: 1.2, life: 0.5, luck: 0.6 }, { survive: 1 }],                // 죽어서도 말에 올라 싸운
+  bedivere:      [{ defense: 1.7, damage: 0.6, dex: 0.7 },    { block: 0.15, stoneRate: 0.4 }],            // 마지막까지 왕 곁에 남은
+  robinhood:     [{ dex: 1.6, damage: 0.7, life: 0.6 },       { critRate: 0.18, goldRate: 0.6 }],          // 부자의 것을 털어 숲에 숨은 명궁
+  mordred:       [{ damage: 1.8, luck: 0.3, defense: 0.5 },   { pierce: 0.3 }],                            // 왕을 찌른 원탁의 마지막 자리
+  ladyofthelake: [{ damage: 0.5, defense: 0.8 },              { regen: 0.06, findRate: 0.5 }],             // 엑스칼리버를 건네고 다시 받아 간
+  // 9격 · 안개 너머의 아발론
+  archmage:      [{ damage: 2.2, life: 0.4, defense: 0.45 },  { critRate: 0.15 }],                         // 마나로 별을 떨어뜨리는
+  elementalist:  [{ damage: 1.6, dex: 0.6, life: 0.6 },       { harmTouch: 0.04, doubleHit: 0.08 }],       // 불과 얼음을 한 손에 쥔
+  salamander:    [{ damage: 1.7, defense: 0.5, life: 0.7 },   { critRate: 0.12 }],                         // 불 속에서만 사는
+  summoner:      [{ defense: 1.5, damage: 0.6, dex: 0.6 },    { doubleTurn: 0.12 }],                       // 이름을 불러 다른 세계의 것을 끌어오는
+  runemage:      [{ defense: 1.5, life: 1.2, dex: 0.5, damage: 0.7 }, { reflect: 0.2 }],                 // 돌에 새긴 글자로 싸우는
+  undine:        [{ life: 1.6, damage: 0.5, defense: 0.7 },   { regen: 0.05 }],                            // 사랑을 잃으면 물로 돌아가는
+  alchemist:     [{ damage: 0.6, life: 0.7 },                 { xpRate: 0.9, stoneRate: 0.6 }],            // 납을 금으로 바꾸려다 자신을 바꾼
+  druid:         [{ life: 1.7, damage: 0.5, dex: 0.7 },       { regen: 0.06 }],                            // 떡갈나무에게 말을 거는
+  faust:         [{ luck: 1.8, life: 0.5, defense: 0.6 },     { findRate: 0.6, xpRate: 0.5 }],             // 악마에게 영혼을 걸고 모든 것을 안
+  sylph:         [{ dex: 2.1, life: 0.5, defense: 0.5 },      { doubleTurn: 0.1 }],                        // 만질 수 없는 것
+  warlock:       [{ damage: 1.6, life: 0.45, luck: 0.6 },     { lifesteal: 0.2 }],                         // 금지된 책을 끝까지 읽은
+  babayaga:      [{ defense: 1.3, luck: 1.3, dex: 0.4, life: 0.7 }, { pierce: 0.2 }],                    // 닭다리 오두막에 사는 숲의 마녀
+  gnome:         [{ defense: 2.2, life: 1.4, dex: 0.3, damage: 0.6 }, {}],                               // 땅속을 헤엄치듯 다니는
+  circe:         [{ luck: 1.5, defense: 0.6, damage: 0.6 },   { lifesteal: 0.12, findRate: 0.4 }],         // 사람을 돼지로 바꾸는 섬의 마녀
+  morgan:        [{ damage: 1.6, dex: 1.3, defense: 0.45, life: 0.6 }, { reflect: 0.2 }],                // 아발론을 다스리는 마녀
+  // 10격 · 오대세가
+  moyong:        [{ defense: 1.3, damage: 0.6, dex: 0.8 },    { reflect: 0.4 }],                           // 받은 수를 그대로 돌려주는
+  jegal:         [{ defense: 1.6, dex: 1.2, damage: 0.5, life: 0.7 }, { block: 0.15, xpRate: 0.3 }],     // 진법과 기관으로 싸우는
+  paeng:         [{ damage: 2.0, dex: 0.5, defense: 0.6 },    { harmTouch: 0.05 }],                        // 도 한 자루로 하북을 지킨
+  // 11격 · 사신수
+  azuredragon:   [{ defense: 1.6, damage: 1.3, dex: 0.5, luck: 0.5 }, { reflect: 0.2 }],                 // 동쪽 하늘을 지키는 푸른 용
+  whitetiger:    [{ damage: 1.9, dex: 1.2, defense: 0.4, life: 0.6 }, { critRate: 0.15 }],               // 서쪽 하늘을 지키는 흰 범
+  vermilionbird: [{ damage: 1.5, life: 0.6, defense: 0.6 },   { regen: 0.04, harmTouch: 0.03 }],           // 남쪽 하늘을 지키는 붉은 새
+  blacktortoise: [{ defense: 2.3, life: 1.6, dex: 0.3, damage: 0.6 }, { regen: 0.03 }],                  // 북쪽 하늘을 지키는 거북과 뱀
+  // 12격 · 잊혀진 성역 (옛 4격의 짐승들 · 헤라클레스의 열두 과업)
+  unicorn:       [{ life: 1.6, defense: 1.2, damage: 0.5, luck: 0.6 }, { regen: 0.05 }],                 // 순수한 자에게만 보이는
+  pegasus:       [{ dex: 2.2, defense: 0.5, life: 0.6 },      { doubleTurn: 0.1 }],                        // 땅을 딛지 않는 말
+  phoenix:       [{ damage: 0.6, defense: 0.6 },              { survive: 1, regen: 0.05, xpRate: 0.5 }], // 타 죽어야 사는 새
+  hippogriff:    [{ dex: 1.8, damage: 1.2, life: 0.6, defense: 0.5 }, { doubleHit: 0.1 }],               // 그리핀이 암말을 사랑해서 난
+  cerberus:      [{ damage: 1.7, defense: 1.3, dex: 0.5, luck: 0.4 }, { doubleHit: 0.15 }],              // 문을 지키는 세 머리
+  nemeanlion:    [{ defense: 2.6, damage: 1.1, dex: 0.4, luck: 0.4 }, {}],                               // 어떤 칼도 들지 않는 가죽
+  ceryneianhind: [{ dex: 2.0, luck: 1.4, damage: 0.4, defense: 0.6 }, { findRate: 0.5 }],                // 황금 뿔에 청동 발굽을 단
+  erymanthianboar: [{ damage: 1.9, life: 1.3, dex: 0.4, luck: 0.5 }, { harmTouch: 0.04 }],               // 산을 갈아엎고 내려온
+  stymphalianbirds: [{ dex: 1.3, life: 0.5, defense: 0.6 },   { pierce: 0.3, doubleHit: 0.12 }],           // 청동 깃을 화살처럼 쏘는
+  cretanbull:    [{ damage: 1.8, life: 1.3, dex: 0.4, defense: 0.6 }, { critRate: 0.1 }],                // 바다에서 올라와 섬을 짓밟은
+  mares:         [{ damage: 1.6, dex: 1.2, defense: 0.4, luck: 0.5 }, { lifesteal: 0.15 }],              // 사람을 먹고 자란
+  geryon:        [{ life: 1.8, defense: 1.6, dex: 0.35, damage: 0.7 }, {}],                              // 몸 셋이 한 허리에 붙은 거인
+  ladon:         [{ defense: 1.4, life: 1.4, dex: 0.4, damage: 0.6 }, { regen: 0.04, goldRate: 0.4 }],   // 황금 사과나무를 감고 잠들지 않는
+  sphinx:        [{ defense: 1.4, damage: 0.6, dex: 0.7 },    { xpRate: 0.6, reflect: 0.2 }],              // 답하지 못하면 잡아먹는
+  kraken:        [{ life: 1.7, damage: 1.3, dex: 0.35, defense: 0.6 }, { lifesteal: 0.15 }],             // 배를 통째로 끌고 내려가는
+  // 14격 · 일곱 대천사
+  uriel:         [{ damage: 1.7, life: 0.6, defense: 0.6 },   { pierce: 0.25 }],                           // 신의 불꽃이라는 이름의
+  raguel:        [{ defense: 1.6, damage: 0.7, dex: 0.6 },    { reflect: 0.3 }],                           // 천사들의 잘못을 따지는
+  sariel:        [{ dex: 1.8, life: 0.6, damage: 0.7 },       { doubleTurn: 0.12 }],                       // 달의 길을 가르친
+  remiel:        [{ life: 1.5, damage: 0.5, dex: 0.7 },       { survive: 1, regen: 0.04 }],              // 다시 일어날 자들을 지키는
+  // 15격 · 솔로몬 72 마신의 아홉 왕
+  bael:          [{ dex: 1.8, defense: 0.5, life: 0.6 },      { doubleHit: 0.12, findRate: 0.3 }],         // 세 머리로 말하는 지옥의 첫 왕
+  beleth:        [{ damage: 1.8, life: 1.2, defense: 0.4, luck: 0.5 }, { critRate: 0.12 }],              // 나팔 소리 속에 창백한 말을 타고 오는
+  purson:        [{ life: 1.6, defense: 1.3, dex: 0.4, damage: 0.7 }, { xpRate: 0.4 }],                  // 사자 얼굴로 곰을 타고 오는
+  vine:          [{ damage: 1.9, defense: 0.45, life: 0.7 },  { harmTouch: 0.05 }],                        // 폭풍을 부르고 탑을 허무는
+  balam:         [{ defense: 1.5, luck: 1.3, damage: 0.5, dex: 0.6 }, { findRate: 0.5 }],                // 지나간 일과 올 일을 말하는
+  zagan:         [{ defense: 1.3, damage: 0.6, dex: 0.7 },    { goldRate: 1.5, reflect: 0.15 }],           // 쇠를 금화로, 물을 포도주로 바꾸는
+  // 16격 · 올림포스 12신
+  hera:          [{ defense: 1.6, life: 1.3, dex: 0.5, luck: 0.6 }, { reflect: 0.3 }],                   // 신들의 여왕
+  athena:        [{ defense: 1.9, damage: 1.2, dex: 0.6, luck: 0.6 }, { block: 0.15 }],                  // 지혜와 싸움을 함께 쥔
+  apollo:        [{ dex: 1.4, life: 0.7, defense: 0.6 },      { critRate: 0.15, regen: 0.04 }],            // 빛과 음악과 활의 신
+  aphrodite:     [{ luck: 2.0, defense: 0.45, damage: 0.6 },  { lifesteal: 0.15, goldRate: 0.4 }],         // 바다 거품에서 태어난
+  hephaestus:    [{ defense: 2.0, damage: 1.2, dex: 0.35, luck: 0.5 }, { stoneRate: 0.8 }],              // 올림포스의 대장장이
+  demeter:       [{ life: 1.8, damage: 0.5, dex: 0.7 },       { regen: 0.06, xpRate: 0.3 }],               // 곡식과 대지의 어머니
+  dionysus:      [{ damage: 1.6, luck: 1.3, defense: 0.4, dex: 0.6 }, { lifesteal: 0.12 }],              // 포도주와 광기의 신
+  // 17격 · 태초의 바다
+  jormungandr:   [{ life: 2.0, defense: 1.3, dex: 0.3, damage: 0.7 }, { lifesteal: 0.15 }],              // 세계를 한 바퀴 감고 제 꼬리를 문
+  fenrir:        [{ damage: 2.2, dex: 1.2, defense: 0.35, luck: 0.4 }, { critRate: 0.15 }],              // 끊어지지 않는 끈에 묶여 때를 기다리는
+  apophis:       [{ dex: 1.5, damage: 1.2, life: 0.55, luck: 0.6 }, { pierce: 0.3 }],                    // 밤마다 해를 삼키려는 뱀
+  vritra:        [{ defense: 2.1, life: 1.5, damage: 0.5, dex: 0.5 }, { block: 0.12 }],                  // 세상의 물을 가둔 용
+  orochi:        [{ damage: 1.8, life: 1.3, dex: 0.4, luck: 0.4 }, { doubleHit: 0.15 }],                 // 여덟 골짜기를 덮은 여덟 머리
+  behemoth:      [{ life: 2.2, defense: 1.5, dex: 0.25, damage: 0.7 }, { regen: 0.04 }],                 // 땅을 통째로 눌러앉은
+  leviathan:     [{ damage: 1.9, life: 1.5, dex: 0.3, defense: 0.6 }, { harmTouch: 0.05 }],              // 바다를 통째로 삼킨
+  ziz:           [{ dex: 2.2, life: 0.6, defense: 0.5 },      { doubleTurn: 0.12 }],                       // 하늘을 가리는 날개
+  typhon:        [{ damage: 2.1, life: 1.3, defense: 0.4, luck: 0.35 }, { doubleHit: 0.15, critRate: 0.1 }], // 괴물들의 아버지
+  ymir:          [{ life: 2.4, defense: 1.3, dex: 0.3, damage: 0.6 }, { xpRate: 0.8 }],                  // 주검으로 세계가 지어진 거인
+  // 18격 · 트리무르티
+  brahma:        [{ damage: 0.55, defense: 0.7 },             { xpRate: 1.4, findRate: 0.3 }],             // 네 얼굴로 세계를 지은
+  // 19격 · 가라앉은 르뤼에
+  shoggoth:      [{ life: 2.0, defense: 0.6, dex: 0.5 },      { regen: 0.07 }],                            // 주인을 삼키고 남은 원형질
+  migo:          [{ dex: 1.4, life: 0.5, defense: 0.6 },      { pierce: 0.35, stoneRate: 0.4 }],           // 유고스에서 날아온 균류
+  atlachnacha:   [{ defense: 1.8, life: 1.2, damage: 0.5, dex: 0.6 }, { block: 0.15, reflect: 0.15 }],   // 다 짜면 세상이 끝나는 거미줄을 치는
+  cthugha:       [{ damage: 2.2, life: 0.45, defense: 0.45 }, { critRate: 0.18, harmTouch: 0.03 }],        // 포말하우트에서 타오르는 불
+  // 20격 · 궁극의 혼돈
+  ubbosathla:    [{ life: 1.6, damage: 0.45, dex: 0.6 },      { xpRate: 1.2, regen: 0.04 }],               // 모든 것의 처음이자 끝
+  daoloth:       [{ dex: 1.5, damage: 1.2, defense: 0.45, life: 0.6 }, { pierce: 0.4 }],                 // 장막을 찢는 자
+  tulzscha:      [{ damage: 1.9, defense: 0.4, luck: 0.6 },   { critRate: 0.2 }],                          // 백치 신의 궁정에서 타는 초록 불꽃
+  yibbtstll:     [{ defense: 1.8, life: 1.3, dex: 0.35, damage: 0.6 }, { block: 0.18 }],                 // 시간 바깥에서 참고 기다리는 자
+  ghroth:        [{ damage: 1.4, defense: 1.3, dex: 0.4, luck: 0.6 }, { reflect: 0.3, doubleTurn: 0.06 }], // 별을 깨우며 떠도는 행성
+  pipers:        [{ dex: 1.6, damage: 0.5, life: 0.6 },       { doubleTurn: 0.15, xpRate: 0.3 }]           // 백치 신 곁에서 피리를 멈추지 않는
 };
 
 // 보스 화신만의 고유 능력 — 능력치 기울기 위에 하나씩, 전투의 규칙 자체를 바꿉니다 (game.js 의 simulateBattle).
@@ -2043,7 +2594,12 @@ const AVATAR_POWERS = {
   michael:  { name: '용 떨어뜨리기',  desc: '상대의 생명이 나보다 크면 주는 피해 ×2' },
   lucifer:  { name: '추락하는 별',    desc: '첫 턴 공격력 ×3 — 턴마다 줄어들어 ×0.5까지 떨어진다' },
   hades:    { name: '문 너머로',      desc: '상대의 생명이 15% 아래로 떨어지면 그 자리에서 데려간다' },
-  zeus:     { name: '벼락',           desc: '내 턴마다 15% 확률로 방어를 무시하고 상대 생명의 10%를 깎는다' }
+  zeus:     { name: '벼락',           desc: '내 턴마다 15% 확률로 방어를 무시하고 상대 생명의 10%를 깎는다' },
+  arthur:      { name: '바위의 검',     desc: '내 공격이 빗나가지 않는다' },
+  merlin:      { name: '꿈의 안개',     desc: '상대의 공격이 셋에 하나꼴로 더 빗나간다 (상대 명중 ×0.7)' },
+  sanctdragon: { name: '천 년의 비늘',  desc: '받는 피해가 30% 줄어든다' },
+  tiamat:      { name: '태초의 바다',   desc: '턴마다 공격력이 10%씩 오른다 (×3까지)' },
+  cthulhu:     { name: '죽지 않는 잠',  desc: '쓰러지면 한 번, 생명을 모두 채우고 다시 깨어난다' }
 };
 
 function canBecomeAvatar(foe) { return !!foe && foe.rank.n >= AVATAR_MIN_RANK && !foe.final; }
@@ -2161,7 +2717,109 @@ const AVATAR_LINES = {
   yogsothoth: '문이자 열쇠다. 어느 쪽이든 필요한 쪽을 쥐어라.',
   abhoth: '끝없이 새것을 게워 낸다. 낡은 건 내가 먹어 주마.',
   voidlordmyth: '아무것도 아닌 것의 왕이다. 그러니 잃을 것도 없지. 너처럼.',
-  nyarlathotep: '가면은 천 개다. 네게 보여 줄 얼굴은 아직 고르지 못했다.'
+  nyarlathotep: '가면은 천 개다. 네게 보여 줄 얼굴은 아직 고르지 못했다.',
+  // ── 격 재편으로 들어온 화신 ──
+  guanyu: '의리 하나로 천 리를 갔다. 이제 그 의리를 네게 건다.',
+  zhangfei: '다리 위에서 한 번 소리치면 대군도 멈춘다. 네 앞길에서도 그래 주마.',
+  zhaoyun: '어린 주군을 품고 대군을 뚫었다. 너 하나쯤 품고 못 뚫을 길은 없다.',
+  machao: '사자 투구는 아직 벗지 않았다. 네 원수도 내 원수다.',
+  huangzhong: '일흔에도 활은 놓지 않았다. 늙었다고 빗나가는 화살은 없다.',
+  auraknight: '검 끝에 빛을 세우는 데 십 년이 걸렸다. 네 검에도 세워 주마.',
+  paladin: '기도는 짧게, 검은 곧게. 남은 건 내가 지킨다.',
+  lancelot: '가장 뛰어났기에 가장 많이 잃었다. 너는 잃지 않게 곁에 서마.',
+  templar: '성지는 잃었지만 맹세는 남았다. 그 맹세를 네게 빌려주지.',
+  dragonknight: '용의 등에서 내려다보면 길이 보인다. 올라타라.',
+  gawain: '해가 높을수록 세진다. 네 앞길이 한낮이면 좋겠군.',
+  berserker: '아픔은 나중에 느끼면 된다. 지금은 앞만 봐라.',
+  galahad: '성배는 찾는 자가 아니라 맑은 자에게 닿는다. 너는 맑다.',
+  greenknight: '목을 베어도 나는 다시 일어선다. 약속은 지켜야 하니까.',
+  tristan: '슬픈 노래는 이제 그만. 네 이야기는 다르게 끝나게 해 주마.',
+  roland: '뿔나팔을 너무 늦게 불었다. 너는 부를 때를 놓치지 마라.',
+  percival: '숲에서 와서 아무것도 몰랐지. 그래서 성배를 봤다. 너도 그렇게 가라.',
+  elcid: '죽어서도 말에 올랐다. 살아 있는 너라면 더 멀리 가겠지.',
+  bedivere: '마지막까지 왕 곁에 남았다. 이제 네 곁이 내 자리다.',
+  robinhood: '부자의 것은 털고 가난한 자의 것은 지킨다. 네 주머니는 걱정 마라.',
+  mordred: '왕을 찔렀다. 그래서 왕이 되는 법도 안다. 원하면 가르쳐 주마.',
+  ladyofthelake: '검은 건네고, 때가 되면 돌려받는다. 잘 쓰고 돌려다오.',
+  arthur: '바위에서 검을 뽑은 날부터 왕이었다. 이제 그 검은 네 손에서 빛난다.',
+  archmage: '마나는 넘치면 별이 된다. 떨어뜨릴 곳만 가리켜라.',
+  elementalist: '불과 얼음은 싸우지 않는다. 쥐는 법을 알면.',
+  salamander: '불 속이 내 집이다. 네 앞을 태워 길을 내 주지.',
+  summoner: '이름을 부르면 온다. 이제 네 이름도 부를 줄 안다.',
+  runemage: '돌에 새긴 것은 지워지지 않는다. 네 이름도 새겨 두마.',
+  undine: '사랑을 잃으면 물로 돌아간다더군. 그러니 나를 잃지 마라.',
+  alchemist: '납을 금으로 바꾸진 못했다. 대신 너를 바꿔 보겠다.',
+  druid: '떡갈나무가 네 이야기를 해 주더군. 오래 살아라.',
+  faust: '모든 것을 알았는데 남은 게 없었다. 너는 남는 쪽을 골라라.',
+  sylph: '바람은 붙잡을 수 없다. 대신 등을 밀어 줄 수는 있지.',
+  warlock: '금지된 책은 끝까지 읽어야 금지된 이유를 안다. 대가는 내가 치렀다.',
+  babayaga: '절구를 타고 숲을 난다. 길을 잃으면 내 오두막에 들러라. 잡아먹진 않으마.',
+  gnome: '땅속 길은 내가 다 안다. 위에서 막히면 아래로 가자.',
+  circe: '사람을 돼지로 바꾸는 건 쉽다. 너는 바꾸지 않겠다. 아직은.',
+  morgan: '아발론의 안개는 내가 걷는다. 네가 지나갈 길만 열어 두지.',
+  merlin: '왕을 만들었다. 이번엔 너를 만들어 볼 차례군.',
+  moyong: '받은 것은 그대로 돌려준다. 은혜든 원한이든.',
+  jegal: '진은 이미 쳐 두었다. 너는 그 가운데로 걸어 들어가기만 해라.',
+  paeng: '도 한 자루면 족하다. 나머지는 네가 들어라.',
+  azuredragon: '동쪽 하늘에서 내려왔다. 해가 뜨는 쪽은 늘 네 편이다.',
+  whitetiger: '서쪽 하늘의 범이다. 네 등 뒤는 내가 노려보마.',
+  vermilionbird: '남쪽 하늘이 붉게 타는 건 내 날개 때문이다. 따뜻하게 해 주지.',
+  blacktortoise: '북쪽 하늘은 느리게 흐른다. 서두르지 않아도 닿는다.',
+  unicorn: '순수한 자에게만 보인다. 그러니 보이는 동안은 너를 믿겠다.',
+  pegasus: '땅을 딛지 않고 간다. 너도 가끔은 발을 떼 봐라.',
+  phoenix: '타 죽어야 다시 산다. 무서워하지 마라, 나는 매번 돌아온다.',
+  hippogriff: '그리핀과 말 사이에서 났다. 안 될 일도 될 때가 있는 법이다.',
+  cerberus: '세 머리가 모두 너를 따르기로 했다. 문은 이제 네가 지켜라.',
+  nemeanlion: '어떤 칼도 내 가죽을 뚫지 못했다. 이제 그 가죽이 너를 덮는다.',
+  ceryneianhind: '누구도 나를 따라잡지 못했다. 너는 쫓지 않아서 닿았다.',
+  erymanthianboar: '산을 갈아엎고 내려왔다. 막히는 것은 엎어 버려라.',
+  stymphalianbirds: '청동 깃은 화살처럼 날아간다. 겨누기만 해라.',
+  cretanbull: '바다에서 올라온 황소다. 들이받을 곳을 정해라.',
+  mares: '사람을 먹고 자랐다. 이제부터는 네 적만 먹겠다.',
+  geryon: '몸이 셋이라 셋이 함께 너를 지킨다. 싸움은 언제나 셋 대 하나다.',
+  ladon: '잠들지 않고 황금 사과를 지켰다. 네 것도 그렇게 지켜 주마.',
+  sphinx: '답을 맞혔으니 길을 내준다. 다음 수수께끼는 네가 내라.',
+  kraken: '배를 통째로 끌고 내려갔다. 네 적은 바다 밑에서 보게 될 거다.',
+  sanctdragon: '천 년을 한 자리에서 지켰다. 이제 그 자리를 너로 옮긴다.',
+  uriel: '신의 불꽃이라는 이름이다. 어두운 곳에는 나를 들어라.',
+  raguel: '천사들의 잘못도 따진다. 네 잘못은 아직 하나도 못 찾았다.',
+  sariel: '달의 길을 가르쳤다. 밤길은 내가 앞장서마.',
+  remiel: '다시 일어날 자들을 지킨다. 쓰러져도 괜찮다, 내가 있으니.',
+  bael: '세 머리가 같은 말을 한다 — 너를 따르겠다고. 보이지 않게.',
+  beleth: '나팔 소리가 들리면 내가 온 거다. 놀라지 마라, 네 편이다.',
+  purson: '숨겨진 것은 내 눈에 다 보인다. 네 앞길의 덫도.',
+  vine: '폭풍을 부르고 탑을 허문다. 네 앞을 막는 벽이라면 무엇이든.',
+  balam: '지나간 일과 올 일을 다 안다. 네 쪽이 이긴다는 것도.',
+  zagan: '쇠를 금화로 바꿔 주지. 네 주머니가 무거워질 거다.',
+  hera: '신들의 여왕이다. 내 질투는 이제 네 적을 향한다.',
+  athena: '지혜 없는 힘은 넘어지고, 힘 없는 지혜는 갇힌다. 둘 다 주마.',
+  apollo: '활을 쏘면 빗나가지 않고, 노래하면 상처가 아문다. 둘 중 무얼 원하나.',
+  aphrodite: '아름다움도 무기다. 네 적이 칼을 내리게 해 주지.',
+  hephaestus: '신들의 무기는 다 내가 벼렸다. 네 것도 다시 벼려 주마.',
+  demeter: '씨를 뿌리면 거둔다. 네가 뿌린 만큼 거두게 해 주지.',
+  dionysus: '취하면 두려움이 사라진다. 한 잔 받아라.',
+  jormungandr: '세계를 한 바퀴 감고 있었다. 이제 너를 감싸 주마.',
+  fenrir: '끊어지지 않는 끈도 언젠가는 끊어진다. 그날 나는 네 편에 서겠다.',
+  apophis: '밤마다 해를 삼키려 했다. 너의 해만은 남겨 두마.',
+  vritra: '세상의 물을 가두었었다. 목마를 때 나를 불러라.',
+  orochi: '여덟 머리 중 하나쯤은 늘 깨어 있다. 네 잠을 지켜 주지.',
+  behemoth: '땅을 통째로 눌러앉았었다. 이제 너를 위해 일어서마.',
+  leviathan: '바다를 통째로 삼켰다. 네 앞의 바다쯤은 갈라 주지.',
+  ziz: '날개를 펴면 하늘이 가려진다. 네 머리 위는 늘 그늘이 질 거다.',
+  typhon: '신들도 짐승 꼴로 달아났었다. 네 적도 그렇게 해 주마.',
+  ymir: '내 주검으로 세계가 지어졌다. 너는 그 위를 걷고 있는 거다.',
+  tiamat: '신들을 낳았고 신들에게 갈라졌다. 너는 나를 가르지 않았군. 좋다.',
+  brahma: '네 얼굴로 세계를 지었다. 다섯째 얼굴은 너를 보는 데 쓰마.',
+  shoggoth: '테켈리-리. …주인을 삼킨 뒤로 처음 섬기는 자다.',
+  migo: '유고스에서 왔다. 네 머릿속이 궁금하지만 참겠다.',
+  atlachnacha: '거미줄을 다 짜면 세상이 끝난다. 네가 있는 동안은 천천히 짜마.',
+  cthugha: '포말하우트에서 탄다. 꺼지지 않는 불이 필요하면 불러라.',
+  ubbosathla: '모든 것이 나에게서 나와 나에게 돌아온다. 너도 언젠가는.',
+  daoloth: '장막을 찢으면 진짜가 보인다. 눈을 감지 마라.',
+  tulzscha: '백치 신의 궁정에서 춤추는 불이다. 네 장단에도 맞춰 주지.',
+  yibbtstll: '시간 바깥에서 기다렸다. 너를 기다리는 건 조금도 길지 않았다.',
+  ghroth: '내 노래에 별들이 깨어난다. 네 이름도 불러 주마.',
+  pipers: '피리를 멈추면 그분이 깬다. 그러니 너를 위해서도 계속 분다.'
 };
 // 한마디가 없는 화신(나중에 늘어난 것)은 이 말로 갑니다
 function avatarLine(foe) {
