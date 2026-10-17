@@ -4407,7 +4407,7 @@ const RULES = {
   START_ENERGY: 30,       // 맨몸으로 시작할 때의 에너지.
                           // 이것만으로는 스무 개 지역을 절대 관통하지 못합니다.
                           // 『격을 삼키는 검』으로 격을 삼켜 적립해야 끝까지 갑니다
-                          // (전부 삼키면 +83 — 묶음 정예는 삼킬 격이 없습니다). 그게 그 검의 존재 이유입니다.
+                          // (전부 삼키면 +81 — 묶음 정예는 삼킬 격이 없습니다). 그게 그 검의 존재 이유입니다.
   TRAVEL_COST: 1,         // 길을 떠날 때 (그리고 보스에게 향할 때) 드는 에너지
                           // 예전엔 공짜였습니다 — "이미 보스를 꺾어서 산 길" 이라는
                           // 이유였는데, 그러면 깊이 들어가는 데 아무 대가가 없어서
@@ -5346,7 +5346,7 @@ const ZONES = [
         d: [['offhand', '두 머리가 다투는 방패'], ['belt', '둘이 나눠 맨 허리띠']] },
       { id: 'frostgiant', name: '서리 거인', title: '숨만 쉬어도 서리가 내리는', icon: '🥶', kind: 'elite', set: 'elementGiants',
         d: [['greaves', '서리 내린 각반']] },
-      { id: 'goliath', name: '골리앗', title: '아직 돌팔매를 맞지 않은', icon: '💪', kind: 'elite',
+      { id: 'goliath', name: '골리앗', title: '아직 돌팔매를 맞지 않은', icon: '💪', itemKey: 'goliath2',
         d: [['weapon', '베틀채 같은 창'], ['armor', '청동 비늘 갑옷']] },
       { id: 'yeti', name: '설인', title: '눈보라 속에 발자국만 남기는', icon: '🦍',
         d: [['boots', '큰 발자국 털신'], ['cloak', '눈보라 털가죽']] },
@@ -5356,8 +5356,8 @@ const ZONES = [
         d: [['necklace', '로크의 알 껍데기']] },
       { id: 'cloudgiant', name: '구름 거인', title: '구름 위에 성을 짓는', icon: '☁️', kind: 'elite', set: 'elementGiants',
         d: [['ring', '구름 성의 열쇠고리']] },
-      { id: 'daidarabotchi', name: '다이다라봇치', title: '발자국이 호수가 된', icon: '🏞️', kind: 'elite',
-        d: [['greaves', '호수가 된 발자국'], ['bracelet', '산을 빚은 흙 팔찌']] },
+      { id: 'mammoth', name: '털매머드', title: '거인들이 짐을 싣고 고개를 넘는', icon: '🦣',
+        d: [['greaves', '눈길을 다지는 각반'], ['bracelet', '매머드 털 팔찌']] },
       { id: 'giantking', name: '거인왕', title: '고개를 막고 앉아 아무도 넘기지 않는', icon: '👑', kind: 'boss',
         d: [['weapon', '고개를 막은 대검'], ['helm', '산맥의 왕관'], ['special', '고개의 쐐기돌', { relic: ['block'] }]] }
     ]
@@ -6003,7 +6003,7 @@ const ENEMY_ARCHETYPE = {
   // 4격 — 거인의 고개
   hillgiant: 'brutal',  cyclops: 'pierce',  stonegiant: 'guard',  ettin: 'fierce',
   frostgiant: 'ward',  goliath: 'brutal',  yeti: 'swift',  firegiant: 'fierce',
-  roc: 'swift',  cloudgiant: 'lucky',  daidarabotchi: 'growth',  giantking: 'thorn',
+  roc: 'swift',  cloudgiant: 'lucky',  mammoth: 'ward',  giantking: 'thorn',
 
   // 5격 — 시체가 걷는 도시
   ghoul: 'leech',  wraith: 'swift',  vampire: 'leech',  whitehorse: 'pierce',
@@ -6573,7 +6573,12 @@ const LEGACY_ITEMS = {
   'thor_2': ['belt', '메긴교르드', 'normal', 13],
   'izanagi_2': ['cloak', '황천의 망토', 'normal', 14],
   'shiva_2': ['necklace', '제3의 눈', 'normal', 14],
-  'cthulhu_2': ['helm', '촉수관', 'normal', 15]
+  'cthulhu_2': ['helm', '촉수관', 'normal', 15],
+  // 2026-10-17 — 4격 손질: 골리앗은 정예 → 일반이라 번호를 새로, 다이다라봇치는 빠지고 털매머드가 그 자리에
+  'goliath_0': ['weapon', '베틀채 같은 창', 'elite', 4],
+  'goliath_1': ['armor', '청동 비늘 갑옷', 'elite', 4],
+  'daidarabotchi_0': ['greaves', '호수가 된 발자국', 'elite', 4],
+  'daidarabotchi_1': ['bracelet', '산을 빚은 흙 팔찌', 'elite', 4]
 };
 for (const [id, [slot, name, grade, rankN]] of Object.entries(LEGACY_ITEMS)) {
   if (!RETIRED_ITEMS[id]) RETIRED_ITEMS[id] = { slot, grade, rank: RANKS.find(r => r.n === rankN), name };

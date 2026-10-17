@@ -482,13 +482,13 @@
    4,
    2170
   ],
-  "goliath_0": [
+  "goliath2_0": [
    "weapon",
    "베틀채 같은 창",
    4,
    2560
   ],
-  "goliath_1": [
+  "goliath2_1": [
    "armor",
    "청동 비늘 갑옷",
    4,
@@ -524,15 +524,15 @@
    4,
    4950
   ],
-  "daidarabotchi_0": [
+  "mammoth_0": [
    "greaves",
-   "호수가 된 발자국",
+   "눈길을 다지는 각반",
    4,
    5830
   ],
-  "daidarabotchi_1": [
+  "mammoth_1": [
    "bracelet",
-   "산을 빚은 흙 팔찌",
+   "매머드 털 팔찌",
    4,
    5830
   ],
@@ -3024,31 +3024,31 @@
    "helm",
    "이름이 번진 안전모",
    4,
-   4190
+   5830
   ],
   "ware_flashlight": [
    "offhand",
    "아직 켜지는 손전등",
    4,
-   4190
+   5830
   ],
   "ware_jacket": [
    "armor",
    "구겨진 협회 점퍼",
    4,
-   4190
+   5830
   ],
   "ware_boots": [
    "boots",
    "끈이 해진 등산화",
    4,
-   4190
+   5830
   ],
   "ware_glove": [
    "gloves",
    "한 짝뿐인 작업 장갑",
    4,
-   4190
+   5830
   ],
   "ware_tag": [
    "necklace",

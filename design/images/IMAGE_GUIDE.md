@@ -17,7 +17,7 @@
 
 ## 개수
 
-- 몬스터 297개 (일반 155 · 정예 116 · 히든 6 · 보스 20) — 이 중 **화신 215명**은 몬스터 그림을 화신 그림으로도 씁니다
+- 몬스터 297개 (일반 157 · 정예 114 · 히든 6 · 보스 20) — 이 중 **화신 215명**은 몬스터 그림을 화신 그림으로도 씁니다
 - 전리품 517개 — 부위별: weapon 55 · offhand 38 · helm 43 · armor 45 · shoulder 35 · gloves 35 · belt 29 · greaves 34 · boots 33 · cloak 37 · ring 33 · necklace 39 · bracelet 36 · special 25
 
 ## 그 밖의 그림
@@ -429,14 +429,14 @@
 - 전리품:
   - `frostgiant_0` **서리 내린 각반** (greaves) → `assets/items/frostgiant_0.png`
 
-### 골리앗 `goliath` — 정예
+### 골리앗 `goliath` — 일반
 
 - 설명: 아직 돌팔매를 맞지 않은 / 성격: 분쇄 — 느리지만 한 방이 무겁다
 - 몬스터 그림: `assets/monsters/goliath.png` (지금은 💪)
-- 프롬프트: 골리앗 — 아직 돌팔매를 맞지 않은. 거인의 고개(제4격 거인)의 정예 적. 전신 도트 일러스트, 투명 배경. 조금 더 정교하고 위압적인 외형.
+- 프롬프트: 골리앗 — 아직 돌팔매를 맞지 않은. 거인의 고개(제4격 거인)의 일반 적. 전신 도트 일러스트, 투명 배경. 평범한 외형.
 - 전리품:
-  - `goliath_0` **베틀채 같은 창** (weapon) → `assets/items/goliath_0.png`
-  - `goliath_1` **청동 비늘 갑옷** (armor) → `assets/items/goliath_1.png`
+  - `goliath2_0` **베틀채 같은 창** (weapon) → `assets/items/goliath2_0.png`
+  - `goliath2_1` **청동 비늘 갑옷** (armor) → `assets/items/goliath2_1.png`
 
 ### 설인 `yeti` — 일반
 
@@ -471,14 +471,14 @@
 - 전리품:
   - `cloudgiant_0` **구름 성의 열쇠고리** (ring) → `assets/items/cloudgiant_0.png`
 
-### 다이다라봇치 `daidarabotchi` — 정예
+### 털매머드 `mammoth` — 일반
 
-- 설명: 발자국이 호수가 된 / 성격: 성장 — 싸움은 약해지고 경험치를 더 얻는다
-- 몬스터 그림: `assets/monsters/daidarabotchi.png` (지금은 🏞️)
-- 프롬프트: 다이다라봇치 — 발자국이 호수가 된. 거인의 고개(제4격 거인)의 정예 적. 전신 도트 일러스트, 투명 배경. 조금 더 정교하고 위압적인 외형.
+- 설명: 거인들이 짐을 싣고 고개를 넘는 / 성격: 보호 — 오래 버틴다
+- 몬스터 그림: `assets/monsters/mammoth.png` (지금은 🦣)
+- 프롬프트: 털매머드 — 거인들이 짐을 싣고 고개를 넘는. 거인의 고개(제4격 거인)의 일반 적. 전신 도트 일러스트, 투명 배경. 평범한 외형.
 - 전리품:
-  - `daidarabotchi_0` **호수가 된 발자국** (greaves) → `assets/items/daidarabotchi_0.png`
-  - `daidarabotchi_1` **산을 빚은 흙 팔찌** (bracelet) → `assets/items/daidarabotchi_1.png`
+  - `mammoth_0` **눈길을 다지는 각반** (greaves) → `assets/items/mammoth_0.png`
+  - `mammoth_1` **매머드 털 팔찌** (bracelet) → `assets/items/mammoth_1.png`
 
 ### 거인왕 `giantking` — 보스
 
