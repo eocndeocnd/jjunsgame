@@ -2849,6 +2849,68 @@ body.lv-rolling .res-xp .je-xp-fill { transition: none; transform-origin: left c
 .result > .res-alloc { position: absolute; right: 0; top: 62px; width: auto; margin: 0; padding: 7px 11px; white-space: nowrap; z-index: 2; }
 .result.has-alloc .res-foe { padding-right: 96px; }
 
+/* ---------- 폰 — 붙박이 버튼 띠를 탭 줄에 붙입니다 ----------
+   예전엔 「길을 떠난다」가 탭 줄보다 20px 남짓 위에 떠 있어서, 그 틈으로 뒤의 「향한다」가 비치고 눌렸습니다.
+   이제 띠가 탭 줄 바로 위에 맞닿고 화면 폭을 다 덮습니다 — 사이로 아무것도 비치지 않고 눌리지도 않습니다.
+   싸우는 동안(탭 줄이 숨을 때)은 띠가 화면 맨 아래까지 내려옵니다. */
+@media (max-width: 860px) {
+  :root { --tabs-h: 58px; }
+  .mobile-tabs { height: calc(var(--tabs-h) + env(safe-area-inset-bottom)); box-sizing: border-box; align-items: stretch; }
+  .btn.thumb, .thumb-bar {
+    left: 0;
+    right: 0;
+    bottom: calc(var(--tabs-h) + env(safe-area-inset-bottom));
+  }
+  .btn.thumb {
+    border-radius: 0;
+    box-shadow:
+      inset 0 var(--bev) 0 var(--b-hi),
+      inset 0 calc(-1 * var(--bev)) 0 var(--b-lo),
+      0 -2px 0 var(--brass),
+      0 -4px 0 var(--frame-out);
+  }
+  .btn.thumb:active:not(:disabled) {
+    box-shadow:
+      inset 0 var(--bev) 0 var(--b-lo),
+      inset 0 -1px 0 var(--b-hi),
+      0 -2px 0 var(--brass),
+      0 -4px 0 var(--frame-out);
+  }
+  /* 맞선다 · 물러선다 둘이 놓이는 띠 — 버튼 사이와 양옆도 나무판으로 막습니다 */
+  .thumb-bar {
+    padding: 10px 12px;
+    background: var(--frame-out) var(--plank);
+    box-shadow: 0 -2px 0 var(--brass), 0 -4px 0 var(--frame-out);
+  }
+  body.fight-locked .btn.thumb,
+  body.fight-locked .thumb-bar { bottom: 0; }
+  body.fight-locked .btn.thumb { padding-bottom: calc(8px + env(safe-area-inset-bottom)); }
+  body.fight-locked .thumb-bar { padding-bottom: calc(10px + env(safe-area-inset-bottom)); }
+}
+@media (max-width: 380px) {
+  .btn.thumb { left: 0; right: 0; }
+}
+
+/* ---------- 벽 너머 — 사람 그림 창도 잿빛 종이로 ----------
+   종이 · 테두리는 잿빛 보라로 식는데 이 창만 누런 종이로 남아, 그 위에 섞인 사람 그림이 갈색으로 떴습니다. */
+body.beyond .equip-slots {
+  background-color: #cbc4d4;
+  background-image:
+    linear-gradient(rgba(74, 58, 107, 0.1) 2px, transparent 2px),
+    linear-gradient(90deg, rgba(74, 58, 107, 0.1) 2px, transparent 2px);
+}
+body.beyond .doll-slot { background: rgba(226, 221, 231, 0.66); }
+body.beyond .doll-slot.sel { background: rgba(236, 230, 242, 0.95); }
+body.beyond .doll-slot.enh-cell { background: rgba(226, 221, 231, 0.9); }
+body.beyond .doll-slot.worn { border-color: #4a3a6b; }
+body.beyond .doll-ic { box-shadow: inset 0 0 0 2px #8f86a8; }
+body.beyond .doll-slot.empty .doll-ic { background: rgba(184, 175, 195, 0.45); }
+body.beyond .doll-body .fig { stroke: #4a3a6b; }
+body.beyond .doll-body .fig-fill { fill: #3b3150; }
+body.beyond .avatar-bar:not(.empty) { border-color: #4a3a6b; }
+body.beyond .ab-ic { box-shadow: inset 0 0 0 2px #8f86a8; }
+body.beyond .avatar-bar.empty .ab-ic { background: rgba(184, 175, 195, 0.45); }
+
 </style>
 </head>
 <body data-tab="journey">
