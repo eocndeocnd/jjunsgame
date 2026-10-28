@@ -9,7 +9,9 @@
 //    ground   타일 층 — 타일셋에서 solid 속성이 붙은 타일은 지나갈 수 없습니다 (벽 · 물)
 //    areas    사각형 — 구역. 속성 rank · monster(적 id) · zone(지역 id). monster 가 없으면 이름뿐인 곳(첫 공간)
 //    posts    점 또는 사각형 — 정예 · 보스 · 히든 자리. 속성 enemy · blocks(길을 막는가)
-//    ports    사각형 — 드나드는 문. 속성 to(행선지) · opensAfter(꺾어야 열리는 보스 id)
+//    ports    사각형 — 드나드는 문. 이름 = 그 지도 안의 문 이름. 속성 to(「지도.문」 행선지) · opensAfter(꺾어야 열리는 보스 id)
+//             · label(문 위에 쓰는 글) · zone(행선지 지도가 아직 없을 때 나설 지역)
+//    (지도 자체의 속성 title — 지역이 없는 지도의 이름, 문의 광장 같은)
 //    secrets  사각형 — 숨은 입구. 벽으로 그려져 있어도 지나갈 수 있습니다
 //    npc      점 — start(시작점) · merchant(상인 자리) · avatarDoor(화신 문)
 // ============================================================
@@ -64,7 +66,7 @@
     const ts = tmj.tilesets[0];
     const solidTiles = new Set((ts.tiles || []).filter(t => props(t).solid).map(t => t.id));
     const ground = layer('ground').data;
-    const m = { id, w, h, tile: new Int16Array(w * h), solid: new Uint8Array(w * h), secret: new Uint8Array(w * h) };
+    const m = { id, w, h, props: props(tmj), tile: new Int16Array(w * h), solid: new Uint8Array(w * h), secret: new Uint8Array(w * h) };
     for (let i = 0; i < w * h; i++) {
       const gid = ground[i] & 0x1fffffff;                 // 위쪽 세 비트는 Tiled 의 뒤집기 표시
       m.tile[i] = gid ? gid - ts.firstgid : -1;

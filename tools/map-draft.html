@@ -144,7 +144,7 @@ function onEvents(evs) {
     } else if (e.type === 'closed' && Date.now() - closedSaid > 1500) {
       closedSaid = Date.now();
       say(`${e.port.name} — 닫혀 있다 (${getEnemy(e.port.opensAfter).name}${josa(getEnemy(e.port.opensAfter).name, '을', '를')} 꺾어야 열림)`);
-    } else if (e.type === 'port') say(`${e.port.name} — 게임에서는 여기서 7격으로 넘어갑니다.`);
+    } else if (e.type === 'port') say(`${e.port.label || e.port.name} — 게임에서는 여기서 그 지도로 넘어갑니다 (${e.port.to}).`);
   }
 }
 

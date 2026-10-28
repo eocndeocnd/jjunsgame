@@ -921,7 +921,8 @@ function freshRun() {
     onBoss: false,       // 그 조우가 보스전인가
     metOnMap: false,     // 지도에서 닿은 일반인가 — 그러면 에너지는 맞설 때 씁니다 (물러서면 공짜)
     zonesVisited: [0],   // 이 여정에 들어선 지역 — 지도에서 「…에 들어섰다」는 처음 한 번만
-    mapAt: null,         // 지도 위에 서 있던 칸 { x, y } — 불러오면 여기서 이어 걷습니다
+    mapId: null,         // 지금 걷는 지도 (null 이면 지금 지역이 있는 지도 — 지역이 없는 문의 광장에 있을 때만 따로 적힘)
+    mapAt: null,         // 그 지도 위에 서 있던 칸 { x, y } — 불러오면 여기서 이어 걷습니다
     merchant: null,      // 이번 회차의 떠돌이 상인 — { zone, wares, bought } (없으면 null)
     over: false,
     victory: false,

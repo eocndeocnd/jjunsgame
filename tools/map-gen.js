@@ -46,6 +46,7 @@ function buildTmj(spec) {
   return {
     compressionlevel: -1, type: 'map', version: '1.10', tiledversion: '1.10.2', orientation: 'orthogonal', renderorder: 'right-down', infinite: false,
     width: spec.w, height: spec.h, tilewidth: TILE, tileheight: TILE, nextlayerid: 7, nextobjectid: nextId, layers,
+    properties: tiledProps(spec.props || {}),
     tilesets: [{
       firstgid: 1, name: 'draft', image: 'tiles.png', imagewidth: TILE * TILE_KINDS, imageheight: TILE, tilewidth: TILE, tileheight: TILE,
       tilecount: TILE_KINDS, columns: TILE_KINDS, margin: 0, spacing: 0,
@@ -332,8 +333,56 @@ function overworld(data) {
     seed: 1,
     obstacle: rank => (rank === 2 ? TREE : ROCK),             // 이끼 낀 숲길은 나무, 나머지는 바위
     // 마왕 뒤 — 관측자 곁에 문의 광장으로 가는 문 (마왕을 꺾어야 열림)
-    exit: (rank, boss, room, o) => rank === 6 && { name: '문의 광장', x: o.x + FIELD_W - 4, y: o.y + (FIELD_H >> 1), w: 1, h: 1, to: 'hub', opensAfter: boss.id }
+    exit: (rank, boss, room, o) => rank === 6 && { name: 'hub', label: '문의 광장', x: o.x + FIELD_W - 4, y: o.y + (FIELD_H >> 1) - 1, w: 1, h: 2, to: 'hub.overworld', opensAfter: boss.id }
   });
 }
 
-module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, generate, overworld, layoutFromPlan };
+// ---------- 문의 광장 (hub) ----------
+// 지도끼리 오가는 넓은 광장. 북쪽 가장자리에 7~20격 일곱 장의 문, 남쪽에 마왕의 성(overworld)으로 돌아가는 문.
+// 장마다 문은 그 앞 격의 보스를 꺾으면 열립니다 (docs/MAP-REFERENCE-PLAN.md 2-2 표).
+// first — 그 장이 시작하는 격 (그 지도가 아직 없으면 그 격의 지역으로 지도 밖에 나섭니다) · after — 그 격의 보스를 꺾어야 열림
+const HUB_DOORS = [
+  { name: 'legends',    label: '① 인간의 전설', first: 7,  after: 6 },
+  { name: 'arthurian',  label: '② 원탁과 마법', first: 8,  after: 7 },
+  { name: 'east',       label: '③ 동방',        first: 10, after: 9 },
+  { name: 'heavenhell', label: '④ 천국과 지옥', first: 14, after: 13 },
+  { name: 'gods',       label: '⑤ 신들의 시대', first: 16, after: 15 },
+  { name: 'oldones',    label: '⑥ 르뤼에',      first: 19, after: 18 },
+  { name: 'outer',      label: '⑦ 바깥',        first: 20, after: 19 }
+];
+function hub(data) {
+  const W = 84, H = 44, cx = W >> 1, cy = (H >> 1) + 2, rx = 38, ry = 17;
+  const noise = valueNoise(7);
+  const tiles = new Uint8Array(W * H).fill(WALL);
+  const set = (x, y, t) => { tiles[y * W + x] = t; };
+  // 둥근 광장 — 가장자리만 살짝 들쭉날쭉
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const d = ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2;
+    if (d < 1 - noise(x * 0.25, y * 0.25) * 0.12) set(x, y, FLOOR);
+  }
+  // 가운데 샘과 그 둘레 길, 남쪽 문에서 샘까지 길
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const r = Math.hypot((x - cx) / 1.6, y - cy);
+    if (r < 3) set(x, y, WATER);
+    else if (r < 5) set(x, y, ROAD);
+  }
+  for (let y = cy + 5; y < cy + ry; y++) for (let x = cx - 1; x <= cx + 1; x++) if (tiles[y * W + x] === FLOOR) set(x, y, ROAD);
+
+  const boss = rank => data.ENEMIES.find(e => e.rank.n === rank && e.kind === 'boss');
+  const zoneOf = rank => data.ZONES.find(z => z.rank === rank);
+  const ports = HUB_DOORS.map((d, i) => {
+    const x = Math.round(cx - rx * 0.78 + (rx * 1.56) * i / (HUB_DOORS.length - 1)) - 1;
+    let y = 0;
+    while (tiles[y * W + x] !== FLOOR || tiles[y * W + x + 1] !== FLOOR) y++;   // 북쪽 가장자리의 첫 바닥 칸
+    for (let j = y; j < y + 4; j++) { set(x, j, ROAD); set(x + 1, j, ROAD); }   // 문 앞 짧은 길
+    return { name: d.name, label: d.label, x, y, w: 2, h: 1, to: `${d.name}.in`, opensAfter: boss(d.after).id, zone: zoneOf(d.first).id };
+  });
+  // 남쪽 — 마왕의 성으로 돌아가는 문 (늘 열림)
+  let sy = H - 1;
+  while (tiles[sy * W + cx] !== ROAD && tiles[sy * W + cx] !== FLOOR) sy--;
+  ports.push({ name: 'overworld', label: '마왕의 성으로', x: cx - 1, y: sy, w: 3, h: 1, to: 'overworld.hub' });
+  const npcs = [{ name: 'start', x: cx, y: sy - 2 }];
+  return buildTmj({ w: W, h: H, tiles, ports, npcs, props: { title: '문의 광장' } });
+}
+
+module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, generate, overworld, hub, layoutFromPlan, HUB_DOORS };

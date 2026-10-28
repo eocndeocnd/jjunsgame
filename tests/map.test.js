@@ -317,7 +317,7 @@ test('overworld — 1~6격 몬스터가 모두 한 번씩, 구역 48개', () => 
   assert.deepEqual(areaMonsters, foes.filter(e => e.kind === 'normal').map(e => e.id).sort());
   assert.deepEqual(m.posts.map(p => p.enemy).sort(), foes.filter(e => e.kind !== 'normal').map(e => e.id).sort());
   assert.equal(areaMonsters.length, 48);
-  assert.deepEqual(m.ports.map(p => [p.to, p.opensAfter]), [['hub', 'demonking']]);
+  assert.deepEqual(m.ports.map(p => [p.to, p.opensAfter]), [['hub.overworld', 'demonking']]);
   // 길을 막는 것은 보스와 세계수를 먹는 벌레뿐, 그리고 그것들은 3×3
   const blockers = m.posts.filter(p => p.blocks);
   assert.deepEqual(blockers.map(p => p.enemy).sort(), ['demonking', 'dungeonguardian', 'giantking', 'worldworm']);
@@ -373,4 +373,31 @@ test('overworld — 보스를 꺾어야 갈래가 열리고, 4격은 보이기�
     return Math.max(Math.max(a.x - x, 0, x - (a.x + a.w - 1)), Math.max(a.y - y, 0, y - (a.y + a.h - 1))) <= R.SIGHT;
   }));
   assert.ok(seen, '1격 길에서 4격이 보임');
+});
+
+test('문의 광장 — 일곱 장의 문은 그 앞 격 보스를 꺾어야 열리고, 마왕의 성으로 가는 문은 늘 열림 · 모두 걸어서 닿음', () => {
+  const data = loadData();
+  const hub = M.parseTiled(JSON.parse(fs.readFileSync(path.join(ROOT, 'maps/hub.tmj'), 'utf8')), 'hub');
+  const over = M.parseTiled(JSON.parse(fs.readFileSync(path.join(ROOT, 'maps/overworld.tmj'), 'utf8')), 'overworld');
+  assert.equal(hub.props.title, '문의 광장');
+  assert.equal(hub.areas.length, 0, '몬스터 없음');
+  const bossOf = rank => data.ENEMIES.find(e => e.rank.n === rank && e.kind === 'boss').id;
+  for (const d of gen.HUB_DOORS) {
+    const p = hub.ports.find(q => q.name === d.name);
+    assert.ok(p, d.name);
+    assert.equal(p.to, `${d.name}.in`);
+    assert.equal(p.opensAfter, bossOf(d.after), `${d.label} — ${d.after}격 보스`);
+    assert.equal(p.zone, data.ZONES.find(z => z.rank === d.first).id);
+  }
+  const back = hub.ports.find(p => p.name === 'overworld');
+  assert.equal(back.to, 'overworld.hub');
+  assert.equal(back.opensAfter, undefined);
+  assert.ok(over.ports.some(p => p.name === 'hub'), '돌아갈 곳 — overworld 의 hub 문');
+  // 시작점에서 모든 문의 바로 앞(아래 칸)까지 걸어서 닿음
+  const d = walk(hub, [hub.start.y * hub.w + hub.start.x]);
+  for (const p of hub.ports) {
+    const near = [];
+    for (let x = p.x; x < p.x + p.w; x++) near.push((p.y + p.h) * hub.w + x, (p.y - 1) * hub.w + x);
+    assert.ok(near.some(i => d[i] >= 0), `${p.label} 앞에 닿음`);
+  }
 });

@@ -104,9 +104,24 @@ const MapView = (function () {
       };
       const line = Math.max(2, Math.round(T / 10));
 
-      for (const port of m.ports) if (seen(port.x, port.y)) {
-        ctx.fillStyle = w.hooks.portOpen(port) ? '#3fae4a' : '#5c3a1a';
-        ctx.fillRect(ox + port.x * T + 2, oy + port.y * T + 2, T - 4, T - 4);
+      // 문 — 열리면 초록, 닫히면 갈색. 이름이 있으면 문 위에 씁니다
+      for (const port of m.ports) {
+        if (!seen(port.x, port.y, port.w, port.h)) continue;
+        const open = w.hooks.portOpen(port);
+        ctx.fillStyle = open ? '#3fae4a' : '#5c3a1a';
+        ctx.fillRect(ox + port.x * T + 2, oy + port.y * T + 2, port.w * T - 4, port.h * T - 4);
+        if (port.label) {
+          // 글은 문 바깥쪽(벽 쪽)에 — 문 앞에 선 나와 겹치지 않게
+          const below = m.solid[Math.min(m.h - 1, port.y + port.h) * m.w + port.x];
+          ctx.font = `bold ${Math.max(10, Math.round(T * 0.42))}px system-ui, sans-serif`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = below ? 'top' : 'bottom';
+          const tx = ox + (port.x + port.w / 2) * T, ty = below ? oy + (port.y + port.h) * T + 3 : oy + port.y * T - 3;
+          ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(28,16,7,0.85)';
+          ctx.strokeText(port.label + (open ? '' : ' 🔒'), tx, ty);
+          ctx.fillStyle = '#f6e7c3';
+          ctx.fillText(port.label + (open ? '' : ' 🔒'), tx, ty);
+        }
       }
       for (const mk of (o.marks ? o.marks() : [])) if (seen(mk.x, mk.y)) glyph(mk.x + 0.5, mk.y + 0.5, mk.icon);
       for (const post of m.posts) {

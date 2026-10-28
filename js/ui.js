@@ -663,7 +663,7 @@ function renderJourney() {
     <div class="frame zone-card ${low ? 'low' : ''}">
       <div class="zone-head">
         <span class="rank-chip r${rank.n}">제${rank.n}격 · ${rank.name}<span class="hanja">${rank.hanja}</span></span>
-        <span class="zone-name">${zone.name}</span>
+        <span class="zone-name">${placeName(zone)}</span>
         <button class="zone-count" id="rosterBtn" title="이 지역에 있는 것">
           <span class="zc-k">도감</span>${run.zoneIndex + 1} / ${knownZoneCount()}
         </button>
@@ -1500,18 +1500,23 @@ function warpButton() {
 }
 
 // ============================================================
-//  월드맵 (1~6격) — 걷다가 닿으면 조우 · 싸움 · 결과 창이 지도 위에 뜹니다
+//  월드맵 — 걷다가 닿으면 조우 · 싸움 · 결과 창이 지도 위에 뜹니다
 // ============================================================
 // 지도 캔버스는 index.html 의 #mapLayer 에 늘 붙어 있고(다시 그릴 때 지워지지 않게), 창만 #mapOverlay 에 그립니다.
-// 7격부터는 지도가 생길 때까지(docs/MAP-REFERENCE-PLAN.md 4단계) 예전처럼 「길을 떠난다」입니다.
-let mapView = null, mapData = null, mapZones = null;
-let mapKey = '', mapZone = -1;   // 지금 걷는 세계가 어느 칸 · 어느 여정 · 어느 지역 것인가
+// 지도는 여러 장(maps/*.tmj) — 1~6격의 overworld, 문의 광장(hub), 7격부터의 일곱 장. 장 사이는 문(ports)으로 오갑니다.
+// 지도가 아직 없는 지역은 예전처럼 「길을 떠난다」입니다 (docs/MAP-REFERENCE-PLAN.md 4단계).
+let mapView = null, maps = null, zoneMap = null;   // 읽은 지도들(id → 지도), 지역 id → 그 지역이 있는 지도 id
+let mapKey = '', mapZone = -1, mapShown = null;    // 지금 걷는 세계가 어느 칸 · 여정 · 지역 · 지도 것인가
 let closedSaidAt = 0;
 
 function initMap() {
   if (mapView || typeof MAP_FILES === 'undefined' || !$('mapCanvas')) return;
-  mapData = MapRules.parseTiled(MAP_FILES.overworld, 'overworld');
-  mapZones = new Set(mapData.areas.map(a => a.zone).filter(Boolean));
+  maps = {};
+  zoneMap = {};
+  for (const [id, tmj] of Object.entries(MAP_FILES)) {
+    maps[id] = MapRules.parseTiled(tmj, id);
+    for (const a of maps[id].areas) if (a.zone) zoneMap[a.zone] = id;
+  }
   mapView = MapView.create({
     canvas: $('mapCanvas'),
     stick: $('mapStick'),
@@ -1522,10 +1527,22 @@ function initMap() {
   });
 }
 
-// 지금 지역이 지도 위에 있는가
-function onMapZone() {
+// 지금 걷는 지도 (null 이면 지도 밖 — 「길을 떠난다」)
+// 회차에 적힌 지도를 따르되, 걷지 않고 지역이 바뀌었으면(화신이 데려다 줌 · 관리자) 그 지역이 있는 지도로 바꿉니다.
+function currentMapId() {
   initMap();
-  return !!(State.run && mapZones && mapZones.has(ZONES[State.run.zoneIndex].id));
+  const run = State.run;
+  if (!run || !maps) return null;
+  const same = mapKey === `${currentSlot}|${State.meta.runCount}`;
+  if ((same && run.zoneIndex !== mapZone) || !maps[run.mapId]) run.mapId = zoneMap[ZONES[run.zoneIndex].id] || null;
+  return run.mapId;
+}
+function onMapZone() { return !!currentMapId(); }
+
+// 지역 머리의 이름 — 지역이 없는 지도(문의 광장)에서는 그 지도의 이름
+function placeName(zone) {
+  const id = currentMapId();
+  return (id && maps[id].props.title) || zone.name;
 }
 
 // 창이 떠 있는 동안은 지도도 멈춥니다 — 쫓아오던 것도 그 자리에
@@ -1536,36 +1553,76 @@ function mapPaused() {
     || isAnyModalOpen() || up('title') || up('tutorial') || up('talk');
 }
 
-// 그 지역의 들머리 — 첫 지역이면 첫 공간, 아니면 가장 약한 일반의 구역 한가운데
-function mapEntrance(zi) {
-  if (zi === 0) return mapData.start;
-  const weakest = ENEMIES.find(e => e.zoneIndex === zi && e.kind === 'normal');
-  const a = mapData.areas.find(x => x.monster === weakest.id);
-  return { x: a.x + (a.w >> 1), y: a.y + (a.h >> 1) };
+// 그 지도에서 그 지역의 들머리 — 가장 약한 일반의 구역 한가운데. 첫 지역이거나 지역이 없는 지도(문의 광장)면 그 지도의 시작점.
+function mapEntrance(data, zi) {
+  const weakest = zi > 0 && ENEMIES.find(e => e.zoneIndex === zi && e.kind === 'normal');
+  const a = weakest && data.areas.find(x => x.monster === weakest.id);
+  return a ? { x: a.x + (a.w >> 1), y: a.y + (a.h >> 1) } : data.start;
 }
 
 // 저장해 둔 칸 — 지도 안의 걸을 수 있는 칸이고, 그 칸의 지역이 지금 지역과 맞을 때만 (구역 밖 길 위면 그대로 믿습니다)
-function savedMapAt(run) {
+function savedMapAt(run, data) {
   const at = run.mapAt;
-  if (!at || !(at.x >= 0 && at.y >= 0 && at.x < mapData.w && at.y < mapData.h)) return null;
-  const k = at.y * mapData.w + at.x;
-  if (mapData.solid[k]) return null;
-  const a = mapData.areaAt[k] >= 0 ? mapData.areas[mapData.areaAt[k]] : null;
+  if (!at || !(at.x >= 0 && at.y >= 0 && at.x < data.w && at.y < data.h)) return null;
+  const k = at.y * data.w + at.x;
+  if (data.solid[k]) return null;
+  const a = data.areaAt[k] >= 0 ? data.areas[data.areaAt[k]] : null;
   const zi = a ? (a.zone ? ZONES.findIndex(z => z.id === a.zone) : 0) : run.zoneIndex;
   return zi === run.zoneIndex ? { x: at.x, y: at.y } : null;
 }
 
 // 새 여정 · 불러오기면 서 있던 칸에서(없으면 들머리), 걷지 않고 지역이 바뀌었으면(관리자) 그 지역 들머리에서 다시 세웁니다
 function syncMap() {
-  const run = State.run;
+  const run = State.run, id = currentMapId(), data = maps[id];
   const key = `${currentSlot}|${State.meta.runCount}`;
-  if (key === mapKey && run.zoneIndex === mapZone) return;
-  mapView.start(mapData, (key !== mapKey && savedMapAt(run)) || mapEntrance(run.zoneIndex));
-  // 막 들어선 구역은 비워 둡니다 — 불러오자마자 선공이 덤벼들지 않게. 멀리 갔다 오면 다시 섭니다.
-  const w = mapView.world, here = MapRules.areaAt(w, w.player.x, w.player.y);
-  if (here) w.mobs = w.mobs.filter(m => m.area !== here.index);
+  if (key === mapKey && id === mapShown && run.zoneIndex === mapZone) return;
+  enterMap(data, (key !== mapKey && savedMapAt(run, data)) || mapEntrance(data, run.zoneIndex));
   mapKey = key;
-  mapZone = run.zoneIndex;
+}
+
+function enterMap(data, at) {
+  mapView.start(data, at);
+  // 막 들어선 구역은 비워 둡니다 — 불러오자마자 선공이 덤벼들지 않게. 멀리 갔다 오면 다시 섭니다.
+  const w = mapView.world, here = MapRules.areaAt(w, at.x, at.y);
+  if (here) w.mobs = w.mobs.filter(m => m.area !== here.index);
+  mapShown = data.id;
+  mapZone = State.run.zoneIndex;
+}
+
+// 문으로 다른 지도에 — 닿는 곳은 그 지도의 같은 이름 문 바로 앞 (예: hub.overworld = 문의 광장의 「마왕의 성으로」 문 앞).
+// 그 지도가 아직 없으면 문에 적힌 지역(zone)으로 지도 밖에 나섭니다 — 거기부터 예전처럼 「길을 떠난다」.
+function goThroughPort(port) {
+  const run = State.run;
+  const [id, door] = port.to.split('.');
+  const data = maps[id];
+  Sound.play('zoneMove');
+  if (!data) {
+    run.mapId = null;
+    walkIntoZone(ZONES.findIndex(z => z.id === port.zone));
+    mapZone = run.zoneIndex;
+    mapShown = null;
+    return;
+  }
+  const target = data.ports.find(p => p.name === door);
+  const at = target ? doorStep(data, target) : data.start;
+  run.mapId = id;
+  rememberMapAt(at.x, at.y, true);
+  enterMap(data, at);
+}
+
+// 문 바로 앞의 걸을 수 있는 칸 (아래 · 위 · 오른쪽 · 왼쪽 순) — 들어서자마자 도로 나가지 않게 문 위가 아니라 그 앞
+function doorStep(data, port) {
+  const inPort = (x, y) => data.ports.some(p => x >= p.x && y >= p.y && x < p.x + p.w && y < p.y + p.h);
+  const free = (x, y) => x >= 0 && y >= 0 && x < data.w && y < data.h && !data.solid[y * data.w + x] && !inPort(x, y);
+  for (let x = port.x; x < port.x + port.w; x++) {
+    if (free(x, port.y + port.h)) return { x, y: port.y + port.h };
+    if (free(x, port.y - 1)) return { x, y: port.y - 1 };
+  }
+  for (let y = port.y; y < port.y + port.h; y++) {
+    if (free(port.x + port.w, y)) return { x: port.x + port.w, y };
+    if (free(port.x - 1, y)) return { x: port.x - 1, y };
+  }
+  return data.start;
 }
 
 function onMapEvents(evs) {
@@ -1583,16 +1640,14 @@ function onMapEvents(evs) {
       if (meetOnMap(id, e.mob ? e.mob.aura : null, e.first)) soundEncounter();
       else mapView.resolve('retreat');   // 에너지가 모자라 여정이 끝났다
       changed = true;
-    } else if (e.type === 'port' && e.port.to === 'hub') {
-      // 마왕 뒤의 문 — 문의 광장과 7격부터의 지도가 생기기 전까지는 곧장 7격으로 (예전처럼 「길을 떠난다」)
-      const next = Math.max(...[...mapZones].map(id => ZONES.findIndex(z => z.id === id))) + 1;
-      walkIntoZone(next);
-      Sound.play('zoneMove');
+    } else if (e.type === 'port' && e.port.to) {
+      goThroughPort(e.port);
       changed = true;
+      break;                             // 남은 일은 떠나온 지도의 것
     } else if (e.type === 'closed' && Date.now() - closedSaidAt > 2000) {
       closedSaidAt = Date.now();
       const boss = getEnemy(e.port.opensAfter);
-      pushLog('info', `${e.port.name} — 닫혀 있다. ${boss.name}${josa(boss.name, '을', '를')} 꺾어야 열린다.`);
+      pushLog('info', `${e.port.label || e.port.name} — 닫혀 있다. ${boss.name}${josa(boss.name, '을', '를')} 꺾어야 열린다.`);
       changed = true;
     }
   }
@@ -1600,11 +1655,11 @@ function onMapEvents(evs) {
   if (changed) render();
 }
 
-// 떠돌이 상인이 서 있는 칸
+// 떠돌이 상인이 서 있는 칸 (지금 지도에 그 지역이 있으면)
 function merchantMark() {
   const m = State.run && State.run.merchant;
   const z = m && ZONES[m.zone];
-  const spot = z && mapData.npcs.find(n => n.name === 'merchant' && n.zone === z.id);
+  const spot = z && mapView.world.map.npcs.find(n => n.name === 'merchant' && n.zone === z.id);
   return spot ? [{ x: spot.x, y: spot.y, icon: '🎒' }] : [];
 }
 
@@ -1639,6 +1694,7 @@ window.addEventListener('resize', () => { if (document.querySelector('.journey-p
 function storeMapAt() {
   if (!mapView || !mapView.world || !State.run || mapKey !== `${currentSlot}|${State.meta.runCount}`) return;
   if (!$('title').classList.contains('hidden') || !onMapZone()) return;
+  if (mapView.world.map.id !== State.run.mapId) return;   // 화면의 지도가 회차와 어긋나 있으면(다시 그리기 전) 적지 않습니다
   rememberMapAt(mapView.world.player.x, mapView.world.player.y, true);
 }
 document.addEventListener('visibilitychange', () => { if (document.hidden) storeMapAt(); });
