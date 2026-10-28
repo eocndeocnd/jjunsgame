@@ -183,7 +183,7 @@ function drawEnc() {
   const c = winChance(heroStats(), f);
   enc.className = '';
   enc.innerHTML = `<b>${f.icon} ${f.name}</b> ${KINDS[f.kind].name} · Lv.${fmtLevel(f.level)}${run.aura ? ` · <span style="color:${run.aura.color}">✦ ${run.aura.name}</span>` : ''}`
-    + ` · 이길 확률 약 ${Math.round(c * 100)}%<br><small>${view.first === 'foe' ? '몬스터가 먼저 닿았다 — 첫 턴은 몬스터 (전투엔 3-2에서)' : '내가 먼저 닿았다'}</small><br>`
+    + ` · 이길 확률 약 ${Math.round(c * 100)}%<br><small>${view.first === 'foe' ? '몬스터가 먼저 덤볐다' : '내가 먼저 닿았다'} — 싸움은 늘 내가 먼저 때림</small><br>`
     + `<button id="bEngage">맞선다${run.onBoss ? '' : ` (에너지 −${RULES.TRAVEL_COST})`}</button> `
     + (run.onBoss ? '물러설 수 없다' : '<button id="bRetreat">물러선다 (에너지 0)</button>');
   $('bEngage').onclick = doEngage;

@@ -130,7 +130,7 @@ test('멀리(10칸 넘게) 갔다가 돌아오면 남은 것을 지우고 새로
   assert.ok(w.mobs.every(x => !before.has(x.id)), '전부 새것');
 });
 
-test('선공은 나를 보면 쫓아와 부딪힌다 — 몬스터가 첫 턴', () => {
+test('선공은 나를 보면 쫓아와 부딪힌다 — 몬스터가 먼저 닿음', () => {
   const m = mapOf([
     '############',
     '#aaaaaaaaaa#',
@@ -184,7 +184,7 @@ test('후공은 쫓아오지 않는다 — 물러서면 멈췄다가 화가 나�
   w.mobs = [];
   const a = mob(w, 6, 3, 'passive');
   assert.ok(!contact(run(w, 6)), '가만히 있으면 안 닿음');
-  // 내가 다가가 닿는다 — 내가 첫 턴
+  // 내가 다가가 닿는다
   a.x = 6; a.y = 3; w.player.x = 4; w.player.y = 3;
   M.setInput(w, 'right');
   const e = contact(run(w, 2));
