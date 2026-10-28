@@ -1544,12 +1544,23 @@ function mapEntrance(zi) {
   return { x: a.x + (a.w >> 1), y: a.y + (a.h >> 1) };
 }
 
-// 새 여정이거나, 걷지 않고 지역이 바뀌었으면(불러오기 · 관리자) 그 지역 들머리에서 다시 세웁니다
+// 저장해 둔 칸 — 지도 안의 걸을 수 있는 칸이고, 그 칸의 지역이 지금 지역과 맞을 때만 (구역 밖 길 위면 그대로 믿습니다)
+function savedMapAt(run) {
+  const at = run.mapAt;
+  if (!at || !(at.x >= 0 && at.y >= 0 && at.x < mapData.w && at.y < mapData.h)) return null;
+  const k = at.y * mapData.w + at.x;
+  if (mapData.solid[k]) return null;
+  const a = mapData.areaAt[k] >= 0 ? mapData.areas[mapData.areaAt[k]] : null;
+  const zi = a ? (a.zone ? ZONES.findIndex(z => z.id === a.zone) : 0) : run.zoneIndex;
+  return zi === run.zoneIndex ? { x: at.x, y: at.y } : null;
+}
+
+// 새 여정 · 불러오기면 서 있던 칸에서(없으면 들머리), 걷지 않고 지역이 바뀌었으면(관리자) 그 지역 들머리에서 다시 세웁니다
 function syncMap() {
   const run = State.run;
   const key = `${currentSlot}|${State.meta.runCount}`;
   if (key === mapKey && run.zoneIndex === mapZone) return;
-  mapView.start(mapData, mapEntrance(run.zoneIndex));
+  mapView.start(mapData, (key !== mapKey && savedMapAt(run)) || mapEntrance(run.zoneIndex));
   // 막 들어선 구역은 비워 둡니다 — 불러오자마자 선공이 덤벼들지 않게. 멀리 갔다 오면 다시 섭니다.
   const w = mapView.world, here = MapRules.areaAt(w, w.player.x, w.player.y);
   if (here) w.mobs = w.mobs.filter(m => m.area !== here.index);
@@ -1558,13 +1569,16 @@ function syncMap() {
 }
 
 function onMapEvents(evs) {
-  const run = State.run;
+  const run = State.run, p = mapView.world.player;
   let changed = false;
   for (const e of evs) {
     if (e.type === 'area') {
       const zi = e.area.zone ? ZONES.findIndex(z => z.id === e.area.zone) : 0;   // 첫 공간은 1격 자리
-      if (zi >= 0 && zi !== run.zoneIndex) { walkIntoZone(zi); changed = true; }
+      const moved = zi >= 0 && zi !== run.zoneIndex;
+      rememberMapAt(p.x, p.y, !moved);   // 지역이 바뀌면 walkIntoZone 이 같이 저장합니다
+      if (moved) { walkIntoZone(zi); changed = true; }
     } else if (e.type === 'contact') {
+      rememberMapAt(p.x, p.y, false);    // meetOnMap 이 같이 저장합니다
       const id = e.mob ? e.mob.monster : e.post.enemy;
       if (meetOnMap(id, e.mob ? e.mob.aura : null, e.first)) soundEncounter();
       else mapView.resolve('retreat');   // 에너지가 모자라 여정이 끝났다
@@ -1620,6 +1634,15 @@ function fitMapLayer() {
   layer.style.minHeight = `${Math.max(280, Math.floor(bottom - top - 10))}px`;
 }
 window.addEventListener('resize', () => { if (document.querySelector('.journey-panel.map-mode')) fitMapLayer(); });
+
+// 화면을 닫거나 다른 앱으로 넘어갈 때 — 서 있던 칸을 바로 저장합니다 (폰은 그 뒤로 말없이 꺼질 수 있어서)
+function storeMapAt() {
+  if (!mapView || !mapView.world || !State.run || mapKey !== `${currentSlot}|${State.meta.runCount}`) return;
+  if (!$('title').classList.contains('hidden') || !onMapZone()) return;
+  rememberMapAt(mapView.world.player.x, mapView.world.player.y, true);
+}
+document.addEventListener('visibilitychange', () => { if (document.hidden) storeMapAt(); });
+window.addEventListener('pagehide', storeMapAt);
 
 // ---------- 승률은 숫자로 보여주지 않습니다 ----------
 // 정확한 확률 대신 "느낌" 을 한 문장으로. 20% 구간마다 하나씩이고,

@@ -921,6 +921,7 @@ function freshRun() {
     onBoss: false,       // 그 조우가 보스전인가
     metOnMap: false,     // 지도에서 닿은 일반인가 — 그러면 에너지는 맞설 때 씁니다 (물러서면 공짜)
     zonesVisited: [0],   // 이 여정에 들어선 지역 — 지도에서 「…에 들어섰다」는 처음 한 번만
+    mapAt: null,         // 지도 위에 서 있던 칸 { x, y } — 불러오면 여기서 이어 걷습니다
     merchant: null,      // 이번 회차의 떠돌이 상인 — { zone, wares, bought } (없으면 null)
     over: false,
     victory: false,
@@ -1104,6 +1105,14 @@ function meetOnMap(foeId, aura, first) {
   else pushLog('travel', first === 'foe' ? `${who} 덤벼들었다` : `${who} 앞을 막아섰다`);
   save();
   return true;
+}
+
+// 지도 위 서 있는 칸을 적어 둡니다 (persist 면 바로 저장). 구역을 옮길 때 · 닿을 때 · 화면을 닫을 때 부릅니다.
+function rememberMapAt(x, y, persist) {
+  const run = State.run;
+  if (!run || run.over) return;
+  run.mapAt = { x, y };
+  if (persist) save();
 }
 
 // 지도에서 다른 지역의 구역으로 걸어 들어섰다 — 「지금 지역」만 바꿉니다. 길은 지도가 막고 엽니다 (보스가 통로를 막고 섬).
