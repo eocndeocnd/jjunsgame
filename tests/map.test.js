@@ -401,3 +401,74 @@ test('문의 광장 — 일곱 장의 문은 그 앞 격 보스를 꺾어야 열
     assert.ok(near.some(i => d[i] >= 0), `${p.label} 앞에 닿음`);
   }
 });
+
+// ---------- 7~20격 일곱 장 ----------
+const loadMap = name => M.parseTiled(JSON.parse(fs.readFileSync(path.join(ROOT, `maps/${name}.tmj`), 'utf8')), name);
+const allMapNames = () => fs.readdirSync(path.join(ROOT, 'maps')).filter(f => f.endsWith('.tmj')).map(f => f.replace(/\.tmj$/, ''));
+
+test('지도 전부 — 스무 지역이 저마다 한 장에만, 296마리가 모두 한 번씩', () => {
+  const data = loadData();
+  const zoneMaps = {}, normals = [], posts = [];
+  for (const name of allMapNames()) {
+    const m = loadMap(name);
+    for (const a of m.areas) if (a.zone) (zoneMaps[a.zone] = zoneMaps[a.zone] || new Set()).add(name);
+    normals.push(...m.areas.filter(a => a.monster).map(a => a.monster));
+    posts.push(...m.posts.map(p => p.enemy));
+  }
+  for (const z of data.ZONES) assert.equal(zoneMaps[z.id] && zoneMaps[z.id].size, 1, `${z.rank}격 ${z.name}`);
+  assert.deepEqual(normals.sort(), data.ENEMIES.filter(e => e.kind === 'normal').map(e => e.id).sort());
+  assert.deepEqual(posts.sort(), data.ENEMIES.filter(e => e.kind !== 'normal').map(e => e.id).sort());
+});
+
+test('일곱 장 — 어귀의 문은 문의 광장의 그 장 문으로, 광장의 문은 그 장의 어귀로', () => {
+  const hub = loadMap('hub');
+  for (const r of gen.REALMS) {
+    const m = loadMap(r.name);
+    const back = m.ports.find(p => p.name === 'in');
+    assert.ok(back, `${r.title} 어귀의 문`);
+    assert.equal(back.to, `hub.${r.name}`);
+    assert.ok(hub.ports.some(p => p.name === r.name && p.to === `${r.name}.in`), `광장의 ${r.title} 문`);
+  }
+});
+
+test('일곱 장 — 같은 장의 다음 격은 앞 격 보스 너머, 먼 격은 처음부터 열렸지만 강 너머로 보이기만 (걸어서 8칸 넘게)', () => {
+  const data = loadData();
+  const bossOf = rank => data.ENEMIES.find(e => e.rank.n === rank && e.kind === 'boss').id;
+  for (const r of gen.REALMS) {
+    const m = loadMap(r.name);
+    const back = m.ports.find(p => p.name === 'in');
+    const from = [(back.y + back.h) * m.w + back.x, back.y * m.w + back.x + 1];   // 광장에서 들어와 서는 칸 근처
+    const allPosts = new Set(m.posts.flatMap(p => cellsOf(m, p)));
+    const without = ids => new Set([...allPosts].filter(i => !m.posts.filter(p => ids.includes(p.enemy)).some(p => cellsOf(m, p).includes(i))));
+    const reach = (blocked, rank) => {
+      const d = walk(m, from.filter(i => !m.solid[i]), blocked);
+      return m.areas.filter(a => a.rank === rank).some(a => cellsOf(m, a).some(i => d[i] >= 0));
+    };
+    r.ranks.forEach((rank, i) => {
+      const prev = rank - 1;
+      if (i > 0 && r.ranks.includes(prev)) {
+        assert.ok(!reach(allPosts, rank), `${r.title} ${rank}격은 ${prev}격 보스 너머`);
+        assert.ok(reach(without(r.ranks.slice(0, i).map(bossOf)), rank), `${r.title} ${prev}격까지의 보스를 꺾으면 ${rank}격`);
+      } else {
+        assert.ok(reach(allPosts, rank), `${r.title} ${rank}격은 처음부터 열림`);
+      }
+    });
+    // 먼 격 — 지금 격(그 장의 첫 격)의 길(어귀 + 첫 격 구역)에서 걸어서 8칸 넘게, 그래도 보임
+    const far = r.ranks.filter((rank, i) => i > 0 && !r.ranks.includes(rank - 1));
+    if (!far.length) continue;
+    const walkable = cells => cells.filter(i => !m.solid[i]);
+    const plaza = m.areas.find(a => !a.monster);
+    const path0 = walkable([...cellsOf(m, plaza), ...m.areas.filter(a => a.rank === r.ranks[0]).flatMap(a => cellsOf(m, a))]);
+    const d = walk(m, path0);
+    for (const rank of far) {
+      const fields = m.areas.filter(a => a.rank === rank);
+      const nearest = Math.min(...fields.flatMap(a => walkable(cellsOf(m, a)).map(i => d[i])).filter(v => v >= 0));
+      assert.ok(nearest > 8, `${r.title} ${rank}격 — 걸어서 ${nearest}칸`);
+      const seen = fields.some(a => path0.some(i => {
+        const x = i % m.w, y = (i / m.w) | 0;
+        return Math.max(Math.max(a.x - x, 0, x - (a.x + a.w - 1)), Math.max(a.y - y, 0, y - (a.y + a.h - 1))) <= R.SIGHT;
+      }));
+      assert.ok(seen, `${r.title} ${rank}격이 보임`);
+    }
+  }
+});

@@ -479,7 +479,6 @@ h3::before { content: '◆ '; color: var(--wax); }
 
 /* 아직 안 만난 것 */
 .roster-item.unseen .r-name,
-.post.unseen .post-name { color: var(--text-faint); letter-spacing: 0.1em; }
 .roster-item.unseen .r-icon { color: var(--text-faint); }
 
 .alloc-foot { display: flex; align-items: center; gap: 8px; }
@@ -784,7 +783,6 @@ h3::before { content: '◆ '; color: var(--wax); }
 .stage-msg { text-align: center; color: var(--text-faint); padding: 24px 0; }
 
 /* 갈림길 */
-.crossroads { display: flex; flex-direction: column; gap: 12px; }
 .btn.big {
   padding: 14px 18px;
   font-size: 14px;
@@ -815,15 +813,6 @@ kbd {
   opacity: 0.85;
   letter-spacing: 0.02em;
 }
-.btn.next-btn {
-  --b: #3f6d2a; --b-hi: #5f8f3e; --b-lo: #22401a;
-  width: 100%;
-  padding: 12px 18px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-}
 
 /* 정해진 자리 — 정예와 보스. 왼쪽의 굵은 띠가 책갈피처럼 종류를 알려줍니다 */
 .post {
@@ -837,19 +826,11 @@ kbd {
   border-left: 6px solid var(--line);
   margin-top: 6px;
 }
-.post.elite { border-left-color: var(--energy); }
-.post.boss  { border-left-color: var(--wax); }
-.post.down  { opacity: 0.5; }
 .post-icon { font-size: 21px; text-align: center; }
 .post-name { font-weight: 700; font-size: 13px; }
 .post-name .lv { color: var(--text-faint); font-weight: 400; font-size: 11px; margin-left: 6px; }
-.post-desc { font-size: 11px; color: var(--text-faint); }
 /* 승률은 숫자 대신 예감 문장 — 짧은 문장이 들어가도록 글씨를 줄였습니다 */
-.post-chance { font-weight: 700; font-size: 12px; white-space: nowrap; text-align: right; }
-.post-done { font-size: 11px; color: var(--text-faint); letter-spacing: 0.1em; }
 .post-btn { padding: 6px 11px; font-size: 11px; }
-.post-btn.elite  { --b: #3f6d2a; --b-hi: #5f8f3e; --b-lo: #22401a; }
-.post-btn.boss   { --b: var(--wax); --b-hi: var(--wax-hi); --b-lo: var(--wax-lo); }
 .post-btn.hidden { --b: #5b2a86; --b-hi: #7d4aa8; --b-lo: #2e1245; }
 
 /* 정예 · 보스 · 히든 — 작은 밀랍 꼬리표 */
@@ -2165,7 +2146,6 @@ body.test-mode::after {
   .alloc-presets .btn { padding: 8px 2px; font-size: 12px; }
   .post { padding: 10px 10px 10px 8px; grid-template-columns: 28px 1fr auto; row-gap: 8px; }
   .post-btn { grid-column: 1 / -1; width: 100%; }
-  .post-chance { grid-column: 2 / -1; text-align: left; }
   /* 폰에서도 칩은 이름 오른쪽 같은 줄에 둡니다. 자리가 빠듯해서
      칸을 조금 좁히고, 밀리면 이름 쪽이 말줄임 되게 했습니다. */
   .roster-item { padding: 7px; grid-template-columns: 20px minmax(0,1fr) auto auto; gap: 7px; }
@@ -2650,21 +2630,6 @@ body.fight-locked .doll-sets { display: none; }
 body.fight-locked #dollModeBtn,
 body.fight-locked #dollSwapBtn { display: none; }
 
-/* 「길을 떠난다」 아래 — 남은 에너지를 크게. 다섯 이하면 붉게 */
-.travel-energy {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 5px;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-}
-.travel-energy b { font-size: 22px; line-height: 1; color: var(--cream); text-shadow: 0 1px 0 rgba(28, 16, 7, 0.55); }
-.travel-energy em { font-style: normal; font-weight: 400; font-size: 11px; opacity: 0.8; margin-left: -2px; }
-.travel-energy i { font-style: normal; font-weight: 400; font-size: 10px; opacity: 0.8; margin-left: 4px; }
-.travel-energy.low b { color: #ffd5c8; animation: energy-low 1.2s steps(2) infinite; }
-@keyframes energy-low { 50% { color: #ff8f78; } }
-@media (prefers-reduced-motion: reduce) { .travel-energy.low b { animation: none; } }
 
 /* 떠돌이 상인 — 소지품이 위, 강화석은 덤으로 아래 */
 .shop-head { margin: 2px 0 8px; font-size: 12px; }

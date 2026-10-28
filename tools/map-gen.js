@@ -236,9 +236,16 @@ function generate(plan, ranks, data, opts) {
 
   const areas = [], npcs = [], ports = [];
   const so = origin(start), sc = center(start);
-  areas.push({ name: '첫 공간', x: so.x, y: so.y, w: FIELD_W, h: FIELD_H });
+  // 어귀(S.) — 몬스터 없는 이름뿐인 곳. 그 지도 첫 격의 지역으로 칩니다 (overworld 의 첫 공간은 1격 자리)
+  const firstZone = data.ZONES.find(z => z.rank === ranks[0]);
+  areas.push({ name: opts.plaza || '첫 공간', x: so.x, y: so.y, w: FIELD_W, h: FIELD_H, zone: firstZone.id });
   npcs.push({ name: 'start', x: sc.x, y: sc.y }, { name: 'avatarDoor', x: sc.x + 5, y: sc.y - 4 });
   fill(sc.x - 2, sc.y - 2, 5, 5, null, true);
+  if (opts.entry) {                                          // 문의 광장으로 돌아가는 문 — 어귀 서쪽 가장자리
+    const e = opts.entry(so);
+    ports.push(e);
+    fill(e.x - 2, e.y - 2, e.w + 4, e.h + 4, null, true);
+  }
 
   const post = (e, x, y, size, blocks) => {
     posts.push(size > 1 ? { name: e.name, x, y, w: size, h: size, enemy: e.id, blocks } : { name: e.name, x, y, enemy: e.id, blocks });
@@ -337,6 +344,62 @@ function overworld(data) {
   });
 }
 
+// ---------- 7~20격 — 비슷한 것끼리 일곱 장 (docs/MAP-REFERENCE-PLAN.md 2-2) ----------
+// 어귀(S.)에 문의 광장으로 돌아가는 문이 있고, 광장의 그 장 문으로 들어오면 그 앞에 섭니다.
+// 바로 앞 격이 같은 장에 있으면 그 보스가 고갯길(b)을 막고, 앞 격이 다른 장에 있는 먼 격(①의 13격 · ②의 12격)은
+// 어귀 아래 지나가는 곳(..)으로 처음부터 들어갈 수 있되, 지금 격의 들판과는 강(~)으로 갈려 보이기만 합니다.
+const REALMS = [
+  { name: 'legends', title: '인간의 전설', ranks: [7, 13], obstacle: ROCK, plan: [
+    '         1E          1H',
+    '         |           ?',
+    'S.-1n-1n-1n-1n-1n-1n-1n-1n-1n-1B',
+    '|  ~  ~  ~  ~  ~  ~  ~  ~  ~',
+    '..-2n-2n-2n-2n-2n-2n-2n-2n-2n',
+    '                           |',
+    '                           2n-2B'
+  ] },
+  { name: 'arthurian', title: '원탁과 마법', ranks: [8, 9, 12], obstacle: TREE, plan: [
+    '         1E       1H                   2E',
+    '         |        ?                    |',
+    'S.-1n-1n-1n-1n-1n-1n-1n-1n-1nb2n-2n-2n-2n-2n-2n-2n-2n-2n-2B',
+    '|  ~  ~  ~  ~  ~  ~',
+    '..-3n-3n-3n-3n-3E-3B'
+  ] },
+  { name: 'east', title: '동방', ranks: [10, 11], obstacle: TREE, plan: [
+    '      1E                         2E       2H',
+    '      |                          |        ?',
+    'S.-1n-1n-1n-1n-1n-1n-1nb2n-2n-2n-2n-2n-2n-2n-2n-2n-2B'
+  ] },
+  { name: 'heavenhell', title: '천국과 지옥', ranks: [14, 15], obstacle: ROCK, plan: [
+    '            1E',
+    '            |',
+    'S.-1n-1n-1n-1n-1n-1n-1n-1n-1n',
+    '         ~  ~  ~  ~  ~  ~  b',
+    '   2B-2E-2n-2n-2n-2n-2n-2n-2n'
+  ] },
+  { name: 'gods', title: '신들의 시대', ranks: [16, 17, 18], obstacle: ROCK, plan: [
+    '      1E=1E                2E                   3E',
+    '      |                    |                    |',
+    'S.-1n-1n-1n-1n-1n-1nb2n-2n-2n-2n-2n-2nb3n-3n-3n-3n-3n-3n-3n-3B'
+  ] },
+  { name: 'oldones', title: '르뤼에', ranks: [19], obstacle: ROCK, plan: [
+    '            1E',
+    '            |',
+    'S.-1n-1n-1n-1n-1n-1n-1n-1B'
+  ] },
+  { name: 'outer', title: '바깥', ranks: [20], obstacle: ROCK, plan: [
+    'S.-1n-1n-1n-1n-1n-1n-1n-1n-1n-1B'
+  ] }
+];
+function realm(data, r, i) {
+  return generate(r.plan, r.ranks, data, {
+    seed: 11 + i * 7,
+    plaza: `${r.title} 어귀`,
+    obstacle: () => r.obstacle,
+    entry: o => ({ name: 'in', label: '문의 광장', x: o.x + 2, y: o.y + (FIELD_H >> 1) - 1, w: 1, h: 2, to: `hub.${r.name}` })
+  });
+}
+
 // ---------- 문의 광장 (hub) ----------
 // 지도끼리 오가는 넓은 광장. 북쪽 가장자리에 7~20격 일곱 장의 문, 남쪽에 마왕의 성(overworld)으로 돌아가는 문.
 // 장마다 문은 그 앞 격의 보스를 꺾으면 열립니다 (docs/MAP-REFERENCE-PLAN.md 2-2 표).
@@ -385,4 +448,11 @@ function hub(data) {
   return buildTmj({ w: W, h: H, tiles, ports, npcs, props: { title: '문의 광장' } });
 }
 
-module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, generate, overworld, hub, layoutFromPlan, HUB_DOORS };
+// 뽑을 지도 전부 — { 파일 이름: 만드는 함수 }
+function allMaps(data) {
+  const out = { overworld: overworld(data), hub: hub(data) };
+  REALMS.forEach((r, i) => { out[r.name] = realm(data, r, i); });
+  return out;
+}
+
+module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, generate, overworld, hub, allMaps, layoutFromPlan, HUB_DOORS, REALMS };

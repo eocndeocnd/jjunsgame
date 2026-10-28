@@ -220,8 +220,8 @@ function soundEncounter() {
 }
 
 // 누르는 소리. 저마다 소리가 따로 있는 버튼은 뺍니다 (겹치면 지저분합니다)
-const OWN_SOUND = '#travelBtn, #engageBtn, #nextZoneBtn, #warpBtn, #retreatBtn, #commitBtn, '
-  + '[data-post], [data-enhslot], [data-equip], [data-unequip], [data-swap], [data-setpick], [data-jset]';
+const OWN_SOUND = '#engageBtn, #warpBtn, #retreatBtn, #commitBtn, '
+  + '[data-enhslot], [data-equip], [data-unequip], [data-swap], [data-setpick], [data-jset]';
 function wireClickSound() {
   document.addEventListener('click', ev => {
     const b = ev.target.closest('button');
@@ -647,7 +647,6 @@ function renderJourney() {
   const run = State.run;
   const zone = ZONES[run.zoneIndex];
   const rank = RANKS.find(r => r.n === zone.rank);
-  const boss = zoneBoss(run.zoneIndex);
   const hero = heroStats();
 
   // 폰에서는 탭을 옮기면 「나」 화면이 안 보이므로, 에너지는 여기에도 둡니다.
@@ -678,8 +677,8 @@ function renderJourney() {
     </div>
   `;
 
-  // ----- 무대: 결과 · 조우 · 갈림길 중 하나 -----
-  // 지도 위(1~6격)에서는 갈림길 대신 지도를 걷고, 조우 · 싸움 · 결과는 그 지도 위에 뜬 창에서 봅니다
+  // ----- 무대: 결과 · 조우 중 하나 — 지도 위에 뜬 창 -----
+  // 지도를 걷다가 닿으면 조우 · 싸움 · 결과를 지도 위 창에서 봅니다. 아무도 마주하지 않으면 창 없이 지도만.
   const onMap = onMapZone();
   let stage = '';
   // 결과 화면이 먼저입니다. 마지막 에너지로 잡은 전리품도 보고 나서 끝나야 하니까요.
@@ -697,7 +696,8 @@ function renderJourney() {
   } else if (run.encounter) {
     stage = encounterCard(getEnemy(run.encounter), run.onBoss, hero, run.aura);
   } else if (!onMap) {
-    stage = crossroads(boss, hero, run);
+    // 모든 지역이 지도 위에 있어서 여기엔 오지 않습니다 — 지도 파일(js/maps.js)을 못 읽었을 때만
+    stage = `<p class="stage-msg">지도를 읽지 못했다. 새로 고쳐 주세요.</p>`;
   }
   // 정예 · 보스 · 히든과 마주하거나 싸우는 동안은 무대 창의 테두리가 그 색이 됩니다
   const facing = facingFoe();
@@ -1427,54 +1427,6 @@ function winChanceMemo(hero, foe, samples) {
   return c;
 }
 
-// 아무도 없을 때 — 떠날 것인가, 정해진 자리로 갈 것인가, 다음 지역으로 갈 것인가
-function crossroads(boss, hero, run) {
-  const max = startEnergy();
-  const low = run.energy <= 5;
-  const canMove = run.energy >= RULES.TRAVEL_COST;
-  const nextZone = ZONES[run.zoneIndex + 1];
-
-  // 정예·히든·보스 — 정해진 자리에 서 있고, 한 여정에 한 번뿐
-  const posts = visiblePosts(run.zoneIndex).map(foe => {
-    const down = isDowned(foe.id);
-    const c = winChanceMemo(hero, foe);
-    const left = dropTable(foe.id).filter(i => !owns(i.id)).length;
-    const K = KINDS[foe.kind];
-    const seen = isSeen(foe.id);
-    // 설명 글은 뺐습니다. 남기는 건 아직 못 얻은 전리품의 수 하나 — 또 찾아갈지 정하는 데 쓰입니다.
-    return `
-      <div class="post ${foe.kind} ${down ? 'down' : ''} ${seen ? '' : 'unseen'}">
-        <span class="post-icon">${seen ? foe.icon : '❓'}</span>
-        <div class="post-body">
-          <div class="post-name">
-            <span class="grade-tag ${foe.kind}">${K.name}</span>${seen ? foe.name : '???'}<span class="lv">Lv.${fmtLevel(foe.level)}</span>
-          </div>
-          ${seen && (foe.set || (!down && left > 0)) ? `<div class="post-desc">${[foe.set ? ELITE_SETS[foe.set].name : '', !down && left > 0 ? `못 얻은 것 ${left}` : ''].filter(Boolean).join(' · ')}</div>` : ''}
-        </div>
-        ${down
-          ? `<span class="post-done">꺾음</span>`
-          : `<span class="post-chance ${winFeelClass(c)}">${winFeel(c)}</span>
-             <button class="btn post-btn ${foe.kind}" data-post="${foe.id}" ${canMove ? '' : 'disabled'}>향한다</button>`}
-      </div>`;
-  }).join('');
-
-  // 떠돌이 상인 — 이 지역에 있으면 정해진 자리들 맨 위에. 싸우지 않고, 들르는 데 에너지도 들지 않습니다.
-  return `
-    <div class="crossroads">
-      ${warpButton()}
-      ${run.zoneCleared && nextZone ? `
-        <button id="nextZoneBtn" class="btn next-btn">${nextZone.name}(으)로 넘어간다</button>` : ''}
-
-      <button id="travelBtn" class="btn primary big thumb" ${canMove ? '' : 'disabled'}>
-        <span class="btn-line">길을 떠난다${KEY_HINT}</span>
-        <span class="travel-energy ${low ? 'low' : ''}">남은 에너지 <b>${run.energy}</b><em>/${max}</em><i>· 한 걸음 −${RULES.TRAVEL_COST}</i></span>
-      </button>
-
-      ${merchantRow()}
-      ${posts}
-    </div>`;
-}
-
 // 떠돌이 상인 — 이 지역에 있으면. 싸우지 않고, 들르는 데 에너지도 들지 않습니다. (갈림길 · 지도 위 둘 다)
 function merchantRow() {
   return merchantHere() ? `
@@ -1504,7 +1456,7 @@ function warpButton() {
 // ============================================================
 // 지도 캔버스는 index.html 의 #mapLayer 에 늘 붙어 있고(다시 그릴 때 지워지지 않게), 창만 #mapOverlay 에 그립니다.
 // 지도는 여러 장(maps/*.tmj) — 1~6격의 overworld, 문의 광장(hub), 7격부터의 일곱 장. 장 사이는 문(ports)으로 오갑니다.
-// 지도가 아직 없는 지역은 예전처럼 「길을 떠난다」입니다 (docs/MAP-REFERENCE-PLAN.md 4단계).
+// 스무 지역이 모두 어느 한 장 위에 있습니다 (tests/map.test.js 가 지킵니다).
 let mapView = null, maps = null, zoneMap = null;   // 읽은 지도들(id → 지도), 지역 id → 그 지역이 있는 지도 id
 let mapKey = '', mapZone = -1, mapShown = null;    // 지금 걷는 세계가 어느 칸 · 여정 · 지역 · 지도 것인가
 let closedSaidAt = 0;
@@ -1527,7 +1479,7 @@ function initMap() {
   });
 }
 
-// 지금 걷는 지도 (null 이면 지도 밖 — 「길을 떠난다」)
+// 지금 걷는 지도 (null 이면 지도를 못 읽은 것)
 // 회차에 적힌 지도를 따르되, 걷지 않고 지역이 바뀌었으면(화신이 데려다 줌 · 관리자) 그 지역이 있는 지도로 바꿉니다.
 function currentMapId() {
   initMap();
@@ -1590,7 +1542,7 @@ function enterMap(data, at) {
 }
 
 // 문으로 다른 지도에 — 닿는 곳은 그 지도의 같은 이름 문 바로 앞 (예: hub.overworld = 문의 광장의 「마왕의 성으로」 문 앞).
-// 그 지도가 아직 없으면 문에 적힌 지역(zone)으로 지도 밖에 나섭니다 — 거기부터 예전처럼 「길을 떠난다」.
+// 그 지도가 없으면(손으로 지운 경우 등) 문에 적힌 지역(zone)으로 건너가 그 지역이 있는 지도의 들머리에 섭니다.
 function goThroughPort(port) {
   const run = State.run;
   const [id, door] = port.to.split('.');
@@ -1605,6 +1557,9 @@ function goThroughPort(port) {
   }
   const target = data.ports.find(p => p.name === door);
   const at = target ? doorStep(data, target) : data.start;
+  // 닿는 칸이 어느 지역의 구역이면(그 장의 어귀) 곧바로 그 지역 — 한 발짝 걷기 전에도 지역 머리가 맞게
+  const k = data.areaAt[at.y * data.w + at.x], a = k >= 0 ? data.areas[k] : null;
+  if (a && a.zone) walkIntoZone(ZONES.findIndex(z => z.id === a.zone));
   run.mapId = id;
   rememberMapAt(at.x, at.y, true);
   enterMap(data, at);
@@ -1769,8 +1724,6 @@ function wireJourney() {
     b.dataset.wired = '1';
     b.addEventListener('click', closeRosterModal);
   }
-  on('travelBtn',    () => { travel();         soundEncounter();         render(); });
-  on('nextZoneBtn',  () => { moveToNextZone(); Sound.play('zoneMove');   render(); });
   on('warpBtn',      () => { if (fightLocked()) return; if (avatarWarp()) { Sound.play('zoneMove'); render(); } });
   on('engageBtn',    () => {
     // 싸우기 직전의 레벨 · 경험치 · 에너지 — 전투를 보여주는 동안은 이 값으로 그리고, 끝나면 여기서부터 올라가는 모습을 보여줍니다
@@ -1791,9 +1744,6 @@ function wireJourney() {
     const slot = $('toGearBtn').dataset.goslot;
     dismissResult(); render(); spotlightGear(slot);
   });
-  for (const btn of document.querySelectorAll('[data-post]')) {
-    btn.addEventListener('click', () => { approachPost(btn.dataset.post); soundEncounter(); render(); });
-  }
 }
 
 // 분배판을 바로 띄웁니다 — 결과 화면의 「스탯을 다시 나눈다」가 부릅니다.
@@ -1821,14 +1771,14 @@ function spotlightGear(slot) {
 // ============================================================
 //  단축키 — 스페이스 하나로 루프를 돌립니다
 // ============================================================
-// 「길을 떠난다 → 맞선다 → 계속한다」가 수십 번 반복되는 게임이라,
+// 「닿는다 → 맞선다 → 계속한다」가 수십 번 반복되는 게임이라,
 // 마우스로 매번 다른 자리를 찾아 누르는 건 손이 아픕니다.
 // 그래서 **지금 화면에서 해야 할 주 행동**을 스페이스 하나에 몰았습니다.
 //
 // 「물러선다」와 정예·보스로 향하는 버튼에는 일부러 안 걸었습니다.
 // 그건 고민해서 눌러야 하는 것들이라, 연타로 잘못 누르면 안 되니까요.
 // 싸우는 동안에는 걸리는 버튼이 없어 스페이스가 아무 일도 하지 않습니다 (건너뛰기 없음).
-const PRIMARY_ORDER = ['agOk', 'talkNext', 'tutNext', 'continueBtn', 'engageBtn', 'newRunBtn', 'travelBtn'];
+const PRIMARY_ORDER = ['agOk', 'talkNext', 'tutNext', 'continueBtn', 'engageBtn', 'newRunBtn'];
 
 function primaryButton() {
   if (!$('title').classList.contains('hidden')) return null;   // 초기화면에서는 안 씁니다

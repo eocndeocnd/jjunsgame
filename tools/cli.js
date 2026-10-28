@@ -88,8 +88,7 @@ if (cmd === 'images') {
     console.log(`  · ${p} — 뽑았습니다`);
   };
   out('maps/tiles.png', gen.tilesPng());
-  out('maps/overworld.tmj', JSON.stringify(gen.overworld(data)));
-  out('maps/hub.tmj', JSON.stringify(gen.hub(data)));
+  for (const [name, tmj] of Object.entries(gen.allMaps(data))) out(`maps/${name}.tmj`, JSON.stringify(tmj));
 } else {
   console.log('사용법: node tools/cli.js images | check-ids | snapshot | check-loot | sim [시드,…] | maps [--force]');
   process.exit(cmd ? 1 : 0);
