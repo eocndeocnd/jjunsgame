@@ -1247,12 +1247,6 @@ function approachPost(enemyId) {
   save();
 }
 
-// 보스에게 향한다 (approachPost 의 편의 래퍼)
-function approachBoss() {
-  const boss = zoneBoss(State.run.zoneIndex);
-  if (boss) approachPost(boss.id);
-}
-
 // 물러선다 — 에너지는 이미 썼으니 그냥 날아갑니다 (지도에서 닿은 것은 아직 안 썼으니 공짜). 보스한테는 못 씁니다.
 function retreat() {
   const run = State.run;
