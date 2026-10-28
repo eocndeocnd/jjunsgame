@@ -2894,3 +2894,26 @@ body.beyond .doll-body .fig-fill { fill: #3b3150; }
 body.beyond .avatar-bar:not(.empty) { border-color: #4a3a6b; }
 body.beyond .ab-ic { box-shadow: inset 0 0 0 2px #8f86a8; }
 body.beyond .avatar-bar.empty .ab-ic { background: rgba(184, 175, 195, 0.45); }
+
+/* ---------- 월드맵 (1~6격) ----------
+   지도는 여정 창 아래에 깔리고, 닿으면 조우 · 싸움 · 결과 창이 그 위에 뜹니다 (ui.js 의 renderMapLayer).
+   7격부터는 지도가 없어 예전 갈림길(「길을 떠난다」)이라 이 칸이 숨습니다. */
+.map-layer { display: none; position: relative; min-height: 560px; background: var(--table);
+             box-shadow: 0 0 0 2px var(--frame-out), 0 0 0 4px var(--brass), 0 0 0 6px var(--frame-out); }
+.journey-panel.map-mode .map-layer { display: block; }
+.map-layer canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+.map-layer.facing canvas { filter: brightness(0.45) saturate(0.6); }   /* 창이 뜨면 지도는 뒤로 물러납니다 */
+.map-overlay { position: relative; z-index: 1; padding: 12px; display: flex; flex-direction: column; gap: 12px; }
+.map-hud { display: flex; flex-direction: column; gap: 8px; }
+.map-stick { position: absolute; left: 50%; bottom: 16px; z-index: 2; width: 124px; height: 124px; margin-left: -62px;
+             border-radius: 50%; background: rgba(28, 16, 7, 0.42); box-shadow: 0 0 0 2px var(--brass), 0 0 0 4px rgba(28, 16, 7, 0.6);
+             touch-action: none; user-select: none; -webkit-user-select: none; }
+.map-stick .knob { position: absolute; left: 50%; top: 50%; width: 50px; height: 50px; margin: -25px 0 0 -25px; border-radius: 50%;
+                   background: var(--wood-hi); box-shadow: inset 0 -4px 0 var(--wood-lo), 0 0 0 2px var(--frame-out); pointer-events: none; }
+.map-layer.facing .map-stick { display: none; }
+@media (max-width: 860px) {
+  /* 폰 — 지도가 탭 줄 바로 위까지 차서 아래에 비워 둘 자리가 없습니다 (창이 떴을 때만 붙박이 띠만큼 비움) */
+  body[data-tab="journey"] .journey-panel.map-mode:not(.facing) { padding-bottom: 0; }
+  .map-layer { min-height: 280px; }
+  .map-overlay { padding: 10px; }
+}

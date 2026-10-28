@@ -919,6 +919,8 @@ function freshRun() {
     aura: null,          // 그 화신이 두른 기운 (없으면 null)
     lastResult: null,    // 방금 끝난 전투의 결과 — 결과 화면이 이걸 보고 그립니다
     onBoss: false,       // 그 조우가 보스전인가
+    metOnMap: false,     // 지도에서 닿은 일반인가 — 그러면 에너지는 맞설 때 씁니다 (물러서면 공짜)
+    zonesVisited: [0],   // 이 여정에 들어선 지역 — 지도에서 「…에 들어섰다」는 처음 한 번만
     merchant: null,      // 이번 회차의 떠돌이 상인 — { zone, wares, bought } (없으면 null)
     over: false,
     victory: false,
@@ -1082,6 +1084,48 @@ function travel() {
   save();
 }
 
+// ---------- 지도에서 (1~6격) ----------
+// 지도 위를 걷다 닿으면 여기를 거칩니다. 「길을 떠난다」와 달리 닿기만 해서는 에너지를 안 씁니다 —
+// 맞설 때 1 (engage), 물러서면 공짜. 정해진 자리(정예 · 히든 · 보스)는 지금처럼 닿는 순간 1이고 물러설 수 없습니다.
+//   aura  — 서 있을 때부터 두르고 있던 기운 (지도에서 빛나 보이던 그것)
+//   first — 'foe' 면 몬스터가 먼저 덤볐다
+function meetOnMap(foeId, aura, first) {
+  const run = State.run;
+  const foe = getEnemy(foeId);
+  if (!run || run.over || run.encounter || !foe) return false;
+  if (foe.zoneIndex !== run.zoneIndex) walkIntoZone(foe.zoneIndex);
+  if (foe.once) { approachPost(foe.id); return !!run.encounter; }
+  if (run.energy < RULES.TRAVEL_COST) { endRun('에너지 고갈'); save(); return false; }
+  beginEncounter(foe, false);
+  run.aura = aura || null;
+  run.metOnMap = true;
+  const who = `${foe.icon} ${foe.name}${josa(foe.name, '이', '가')}`;
+  if (run.aura) pushLog('aura', `✦ ${run.aura.name} ${foe.name}${josa(foe.name, '이', '가')} ${first === 'foe' ? '덤벼들었다' : '앞에 섰다'} — ${run.aura.desc} ✦`);
+  else pushLog('travel', first === 'foe' ? `${who} 덤벼들었다` : `${who} 앞을 막아섰다`);
+  save();
+  return true;
+}
+
+// 지도에서 다른 지역의 구역으로 걸어 들어섰다 — 「지금 지역」만 바꿉니다. 길은 지도가 막고 엽니다 (보스가 통로를 막고 섬).
+// 이 여정에 처음 들어선 지역이면 「…에 들어섰다」를 남깁니다. 지도 밖(7격)으로 나설 때도 이걸 씁니다.
+function walkIntoZone(zi) {
+  const run = State.run;
+  if (!run || run.over || !ZONES[zi] || zi === run.zoneIndex) return;
+  run.zoneIndex = zi;
+  run.progress = 0;
+  const boss = zoneBoss(zi);
+  run.zoneCleared = !!boss && isDowned(boss.id);
+  if (zi + 1 > State.meta.bestZone) State.meta.bestZone = zi + 1;
+  if (!run.zonesVisited.includes(zi)) {
+    run.zonesVisited.push(zi);
+    const z = currentZone();
+    const r = RANKS.find(x => x.n === z.rank);
+    pushLog('rank', `━━ 제${r.n}격 · ${r.name}(${r.hanja}) — ${z.name}에 들어섰다 ━━`);
+    pushLog('info', z.flavor);
+  }
+  save();
+}
+
 // 정해진 자리의 상대(정예·히든·보스)에게 향하는 데 쓴 에너지를 기록합니다.
 // 되돌려 받는 건 **이긴 그 도전에 쓴 것뿐** — 그래서 더하지 않고 매번 덮어씁니다.
 // 앞서 진 만큼(패배 페널티)과 그전에 찾아간 값은 돌아오지 않습니다.
@@ -1199,14 +1243,15 @@ function approachBoss() {
   if (boss) approachPost(boss.id);
 }
 
-// 물러선다 — 에너지는 이미 썼으니 그냥 날아갑니다. 보스한테는 못 씁니다.
+// 물러선다 — 에너지는 이미 썼으니 그냥 날아갑니다 (지도에서 닿은 것은 아직 안 썼으니 공짜). 보스한테는 못 씁니다.
 function retreat() {
   const run = State.run;
   if (run.over || !run.encounter || run.onBoss) return;
   const foe = getEnemy(run.encounter);
-  pushLog('info', `${foe.name} 앞에서 물러섰다. 발걸음만 축냈다.`);
+  pushLog('info', run.metOnMap ? `${foe.name} 앞에서 물러섰다.` : `${foe.name} 앞에서 물러섰다. 발걸음만 축냈다.`);
   run.encounter = null;
   run.aura = null;
+  run.metOnMap = false;
   checkEnergy();
   save();
 }
@@ -1215,6 +1260,12 @@ function retreat() {
 function engage() {
   const run = State.run;
   if (run.over || !run.encounter) return null;
+  // 지도에서 닿은 일반은 맞서는 지금 에너지를 씁니다
+  if (run.metOnMap) {
+    if (run.energy < RULES.TRAVEL_COST) return null;
+    run.energy -= RULES.TRAVEL_COST;
+    run.metOnMap = false;
+  }
 
   const enemy = getEnemy(run.encounter);
   const wasBoss = run.onBoss;

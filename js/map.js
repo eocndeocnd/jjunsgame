@@ -111,8 +111,11 @@
       mobs: [],
       nextMob: 1,
       live: map.areas.map(() => false),   // 구역마다 — 지금 몬스터가 세워져 있는가
-      encounter: null                     // 닿아서 싸움 화면이 떠 있는 동안 { mob | post, first }
+      encounter: null,                    // 닿아서 싸움 화면이 떠 있는 동안 { mob | post, first }
+      lastArea: -1                        // 마지막으로 서 있던 구역 (구역 밖 길 위에서는 그대로)
     };
+    const a = areaAt(w, map.start.x, map.start.y);
+    if (a) w.lastArea = a.index;
     updateAreas(w, []);
     return w;
   }
@@ -193,6 +196,7 @@
   //   { type: 'contact', mob | post, first: 'player' | 'foe' }  닿았다 — 싸움 화면 (resolve 로 끝낼 때까지 세계는 멈춤)
   //   { type: 'port', port }    열린 문에 들어섰다
   //   { type: 'closed', port }  닫힌 문에 부딪혔다
+  //   { type: 'area', area }    다른 구역에 들어섰다 (밀려나 들어선 것도)
   //   { type: 'spawn' | 'despawn', area }
   function tick(w, dt) {
     const ev = [];
@@ -213,6 +217,8 @@
       m.wait -= dt;
       if (m.wait <= 0) act(w, m, ev);
     }
+    const a = areaAt(w, p.x, p.y);
+    if (a && a.index !== w.lastArea) { w.lastArea = a.index; ev.push({ type: 'area', area: a }); }
     return ev;
   }
 

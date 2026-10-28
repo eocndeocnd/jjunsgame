@@ -679,29 +679,32 @@ function renderJourney() {
   `;
 
   // ----- 무대: 결과 · 조우 · 갈림길 중 하나 -----
-  // 정예 · 보스 · 히든과 마주하거나 싸우는 동안은 무대 창의 테두리가 그 색이 됩니다
-  const facing = facingFoe();
-  html += `<div class="frame stage ${facing && facing.kind !== 'normal' ? `k-${facing.kind}` : ''}">`;
+  // 지도 위(1~6격)에서는 갈림길 대신 지도를 걷고, 조우 · 싸움 · 결과는 그 지도 위에 뜬 창에서 봅니다
+  const onMap = onMapZone();
+  let stage = '';
   // 결과 화면이 먼저입니다. 마지막 에너지로 잡은 전리품도 보고 나서 끝나야 하니까요.
   // (여정이 끝났어도 결과를 닫기 전까지는 종료 화면을 띄우지 않습니다 — renderOverlay 참고)
   if (battle && battle.r === run.lastResult) {
-    html += battleCard(battle);
+    stage = battleCard(battle);
   } else if (run.lastResult) {
-    html += resultCard(run.lastResult, run);
+    stage = resultCard(run.lastResult, run);
     resultSounds(run.lastResult, run);
     avatarMoment(run.lastResult);
     wallMoment(run.lastResult);
     levelMoment(run.lastResult);
   } else if (run.over) {
-    html += `<p class="stage-msg">여정이 끝났다.</p>`;
+    stage = `<p class="stage-msg">여정이 끝났다.</p>`;
   } else if (run.encounter) {
-    html += encounterCard(getEnemy(run.encounter), run.onBoss, hero, run.aura);
-  } else {
-    html += crossroads(boss, hero, run);
+    stage = encounterCard(getEnemy(run.encounter), run.onBoss, hero, run.aura);
+  } else if (!onMap) {
+    stage = crossroads(boss, hero, run);
   }
-  html += `</div>`;
+  // 정예 · 보스 · 히든과 마주하거나 싸우는 동안은 무대 창의 테두리가 그 색이 됩니다
+  const facing = facingFoe();
+  const frame = stage ? `<div class="frame stage ${facing && facing.kind !== 'normal' ? `k-${facing.kind}` : ''}">${stage}</div>` : '';
 
-  $('journey').innerHTML = html;
+  $('journey').innerHTML = onMap ? html : html + frame;
+  renderMapLayer(onMap, frame);
   renderRoster();
   wireJourney();
   if (battle) { paintBattle(); return; }   // 전투가 끝나야 전리품이 튀어나오고 자동 넘기기가 돕니다
@@ -1456,27 +1459,9 @@ function crossroads(boss, hero, run) {
   }).join('');
 
   // 떠돌이 상인 — 이 지역에 있으면 정해진 자리들 맨 위에. 싸우지 않고, 들르는 데 에너지도 들지 않습니다.
-  const merchant = merchantHere() ? `
-      <div class="post hidden merchant">
-        <span class="post-icon">🎒</span>
-        <div class="post-body">
-          <div class="post-name"><span class="grade-tag hidden">${KINDS.hidden.name}</span>떠돌이 상인</div>
-        </div>
-        <button class="btn post-btn hidden" id="shopBtn">들른다</button>
-      </div>` : '';
-
-  // 화신이 데려다 준다 — 맨 처음 1격에서만, 무명의 화신이 아닌 진짜 화신을 삼았을 때
-  const warpAv = canAvatarWarp() ? getEnemy(State.meta.avatar) : null;
-  const warpZone = warpAv ? ZONES[warpZoneIndex()] : null;
-  const warp = warpAv ? `
-      <button id="warpBtn" class="btn warp-btn">
-        <span class="btn-line">${avatarTitle(warpAv)}${josa(avatarTitle(warpAv), '이', '가')} 데려다 준다</span>
-        <span class="cost">제${warpZone.rank}격 · ${warpZone.name} — 에너지 0</span>
-      </button>` : '';
-
   return `
     <div class="crossroads">
-      ${warp}
+      ${warpButton()}
       ${run.zoneCleared && nextZone ? `
         <button id="nextZoneBtn" class="btn next-btn">${nextZone.name}(으)로 넘어간다</button>` : ''}
 
@@ -1485,10 +1470,156 @@ function crossroads(boss, hero, run) {
         <span class="travel-energy ${low ? 'low' : ''}">남은 에너지 <b>${run.energy}</b><em>/${max}</em><i>· 한 걸음 −${RULES.TRAVEL_COST}</i></span>
       </button>
 
-      ${merchant}
+      ${merchantRow()}
       ${posts}
     </div>`;
 }
+
+// 떠돌이 상인 — 이 지역에 있으면. 싸우지 않고, 들르는 데 에너지도 들지 않습니다. (갈림길 · 지도 위 둘 다)
+function merchantRow() {
+  return merchantHere() ? `
+      <div class="post hidden merchant">
+        <span class="post-icon">🎒</span>
+        <div class="post-body">
+          <div class="post-name"><span class="grade-tag hidden">${KINDS.hidden.name}</span>떠돌이 상인</div>
+        </div>
+        <button class="btn post-btn hidden" id="shopBtn">들른다</button>
+      </div>` : '';
+}
+
+// 화신이 데려다 준다 — 맨 처음 1격에서만, 무명의 화신이 아닌 진짜 화신을 삼았을 때 (갈림길 · 지도 위 둘 다)
+function warpButton() {
+  const av = canAvatarWarp() ? getEnemy(State.meta.avatar) : null;
+  if (!av) return '';
+  const zone = ZONES[warpZoneIndex()];
+  return `
+      <button id="warpBtn" class="btn warp-btn">
+        <span class="btn-line">${avatarTitle(av)}${josa(avatarTitle(av), '이', '가')} 데려다 준다</span>
+        <span class="cost">제${zone.rank}격 · ${zone.name} — 에너지 0</span>
+      </button>`;
+}
+
+// ============================================================
+//  월드맵 (1~6격) — 걷다가 닿으면 조우 · 싸움 · 결과 창이 지도 위에 뜹니다
+// ============================================================
+// 지도 캔버스는 index.html 의 #mapLayer 에 늘 붙어 있고(다시 그릴 때 지워지지 않게), 창만 #mapOverlay 에 그립니다.
+// 7격부터는 지도가 생길 때까지(docs/MAP-REFERENCE-PLAN.md 4단계) 예전처럼 「길을 떠난다」입니다.
+let mapView = null, mapData = null, mapZones = null;
+let mapKey = '', mapZone = -1;   // 지금 걷는 세계가 어느 칸 · 어느 여정 · 어느 지역 것인가
+let closedSaidAt = 0;
+
+function initMap() {
+  if (mapView || typeof MAP_FILES === 'undefined' || !$('mapCanvas')) return;
+  mapData = MapRules.parseTiled(MAP_FILES.overworld, 'overworld');
+  mapZones = new Set(mapData.areas.map(a => a.zone).filter(Boolean));
+  mapView = MapView.create({
+    canvas: $('mapCanvas'),
+    stick: $('mapStick'),
+    hooks: MapView.gameHooks(),
+    paused: mapPaused,
+    marks: merchantMark,
+    onEvents: onMapEvents
+  });
+}
+
+// 지금 지역이 지도 위에 있는가
+function onMapZone() {
+  initMap();
+  return !!(State.run && mapZones && mapZones.has(ZONES[State.run.zoneIndex].id));
+}
+
+// 창이 떠 있는 동안은 지도도 멈춥니다 — 쫓아오던 것도 그 자리에
+function mapPaused() {
+  const run = State.run;
+  const up = id => { const el = $(id); return !!el && !el.classList.contains('hidden'); };
+  return !run || run.over || !!run.encounter || !!run.lastResult || !!battle || !onMapZone()
+    || isAnyModalOpen() || up('title') || up('tutorial') || up('talk');
+}
+
+// 그 지역의 들머리 — 첫 지역이면 첫 공간, 아니면 가장 약한 일반의 구역 한가운데
+function mapEntrance(zi) {
+  if (zi === 0) return mapData.start;
+  const weakest = ENEMIES.find(e => e.zoneIndex === zi && e.kind === 'normal');
+  const a = mapData.areas.find(x => x.monster === weakest.id);
+  return { x: a.x + (a.w >> 1), y: a.y + (a.h >> 1) };
+}
+
+// 새 여정이거나, 걷지 않고 지역이 바뀌었으면(불러오기 · 관리자) 그 지역 들머리에서 다시 세웁니다
+function syncMap() {
+  const run = State.run;
+  const key = `${currentSlot}|${State.meta.runCount}`;
+  if (key === mapKey && run.zoneIndex === mapZone) return;
+  mapView.start(mapData, mapEntrance(run.zoneIndex));
+  // 막 들어선 구역은 비워 둡니다 — 불러오자마자 선공이 덤벼들지 않게. 멀리 갔다 오면 다시 섭니다.
+  const w = mapView.world, here = MapRules.areaAt(w, w.player.x, w.player.y);
+  if (here) w.mobs = w.mobs.filter(m => m.area !== here.index);
+  mapKey = key;
+  mapZone = run.zoneIndex;
+}
+
+function onMapEvents(evs) {
+  const run = State.run;
+  let changed = false;
+  for (const e of evs) {
+    if (e.type === 'area') {
+      const zi = e.area.zone ? ZONES.findIndex(z => z.id === e.area.zone) : 0;   // 첫 공간은 1격 자리
+      if (zi >= 0 && zi !== run.zoneIndex) { walkIntoZone(zi); changed = true; }
+    } else if (e.type === 'contact') {
+      const id = e.mob ? e.mob.monster : e.post.enemy;
+      if (meetOnMap(id, e.mob ? e.mob.aura : null, e.first)) soundEncounter();
+      else mapView.resolve('retreat');   // 에너지가 모자라 여정이 끝났다
+      changed = true;
+    } else if (e.type === 'port' && e.port.to === 'hub') {
+      // 마왕 뒤의 문 — 문의 광장과 7격부터의 지도가 생기기 전까지는 곧장 7격으로 (예전처럼 「길을 떠난다」)
+      const next = Math.max(...[...mapZones].map(id => ZONES.findIndex(z => z.id === id))) + 1;
+      walkIntoZone(next);
+      Sound.play('zoneMove');
+      changed = true;
+    } else if (e.type === 'closed' && Date.now() - closedSaidAt > 2000) {
+      closedSaidAt = Date.now();
+      const boss = getEnemy(e.port.opensAfter);
+      pushLog('info', `${e.port.name} — 닫혀 있다. ${boss.name}${josa(boss.name, '을', '를')} 꺾어야 열린다.`);
+      changed = true;
+    }
+  }
+  mapZone = run.zoneIndex;
+  if (changed) render();
+}
+
+// 떠돌이 상인이 서 있는 칸
+function merchantMark() {
+  const m = State.run && State.run.merchant;
+  const z = m && ZONES[m.zone];
+  const spot = z && mapData.npcs.find(n => n.name === 'merchant' && n.zone === z.id);
+  return spot ? [{ x: spot.x, y: spot.y, icon: '🎒' }] : [];
+}
+
+function renderMapLayer(onMap, frame) {
+  const panel = document.querySelector('.journey-panel'), layer = $('mapLayer');
+  if (!panel || !layer) return;
+  panel.classList.toggle('map-mode', onMap);
+  panel.classList.toggle('facing', onMap && !!frame);
+  layer.classList.toggle('facing', onMap && !!frame);
+  if (!onMap) { $('mapOverlay').innerHTML = ''; return; }
+  syncMap();
+  // 아무도 마주하지 않으면 창 없이 지도만 — 상인 · 화신 문이 있으면 위에 작게
+  const hud = warpButton() + merchantRow();
+  $('mapOverlay').innerHTML = frame || (hud ? `<div class="map-hud">${hud}</div>` : '');
+  fitMapLayer();
+}
+
+// 폰에서는 지도가 아래 탭 줄 바로 위까지 화면을 채웁니다 (넓은 화면은 CSS 의 높이 그대로)
+function fitMapLayer() {
+  const layer = $('mapLayer');
+  if (!layer) return;
+  if (window.innerWidth > 860) { layer.style.minHeight = ''; return; }
+  if (fightLocked()) return;            // 싸우는 동안은 탭 줄이 숨어 높이가 달라집니다 — 그대로 둡니다
+  const tabs = document.querySelector('.mobile-tabs');
+  const bottom = tabs && tabs.getClientRects().length ? tabs.getBoundingClientRect().top : window.innerHeight;
+  const top = layer.getBoundingClientRect().top + window.scrollY;
+  layer.style.minHeight = `${Math.max(280, Math.floor(bottom - top - 10))}px`;
+}
+window.addEventListener('resize', () => { if (document.querySelector('.journey-panel.map-mode')) fitMapLayer(); });
 
 // ---------- 승률은 숫자로 보여주지 않습니다 ----------
 // 정확한 확률 대신 "느낌" 을 한 문장으로. 20% 구간마다 하나씩이고,
@@ -1569,10 +1700,12 @@ function wireJourney() {
     const from = logSeq;
     const r = engage();
     if (r) r.pre = pre;
+    // 지도 위라면 이긴 상대는 사라지고, 지면 한 칸 밀려납니다 (보여 주는 건 싸움 창이 닫힌 뒤)
+    if (r && mapView) mapView.resolve(r.win ? 'win' : 'lose');
     startBattle(r, from);
     render();
   });   // 소리는 전투 화면이 한 줄씩 냅니다
-  on('retreatBtn',   () => { retreat();        Sound.play('retreat');    render(); });
+  on('retreatBtn',   () => { retreat(); if (mapView) mapView.resolve('retreat'); Sound.play('retreat'); render(); });
   on('continueBtn',  () => { dismissResult();  render(); });
   on('toAllocBtn',   openAllocHere);   // 결과는 그대로 두고 분배 창만 띄웁니다
   on('toGearBtn',    () => {
@@ -2621,9 +2754,9 @@ const TUTORIAL = [
   { t: '격이 무너져도 남는 것',
     b: '에너지가 떨어지면 레벨은 1로 돌아갑니다. 하지만 <b>빼앗은 전리품은 영원히 남습니다.</b> 다음 여정은 더 강한 몸으로 시작합니다.' },
   { t: '길 끝에는 누가 서 있다',
-    b: '「길을 떠난다」로 만나는 상대는 매번 다릅니다. 하지만 <b>정예와 보스는 정해진 자리</b>에 늘 서 있고, 한 여정에 한 번만 만날 수 있습니다. 대신 좋은 것을 남깁니다.' },
+    b: '지도를 걷다가 <b>몬스터에 닿으면 싸움</b>이 됩니다 (폰은 아래 조이스틱, 키보드는 방향키). 보자마자 쫓아오는 놈도, 달아나는 놈도 있습니다. <b>정예와 보스는 정해진 자리</b>에 서 있고, 한 여정에 한 번만 만날 수 있습니다. 대신 좋은 것을 남깁니다.' },
   { t: '이길 수 있을 것 같나',
-    b: '싸우기 전에 <b>이길 만한지 예감</b>이 듭니다 — 「잡기 쉬울 것 같다」부터 「불가능할 것 같다」까지. 물러설 수도 있습니다 — 다만 이미 쓴 에너지는 돌아오지 않습니다. 정예와 보스 앞에서는 물러설 수 없습니다.' },
+    b: '싸우기 전에 <b>이길 만한지 예감</b>이 듭니다 — 「잡기 쉬울 것 같다」부터 「불가능할 것 같다」까지. 에너지는 <b>맞설 때만</b> 듭니다 — 물러서면 그대로입니다. 정예와 보스 앞에서는 물러설 수 없습니다.' },
   { t: '같은 것이 또 나오면',
     b: '이미 가진 전리품은 <b>자동으로 분해되어 그 부위의 강화석</b>이 됩니다. 강화석으로 부위를 강화하면 그 칸에 무엇을 끼든 강해집니다. 높이 올릴수록 실패하기 쉽습니다.' }
 ];

@@ -28,6 +28,17 @@ def read(p):
     # 알아서 걷어내기 때문에 합친 파일에서만 터집니다.
     return (ROOT / p).read_text(encoding="utf-8-sig")
 
+# 지도 — maps/*.tmj (Tiled 로 고치는 파일)를 js/maps.js 로 감쌉니다.
+# 한 파일 빌드(jjunsgame.html)는 따로 된 파일을 못 불러오니, 지도도 스크립트로 넣어야 열립니다.
+# 지도가 그대로면 파일도 그대로 둡니다 (빌드마다 커다란 변경이 생기지 않게).
+import json
+_maps = {p.stem: json.loads(p.read_text(encoding="utf-8-sig")) for p in sorted((ROOT / "maps").glob("*.tmj"))}
+_maps_js = ("// 자동으로 만든 파일입니다 — 고치지 마세요. 지도는 maps/*.tmj 를 Tiled 로 고치고 python build.py 로 다시 뽑습니다.\n"
+            "const MAP_FILES = " + json.dumps(_maps, ensure_ascii=False, separators=(",", ":")) + ";\n")
+_maps_path = ROOT / "js" / "maps.js"
+if not _maps_path.exists() or _maps_path.read_text(encoding="utf-8") != _maps_js:
+    _maps_path.write_text(_maps_js, encoding="utf-8")
+
 # 쪽지 — index.html 이 가리키는 css · js 주소에 빌드마다 ?v=시각 을 붙입니다.
 # 깃허브 페이지는 파일마다 따로 캐시(약 10분)를 해서, 새로 올린 직후 폰이 **옛 index.html + 새 js** 를 섞어 받는 일이
 # 있었습니다 (새 js 가 찾는 요소가 옛 html 에 없어 초기화면이 안 뜨고 탭이 죽음). 주소가 버전마다 다르면
@@ -101,9 +112,11 @@ assert "--bg:" in html, "치명적: 색 변수가 사라졌습니다"
 # 쉼표 하나 빠뜨려서 data.js 가 통째로 죽은 적이 있습니다. 그러면 화면은
 # 멀쩡히 뜨는데 게임만 안 돌아서, 브라우저 콘솔을 보기 전에는 모릅니다.
 import shutil, subprocess
+JS_CHECK = ("js/backdrop.js", "js/sound.js", "js/fx.js", "js/data.js", "js/game.js",
+            "js/maps.js", "js/map.js", "js/mapview.js", "js/ui.js")
 _node = shutil.which("node")
 if _node:
-    for f in ("js/backdrop.js", "js/sound.js", "js/fx.js", "js/data.js", "js/game.js", "js/ui.js"):
+    for f in JS_CHECK:
         r = subprocess.run([_node, "--check", str(ROOT / f)], capture_output=True, text=True)
         if r.returncode != 0:
             raise SystemExit(f"문법 오류 — {f}\n{r.stderr.strip()}")
@@ -123,7 +136,7 @@ if _node:
 else:
     print("  ⚠ node 가 없어 문법 검사 · 전리품 번호 · 분포 검사를 건너뜁니다 (괄호 짝만 셉니다). 설치하면 빌드할 때마다 자동으로 돕니다.")
     # node 가 없으면 최소한 괄호 짝이라도 셉니다
-    for f in ("js/backdrop.js", "js/sound.js", "js/fx.js", "js/data.js", "js/game.js", "js/ui.js"):
+    for f in JS_CHECK:
         src = read(f)
         for open_c, close_c in (("{", "}"), ("(", ")"), ("[", "]")):
             if src.count(open_c) != src.count(close_c):

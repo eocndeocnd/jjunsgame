@@ -90,6 +90,20 @@ test('구역이 시야에 들어오면 3~4마리 — 서로 붙지 않고, 내 �
   }
 });
 
+test('다른 구역에 들어서면 알린다 — 구역 밖 길 위는 그대로', () => {
+  const m = mapOf([
+    '############',
+    '#aaa@...bbb#',
+    '############'
+  ]);
+  const w = M.createWorld(m, {}, 11);
+  w.mobs = [];
+  M.setInput(w, 'right');
+  const ev = run(w, 1.2).filter(e => e.type === 'area');
+  assert.equal(ev.length, 1, '길 위로 나선 것은 알리지 않음');
+  assert.equal(ev[0].area.name, 'b');
+});
+
 test('멀리(10칸 넘게) 갔다가 돌아오면 남은 것을 지우고 새로 선다', () => {
   const m = mapOf([
     '##################################',
