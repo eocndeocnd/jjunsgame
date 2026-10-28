@@ -192,7 +192,7 @@ function drawEnc() {
 
 // ───────────────────────── 글 · 작은 지도 ─────────────────────────
 const RANK_COLOR = { 1: '#6b6152', 2: '#4f6b30', 3: '#7a4f2a', 4: '#5c6570', 5: '#5e3a72', 6: '#8c1f24' };
-const TILE_COLOR = ['#ead6a6', '#3f240f', '#1f5a96'];
+const TILE_COLOR = ['#ead6a6', '#3f240f', '#1f5a96', '#4a5e2a', '#7a7062', '#f2e2b8'];   // 바닥 · 벽 · 물 · 나무 · 바위 · 길
 function drawHud() {
   const run = State.run, w = view.world;
   if (!run || !w) return;
@@ -221,7 +221,7 @@ function drawMini() {
   const hooks = view.world.hooks;
   for (const post of map.posts) if (hooks.postAlive(post.enemy)) {
     mx.fillStyle = MapView.KIND_COLOR[getEnemy(post.enemy).kind];
-    mx.fillRect(post.x * MS - 1, post.y * MS - 1, MS + 2, MS + 2);
+    mx.fillRect(post.x * MS - 1, post.y * MS - 1, post.w * MS + 2, post.h * MS + 2);
   }
   const p = view.world.player, r = MapRules.RULES.SIGHT;
   mx.strokeStyle = '#f6e7c3'; mx.lineWidth = 1;

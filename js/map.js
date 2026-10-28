@@ -8,7 +8,7 @@
 //  지도는 Tiled(무료 지도 편집기)가 바로 여는 JSON(.tmj)입니다 — parseTiled 가 읽습니다.
 //    ground   타일 층 — 타일셋에서 solid 속성이 붙은 타일은 지나갈 수 없습니다 (벽 · 물)
 //    areas    사각형 — 구역. 속성 rank · monster(적 id) · zone(지역 id). monster 가 없으면 이름뿐인 곳(첫 공간)
-//    posts    점 — 정예 · 보스 · 히든 자리. 속성 enemy · blocks(길을 막는가)
+//    posts    점 또는 사각형 — 정예 · 보스 · 히든 자리. 속성 enemy · blocks(길을 막는가)
 //    ports    사각형 — 드나드는 문. 속성 to(행선지) · opensAfter(꺾어야 열리는 보스 id)
 //    secrets  사각형 — 숨은 입구. 벽으로 그려져 있어도 지나갈 수 있습니다
 //    npc      점 — start(시작점) · merchant(상인 자리) · avatarDoor(화신 문)
@@ -78,7 +78,8 @@
     m.areas = objects('areas').map((o, i) => ({ index: i, name: o.name, ...rect(o), ...props(o) }));
     m.areaAt = new Int16Array(w * h).fill(-1);
     for (const a of m.areas) eachCell(m, a, (x, y) => { m.areaAt[y * w + x] = a.index; });
-    m.posts = objects('posts').map(o => ({ name: o.name, ...cell(o), ...props(o) }));
+    // 정해진 자리 — 점이면 한 칸, 사각형이면 그만큼 (3×3 보스가 고갯길을 막고 섭니다)
+    m.posts = objects('posts').map(o => ({ name: o.name, ...(o.point || !o.width ? { ...cell(o), w: 1, h: 1 } : rect(o)), ...props(o) }));
     m.ports = objects('ports').map(o => ({ name: o.name, ...rect(o), ...props(o) }));
     m.npcs = objects('npc').map(o => ({ name: o.name, ...cell(o), ...props(o) }));
     const start = m.npcs.find(n => n.name === 'start');
@@ -139,7 +140,7 @@
     return i >= 0 ? w.map.areas[i] : null;
   }
   function mobAt(w, x, y) { return w.mobs.find(m => m.x === x && m.y === y) || null; }
-  function postAt(w, x, y) { return w.map.posts.find(p => p.x === x && p.y === y && w.hooks.postAlive(p.enemy)) || null; }
+  function postAt(w, x, y) { return w.map.posts.find(p => inRect(p, x, y) && w.hooks.postAlive(p.enemy)) || null; }
   function portAt(w, x, y) { return w.map.ports.find(p => inRect(p, x, y)) || null; }
   function wall(w, x, y) {
     if (x < 0 || y < 0 || x >= w.map.w || y >= w.map.h || w.map.solid[y * w.map.w + x]) return true;
@@ -334,11 +335,12 @@
 
   function pushBack(w, foe) {
     const p = w.player;
+    const fx = foe.x + ((foe.w || 1) - 1) / 2, fy = foe.y + ((foe.h || 1) - 1) / 2;   // 큰 자리는 한가운데에서 멀어지게
     let best = null, bestScore = -1;
     for (const [dx, dy] of STEPS) {
       const x = p.x + dx, y = p.y + dy;
       if (wall(w, x, y) || mobAt(w, x, y) || postAt(w, x, y) || (portAt(w, x, y) || {}).to) continue;
-      const score = manh(x, y, foe.x, foe.y) + (x === p.fromX && y === p.fromY ? 0.5 : 0);   // 걸어온 칸이면 그쪽으로
+      const score = manh(x, y, fx, fy) + (x === p.fromX && y === p.fromY ? 0.5 : 0);   // 걸어온 칸이면 그쪽으로
       if (score > bestScore) { best = { x, y }; bestScore = score; }
     }
     if (!best) return;
@@ -347,7 +349,7 @@
     updateAreas(w, []);
   }
 
-  const api = { RULES, TEMPER_BY_ARCH, DIRS, temperOf, parseTiled, createWorld, setInput, tick, resolve, areaAt, mobAt, postAt, portAt };
+  const api = { RULES, TEMPER_BY_ARCH, DIRS, temperOf, mulberry, parseTiled, createWorld, setInput, tick, resolve, areaAt, mobAt, postAt, portAt };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.MapRules = api;
 })(typeof window !== 'undefined' ? window : globalThis);

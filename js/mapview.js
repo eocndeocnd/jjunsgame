@@ -8,7 +8,9 @@ const MapView = (function () {
   'use strict';
 
   const VIEW = MapRules.RULES.SIGHT * 2 + 1;              // 좁은 쪽에 이만큼 칸 — 나를 가운데 둔 보이는 범위
-  const TILE_COLOR = ['#ead6a6', '#3f240f', '#1f5a96'];   // 바닥 · 벽 · 물 (maps/tiles.png 와 같은 순서)
+  // 바닥 · 벽 · 물 · 나무 · 바위 · 길 (maps/tiles.png 와 같은 순서) — 나무 · 바위는 바닥 위에 그 모양을 얹습니다
+  const TILE_COLOR = ['#ead6a6', '#3f240f', '#1f5a96', '#ead6a6', '#ead6a6', '#f2e2b8'];
+  const TREE = 3, ROCK = 4;
   const RANK_FALLBACK = { 1: '#6b6152', 2: '#4f6b30', 3: '#7a4f2a', 4: '#5c6570', 5: '#5e3a72', 6: '#8c1f24' };   // style.css 가 없을 때 (맵 초안)
   const KIND_COLOR = { elite: '#3f6d2a', boss: '#a8262b', hidden: '#5b2a86' };   // 무대 창 테두리와 같은 색
   const TEMPER_COLOR = { aggro: '#d0473f', passive: '#4a80b8', shy: '#5aa04f' };
@@ -77,20 +79,28 @@ const MapView = (function () {
       const x0 = Math.max(0, Math.floor(-ox / T)), y0 = Math.max(0, Math.floor(-oy / T));
       const x1 = Math.min(m.w, Math.ceil((cw - ox) / T)), y1 = Math.min(m.h, Math.ceil((ch - oy) / T));
       for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
-        const k = y * m.w + x, px = ox + x * T, py = oy + y * T;
-        ctx.fillStyle = TILE_COLOR[m.tile[k]] || '#000';
+        const k = y * m.w + x, px = ox + x * T, py = oy + y * T, t = m.tile[k];
+        ctx.fillStyle = TILE_COLOR[t] || '#000';
         ctx.fillRect(px, py, T, T);
         const a = m.areaAt[k] >= 0 ? m.areas[m.areaAt[k]] : null;
         if (a && a.rank) { ctx.globalAlpha = 0.2; ctx.fillStyle = rankColor(a.rank); ctx.fillRect(px, py, T, T); ctx.globalAlpha = 1; }
+        if (t === TREE) {
+          ctx.fillStyle = '#4a5e2a'; ctx.beginPath(); ctx.arc(px + T / 2, py + T / 2, T * 0.42, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = '#5c7434'; ctx.beginPath(); ctx.arc(px + T * 0.42, py + T * 0.4, T * 0.2, 0, Math.PI * 2); ctx.fill();
+        } else if (t === ROCK) {
+          ctx.fillStyle = '#7a7062'; ctx.fillRect(px + T * 0.12, py + T * 0.22, T * 0.76, T * 0.66);
+          ctx.fillStyle = '#968c7c'; ctx.fillRect(px + T * 0.12, py + T * 0.22, T * 0.76, T * 0.22);
+        }
         if (m.secret[k]) { ctx.fillStyle = 'rgba(234,214,166,0.1)'; ctx.fillRect(px, py, T, T); }   // 아주 옅게 — 눈썰미 있는 사람만
       }
-      const seen = (x, y) => x >= x0 - 1 && y >= y0 - 1 && x <= x1 && y <= y1;
-      const glyph = (x, y, icon, scale = 0.72) => {
-        ctx.font = `${Math.round(T * scale)}px system-ui, "Segoe UI Emoji", "Noto Color Emoji", sans-serif`;
+      const seen = (x, y, sw = 1, sh = 1) => x + sw >= x0 && y + sh >= y0 && x <= x1 && y <= y1;
+      // cx · cy 는 칸 단위의 한가운데 (한 칸짜리면 x + 0.5)
+      const glyph = (cx, cy, icon, size = 0.72) => {
+        ctx.font = `${Math.round(T * size)}px system-ui, "Segoe UI Emoji", "Noto Color Emoji", sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillStyle = '#000';
-        ctx.fillText(icon, ox + (x + 0.5) * T, oy + (y + 0.56) * T);
+        ctx.fillText(icon, ox + cx * T, oy + (cy + 0.06) * T);
       };
       const line = Math.max(2, Math.round(T / 10));
 
@@ -98,14 +108,15 @@ const MapView = (function () {
         ctx.fillStyle = w.hooks.portOpen(port) ? '#3fae4a' : '#5c3a1a';
         ctx.fillRect(ox + port.x * T + 2, oy + port.y * T + 2, T - 4, T - 4);
       }
-      for (const mk of (o.marks ? o.marks() : [])) if (seen(mk.x, mk.y)) glyph(mk.x, mk.y, mk.icon);
+      for (const mk of (o.marks ? o.marks() : [])) if (seen(mk.x, mk.y)) glyph(mk.x + 0.5, mk.y + 0.5, mk.icon);
       for (const post of m.posts) {
-        if (!seen(post.x, post.y) || !w.hooks.postAlive(post.enemy)) continue;
-        const f = getEnemy(post.enemy);
+        if (!seen(post.x, post.y, post.w, post.h) || !w.hooks.postAlive(post.enemy)) continue;
+        const f = getEnemy(post.enemy), pw = post.w * T, ph = post.h * T;
+        if (post.w > 1) { ctx.fillStyle = 'rgba(28,16,7,0.18)'; ctx.fillRect(ox + post.x * T, oy + post.y * T, pw, ph); }   // 큰 자리 — 그림자
         ctx.strokeStyle = KIND_COLOR[f.kind] || '#000';
         ctx.lineWidth = line;
-        ctx.strokeRect(ox + post.x * T + line / 2, oy + post.y * T + line / 2, T - line, T - line);
-        glyph(post.x, post.y, f.icon);
+        ctx.strokeRect(ox + post.x * T + line / 2, oy + post.y * T + line / 2, pw - line, ph - line);
+        glyph(post.x + post.w / 2, post.y + post.h / 2, f.icon, 0.72 * Math.min(post.w, post.h));
       }
       for (const mob of w.mobs) {
         if (!seen(mob.x, mob.y)) continue;
@@ -118,7 +129,7 @@ const MapView = (function () {
           ctx.restore();
         }
         ctx.globalAlpha = mob.frozen > 0 ? 0.45 : 1;
-        glyph(mob.x, mob.y, getEnemy(mob.monster).icon);
+        glyph(mob.x + 0.5, mob.y + 0.5, getEnemy(mob.monster).icon);
         ctx.globalAlpha = 1;
         if (o.dots) {
           ctx.fillStyle = TEMPER_COLOR[mob.temper];

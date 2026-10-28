@@ -318,13 +318,30 @@ test('overworld — 1~6격 몬스터가 모두 한 번씩, 구역 48개', () => 
   assert.deepEqual(m.posts.map(p => p.enemy).sort(), foes.filter(e => e.kind !== 'normal').map(e => e.id).sort());
   assert.equal(areaMonsters.length, 48);
   assert.deepEqual(m.ports.map(p => [p.to, p.opensAfter]), [['hub', 'demonking']]);
+  // 길을 막는 것은 보스와 세계수를 먹는 벌레뿐, 그리고 그것들은 3×3
+  const blockers = m.posts.filter(p => p.blocks);
+  assert.deepEqual(blockers.map(p => p.enemy).sort(), ['demonking', 'dungeonguardian', 'giantking', 'worldworm']);
+  assert.ok(blockers.every(p => p.w === 3 && p.h === 3));
+});
+
+test('overworld — 오픈월드: 같은 격 들판 사이는 넓게 트였다 (8칸 넘게)', () => {
+  const m = M.parseTiled(JSON.parse(fs.readFileSync(path.join(ROOT, 'maps/overworld.tmj'), 'utf8')), 'overworld');
+  const open = (x, y) => x >= 0 && y >= 0 && x < m.w && y < m.h && !m.solid[y * m.w + x];
+  // 1격 첫 두 구역(슬라임 · 자이언트 랫) 사이 틈에서, 세로로 이어 트인 칸이 가장 긴 줄
+  const [a, b] = ['slime', 'giantrat'].map(id => m.areas.find(x => x.monster === id));
+  let best = 0;
+  for (let x = a.x + a.w; x < b.x; x++) {
+    let run = 0;
+    for (let y = a.y; y < a.y + a.h; y++) { run = open(x, y) ? run + 1 : 0; best = Math.max(best, run); }
+  }
+  assert.ok(best >= 8, `트인 폭 ${best}칸`);
 });
 
 test('overworld — 보스를 꺾어야 갈래가 열리고, 4격은 보이기만 하고 1격 길에서 걸어서 8칸 넘게', () => {
   const m = M.parseTiled(JSON.parse(fs.readFileSync(path.join(ROOT, 'maps/overworld.tmj'), 'utf8')), 'overworld');
   const start = m.start.y * m.w + m.start.x;
-  const postCell = id => { const p = m.posts.find(q => q.enemy === id); return p.y * m.w + p.x; };
-  const allPosts = new Set(m.posts.map(p => p.y * m.w + p.x));
+  const postCells = p => cellsOf(m, p);                     // 3×3 보스는 아홉 칸 다
+  const allPosts = new Set(m.posts.flatMap(postCells));
   const reach = (blocked, rank) => {   // 그 격의 구역 하나라도 닿는가 (길막 정예 너머는 못 갈 수 있음)
     const d = walk(m, [start], blocked);
     return m.areas.filter(a => a.rank === rank).some(a => cellsOf(m, a).some(i => d[i] >= 0));
@@ -332,20 +349,24 @@ test('overworld — 보스를 꺾어야 갈래가 열리고, 4격은 보이기�
   // 정예 · 보스가 모두 서 있으면 1 · 4격까지만
   for (const r of [1, 4]) assert.ok(reach(allPosts, r), `${r}격은 처음부터`);
   for (const r of [2, 3, 5, 6]) assert.ok(!reach(allPosts, r), `${r}격은 보스 너머`);
-  const but = (...ids) => new Set([...allPosts].filter(i => !ids.map(postCell).includes(i)));
+  const but = (...ids) => {
+    const gone = new Set(m.posts.filter(p => ids.includes(p.enemy)).flatMap(postCells));
+    return new Set([...allPosts].filter(i => !gone.has(i)));
+  };
   const after1 = but('dungeonguardian', 'goblinchief'), after4 = but('giantking');
   assert.ok(reach(after1, 2) && reach(after1, 3), '1격 보스 너머 2 · 3격');
   assert.ok(reach(after4, 5) && reach(after4, 6), '4격 보스 너머 5 · 6격');
   // 지도 전체가 이어져 있다 (숨은 통로 포함)
   const all = walk(m, [start]);
-  assert.ok(m.areas.every(a => cellsOf(m, a).every(i => all[i] >= 0)), '모든 구역에 닿음');
+  assert.ok(m.areas.every(a => cellsOf(m, a).filter(i => !m.solid[i]).every(i => all[i] >= 0)), '모든 구역의 걸을 수 있는 칸에 닿음');
 
   // 배치 규칙 — 1격 길(첫 공간 + 1격 구역)에서 4격 구역까지 걸어서 8칸 넘게, 그러나 눈에는 보임
   const plaza = m.areas.find(a => !a.monster);
-  const path1 = [...cellsOf(m, plaza), ...m.areas.filter(a => a.rank === 1).flatMap(a => cellsOf(m, a))];
+  const walkable = cells => cells.filter(i => !m.solid[i]);
+  const path1 = walkable([...cellsOf(m, plaza), ...m.areas.filter(a => a.rank === 1).flatMap(a => cellsOf(m, a))]);
   const d = walk(m, path1);
   const giants = m.areas.filter(a => a.rank === 4);
-  const nearest = Math.min(...giants.flatMap(a => cellsOf(m, a).map(i => d[i])));
+  const nearest = Math.min(...giants.flatMap(a => walkable(cellsOf(m, a)).map(i => d[i])));
   assert.ok(nearest > 8, `걸어서 ${nearest}칸`);
   const seen = giants.some(a => path1.some(i => {
     const x = i % m.w, y = (i / m.w) | 0;
