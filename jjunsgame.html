@@ -9553,6 +9553,27 @@ const MapView = (function () {
     const shown = () => !!o.canvas.offsetParent;   // 탭을 옮겨 안 보이면 세계도 멈춥니다
     const live = () => v.world && shown() && !o.paused();
 
+    // ---------- 부드럽게 ----------
+    // 규칙은 칸 그대로(map.js) — 보이는 자리만 칸 사이를 미끄러져 따라갑니다. 걷는 동안은 살짝 들썩입니다.
+    // 미끄러지는 빠르기는 그 걸음의 빠르기와 같게: 나는 초당 5칸, 몬스터는 초당 3칸 (어슬렁은 미끄러진 뒤 잠깐 섬).
+    const glide = new WeakMap();   // 나 · 몬스터 → 보이는 자리 { x, y, phase }
+    function seenAt(e, speed, dt) {
+      let g = glide.get(e);
+      if (!g || Math.abs(g.x - e.x) + Math.abs(g.y - e.y) > 2) {   // 처음 보거나 멀리 옮겨졌으면(문 · 불러오기) 그 자리에
+        g = { x: e.x, y: e.y, phase: 0 };
+        glide.set(e, g);
+        return g;
+      }
+      const step = speed * dt;
+      const toward = (from, to) => (Math.abs(to - from) <= step ? to : from + Math.sign(to - from) * step);
+      const moving = g.x !== e.x || g.y !== e.y;
+      g.x = toward(g.x, e.x);
+      g.y = toward(g.y, e.y);
+      g.phase = moving ? g.phase + dt * speed * Math.PI : 0;   // 한 칸에 한 번 들썩
+      return g;
+    }
+    v.seenAt = e => glide.get(e);   // 시험 · 살펴보기용
+
     // ---------- 시간 ----------
     function frame(now) {
       const dt = Math.min(0.1, (now - (last || now)) / 1000);
@@ -9561,7 +9582,7 @@ const MapView = (function () {
         const evs = MapRules.tick(v.world, dt);
         if (evs.length) o.onEvents(evs);
       }
-      if (v.world && shown()) draw();
+      if (v.world && shown()) draw(dt);
       requestAnimationFrame(frame);
     }
     requestAnimationFrame(frame);
@@ -9577,13 +9598,16 @@ const MapView = (function () {
       T = Math.max(16, Math.floor(Math.min(cw, ch) / VIEW));
     }
 
-    function draw() {
+    function draw(dt) {
       fit();
-      const w = v.world, m = w.map, p = w.player;
+      const w = v.world, m = w.map, p = w.player, R = MapRules.RULES;
+      const gp = seenAt(p, R.PLAYER_SPEED, dt);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.fillStyle = '#1c1007';
       ctx.fillRect(0, 0, cw, ch);
-      const ox = Math.round(cw / 2 - (p.x + 0.5) * T), oy = Math.round(ch / 2 - (p.y + 0.5) * T);
+      // 카메라는 보이는 내 자리를 따라갑니다 — 기기 픽셀에 맞춰 반올림해 칸 사이에 틈이 안 생기게
+      const ox = Math.round((cw / 2 - (gp.x + 0.5) * T) * dpr) / dpr, oy = Math.round((ch / 2 - (gp.y + 0.5) * T) * dpr) / dpr;
+      const bob = g => -Math.abs(Math.sin(g.phase)) * T * 0.08;
       const x0 = Math.max(0, Math.floor(-ox / T)), y0 = Math.max(0, Math.floor(-oy / T));
       const x1 = Math.min(m.w, Math.ceil((cw - ox) / T)), y1 = Math.min(m.h, Math.ceil((ch - oy) / T));
       for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
@@ -9642,8 +9666,10 @@ const MapView = (function () {
         glyph(post.x + post.w / 2, post.y + post.h / 2, f.icon, 0.72 * Math.min(post.w, post.h));
       }
       for (const mob of w.mobs) {
-        if (!seen(mob.x, mob.y)) continue;
-        const cx = ox + (mob.x + 0.5) * T, cy = oy + (mob.y + 0.5) * T;
+        const g = seenAt(mob, R.CHASE_SPEED, dt);
+        if (!seen(Math.floor(g.x), Math.floor(g.y), 2, 2)) continue;
+        const gy = g.y + bob(g) / T;                          // 들썩임까지 얹은 보이는 줄
+        const cx = ox + (g.x + 0.5) * T, cy = oy + (gy + 0.5) * T;
         if (mob.aura) {   // 기운 — 그 색으로 빛남
           ctx.save();
           ctx.shadowColor = mob.aura.color; ctx.shadowBlur = T * 0.6;
@@ -9652,21 +9678,22 @@ const MapView = (function () {
           ctx.restore();
         }
         ctx.globalAlpha = mob.frozen > 0 ? 0.45 : 1;
-        glyph(mob.x + 0.5, mob.y + 0.5, getEnemy(mob.monster).icon);
+        glyph(g.x + 0.5, gy + 0.5, getEnemy(mob.monster).icon);
         ctx.globalAlpha = 1;
         if (o.dots) {
           ctx.fillStyle = TEMPER_COLOR[mob.temper];
-          ctx.beginPath(); ctx.arc(ox + (mob.x + 0.18) * T, oy + (mob.y + 0.18) * T, T * 0.13, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.arc(ox + (g.x + 0.18) * T, oy + (gy + 0.18) * T, T * 0.13, 0, Math.PI * 2); ctx.fill();
         }
         if (mob.mode === 'chase') {   // 쫓아오는 중
           ctx.fillStyle = '#d0473f';
           ctx.font = `bold ${Math.round(T * 0.55)}px sans-serif`;
-          ctx.fillText('!', ox + (mob.x + 0.85) * T, oy + (mob.y + 0.2) * T);
+          ctx.fillText('!', ox + (g.x + 0.85) * T, oy + (gy + 0.2) * T);
         }
       }
       // 나
+      const py = gp.y + bob(gp) / T;
       ctx.fillStyle = '#1c1007'; ctx.strokeStyle = '#f6e7c3'; ctx.lineWidth = line + 1;
-      ctx.beginPath(); ctx.arc(ox + (p.x + 0.5) * T, oy + (p.y + 0.5) * T, T * 0.34, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.arc(ox + (gp.x + 0.5) * T, oy + (py + 0.5) * T, T * 0.34, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
     }
 
     // ---------- 방향키 · WASD ----------
