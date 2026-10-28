@@ -43,6 +43,7 @@ const fbm = (x, y, s = 0) => vnoise(x, y, s) * 0.55 + vnoise(x * 2.1, y * 2.1, s
 const base = new Float32Array(PW * PH * 3);
 const emis = new Uint8Array(PW * PH);              // 스스로 빛나는 픽셀 (용암) — 어두운 격에서도 안 어두워짐
 const glowBuf = new Float32Array(PW * PH * 3);
+const lightBuf = new Float32Array(PW * PH);         // 어둠을 걷어 내는 빛 (곱하는 빛 — 더하는 glow 와 달리 색이 바래지 않음)
 function put(x, y, c, a = 1) {
   x |= 0; y |= 0;
   if (x < 0 || y < 0 || x >= PW || y >= PH) return;
@@ -72,6 +73,13 @@ function shadow(cx, cy, rx, ry, f = 0.62) {
 function line(x0, y0, x1, y1, c, a = 1) {
   const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0), 1);
   for (let k = 0; k <= n; k++) put(Math.round(x0 + (x1 - x0) * k / n), Math.round(y0 + (y1 - y0) * k / n), c, a);
+}
+function lightUp(cx, cy, r, s) {
+  for (let y = Math.floor(cy - r); y <= cy + r; y++) for (let x = Math.floor(cx - r); x <= cx + r; x++) {
+    if (x < 0 || y < 0 || x >= PW || y >= PH) continue;
+    const d = Math.hypot(x + 0.5 - cx, (y + 0.5 - cy) * 1.25) / r;
+    if (d < 1) lightBuf[y * PW + x] += sm(1 - d) * s;
+  }
 }
 function glow(cx, cy, r, c, s = 1) {
   for (let y = Math.floor(cy - r); y <= cy + r; y++) for (let x = Math.floor(cx - r); x <= cx + r; x++) {
@@ -141,7 +149,7 @@ function trail(pts, width, b) {
 // 강 — 숲 북서쪽 폭포에서 내려와, 숲을 나서면 어두운 협곡 사이로만 흐르다가(둑 없음 — 숲과 첫 공간이 이어지지 않게)
 // 첫 공간 남쪽에서 강가 풀밭이 되고, 동쪽 끝 호수에서 어둠 속으로 떨어집니다. 호수 둘레도 어둠이라 강 양쪽이 이어지지 않습니다.
 const RIVER = [[9, 1], [11, 9], [15, 20], [13, 31], [17, 44], [22, 56], [32, 66], [50, 67], [70, 66], [88, 67], [100, 65]];
-road(RIVER.slice(5, 10), 11, GRASS, 0, 0, 1.2, 5);
+road(RIVER.slice(5, 10), 11, COBBLE, 7, 0, 1.2, 5);          // 물길 양옆은 젖은 돌둑 (첫 공간 쪽은 지하수로의 맨 밑)
 // 2격 이끼 낀 숲길 (북서)
 blob(29, 21, 25, 20, GRASS, 2, 0, 0.3, 11);
 blob(8, 38, 6, 4, GRASS, 2, 0, 0.3, 27);          // 트롤 킹의 굴 — 숲길 끝, 다리 건너 서쪽 강둑
@@ -154,10 +162,10 @@ road([[70, 18], [62, 17], [52, 15], [46, 12]], 5, GRASS, 2, 0, 0.6);
 road([[82, 18], [92, 17], [104, 15]], 5, GRASS, 3, 0, 0.6);
 // 1격 초심자의 지하수로 — 어둠 위에 떠 있는 돌 구역. 수로가 가로세로로 가르는 아홉 구역
 box(54, 26, 97, 49, COBBLE, 1, 0);
-// 첫 공간 — 모닥불 야영지
-blob(72, 57, 12, 7, GRASS, 0, 0, 0.3, 14);
+// 첫 공간 — 지하수로 맨 밑, 무너진 천장 아래의 둥근 방. 빛은 위에서 떨어지는 한 줄뿐
+blob(72, 57, 11, 7, COBBLE, 7, 0, 0.3, 14);
 // 첫 공간에서 서쪽으로 — 어둠 위 능선길을 따라 강가로, 다리 건너 4격
-road([[61, 58], [50, 60], [40, 61], [34, 63]], 5, GRASS, 0, 0, 0.7);
+road([[61, 58], [50, 60], [40, 61], [34, 63]], 3.5, COBBLE, 7, 0, 0.6);   // 어둠 위로 난 좁은 돌턱 — 물가 다리까지
 // 4격 거인의 고개 — 강 남쪽 고원. 서쪽은 눈 덮인 봉우리(더 높은 단)
 blob(56, 90, 42, 19, ROCKY, 4, 1, 0.3, 15);
 blob(30, 93, 13, 9, SNOW, 4, 2, 0.35, 16);
@@ -182,12 +190,14 @@ road(RIVER, 5, WATER, undefined, 0, 0.9, 6);
 blob(108, 63, 8, 3.5, WATER, 0, 0, 0.35, 22);
 // 숲 속 작은 시내 (강으로 합류)
 road([[44, 4], [40, 12], [33, 18], [25, 22], [16, 24]], 2.2, WATER, 2, 0, 0.5, 7);
+// 숲을 나선 뒤의 물(협곡 · 첫 공간 밑 물길 · 호수)은 땅 밑 — 첫 공간과 같은 어둠
+for (let y = 45; y < 76; y++) for (let x = 0; x < 124; x++) if (ter[idx(x, y)] === WATER) bio[idx(x, y)] = 7;
 
 // ---- 1격 수로 — 가로 둘, 세로 둘 (폭 2). 바깥 둘레는 돌 테두리 ----
 for (let x = 55; x <= 96; x++) for (const y of [33, 34, 41, 42]) paint(x, y, CANAL, 1);
 for (let y = 27; y <= 48; y++) for (const x of [66, 67, 84, 85]) paint(x, y, CANAL, 1);
 // 첫 공간 → 지하수로 남쪽 들머리 계단, 지하수로 북쪽 → 1격 보스(던전 가디언)의 수문 → 갈림목
-box(70, 49, 74, 51, COBBLE, 0, 0);
+box(70, 49, 74, 51, COBBLE, 7, 0);
 box(73, 22, 78, 26, COBBLE, 1, 0);
 // 지하수로 둘레는 군데군데 무너져 — 반듯한 네모가 아니게 (수문 · 들머리 계단 쪽은 남김)
 for (let y = 26; y <= 49; y++) for (let x = 54; x <= 97; x++) {
@@ -197,8 +207,7 @@ for (let y = 26; y <= 49; y++) for (let x = 54; x <= 97; x++) {
 }
 
 // ---- 길 (흙 — 픽셀로 그림) ----
-trail([[72, 51], [72, 56], [67, 58], [61, 58]], 2.2, 0);
-trail([[61, 58], [50, 60], [40, 61], [34, 63]], 2, 0);
+// (첫 공간 · 돌턱에는 흙길이 없음 — 젖은 돌뿐)
 trail([[76, 21], [76, 17], [70, 18]], 2, 0);
 trail([[70, 18], [62, 17], [52, 15], [46, 12], [40, 9], [32, 10], [26, 15], [24, 24], [20, 30], [14, 36], [9, 38]], 2.2, 2);
 trail([[34, 70], [36, 76], [44, 80], [58, 83], [70, 86], [84, 88], [96, 88]], 2.2, 4);
@@ -244,7 +253,8 @@ function sample(X, Y) {
   const nx = vnoise(X * 0.09, Y * 0.09, 91) - 0.5, ny = vnoise(X * 0.09, Y * 0.09, 92) - 0.5;
   const ux = Math.floor((X + nx * 14) / T), uy = Math.floor((Y + ny * 14) / T), t1 = T_(ux, uy);
   if (CRISP.has(t1)) return { t: t0, tx, ty };
-  if (BUILT.has(t0) || BUILT.has(t1)) {                        // 깐 바닥의 가장자리는 덜 흔들어 반듯함을 남김
+  const cave = bio[idx(tx, ty)] === 7;                         // 첫 공간 둘레는 동굴처럼 들쭉날쭉
+  if (!cave && (BUILT.has(t0) || BUILT.has(t1))) {             // 깐 바닥의 가장자리는 덜 흔들어 반듯함을 남김
     const vx = Math.floor((X + nx * 6) / T), vy = Math.floor((Y + ny * 6) / T), t2 = T_(vx, vy);
     return CRISP.has(t2) ? { t: t0, tx, ty } : { t: t2, tx: vx, ty: vy };
   }
@@ -335,8 +345,9 @@ function texture(t, b, X, Y) {
     case ROCKY: { let c = shadeOf(C.rocky, v); if (fbm(X * 0.05, Y * 0.05, 8) > 0.62) c = mix(c, hex('#7f9a52'), 0.6); if (hash(X, Y, 9) < 0.02) c = hex('#55513f'); return c; }
     case SNOW: { let c = shadeOf(C.snow, v * 0.7 + 0.3); if (hash(X, Y, 10) < 0.004) c = [255, 255, 255]; return c; }
     case COBBLE: case CANAL: {
-      // 둥근 자갈돌 — 크기도 모양도 제각각, 물가 가까이는 젖어 짙게, 군데군데 이끼
-      let c = stones(X, Y, 7, 11, C.cobble, '#4e4b46');
+      // 둥근 자갈돌 — 크기도 모양도 제각각, 물가 가까이는 젖어 짙게, 군데군데 이끼 (첫 공간은 더 짙고 축축)
+      let c = b === 7 ? stones(X, Y, 8, 12, ['#5e6266', '#4e5256', '#70757a', '#3a3d40'], '#2a2c30') : stones(X, Y, 7, 11, C.cobble, '#4e4b46');
+      if (b === 7 && fbm(X * 0.05, Y * 0.05, 17) > 0.62) c = mix(c, hex('#2e4a52'), 0.5);   // 고인 물 얼룩
       if (fbm(X * 0.04, Y * 0.04, 14) > 0.58 && hash(X, Y, 15) < 0.6) c = mix(c, hex('#5f8a42'), 0.5);
       if (fbm(X * 0.03, Y * 0.03, 16) < 0.3) c = mul(c, 0.86);
       return c;
@@ -616,14 +627,6 @@ function lantern(px, py, col = '#ffc864') {
     glow(px + 1, py - 15, 34, mul(hex(col), 0.55));
   });
 }
-function campfire(px, py) {
-  add(py, () => {
-    for (let k = 0; k < 8; k++) { const a = k / 8 * Math.PI * 2; rect(px + Math.cos(a) * 7 - 1, py + Math.sin(a) * 4 - 1, 3, 2, hex('#7a746a')); }
-    rect(px - 5, py - 1, 10, 2, hex('#5a3a22')); rect(px - 1, py - 4, 2, 6, hex('#5a3a22'));
-    for (let j = 0; j < 10; j++) for (let i = -4; i <= 4; i++) if (Math.abs(i) < 4 - j * 0.35 && hash(i, j, 56) < 0.85) put(px + i, py - 2 - j, hex(j < 3 ? '#ff6a1a' : j < 6 ? '#ffb030' : '#ffe890'));
-    glow(px, py - 4, 70, [255, 150, 60], 0.75);
-  });
-}
 function tent(px, py, col) {
   add(py, () => {
     shadow(px + 4, py + 2, 16, 4);
@@ -638,24 +641,6 @@ function sign(px, py) {
     rect(px, py - 12, 2, 12, hex('#5a3c24'));
     rect(px - 7, py - 14, 9, 4, hex('#a8784a')); rect(px + 2, py - 10, 8, 4, hex('#a8784a'));
     rect(px - 7, py - 14, 9, 1, hex('#c99a64')); rect(px + 2, py - 10, 8, 1, hex('#c99a64'));
-  });
-}
-function cart(px, py) {
-  add(py, () => {
-    shadow(px + 3, py + 2, 14, 4);
-    rect(px - 12, py - 12, 22, 8, hex('#8a5a32')); rect(px - 12, py - 12, 22, 2, hex('#b07a46'));
-    for (const [cx, col] of [[-8, '#c8402a'], [-2, '#e8c040'], [4, '#4a7ac8']]) rect(px + cx, py - 17, 5, 5, hex(col));
-    for (let j = 0; j < 8; j++) for (let i = -13; i <= 11; i++) if (j < 2 || (i + j) % 7 === 0) put(px + i, py - 26 + j, hex(j < 2 ? '#e8dcc0' : '#d8ccb0'));
-    rect(px - 12, py - 24, 1, 12, hex('#5a3a22')); rect(px + 10, py - 24, 1, 12, hex('#5a3a22'));
-    ellipse(px - 7, py - 3, 3.5, 3.5, hex('#4a3020')); ellipse(px + 5, py - 3, 3.5, 3.5, hex('#4a3020'));
-  });
-}
-function well(px, py) {
-  add(py, () => {
-    shadow(px + 2, py + 2, 10, 4);
-    ellipse(px, py - 4, 9, 5, hex('#8a867c')); ellipse(px, py - 5, 6, 3, hex('#1e3a4a'));
-    rect(px - 9, py - 20, 2, 16, hex('#5a3c24')); rect(px + 7, py - 20, 2, 16, hex('#5a3c24'));
-    for (let i = -11; i <= 11; i++) rect(px + i, py - 23 + Math.abs(i) * 0.25, 1, 3, hex('#8a3a2a'));
   });
 }
 function bridge(tx0, ty0, len, vertical) {
@@ -964,17 +949,6 @@ function fern(px, py, col = '#5a9a48') {
 function rubble(px, py, n = 5, col = '#b0a690') {
   for (let k = 0; k < n; k++) rock(px - 8 + hash(k, px, 66) * 16, py - 3 + hash(k, py, 66) * 6, 2 + hash(k, 1, 66) * 2.5, col);
 }
-function woodFence(px0, py, n, vertical) {
-  add(py + (vertical ? n * 6 : 0), () => {
-    for (let k = 0; k < n; k++) {
-      const x = vertical ? px0 : px0 + k * 6, y = vertical ? py + k * 6 : py;
-      rect(x, y - 9, 2, 9, hex('#7a5232')); put(x, y - 10, hex('#9a6a3e'));
-    }
-    if (!vertical) { rect(px0, py - 7, n * 6 - 4, 1, hex('#9a6a3e')); rect(px0, py - 4, n * 6 - 4, 1, hex('#7a5232')); }
-    else rect(px0, py - 7, 2, n * 6, hex('#9a6a3e'));
-  });
-}
-function steppingStone(px, py) { add(py - 6, () => { ellipse(px, py, 4, 2.6, hex('#9a958a')); ellipse(px - 1, py - 1, 2.5, 1.4, hex('#b4afa4')); }); }
 function spout(px, py, h) {
   // 벽 구멍에서 수로로 떨어지는 물
   add(py, () => { rect(px - 3, py - h - 4, 7, 5, hex('#3a3632')); rect(px - 2, py - h - 3, 5, 3, hex('#141214')); for (let j = 0; j < h; j++) for (let i = -1; i <= 1; i++) put(px + i, py - h + j, hash(i, j, 67) < 0.4 ? [230, 250, 255] : hex('#8ad0e0')); });
@@ -991,10 +965,6 @@ function vent(px, py) {
     for (let k = 0; k < 18; k++) put(px + Math.sin(k * 0.9) * (2 + k * 0.25), py - 3 - k * 1.3, [140, 120, 130], 0.5 - k * 0.02);
     glow(px, py - 2, 18, [255, 110, 50], 0.5);
   });
-}
-function cat(px, py) {
-  // 모닥불 곁에서 자는 고양이 — 첫 공간의 친근함
-  add(py, () => { ellipse(px, py - 2, 4, 2.4, hex('#e8a050')); ellipse(px + 3.5, py - 3.5, 2, 1.8, hex('#e8a050')); put(px + 3, py - 5.5, hex('#e8a050')); put(px + 5, py - 5.5, hex('#e8a050')); line(px - 4, py - 1, px - 6, py - 3, hex('#c88040')); put(px + 3, py - 4, hex('#4a2a18')); });
 }
 function ruinWallV(tx, ty, len) {
   // 세로로 선 성벽 조각 (위에서 내려다본 두께)
@@ -1067,37 +1037,104 @@ function orcCamp(tx, ty) {
   tent(x - 24, y + 6, '#7a6a4a'); tent(x + 26, y + 10, '#6a5a3e');
 }
 
-// ---------- 놓기 ----------
-// 첫 공간 — 모닥불 · 천막 · 상인 수레 · 우물 · 표지판 · 등불
-campfire(...P(72, 57)); keepClear(72, 57, 4);
-tent(...P(67, 54, 8, 12), '#c8b088'); tent(...P(77, 54, 8, 12), '#a8c0c8');
-cart(...P(80, 59, 8, 10)); well(...P(64, 59, 8, 10)); sign(...P(70, 52, 4, 12)); sign(...P(61, 58, 8, 12));
-for (const [x, y] of [[66, 60], [78, 61], [72, 50]]) lantern(...P(x, y, 8, 12));
-for (const [x, y, c] of [[63, 54, '#f4d35e'], [80, 52, '#ee8fb0'], [67, 62, '#ffffff'], [76, 62, '#9fc5ff']]) bush(x, y, 8, 12, x * y, c);
-// 모닥불 둘레 통나무 의자 · 자는 고양이 · 상인 수레 곁 짐 · 강가 울타리 · 디딤돌
-log(...P(69, 56, 4, 12), 16); log(...P(73, 58, 4, 12), 16); log(...P(70, 59, 0, 8), 14);
-cat(...P(74, 56, 2, 12));
-crate(...P(82, 58, 2, 12)); crate(...P(82, 59, 6, 6)); barrel(...P(83, 60, 2, 12)); barrel(...P(79, 61, 10, 10));
-woodFence(...P(62, 63, 0, 10), 12); woodFence(...P(76, 63, 0, 12), 10);
-for (const [x, y] of [[72, 53], [72, 54], [71, 55], [65, 58], [63, 58]]) steppingStone(...P(x, y, 8, 10));
-for (let k = 0; k < 18; k++) { const x = 60 + hash(k, 1, 77) * 24, y = 51 + hash(k, 2, 77) * 12; if (ter[idx(x | 0, y | 0)] === GRASS) add(y * T, () => { for (let f = 0; f < 6; f++) put(x * T + hash(k, f, 78) * 10, y * T + hash(f, k, 78) * 6, hex(['#f4d35e', '#ee8fb0', '#ffffff', '#c890ff'][(k + f) % 4])); }); }
-keepClear(72, 56, 9);
-for (const [x, y, k] of [[60, 53, 'big'], [84, 55, 'round'], [59, 61, 'round'], [85, 62, 'big'], [65, 51, 'round'], [80, 50, 'round'], [62, 56, 'round']]) tree(x, y, k, x * 13 + y);
+function lightShaft(px, py) {
+  // 무너진 천장 구멍에서 떨어지는 빛 한 줄 — 바닥에 둥글게 고이고, 빛 속에 먼지가 떠 있음
+  lightUp(px, py, 92, 1.15);
+  for (let k = 1; k <= 5; k++) lightUp(px, py - k * 26, 34 - k * 3, 0.32 - k * 0.04);   // 위로 올라가며 흐려지는 빛기둥
+  glow(px, py - 6, 46, [160, 180, 215], 0.32);
+  add(py + 40, () => { for (let k = 0; k < 26; k++) put(px - 34 + hash(k, 1, 98) * 68, py - 40 + hash(k, 2, 98) * 70, [230, 240, 255], 0.55); });
+}
+function slab(px, py, w, h, tilt) {
+  // 무너져 내린 천장 돌판
+  add(py, () => {
+    shadow(px + 3, py + 2, w * 0.6, 3);
+    for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) put(px - w / 2 + i + j * tilt, py - j, hex(j === h - 1 ? '#8a8e92' : i === 0 ? '#3a3d40' : '#5e6266'));
+  });
+}
+function tallyStone(px, py) {
+  // 벽에 기대 선 돌 — 긁어서 센 줄들 (다섯씩 묶음)
+  add(py, () => {
+    shadow(px + 4, py + 2, 14, 3);
+    rect(px - 13, py - 22, 26, 22, hex('#4e5256')); rect(px - 13, py - 22, 26, 2, hex('#70757a')); rect(px + 11, py - 22, 2, 22, hex('#2a2c30'));
+    for (let g = 0; g < 7; g++) {
+      const gx = px - 11 + (g % 4) * 6, gy = py - 19 + Math.floor(g / 4) * 9;
+      for (let k = 0; k < 4; k++) rect(gx + k, gy, 1, 6, hex('#b8bcc0'));
+      if (g < 6) line(gx - 1, gy + 5, gx + 4, gy, hex('#b8bcc0'));
+    }
+  });
+}
+function deadLantern(px, py) {
+  // 꺼진 등
+  add(py, () => { shadow(px + 1, py + 1, 3, 1.5); rect(px, py - 14, 2, 14, hex('#2a221c')); rect(px - 2, py - 18, 6, 5, hex('#1e1814')); rect(px - 1, py - 17, 4, 3, hex('#3a4044')); put(px + 2, py - 17, hex('#6a7074')); });
+}
+function oddLantern(px, py) { lantern(px, py, '#a8ffd0'); }   // 켠 사람이 없는데 켜져 있는 등 — 차가운 빛
+function bag(px, py) {
+  add(py, () => { shadow(px + 2, py + 1, 6, 2); ellipse(px, py - 4, 6, 4.5, hex('#6a5038')); ellipse(px - 1, py - 6, 4, 2, hex('#86684a')); rect(px - 5, py - 8, 3, 3, hex('#4a3626')); line(px + 3, py - 7, px + 7, py - 2, hex('#4a3626')); });
+}
+function nametag(px, py) {
+  // 녹슨 명찰 — 아주 작게 반짝
+  add(py - 2, () => { rect(px - 3, py - 2, 6, 3, hex('#8a7a5a')); rect(px - 3, py - 2, 6, 1, hex('#b0a07a')); rect(px - 2, py - 1, 4, 1, hex('#4a3e2e')); put(px + 2, py - 2, [255, 250, 220]); glow(px + 2, py - 2, 5, [255, 240, 200], 0.5); });
+}
+function bones(px, py) {
+  add(py, () => {
+    for (const [dx, dy, l, a] of [[0, 0, 9, 0.3], [-5, 3, 7, -0.8], [6, 2, 6, 1.2], [-2, -3, 5, 2]]) for (let k = 0; k < l; k++) put(px + dx + Math.cos(a) * k, py + dy + Math.sin(a) * k, hex(k === 0 || k === l - 1 ? '#e8e2d0' : '#c8c0aa'));
+    ellipse(px + 8, py - 3, 3.2, 2.8, hex('#d8d0bc')); put(px + 7, py - 3, hex('#2a2420')); put(px + 9, py - 3, hex('#2a2420'));
+  });
+}
+function eyesInDark(px, py, col) {
+  // 어둠 속에서 이쪽을 보는 눈 둘
+  add(py + 60, () => { const c = hex(col); put(px, py, c); put(px + 1, py, c); put(px + 5, py, c); put(px + 6, py, c); glow(px + 3, py, 9, mul(c, 0.5)); });
+}
+function sealedDoor(px, py) {
+  // 벽돌로 막아 버린 옛 문
+  add(py, () => {
+    for (let a = Math.PI; a <= Math.PI * 2; a += 0.03) for (let r = 9; r <= 11; r++) put(px + Math.cos(a) * r, py - 14 + Math.sin(a) * r, hex('#3e3833'));
+    rect(px - 11, py - 14, 2, 14, hex('#3e3833')); rect(px + 9, py - 14, 2, 14, hex('#3e3833'));
+    for (let j = -24; j < 0; j++) for (let i = -9; i < 9; i++) {
+      if (j < -14 && i * i + (j + 14) ** 2 > 81) continue;
+      const row = Math.floor(j / 3);
+      put(px + i, py + j, hex(((i + 20 + (row % 2) * 3) % 6 === 0 || j % 3 === 0) ? '#3e3833' : '#5e5750'));
+    }
+  });
+}
+function puddle(px, py, rx) { add(py - 300, () => { ellipse(px, py, rx, rx * 0.5, hex('#2e4a58')); ellipse(px - rx * 0.3, py - 1, rx * 0.4, rx * 0.15, hex('#5a8090')); }); }
+function drip(px, py) { add(py, () => { put(px, py, hex('#9ad4e4')); put(px, py - 3, hex('#6ab4cc'), 0.6); }); }
 
-// 1격 지하수로 — 아홉 구역의 등불 · 하수 쇠창살 · 이끼 낀 돌 · 작은 다리 (수로를 건너는 곳)
-for (const by of [29, 37, 45]) for (const bx of [60, 75, 90]) lantern(...P(bx, by, 4, 12), '#ffd890');
+// ---------- 놓기 ----------
+// 첫 공간 — 무너진 천장 구멍 아래. 빛 한 줄, 떨어져 내린 돌판, 그리고 누군가 두고 간 것들
+lightShaft(...P(72, 57)); keepClear(72, 57, 9);
+rubble(...P(70, 55), 7, '#70757a'); rubble(...P(75, 59), 6, '#70757a');
+slab(...P(67, 58, 8, 12), 22, 5, 0.2); slab(...P(77, 55, 4, 12), 18, 4, -0.25);
+tallyStone(...P(66, 54, 8, 12));
+deadLantern(...P(66, 61, 8, 12)); deadLantern(...P(80, 53, 8, 12));
+bag(...P(78, 60, 4, 12)); nametag(...P(74, 60, 2, 8));
+bones(...P(64, 60, 4, 10)); bones(...P(81, 58, 2, 10));
+puddle(...P(69, 61, 8, 8), 9); puddle(...P(79, 57, 4, 4), 6);
+for (const [x, y] of [[61, 56], [83, 56], [70, 51], [62, 61]]) fern(...P(x, y, 8, 12), '#3e5a52');
+for (let k = 0; k < 14; k++) drip(...P(61 + hash(k, 1, 99) * 22 | 0, 51 + hash(k, 2, 99) * 12 | 0, 8, 8));
+// 빛 밖 어둠 속 — 이쪽을 보는 눈들, 그리고 아주 멀리 작은 보랏빛 한 점
+for (const [x, y, c] of [[59, 55, '#ffd84a'], [85, 59, '#ff7a4a'], [62, 49, '#ffd84a'], [88, 54, '#c8ff6a'], [56, 61, '#ff7a4a']]) eyesInDark(...P(x, y, 4, 8), c);
+add(0, () => { const [x, y] = P(100, 54, 4, 8); put(x, y, hex('#b88aff')); put(x + 3, y, hex('#b88aff')); glow(x + 1.5, y, 6, [150, 100, 230], 0.35); });
+
+// 1격 지하수로 — 끝난 도시 밑의 수로. 등은 거의 꺼졌고, 켜진 두엇은 차가운 빛 · 쇠창살 · 막아 버린 문 · 작은 다리
+for (const [x, y] of [[60, 29], [90, 37], [60, 45], [75, 45], [90, 45], [60, 37], [75, 29]]) deadLantern(...P(x, y, 4, 12));
+for (const [x, y] of [[75, 37], [90, 29]]) oddLantern(...P(x, y, 4, 12));
 for (const [x, y] of [[57, 30], [80, 36], [92, 46], [62, 46], [72, 28]]) add(y * T + 10, () => { const [px, py] = P(x, y, 2, 4); rect(px, py, 12, 8, hex('#2a2a2e')); for (let i = 1; i < 12; i += 3) rect(px + i, py, 1, 8, hex('#5a5a60')); });
 for (const [x, y, v] of [[59, 33, true], [75, 33, true], [91, 33, true], [59, 41, true], [75, 41, true], [91, 41, true]]) bridge(x, y, 2, v);
 for (const [x, y] of [[66, 30], [84, 30], [66, 38], [84, 38], [66, 46], [84, 46]]) bridge(x, y, 2, false);
 gate(75, 24);                                                                 // 던전 가디언의 수문
-for (const [x, y] of [[56, 44], [95, 28], [88, 47], [57, 27]]) crystal(...P(x, y, 8, 12), '#7ae0f0', 9);
-statue(...P(70, 37, 8, 12), '#8a9298', '#7ae0f0');                            // 고블린 족장이 지키는 석상 (정예 자리)
+for (const [x, y] of [[62, 27], [88, 27]]) sealedDoor(...P(x, y, 8, 10));
+for (const [x, y] of [[56, 44], [95, 28]]) crystal(...P(x, y, 8, 12), '#7ae0f0', 8);
+statue(...P(70, 37, 8, 12), '#6e767c', '#7ae0f0');                            // 고블린 족장이 지키는 석상 (정예 자리)
 // 미믹 — 수로 구석에 놓인, 너무 반짝이는 보물상자 (정예 자리)
 add(46 * T + 12, () => { const [x, y] = P(93, 46, 8, 12); shadow(x + 2, y + 1, 7, 2); rect(x - 6, y - 8, 12, 8, hex('#8a5a32')); rect(x - 6, y - 11, 12, 4, hex('#a8784a')); rect(x - 6, y - 8, 12, 1, hex('#c8a040')); rect(x - 1, y - 9, 2, 3, hex('#f0d070')); glow(x, y - 6, 16, [255, 210, 110], 0.5); });
-// 통 · 상자 · 고사리 · 무너진 돌 — 사람이 쓰던 곳
-for (const [x, y] of [[57, 29], [62, 36], [92, 37], [88, 29], [70, 45], [80, 44], [57, 45]]) barrel(...P(x, y, 4 + (x % 3) * 3, 12));
-for (const [x, y] of [[58, 29], [93, 38], [81, 44], [63, 30]]) crate(...P(x, y, 8, 12));
+// 썩은 통 · 상자 · 무너진 계단 · 고인 물 · 고사리
+for (const [x, y] of [[57, 29], [92, 37], [70, 45]]) barrel(...P(x, y, 4 + (x % 3) * 3, 12));
+for (const [x, y] of [[58, 29], [81, 44]]) crate(...P(x, y, 8, 12));
+for (const [x, y] of [[56, 38], [95, 44], [79, 28]]) rubble(...P(x, y), 6, '#7a7770');
+for (const [x, y, r] of [[63, 36, 7], [80, 46, 6], [88, 30, 5], [72, 38, 6]]) puddle(...P(x, y, 8, 8), r);
 for (let k = 0; k < 40; k++) { const x = 55 + hash(k, 1, 79) * 42 | 0, y = 27 + hash(k, 2, 79) * 22 | 0; if (ter[idx(x, y)] === COBBLE && [CANAL, VOID].some(t => [T_(x - 1, y), T_(x + 1, y), T_(x, y - 1), T_(x, y + 1)].includes(t))) fern(...P(x, y, 2 + hash(k, 3, 79) * 12 | 0, 14)); }
+for (let k = 0; k < 30; k++) drip(...P(55 + hash(k, 1, 100) * 42 | 0, 27 + hash(k, 2, 100) * 22 | 0, 8, 8));
 // 벽 구멍에서 떨어지는 물, 수로 끝에서 어둠으로 쏟아지는 물
 for (const x of [61, 79, 91]) spout(...P(x, 27, 8, 4), 8);
 for (const [x, y] of [[54, 33], [97, 41]]) waterfall(...P(x, y + 2, 0, 14), 16, 30);
@@ -1222,13 +1259,14 @@ for (const o of objs) o.fn();
 //  빛 · 안개 · 마무리
 // ============================================================
 // 격마다 바탕 빛 — 남동쪽(5 · 6격)으로 갈수록 어둡고 차갑거나 붉게
-const AMB = [[1, 1, 1], [0.96, 0.98, 1.02], [0.9, 0.98, 0.9], [1.02, 0.98, 0.9], [0.95, 0.96, 1.02], [0.66, 0.68, 0.82], [0.62, 0.5, 0.58]];
+const AMB = [[1, 1, 1], [0.6, 0.66, 0.8], [0.9, 0.98, 0.9], [1.02, 0.98, 0.9], [0.95, 0.96, 1.02], [0.66, 0.68, 0.82], [0.62, 0.5, 0.58], [0.34, 0.38, 0.5]];
 const out = new Uint8Array(PW * PH * 4);
 for (let Y = 0; Y < PH; Y++) for (let X = 0; X < PW; X++) {
   const tx = Math.min(W - 1, Math.max(0, Math.floor((X + (vnoise(X * 0.01, Y * 0.01, 90) - 0.5) * 120) / T)));
   const ty = Math.min(H - 1, Math.max(0, Math.floor((Y + (vnoise(X * 0.01, Y * 0.01, 93) - 0.5) * 120) / T)));
   const b = ter[idx(tx, ty)] === VOID ? 0 : bio[idx(tx, ty)];
-  const a = emis[Y * PW + X] ? [1, 1, 1] : AMB[b];
+  const L = lightBuf[Y * PW + X], A = AMB[b];
+  const a = emis[Y * PW + X] ? [1, 1, 1] : [A[0] + L, A[1] + L, A[2] + L * 1.05];   // 비추는 빛은 그 자리의 어둠을 걷어 냄
   const i = (Y * PW + X) * 3;
   let r = base[i] * a[0], g = base[i + 1] * a[1], bl = base[i + 2] * a[2];
   // 안개 — 5격 · 6격, 그리고 어둠과 맞닿은 곳 가까이
