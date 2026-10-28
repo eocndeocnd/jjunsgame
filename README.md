@@ -462,7 +462,8 @@ Resolute Hero RPG 와 Inflation RPG 를 모티브로 한 로그라이트 오토�
 - Node 가 없으면 같은 일을 브라우저 도구로 합니다: `tools/check-ids.html` (번호 검사 · 번호표 갱신) · `tools/export-images.html` (그림 목록 뽑기). `tools/` 폴더가 아닌 저장소 맨 위에서 `python -m http.server` 로 연 뒤 주소로 들어가면 됩니다.
 - Node 가 있으면 한 줄씩: `node tools/cli.js images` (그림 목록 다시 뽑기) · `node tools/cli.js check-ids` (번호 검사) · `node tools/cli.js snapshot` (의도한 변경을 확인한 뒤 번호표 갱신).
 - 번호 검사에서 걸렸을 때: 옛 전리품을 뺀 것이면 `data.js` 의 `RETIRED_ITEMS` 로 정리해 가진 사람이 강화석으로 돌려받게 하고, 순서를 바꾼 것이면 옛 번호의 자리를 `'retired'` 로 비워 두세요 (자세한 건 아래 「6격」 설명과 `id-check.js` 의 주석).
-- 그 밖: `tools/sim.html` (밸런스 시뮬레이터) · `tools/map-draft.html` (맵 초안).
+- 그 밖: `tools/sim.html` (밸런스 시뮬레이터) · `tools/map-draft.html` (맵 초안 — 색칸 지도 `maps/overworld.tmj` 위를 걸어 봄).
+- 월드맵 규칙(`js/map.js`) 시험: `node --test tests/map.test.js`. 임시 지도 다시 뽑기: `node tools/cli.js maps` (이미 있는 지도는 `--force` 일 때만 덮어씀 — 지도는 Tiled 로 열어 고칠 수 있습니다).
 
 ## 그림 목록 (AI 이미지 생성용)
 
@@ -550,7 +551,8 @@ git push
 | `js/fx.js` · `assets/fx/` | 전투 이펙트 — 그림 두 장과 프레임 자리 | **이펙트** (한 파일 빌드에는 그림이 통째로 들어갑니다) |
 | `index.html` | 화면 뼈대 | 요소 추가/삭제 |
 | `design/` | 화면 시안 (빌드에 안 들어감) | 디자인을 다시 고를 때 |
-| `docs/MAP-PLAN.md` | **캐릭터 직접 이동으로 바꿀 때의 계획** | 다음 큰 작업 |
+| `docs/MAP-REFERENCE-PLAN.md` | **월드맵을 걸어 다니는 방식으로 바꾸는 계획** (옛 계획은 `docs/MAP-PLAN.md`) | 다음 큰 작업 |
+| `js/map.js` · `maps/` · `tests/` | 월드맵 걷기의 규칙 · Tiled 지도 · 자동 시험 (아직 게임에 안 들어감) | 맵 작업 |
 | `tools/sim.html` · `tools/sim.js` | **자동 플레이 시뮬레이터** (개발용, 빌드에 안 들어감) | 밸런스를 숫자로 확인 |
 
 ## 적을 추가하는 법

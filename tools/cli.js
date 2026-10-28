@@ -5,6 +5,7 @@
 //   node tools/cli.js snapshot    전리품 번호표(tools/item-snapshot.json)를 지금 상태로 갱신한다 — 의도한 변경 뒤에만
 //   node tools/cli.js check-loot  전리품이 고르게 퍼져 있는지 검사한다 (build.py 가 자동으로 부릅니다)
 //   node tools/cli.js sim [1,2,3]  밸런스 시뮬을 시드마다 돌린다 (tools/sim.html 과 같은 것을 터미널에서)
+//   node tools/cli.js maps [--force]  임시 지도(maps/*.tmj)를 뽑는다 — 이미 있는 지도는 --force 일 때만 덮어씀
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -74,7 +75,21 @@ if (cmd === 'images') {
     console.log(JSON.stringify(res, null, 1));
     console.log(`시드 ${seeds.length}개 · ${Math.round((Date.now() - t0) / 1000)}초`);
   });
+} else if (cmd === 'maps') {
+  // 손으로 고친 지도를 지우지 않게, 이미 있으면 건너뜁니다
+  const gen = require('./map-gen.js');
+  const force = process.argv.includes('--force');
+  const { data } = loadData();
+  const out = (p, body) => {
+    if (fs.existsSync(path.join(ROOT, p)) && !force) { console.log(`  · ${p} — 이미 있어서 건너뜀 (덮어쓰려면 --force)`); return; }
+    const f = path.join(ROOT, p);
+    fs.mkdirSync(path.dirname(f), { recursive: true });
+    fs.writeFileSync(f, body);
+    console.log(`  · ${p} — 뽑았습니다`);
+  };
+  out('maps/tiles.png', gen.tilesPng());
+  out('maps/overworld.tmj', JSON.stringify(gen.overworld(data)));
 } else {
-  console.log('사용법: node tools/cli.js images | check-ids | snapshot | check-loot | sim [시드,…]');
+  console.log('사용법: node tools/cli.js images | check-ids | snapshot | check-loot | sim [시드,…] | maps [--force]');
   process.exit(cmd ? 1 : 0);
 }
