@@ -71,6 +71,11 @@ function tilesPng() {
     else if (t === ROCK) put(x, y, r < 6.5 && y > 2 ? (y < 7 ? [150, 140, 124] : [122, 112, 98]) : PAPER);
     else put(x, y, (lx + y) % 7 === 0 ? [224, 200, 150] : [242, 226, 184]);
   }
+  return encodePng(W, H, px);
+}
+
+// RGBA 버퍼 → PNG (그림 도구들이 같이 씁니다 — design/map-concept 도)
+function encodePng(W, H, px) {
   const crcTable = Array.from({ length: 256 }, (_, n) => { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; return c >>> 0; });
   const crc = buf => { let c = 0xFFFFFFFF; for (const b of buf) c = crcTable[(c ^ b) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
   const chunk = (type, data) => {
@@ -82,8 +87,9 @@ function tilesPng() {
   const ihdr = Buffer.alloc(13);
   ihdr.writeUInt32BE(W, 0); ihdr.writeUInt32BE(H, 4); ihdr[8] = 8; ihdr[9] = 6;
   const raw = Buffer.alloc((W * 4 + 1) * H);
-  for (let y = 0; y < H; y++) px.copy(raw, y * (W * 4 + 1) + 1, y * W * 4, (y + 1) * W * 4);
-  return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', ihdr), chunk('IDAT', zlib.deflateSync(raw)), chunk('IEND', Buffer.alloc(0))]);
+  const src = Buffer.from(px.buffer, px.byteOffset, px.byteLength);
+  for (let y = 0; y < H; y++) src.copy(raw, y * (W * 4 + 1) + 1, y * W * 4, (y + 1) * W * 4);
+  return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', ihdr), chunk('IDAT', zlib.deflateSync(raw, { level: 9 })), chunk('IEND', Buffer.alloc(0))]);
 }
 
 // ---------- 들판 배치로 지도 짜기 ----------
@@ -455,4 +461,4 @@ function allMaps(data) {
   return out;
 }
 
-module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, generate, overworld, hub, allMaps, layoutFromPlan, HUB_DOORS, REALMS };
+module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, encodePng, generate, overworld, hub, allMaps, layoutFromPlan, HUB_DOORS, REALMS };
