@@ -16,6 +16,11 @@ const MapView = (function () {
   const TEMPER_COLOR = { aggro: '#d0473f', passive: '#4a80b8', shy: '#5aa04f' };
   const KEYS = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right',
                  w: 'up', s: 'down', a: 'left', d: 'right', W: 'up', S: 'down', A: 'left', D: 'right' };
+  // 나 — 걷기 그림 (design/hero/walk.js 가 만듦). 한 줄에 한 방향, 한 줄 4칸(서기 · 걸음 A · 서기 · 걸음 B), 한 칸 32×40, 발끝은 38줄.
+  // 줄 순서는 앞 · 뒤 · 왼옆 · 오른옆 — 왼옆이 보이는 모습이 화면 오른쪽을 봅니다. 못 불러오면(맵 초안) 예전 동그라미로.
+  const HERO = { w: 32, h: 40, foot: 38, body: 34, row: { down: 0, up: 1, right: 2, left: 3 } };
+  const heroImg = new Image();
+  heroImg.src = 'assets/hero/walk.png';
 
   const rankColors = {};
   function rankColor(n) {
@@ -39,9 +44,9 @@ const MapView = (function () {
     const knob = o.stick && o.stick.querySelector('.knob');
     let T = 24, dpr = 1, cw = 0, ch = 0, last = 0;
     const held = [];
-    let stickId = null, stickDir = null;
+    let stickId = null, stickDir = null, face = 'down';
 
-    v.start = (map, start, seed) => { v.world = MapRules.createWorld({ ...map, start: start || map.start }, o.hooks, seed); };
+    v.start = (map, start, seed) => { v.world = MapRules.createWorld({ ...map, start: start || map.start }, o.hooks, seed); face = 'down'; };
     v.resolve = outcome => { if (v.world) MapRules.resolve(v.world, outcome); };
     const shown = () => !!o.canvas.offsetParent;   // 탭을 옮겨 안 보이면 세계도 멈춥니다
     const live = () => v.world && shown() && !o.paused();
@@ -53,7 +58,7 @@ const MapView = (function () {
     function seenAt(e, speed, dt) {
       let g = glide.get(e);
       if (!g || Math.abs(g.x - e.x) + Math.abs(g.y - e.y) > 2) {   // 처음 보거나 멀리 옮겨졌으면(문 · 불러오기) 그 자리에
-        g = { x: e.x, y: e.y, phase: 0 };
+        g = { x: e.x, y: e.y, phase: 0, moving: false, walked: 0, idle: 1 };
         glide.set(e, g);
         return g;
       }
@@ -63,6 +68,10 @@ const MapView = (function () {
       g.x = toward(g.x, e.x);
       g.y = toward(g.y, e.y);
       g.phase = moving ? g.phase + dt * speed * Math.PI : 0;   // 한 칸에 한 번 들썩
+      // 걸은 칸 수 — 칸과 칸 사이에 잠깐 멈춰도 이어서 세고(걸음 A · B 가 번갈아), 조금 서 있으면 처음부터
+      g.moving = moving;
+      g.idle = moving ? 0 : g.idle + dt;
+      g.walked = moving ? g.walked + step : g.idle > 0.15 ? 0 : g.walked;
       return g;
     }
     v.seenAt = e => glide.get(e);   // 시험 · 살펴보기용
@@ -197,10 +206,23 @@ const MapView = (function () {
         }
         label(mob.monster, cx, oy + gy * T + 1);
       }
-      // 나
-      const py = gp.y + bob(gp) / T;
-      ctx.fillStyle = '#1c1007'; ctx.strokeStyle = '#f6e7c3'; ctx.lineWidth = line + 1;
-      ctx.beginPath(); ctx.arc(ox + (gp.x + 0.5) * T, oy + (py + 0.5) * T, T * 0.34, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      // 나 — 누른 쪽을 보고, 걷는 동안 한 칸에 두 칸씩 넘김. 그림 1픽셀을 기기 픽셀의 정수 배로 키워 또렷하게
+      // (몸 높이가 1.5칸에 가장 가까운 배 — 폰에서는 2배, 약 1.7칸)
+      if (p.dir) face = p.dir;
+      if (heroImg.complete && heroImg.naturalWidth) {
+        const k = Math.max(1, Math.round(T * dpr * 1.5 / HERO.body)) / dpr;
+        const fx = Math.round((ox + (gp.x + 0.5) * T) * dpr) / dpr, fy = Math.round((oy + (gp.y + 0.9) * T) * dpr) / dpr;   // 발끝 자리
+        ctx.fillStyle = 'rgba(28,16,7,0.3)';
+        ctx.beginPath(); ctx.ellipse(fx, fy - k, T * 0.3, T * 0.1, 0, 0, Math.PI * 2); ctx.fill();
+        const n = gp.moving ? (Math.floor(gp.walked * 2) + 1) % 4 : 0;
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(heroImg, n * HERO.w, HERO.row[face] * HERO.h, HERO.w, HERO.h,
+          fx - (HERO.w / 2) * k, fy - HERO.foot * k, HERO.w * k, HERO.h * k);
+      } else {
+        const py = gp.y + bob(gp) / T;
+        ctx.fillStyle = '#1c1007'; ctx.strokeStyle = '#f6e7c3'; ctx.lineWidth = line + 1;
+        ctx.beginPath(); ctx.arc(ox + (gp.x + 0.5) * T, oy + (py + 0.5) * T, T * 0.34, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      }
     }
 
     // ---------- 방향키 · WASD ----------

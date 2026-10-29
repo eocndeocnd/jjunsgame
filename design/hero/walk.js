@@ -2,7 +2,7 @@
 //  주인공 걷기 — hero-edit.png(사용자가 고친 네 방향)에서 다리만 움직여 만든다
 //
 //    node design/hero/walk.js
-//      → design/hero/hero-walk.png          (한 줄에 한 방향: 앞 · 뒤 · 왼쪽 · 오른쪽. 한 줄 4칸 = 서기 · 걸음 A · 서기 · 걸음 B, 한 칸 32×40)
+//      → assets/hero/walk.png               (게임이 쓰는 그림 — 한 줄에 한 방향: 앞 · 뒤 · 왼쪽 · 오른쪽. 한 줄 4칸 = 서기 · 걸음 A · 서기 · 걸음 B, 한 칸 32×40)
 //      → design/hero/hero-walk-preview.png  (움직이는 PNG, 4배 — 네 방향이 나란히 걷는 모습)
 //
 //  새로 그리는 픽셀은 없습니다. 원래 픽셀을 옮기기만 합니다 — 얼굴 · 몸 픽셀은 그대로고, 몸 전체가 1칸 위아래로만 움직입니다.
@@ -136,7 +136,7 @@ const put = (buf, W, x0, y0, f, Z = 1) => { for (let y = 0; y < FH * Z; y++) for
 {
   const W = FW * 4, H = FH * 4, px = new Uint8Array(W * H * 4);
   WALK.forEach((frames, n) => frames.forEach((f, i) => put(px, W, i * FW, n * FH, f)));
-  fs.writeFileSync(path.join(__dirname, 'hero-walk.png'), png(W, H, px));
+  fs.writeFileSync(path.join(__dirname, '../../assets/hero/walk.png'), png(W, H, px));
 }
 {
   const Z = 4, GAP = 8, W = 4 * (FW * Z + GAP) + GAP, H = FH * Z + GAP * 2;
