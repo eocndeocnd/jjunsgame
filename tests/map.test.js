@@ -318,61 +318,60 @@ test('overworld — 1~6격 몬스터가 모두 한 번씩, 구역 48개', () => 
   assert.deepEqual(m.posts.map(p => p.enemy).sort(), foes.filter(e => e.kind !== 'normal').map(e => e.id).sort());
   assert.equal(areaMonsters.length, 48);
   assert.deepEqual(m.ports.map(p => [p.to, p.opensAfter]), [['hub.overworld', 'demonking']]);
-  // 길을 막는 것은 보스와 세계수를 먹는 벌레뿐, 그리고 그것들은 3×3
+  // 길을 막는 것은 다음 격으로 가는 틈의 보스 넷과 세계수를 먹는 벌레뿐, 그리고 그것들은 3×3
   const blockers = m.posts.filter(p => p.blocks);
-  assert.deepEqual(blockers.map(p => p.enemy).sort(), ['demonking', 'dungeonguardian', 'giantking', 'worldworm']);
+  assert.deepEqual(blockers.map(p => p.enemy).sort(), ['dungeonguardian', 'giantking', 'lichking', 'trollking', 'worldworm']);
   assert.ok(blockers.every(p => p.w === 3 && p.h === 3));
 });
 
-test('overworld — 오픈월드: 같은 격 들판 사이는 넓게 트였다 (8칸 넘게)', () => {
+test('overworld — 같은 격 구역끼리는 보스 없이 걸어서 이어지고, 숲 · 고원은 넓게 트였다', () => {
   const m = M.parseTiled(JSON.parse(fs.readFileSync(path.join(ROOT, 'maps/overworld.tmj'), 'utf8')), 'overworld');
-  const open = (x, y) => x >= 0 && y >= 0 && x < m.w && y < m.h && !m.solid[y * m.w + x];
-  // 1격 첫 두 구역(슬라임 · 자이언트 랫) 사이 틈에서, 세로로 이어 트인 칸이 가장 긴 줄
-  const [a, b] = ['slime', 'giantrat'].map(id => m.areas.find(x => x.monster === id));
-  let best = 0;
-  for (let x = a.x + a.w; x < b.x; x++) {
-    let run = 0;
-    for (let y = a.y; y < a.y + a.h; y++) { run = open(x, y) ? run + 1 : 0; best = Math.max(best, run); }
+  const posts = new Set(m.posts.flatMap(p => cellsOf(m, p)));
+  for (let rank = 1; rank <= 6; rank++) {
+    const mine = m.areas.filter(a => a.rank === rank), first = mine[0];
+    const d = walk(m, [(first.y + (first.h >> 1)) * m.w + first.x + (first.w >> 1)], posts);
+    for (const a of mine) assert.ok(cellsOf(m, a).some(i => d[i] >= 0), `${rank}격 ${a.name} 구역`);
   }
-  assert.ok(best >= 8, `트인 폭 ${best}칸`);
+  // 덩어리 숲 — 땅(바닥 · 길 · 나무 · 바위) 가운데 나무 · 바위는 적게
+  const [FLOOR, , , TREE, ROCK, ROAD] = [0, 1, 2, 3, 4, 5];
+  for (const rank of [2, 4]) {
+    const land = m.areas.filter(a => a.rank === rank).flatMap(a => cellsOf(m, a)).filter(i => [FLOOR, TREE, ROCK, ROAD].includes(m.tile[i]));
+    const open = land.filter(i => m.tile[i] === FLOOR || m.tile[i] === ROAD).length / land.length;
+    assert.ok(open >= 0.7, `${rank}격 트인 칸 ${Math.round(open * 100)}%`);
+  }
 });
 
-test('overworld — 보스를 꺾어야 갈래가 열리고, 4격은 보이기만 하고 1격 길에서 걸어서 8칸 넘게', () => {
+test('overworld — 한 줄로 열린다: 1격 → 2 · 4격(던전 가디언) · 3격 막다른 곳(트롤 킹) · 5격(거인왕) · 6격(불사의 왕) · 왕좌의 방(벌레)', () => {
   const m = M.parseTiled(JSON.parse(fs.readFileSync(path.join(ROOT, 'maps/overworld.tmj'), 'utf8')), 'overworld');
   const start = m.start.y * m.w + m.start.x;
-  const postCells = p => cellsOf(m, p);                     // 3×3 보스는 아홉 칸 다
-  const allPosts = new Set(m.posts.flatMap(postCells));
-  const reach = (blocked, rank) => {   // 그 격의 구역 하나라도 닿는가 (길막 정예 너머는 못 갈 수 있음)
-    const d = walk(m, [start], blocked);
-    return m.areas.filter(a => a.rank === rank).some(a => cellsOf(m, a).some(i => d[i] >= 0));
-  };
-  // 정예 · 보스가 모두 서 있으면 1 · 4격까지만
-  for (const r of [1, 4]) assert.ok(reach(allPosts, r), `${r}격은 처음부터`);
-  for (const r of [2, 3, 5, 6]) assert.ok(!reach(allPosts, r), `${r}격은 보스 너머`);
+  const allPosts = new Set(m.posts.flatMap(p => cellsOf(m, p)));   // 3×3 보스는 아홉 칸 다
   const but = (...ids) => {
-    const gone = new Set(m.posts.filter(p => ids.includes(p.enemy)).flatMap(postCells));
+    const gone = new Set(m.posts.filter(p => ids.includes(p.enemy)).flatMap(p => cellsOf(m, p)));
     return new Set([...allPosts].filter(i => !gone.has(i)));
   };
-  const after1 = but('dungeonguardian', 'goblinchief'), after4 = but('giantking');
-  assert.ok(reach(after1, 2) && reach(after1, 3), '1격 보스 너머 2 · 3격');
-  assert.ok(reach(after4, 5) && reach(after4, 6), '4격 보스 너머 5 · 6격');
-  // 지도 전체가 이어져 있다 (숨은 통로 포함)
+  const ranks = blocked => {                                       // 그 격의 구역 하나라도 닿는 격들
+    const d = walk(m, [start], blocked);
+    return [1, 2, 3, 4, 5, 6].filter(r => m.areas.filter(a => a.rank === r).some(a => cellsOf(m, a).some(i => d[i] >= 0)));
+  };
+  assert.deepEqual(ranks(allPosts), [1], '처음에는 1격만 — 지하수로에서 4격으로 새는 길 없음');
+  assert.deepEqual(ranks(but('dungeonguardian')), [1, 2, 4], '수문 너머 숲, 숲에서 그대로 4격');
+  assert.deepEqual(ranks(but('dungeonguardian', 'trollking')), [1, 2, 3, 4], '성문 너머 3격');
+  assert.deepEqual(ranks(but('dungeonguardian', 'giantking')), [1, 2, 4, 5], '아치 너머 5격');
+  assert.deepEqual(ranks(but('dungeonguardian', 'giantking', 'lichking')), [1, 2, 4, 5, 6], '묘실 너머 6격 — 3격은 트롤 킹 너머로만 (막다른 곳)');
+  // 문의 광장 문 — 세계수를 먹는 벌레가 막은 굴 너머 왕좌의 방
+  const port = cellsOf(m, m.ports.find(p => p.name === 'hub'));
+  const reaches = blocked => { const d = walk(m, [start], blocked); return port.some(i => d[i] >= 0); };
+  assert.ok(!reaches(but('dungeonguardian', 'giantking', 'lichking')), '벌레가 막음');
+  assert.ok(reaches(but('dungeonguardian', 'giantking', 'lichking', 'worldworm', 'demonking')), '벌레를 꺾으면 문까지');
+  // 지도 전체가 이어져 있다
   const all = walk(m, [start]);
   assert.ok(m.areas.every(a => cellsOf(m, a).filter(i => !m.solid[i]).every(i => all[i] >= 0)), '모든 구역의 걸을 수 있는 칸에 닿음');
-
-  // 배치 규칙 — 1격 길(첫 공간 + 1격 구역)에서 4격 구역까지 걸어서 8칸 넘게, 그러나 눈에는 보임
-  const plaza = m.areas.find(a => !a.monster);
-  const walkable = cells => cells.filter(i => !m.solid[i]);
-  const path1 = walkable([...cellsOf(m, plaza), ...m.areas.filter(a => a.rank === 1).flatMap(a => cellsOf(m, a))]);
-  const d = walk(m, path1);
-  const giants = m.areas.filter(a => a.rank === 4);
-  const nearest = Math.min(...giants.flatMap(a => walkable(cellsOf(m, a)).map(i => d[i])));
-  assert.ok(nearest > 8, `걸어서 ${nearest}칸`);
-  const seen = giants.some(a => path1.some(i => {
-    const x = i % m.w, y = (i / m.w) | 0;
-    return Math.max(Math.max(a.x - x, 0, x - (a.x + a.w - 1)), Math.max(a.y - y, 0, y - (a.y + a.h - 1))) <= R.SIGHT;
-  }));
-  assert.ok(seen, '1격 길에서 4격이 보임');
+  // 들머리(첫 구역 한가운데) · 상인 자리는 걸을 수 있는 칸
+  for (const a of m.areas.filter(x => x.monster)) {
+    const first = m.areas.find(x => x.zone === a.zone && x.monster);
+    assert.ok(!m.solid[(first.y + (first.h >> 1)) * m.w + first.x + (first.w >> 1)], `${a.zone} 들머리`);
+  }
+  for (const n of m.npcs) assert.ok(!m.solid[n.y * m.w + n.x], `${n.name} 자리`);
 });
 
 test('문의 광장 — 일곱 장의 문은 그 앞 격 보스를 꺾어야 열리고, 마왕의 성으로 가는 문은 늘 열림 · 모두 걸어서 닿음', () => {

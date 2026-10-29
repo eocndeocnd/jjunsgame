@@ -94,35 +94,13 @@ function encodePng(W, H, px) {
 
 // ---------- 들판 배치로 지도 짜기 ----------
 // 들판 하나는 20×14칸, 들판 사이 틈은 4칸. 아래 그림에서 들판은 두 글자, 그 사이의 한 글자가 잇는 방법입니다.
-//   들판    S. 첫 공간 · .. 지나가는 곳 · Nn N격 구역 · NE N격 정예의 홀 · NB N격 보스의 자리 · NH N격 숨은 곳
-//           (N 은 그 지도가 품은 격 목록에서 몇 번째인가 — overworld 는 1~6격이라 격 번호 그대로)
+//   들판    S. 어귀 · .. 지나가는 곳 · Nn N격 구역 · NE N격 정예의 홀 · NB N격 보스의 자리 · NH N격 숨은 곳
+//           (N 은 그 지도가 품은 격 목록에서 몇 번째인가)
+// 7~20격 일곱 장이 씁니다 — 1~6격(overworld)은 시안 배치를 그대로 옮긴 것이라 아래 overworld() 가 따로 짭니다.
 //   잇기    - | 트인 길(8~10칸) · ~ 강(건너편이 보이기만) · ? 숨은 샛길 · b 보스가 막은 고갯길 · e 정예가 막은 고갯길 · = 들판을 터서 하나로
 // 좁은 곳은 고갯길(3칸)뿐입니다 — 3×3 크기의 보스(또는 길막 정예)가 막고 섭니다.
 const FIELD_W = 20, FIELD_H = 14, GAP = 4, PITCH_X = FIELD_W + GAP, PITCH_Y = FIELD_H + GAP;
 const OPEN = 10, PASS = 3, BIG = 3, CLUMPS = 6;
-
-// 1~6격 — 첫 공간에서 1격(위)과 4격(아래). 1격 보스 너머로 2 · 3격, 4격 보스(거인왕) 너머로 5 · 6격.
-// 4격의 첫 구역은 첫 공간 · 1격 들판과 강으로 갈려 보이기만 하고, 걸어서는 고갯길 어귀를 돌아가야 합니다.
-// 길을 막는 것은 보스와 6격의 세계수를 먹는 벌레뿐 — 다른 정예는 들판 한가운데 서서 골라 잡습니다.
-const OVERWORLD = [
-  '                              3B',
-  '                              |',
-  '   2B-2n-2n-2n-2n-2n-2n-2n-2n 3n-3n-3n-3n',
-  '                           |        ?  |',
-  '                           2n       3H 3n',
-  '                           |           |',
-  '1n-1n-1n-1n-1n-1n-1n-1n-1nb..-3n-3n-3n-3n',
-  '|  ~',
-  'S.~4n',
-  '|  |',
-  '..-4n-4n-4n-4n-4n-4n-4Eb..-6n-6n',
-  '                        |     |',
-  '                        5n    6n-6n-6n-6E=6Ee..b6H',
-  '                        |',
-  '5B-5n-5n-5n-5n-5n-5n-5n-5n',
-  '      ?        |',
-  '      5H       5E'
-];
 
 function layoutFromPlan(plan) {
   // 들판 줄은 짝수 줄, 그 아래 홀수 줄은 세로 잇기. 들판은 3글자 간격, 가로 잇기는 들판 바로 뒤 글자.
@@ -164,7 +142,7 @@ function valueNoise(seed) {
 }
 
 // data: js/data.js 에서 꺼낸 { ENEMIES, ZONES }
-// ranks: 그림의 N 번째 = 몇 격인가 · opts: { seed, obstacle(rank) → 그 격 들판에 흩어질 장애물 타일, exit(rank, boss, hRoom) → 문 }
+// ranks: 그림의 N 번째 = 몇 격인가 · opts: { seed, plaza(어귀 이름), obstacle(rank) → 그 격 들판에 흩어질 장애물 타일, entry(어귀) → 문의 광장으로 가는 문 }
 function generate(plan, ranks, data, opts) {
   const { rooms, links, cols, rows } = layoutFromPlan(plan);
   const rng = mulberry(opts.seed);
@@ -242,7 +220,7 @@ function generate(plan, ranks, data, opts) {
 
   const areas = [], npcs = [], ports = [];
   const so = origin(start), sc = center(start);
-  // 어귀(S.) — 몬스터 없는 이름뿐인 곳. 그 지도 첫 격의 지역으로 칩니다 (overworld 의 첫 공간은 1격 자리)
+  // 어귀(S.) — 몬스터 없는 이름뿐인 곳. 그 지도 첫 격의 지역으로 칩니다
   const firstZone = data.ZONES.find(z => z.rank === ranks[0]);
   areas.push({ name: opts.plaza || '첫 공간', x: so.x, y: so.y, w: FIELD_W, h: FIELD_H, zone: firstZone.id });
   npcs.push({ name: 'start', x: sc.x, y: sc.y }, { name: 'avatarDoor', x: sc.x + 5, y: sc.y - 4 });
@@ -304,8 +282,6 @@ function generate(plan, ranks, data, opts) {
     if (hidden) {
       const hRoom = mine('H')[0], c = center(hRoom);
       post(hidden, c.x, c.y, 1, false);
-      const exit = opts.exit && opts.exit(rank, boss, hRoom, origin(hRoom));
-      if (exit) { ports.push(exit); fill(exit.x - 2, exit.y - 2, 5, 5, null, true); }
     }
   }
 
@@ -341,13 +317,146 @@ function generate(plan, ranks, data, opts) {
   return buildTmj({ w, h, tiles, areas, posts, ports, secrets, npcs });
 }
 
+// ---------- 1~6격 한 장 (overworld) — design/map-concept 시안 배치 그대로 ----------
+// 땅 모양 · 격 나누기 · 물 · 흙길 · 다리 · 성벽은 tools/overworld-layout.js 가 정하고 (시안 그림과 같이 씀),
+// 여기서는 그 칸을 게임 칸으로 바꾸고 구역 · 정해진 자리 · 상인 · 문을 시안 그림의 같은 자리에 둡니다.
+//   어둠 → 벽 · 물 · 수로 · 용암 → 물 · 바위 등성이 · 흑요석 벼랑 · 바위턱 → 바위 · 처음의 방을 두른 통바위 → 벽
+// 다음 격은 보스(3×3)가 세 칸 틈을 막고 서서 엽니다 — 1 → 2 (수문의 던전 가디언) · 2 → 3 (성문의 트롤 킹, 3격은 막다른 곳)
+// · 2 → 4 (숲에서 그대로 이어짐) · 4 → 5 (쐐기돌 아치의 거인왕) · 5 → 6 (대성당 뒤 묘실 통로의 불사의 왕) · 왕좌의 방 (벌레의 굴)
+
+// 구역 — 격마다 일반 몬스터 순서(약한 것부터)대로, 들어오는 곳에서 먼 쪽으로. [x0, y0, x1, y1] (끝 칸 포함)
+// 첫 구역 한가운데가 그 지역 들머리입니다 (불러오면 거기 섭니다).
+const OVERWORLD_AREAS = {
+  1: [[31, 84, 45, 91], [9, 84, 28, 91], [48, 84, 65, 91], [31, 74, 45, 81], [9, 74, 28, 81],      // 수로가 가른 아홉 구역 — 계단 앞에서 수문 쪽으로
+      [48, 74, 65, 81], [9, 64, 28, 71], [48, 64, 65, 71], [31, 64, 45, 71]],
+  2: [[26, 52, 45, 61], [6, 52, 25, 61], [46, 52, 62, 61], [26, 42, 45, 51], [6, 42, 25, 51],      // 수문 앞에서 왕국 성벽 쪽으로
+      [46, 42, 62, 51], [6, 32, 25, 41], [46, 32, 62, 41], [26, 32, 45, 41]],
+  3: [[31, 21, 46, 28], [47, 21, 64, 28], [9, 21, 30, 28], [37, 12, 50, 20], [23, 12, 36, 20],     // 성문 앞에서 성 쪽으로 (성 안은 구역 밖)
+      [51, 12, 64, 20], [37, 3, 50, 11], [51, 3, 64, 11], [23, 3, 36, 11]],
+  4: [[66, 40, 80, 58], [68, 59, 86, 74], [81, 40, 100, 56], [72, 22, 86, 39], [87, 22, 100, 39],  // 숲 가장자리 → 남쪽 · 가운데 → 북쪽 눈밭 → 동쪽 아치 앞
+      [87, 57, 109, 74], [101, 36, 109, 56]],
+  5: [[116, 44, 132, 58], [116, 59, 132, 73], [116, 74, 132, 89], [133, 74, 149, 89], [133, 59, 149, 73],   // 아치 앞에서 대성당 쪽으로
+      [150, 74, 167, 89], [150, 59, 167, 73], [150, 44, 167, 58], [133, 44, 149, 58]],
+  6: [[131, 33, 146, 40], [114, 33, 130, 40], [113, 5, 123, 32], [124, 19, 143, 32], [124, 5, 146, 18]]   // 묘실 입구 → 용암 강 → 칠죄종 홀 → 북쪽
+};
+// 정해진 자리 — [이름, x, y, 크기(3 = 3×3), 길을 막는가]. 시안 그림의 그 그림 조각 자리 (앞에 서는 것은 한 칸 아래)
+const OVERWORLD_POSTS = [
+  ['던전 가디언', 37, 61, 3, true],                                     // 지하수로 수문
+  ['고블린 족장', 38, 79], ['미믹', 60, 89],                            // 가운데 석상 · 구석의 보물상자
+  ['트롤 킹', 43, 30, 3, true],                                         // 왕국 성벽의 무너진 성문
+  ['오크 장군', 13, 46], ['숲의 마녀', 54, 41],                         // 야영지 · 오두막
+  ['몰락한 왕', 13, 12, 3, false],                                      // 성 안 왕좌
+  ['그리핀 로드', 56, 15], ['히드라', 28, 25], ['카벙클', 60, 11],      // 탑 자리 · 물에 잠긴 안뜰 · 바위턱 폭포 밑
+  ['돌 거인', 98, 39], ['서리 거인', 101, 41], ['불의 거인', 98, 43], ['구름 거인', 95, 41],   // 돌 고리
+  ['거인왕', 111, 47, 3, true],                                         // 쐐기돌 아치
+  ['흰 말의 기사', 128, 60], ['붉은 말의 기사', 132, 60], ['검은 말의 기사', 128, 63], ['창백한 말의 기사', 132, 63],   // 네 말의 기사 광장
+  ['데스 나이트', 122, 77], ['리치', 160, 55], ['까마귀 왕', 158, 81],  // 영묘 둘 · 숨은 묘실
+  ['불사의 왕', 135, 44, 3, true],                                      // 대성당 — 그 뒤 벼랑의 묘실 통로
+  ['칠죄종 · 탐욕', 127, 21], ['칠죄종 · 질투', 133, 21], ['칠죄종 · 색욕', 139, 21], ['칠죄종 · 폭식', 127, 30],
+  ['칠죄종 · 오만', 133, 30], ['칠죄종 · 분노', 139, 30], ['칠죄종 · 나태', 142, 25],          // 홀의 불꽃 받침
+  ['세계수를 먹는 벌레', 145, 24, 3, true],                             // 왕좌의 방으로 가는 굴
+  ['마왕', 154, 22, 3, false], ['관측자', 158, 30]                      // 왕좌 · 문 곁
+];
+const OVERWORLD_MERCHANTS = { sewer: [33, 86], forest: [34, 58], ruins: [40, 26], giantpass: [70, 46], necropolis: [120, 50], abyss: [128, 37] };
+
 function overworld(data) {
-  return generate(OVERWORLD, [1, 2, 3, 4, 5, 6], data, {
-    seed: 1,
-    obstacle: rank => (rank === 2 ? TREE : ROCK),             // 이끼 낀 숲길은 나무, 나머지는 바위
-    // 마왕 뒤 — 관측자 곁에 문의 광장으로 가는 문 (마왕을 꺾어야 열림)
-    exit: (rank, boss, room, o) => rank === 6 && { name: 'hub', label: '문의 광장', x: o.x + FIELD_W - 4, y: o.y + (FIELD_H >> 1) - 1, w: 1, h: 2, to: 'hub.overworld', opensAfter: boss.id }
-  });
+  const L = require('./overworld-layout.js');
+  const w = L.W, h = L.H, idx = L.idx;
+  const inside = (x, y) => x >= 0 && y >= 0 && x < w && y < h;
+  const tiles = new Uint8Array(w * h);
+  const keep = new Uint8Array(w * h);                        // 장애물을 두지 않을 칸 — 정해진 자리 곁 · 들머리 · 상인 · 시작점 · 문 · 길가
+  const guard = (x, y, rw, rh, pad) => { for (let j = -pad; j < rh + pad; j++) for (let i = -pad; i < rw + pad; i++) if (inside(x + i, y + j)) keep[idx(x + i, y + j)] = 1; };
+
+  // 1) 땅 → 칸
+  for (let i = 0; i < w * h; i++) {
+    const t = L.ter[i];
+    tiles[i] = t === L.VOID || L.wallMask[i] ? WALL
+      : t === L.WATER || t === L.CANAL || t === L.LAVA ? WATER
+      : L.hgt[i] === 3 ? ROCK
+      : t === L.ROCKY && L.bio[i] === 7 ? WALL
+      : FLOOR;
+  }
+  // 흙길 — 시안 길의 폭 그대로 (숲 시내를 건너는 곳은 통나무 다리)
+  for (const r of L.ROADS) {
+    const pad = r.hw + 2;
+    for (let ty = Math.floor((Math.min(r.ay, r.by) - pad) / L.T); ty <= (Math.max(r.ay, r.by) + pad) / L.T; ty++)
+      for (let tx = Math.floor((Math.min(r.ax, r.bx) - pad) / L.T); tx <= (Math.max(r.ax, r.bx) + pad) / L.T; tx++) {
+        if (!inside(tx, ty)) continue;
+        const X = tx * L.T + 8, Y = ty * L.T + 8, vx = r.bx - r.ax, vy = r.by - r.ay, l2 = vx * vx + vy * vy || 1;
+        const k = Math.max(0, Math.min(1, ((X - r.ax) * vx + (Y - r.ay) * vy) / l2));
+        const i = idx(tx, ty);
+        if (Math.hypot(X - (r.ax + vx * k), Y - (r.ay + vy * k)) <= pad && (tiles[i] === FLOOR || tiles[i] === WATER)) { tiles[i] = ROAD; keep[i] = 1; }
+      }
+  }
+  for (const b of L.BRIDGES) for (let j = 0; j < (b.vertical ? b.len : b.wide); j++) for (let i = 0; i < (b.vertical ? b.wide : b.len); i++) tiles[idx(b.x + i, b.y + j)] = ROAD;
+  for (const [x, y] of L.CASTLE.columns) tiles[idx(x, y)] = ROCK;
+
+  // 2) 구역 · 정해진 자리 · 상인 · 시작점 · 문
+  const areas = [], posts = [], npcs = [], ports = [], gates = [];
+  const sewer = data.ZONES.find(z => z.rank === 1);
+  areas.push({ name: '첫 공간', x: 30, y: 95, w: 19, h: 13, zone: sewer.id });
+  npcs.push({ name: 'start', x: 39, y: 101 }, { name: 'avatarDoor', x: 45, y: 98 });
+  guard(39, 101, 1, 1, 2); guard(45, 98, 1, 1, 1);
+  for (let rank = 1; rank <= 6; rank++) {
+    const zi = data.ZONES.findIndex(z => z.rank === rank), zone = data.ZONES[zi];
+    const normals = data.ENEMIES.filter(e => e.zoneIndex === zi && e.kind === 'normal');
+    const rects = OVERWORLD_AREAS[rank];
+    if (rects.length !== normals.length) throw new Error(`${rank}격 — 구역 ${rects.length}개, 일반 ${normals.length}종`);
+    rects.forEach(([x0, y0, x1, y1], k) => {
+      const a = { name: normals[k].name, x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1, rank, monster: normals[k].id, zone: zone.id };
+      areas.push(a);
+      if (k === 0) { gates.push(a); guard(a.x + (a.w >> 1) - 1, a.y + (a.h >> 1) - 1, 3, 3, 0); }   // 들머리는 비워 둠
+    });
+    const [mx, my] = OVERWORLD_MERCHANTS[zone.id];
+    npcs.push({ name: 'merchant', x: mx, y: my, zone: zone.id });
+    guard(mx, my, 1, 1, 1);
+  }
+  const foes = data.ENEMIES.filter(e => e.rank.n <= 6 && e.kind !== 'normal');
+  for (const [name, x, y, size = 1, blocks = false] of OVERWORLD_POSTS) {
+    const e = foes.find(f => f.name === name);
+    if (!e) throw new Error(`정해진 자리 — ${name} 이(가) 1~6격에 없음`);
+    posts.push(size > 1 ? { name, x, y, w: size, h: size, enemy: e.id, blocks } : { name, x, y, enemy: e.id, blocks });
+    guard(x, y, size, size, 2);
+  }
+  const missing = foes.filter(e => !posts.some(p => p.enemy === e.id));
+  if (missing.length) throw new Error(`정해진 자리가 없는 정예 · 보스 — ${missing.map(e => e.name).join(', ')}`);
+  // 마왕 뒤 — 관측자 곁에 문의 광장으로 가는 문 (마왕을 꺾어야 열림)
+  const king = foes.find(e => e.rank.n === 6 && e.kind === 'boss');
+  ports.push({ name: 'hub', label: '문의 광장', x: 155, y: 31, w: 2, h: 1, to: 'hub.overworld', opensAfter: king.id });
+  guard(155, 31, 2, 1, 2);
+
+  // 3) 나무 · 바위 무더기 — 시안의 숲덩이 잡음이 짙은 자리에만 (덩어리 숲 — 사이는 넓게 트임)
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const i = idx(x, y);
+    if (tiles[i] !== FLOOR || keep[i]) continue;
+    const b = L.bio[i], grove = L.fbm(x * 0.16, y * 0.16, 83), r = L.hash(x, y, 80);
+    if ((b === 2 && grove > 0.6 && r < 0.8) || (b === 3 && grove > 0.64 && r < 0.6) || (b === 4 && grove > 0.6 && r < 0.55) || (b === 5 && grove > 0.62 && r < 0.3)) tiles[i] = TREE;
+    else if ((b === 4 && r < 0.012) || (b === 6 && r < 0.035)) tiles[i] = ROCK;
+  }
+
+  // 4) 시작점에서 닿지 않는 칸은 벽으로 — 갇힌 빈칸에 몬스터가 서지 않게
+  const open = k => tiles[k] === FLOOR || tiles[k] === ROAD;
+  const seen = new Uint8Array(w * h), q = [idx(39, 101)];
+  seen[q[0]] = 1;
+  for (let n = 0; n < q.length; n++) {
+    const k = q[n], x = k % w, y = (k / w) | 0;
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const j = idx(x + dx, y + dy);
+      if (inside(x + dx, y + dy) && !seen[j] && open(j)) { seen[j] = 1; q.push(j); }
+    }
+  }
+  for (let k = 0; k < w * h; k++) {                         // 나무 · 바위에 갇힌 빈칸은 그 나무 · 바위로 메움
+    if (seen[k] || !open(k)) continue;
+    const nb = [k - 1, k + 1, k - w, k + w].map(j => tiles[j]);
+    tiles[k] = nb.includes(TREE) ? TREE : nb.includes(ROCK) ? ROCK : WALL;
+  }
+  // 서는 자리는 모두 걸을 수 있는 칸이어야 — 시안을 고쳐 어긋나면 여기서 알림
+  const stand = [...posts.flatMap(p => { const out = []; for (let j = 0; j < (p.h || 1); j++) for (let i = 0; i < (p.w || 1); i++) out.push([p.name, p.x + i, p.y + j]); return out; }),
+    ...npcs.map(n => [n.name, n.x, n.y]), ...gates.map(a => [`${a.name} 구역 한가운데(들머리)`, a.x + (a.w >> 1), a.y + (a.h >> 1)])];
+  const bad = stand.filter(([, x, y]) => !seen[idx(x, y)]);
+  if (bad.length) throw new Error(`걸을 수 없는 자리 — ${bad.map(([n, x, y]) => `${n}(${x},${y})`).join(', ')}`);
+
+  return buildTmj({ w, h, tiles, areas, posts, ports, npcs });
 }
 
 // ---------- 7~20격 — 비슷한 것끼리 일곱 장 (docs/MAP-REFERENCE-PLAN.md 2-2) ----------
