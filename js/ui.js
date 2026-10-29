@@ -1473,6 +1473,7 @@ function initMap() {
     canvas: $('mapCanvas'),
     stick: $('mapStick'),
     hooks: MapView.gameHooks(),
+    tag: MapView.gameTag,
     paused: mapPaused,
     marks: merchantMark,
     onEvents: onMapEvents

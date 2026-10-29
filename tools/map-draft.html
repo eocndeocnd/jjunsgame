@@ -74,6 +74,7 @@ const say = t => { lines.unshift(t); lines.length = Math.min(lines.length, 60); 
 const view = MapView.create({
   canvas: $('view'), stick: $('stick'), dots: true,
   hooks: MapView.gameHooks(),
+  tag: MapView.gameTag,
   paused: () => !State.run || State.run.over || !!State.run.encounter,
   onEvents
 });

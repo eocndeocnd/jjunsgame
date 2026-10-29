@@ -30,7 +30,8 @@ const MapView = (function () {
   //   canvas, stick(.knob 를 품은 조이스틱 — 없어도 됨), hooks(MapRules 가 게임에게 묻는 것),
   //   paused() → 지금은 세계를 멈출 때인가 (싸움 창 · 다른 창이 떠 있을 때),
   //   onEvents(events) → 한 틱에 일어난 일,
-  //   marks() → [{ x, y, icon }] 지도에 더 얹을 것 (떠돌이 상인 같은), dots → 몬스터 성격 점을 찍을까 (맵 초안)
+  //   marks() → [{ x, y, icon }] 지도에 더 얹을 것 (떠돌이 상인 같은), dots → 몬스터 성격 점을 찍을까 (맵 초안),
+  //   tag(enemyId) → { text, hot } 머리 위에 쓸 글 (레벨 — hot 이면 나보다 셈)
   // }
   function create(o) {
     const v = { world: null };
@@ -127,6 +128,18 @@ const MapView = (function () {
         ctx.fillText(icon, ox + cx * T, oy + (cy + 0.06) * T);
       };
       const line = Math.max(2, Math.round(T / 10));
+      // 머리 위 레벨 — 나보다 센 상대는 붉게. cx · topY 는 픽셀
+      const label = (id, cx, topY) => {
+        const t = o.tag && o.tag(id);
+        if (!t) return;
+        ctx.font = `bold ${Math.max(9, Math.round(T * 0.36))}px system-ui, sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(28,16,7,0.85)';
+        ctx.strokeText(t.text, cx, topY);
+        ctx.fillStyle = t.hot ? '#ff9a8a' : '#f6e7c3';
+        ctx.fillText(t.text, cx, topY);
+      };
 
       // 문 — 열리면 초록, 닫히면 갈색. 이름이 있으면 문 위에 씁니다
       for (const port of m.ports) {
@@ -156,6 +169,7 @@ const MapView = (function () {
         ctx.lineWidth = line;
         ctx.strokeRect(ox + post.x * T + line / 2, oy + post.y * T + line / 2, pw - line, ph - line);
         glyph(post.x + post.w / 2, post.y + post.h / 2, f.icon, 0.72 * Math.min(post.w, post.h));
+        label(post.enemy, ox + (post.x + post.w / 2) * T, oy + post.y * T - 1);
       }
       for (const mob of w.mobs) {
         const g = seenAt(mob, R.CHASE_SPEED, dt);
@@ -181,6 +195,7 @@ const MapView = (function () {
           ctx.font = `bold ${Math.round(T * 0.55)}px sans-serif`;
           ctx.fillText('!', ox + (g.x + 0.85) * T, oy + (gy + 0.2) * T);
         }
+        label(mob.monster, cx, oy + gy * T + 1);
       }
       // 나
       const py = gp.y + bob(gp) / T;
@@ -254,5 +269,12 @@ const MapView = (function () {
     };
   }
 
-  return { create, gameHooks, VIEW, KIND_COLOR, TEMPER_COLOR };
+  // 머리 위 레벨 — 지금 내 레벨보다 높으면 붉게 (게임과 맵 초안이 같이 씀)
+  function gameTag(id) {
+    const f = getEnemy(id);
+    if (!f) return null;
+    return { text: `Lv.${fmtLevel(f.level)}`, hot: !!State.run && f.level > State.run.level };
+  }
+
+  return { create, gameHooks, gameTag, VIEW, KIND_COLOR, TEMPER_COLOR };
 })();
