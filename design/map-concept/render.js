@@ -19,11 +19,9 @@ const fs = require('fs');
 const path = require('path');
 const { encodePng } = require('../../tools/map-gen.js');
 
-const {
-  W, H, T, hash, sm, vnoise, fbm,
-  VOID, GRASS, DIRT, COBBLE, TILES, WATER, LAVA, OBSID, SNOW, ROCKY, PAVE, CANAL,
-  ter, bio, hgt, idx, inMap, T_, ROADS, pathMask, BRIDGES
-} = require('../../tools/overworld-layout.js');
+const OL = require('../../tools/overworld-layout.js');
+const { hash, sm, vnoise, fbm, VOID, GRASS, DIRT, COBBLE, TILES, WATER, LAVA, OBSID, SNOW, ROCKY, PAVE, CANAL } = OL;
+const { W, H, T, ter, bio, hgt, idx, inMap, T_, ROADS, pathMask, BRIDGES } = OL.build(1);   // 시안은 1배 (게임 지도는 더 크게)
 const PW = W * T, PH = H * T;
 const OUT = __dirname;
 
