@@ -61,32 +61,28 @@ test('지도 읽기 — 벽 · 물은 막히고 숨은 통로는 지나간다', 
   assert.equal(m.solid[0], 1, '벽');
 });
 
-test('구역이 시야에 들어오면 3~4마리 — 서로 붙지 않고, 내 코앞엔 없다', () => {
-  const m = mapOf([
-    '##########################',
-    '#@...............aaaaaaaa#',
-    '#................aaaaaaaa#',
-    '#................aaaaaaaa#',
-    '##########################'
-  ]);
+// 구역 둘 — 왼쪽 a(1~7칸) · 오른쪽 b(25~32칸), 나는 한가운데(16칸)라 둘 다 시야(8칸) 밖
+const twoAreas = () => mapOf([
+  '#'.repeat(34),
+  '#' + 'a'.repeat(7) + '.'.repeat(17) + 'b'.repeat(8) + '#',
+  '#' + 'a'.repeat(7) + '.'.repeat(8) + '@' + '.'.repeat(8) + 'b'.repeat(8) + '#',
+  '#' + 'a'.repeat(7) + '.'.repeat(17) + 'b'.repeat(8) + '#',
+  '#'.repeat(34)
+]);
+
+test('세계가 서면 몬스터가 있는 모든 구역에 3~4마리 — 서로 붙지 않고, 내 코앞엔 없다', () => {
+  const m = twoAreas();
   for (let seed = 1; seed <= 20; seed++) {
     const w = M.createWorld(m, {}, seed);
-    assert.equal(w.mobs.length, 0, '멀리 있을 때는 아직 없음');
-    M.setInput(w, 'right');
-    run(w, 3);
-    const p = w.player;
-    assert.ok(w.live[0], `시드 ${seed} — 구역이 보이면 세워짐`);
-    assert.ok(w.mobs.length >= R.SPAWN_MIN && w.mobs.length <= R.SPAWN_MAX, `시드 ${seed} — ${w.mobs.length}마리`);
-  }
-  // 세워지는 순간만 따로 — 서로 떨어져 있고 내 코앞이 아님
-  const w = M.createWorld(m, {}, 7);
-  w.player.x = 17 - R.SIGHT; w.player.y = 2;
-  M.tick(w, 0.001);
-  M.setInput(w, 'right');
-  for (let i = 0; i < 30 && !w.live[0]; i++) M.tick(w, 0.2);
-  for (const a of w.mobs) {
-    assert.ok(Math.max(Math.abs(a.x - w.player.x), Math.abs(a.y - w.player.y)) > R.SPAWN_CLEAR);
-    for (const b of w.mobs) if (a !== b) assert.ok(Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y)) >= R.SPAWN_GAP);
+    for (const a of m.areas) {
+      const mine = w.mobs.filter(x => x.area === a.index);
+      assert.ok(mine.length >= R.SPAWN_MIN && mine.length <= R.SPAWN_MAX, `시드 ${seed} ${a.name} — ${mine.length}마리`);
+      assert.ok(mine.every(x => x.x >= a.x && x.x < a.x + a.w && x.y >= a.y && x.y < a.y + a.h), '제 구역 안');
+    }
+    for (const a of w.mobs) {
+      assert.ok(Math.max(Math.abs(a.x - w.player.x), Math.abs(a.y - w.player.y)) > R.SPAWN_CLEAR);
+      for (const b of w.mobs) if (a !== b) assert.ok(Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y)) >= R.SPAWN_GAP);
+    }
   }
 });
 
@@ -104,30 +100,56 @@ test('다른 구역에 들어서면 알린다 — 구역 밖 길 위는 그대�
   assert.equal(ev[0].area.name, 'b');
 });
 
-test('멀리(10칸 넘게) 갔다가 돌아오면 남은 것을 지우고 새로 선다', () => {
-  const m = mapOf([
-    '##################################',
-    '#aaaaaaa.........................#',
-    '#aaaaaaa........................@#',
-    '#aaaaaaa.........................#',
-    '##################################'
+test('멀리 갔다 와도 그대로 — 잡으면 그 구역에 하나가 새로 서고, 기운도 그때 새로 굴린다', () => {
+  let rolls = 0;
+  const w = M.createWorld(twoAreas(), { rollAura: () => ({ id: `기운${++rolls}` }) }, 3);
+  assert.equal(rolls, w.mobs.length, '처음 설 때 한 마리에 한 번씩 굴림');
+  const ids = () => w.mobs.map(x => x.id).sort((p, q) => p - q).join();
+  const before = ids(), lastId = Math.max(...w.mobs.map(x => x.id));
+  for (const x of [9, 24, 16]) { w.player.x = x; run(w, 1); }   // a 앞 · b 앞 · 한가운데
+  assert.equal(ids(), before, '지우지도 새로 세우지도 않음');
+  assert.equal(rolls, w.mobs.length, '기운도 그대로');
+
+  const foe = w.mobs.find(x => x.area === 0), n = w.mobs.filter(x => x.area === 0).length;
+  w.encounter = { mob: foe, first: 'player' };
+  M.resolve(w, 'win');
+  const now = w.mobs.filter(x => x.area === 0), fresh = now.find(x => x.id > lastId);
+  assert.ok(!w.mobs.includes(foe), '잡은 것은 사라짐');
+  assert.equal(now.length, n, '그 구역의 수는 그대로');
+  assert.ok(fresh, '새로 하나');
+  assert.equal(fresh.aura.id, `기운${rolls}`, '기운을 새로 굴림');
+  for (const b of now) if (b !== fresh) assert.ok(Math.max(Math.abs(b.x - fresh.x), Math.abs(b.y - fresh.y)) >= R.SPAWN_GAP);
+});
+
+test('적어 둔 몬스터로 되살린다 — 지도와 안 맞는 것은 버리고 빈 구역은 새로, 마주하던 것은 그 조우로, 코앞에 선 것은 먼 칸으로', () => {
+  const keep = [
+    { monster: 'a', area: 0, x: 2, y: 1, aura: { id: '황금' } },
+    { monster: 'a', area: 0, x: 6, y: 3, aura: null, fighting: true },
+    { monster: 'b', area: 0, x: 4, y: 2, aura: null },   // 구역과 몬스터가 안 맞음
+    { monster: 'a', area: 7, x: 4, y: 2, aura: null }    // 없는 구역
+  ];
+  const w = M.createWorld(twoAreas(), {}, 5, keep);
+  const a = w.mobs.filter(x => x.area === 0);
+  assert.equal(a.length, 2, 'a 구역은 적어 둔 둘만');
+  assert.deepEqual([a[0].x, a[0].y, a[0].aura.id], [2, 1, '황금']);
+  assert.ok(w.mobs.filter(x => x.area === 1).length >= R.SPAWN_MIN, '적어 둔 것이 없는 b 구역은 새로');
+  assert.equal(w.encounter && w.encounter.mob, a[1], '마주하던 것으로 조우');
+  assert.equal(M.tick(w, 1).length, 0, '조우 중에는 멈춤');
+  M.resolve(w, 'win');
+  assert.ok(!w.mobs.includes(a[1]), '이기면 사라짐');
+  assert.equal(w.mobs.filter(x => x.area === 0).length, 2, '그 구역에 새로 하나');
+
+  const big = mapOf([
+    '############',
+    '#aaaaaaaaaa#',
+    '#aaaaaaaaaa#',
+    '#aaaa@aaaaa#',
+    '#aaaaaaaaaa#',
+    '############'
   ]);
-  const w = M.createWorld(m, {}, 3);
-  assert.equal(w.live[0], false);
-  M.setInput(w, 'left');
-  run(w, 4);                                      // 구역에서 5칸 앞까지
-  assert.ok(w.live[0] && w.mobs.length >= R.SPAWN_MIN);
-  w.mobs.pop();                                   // 하나 잡았다 치고
-  const before = new Set(w.mobs.map(x => x.id));
-  M.setInput(w, 'right');
-  run(w, 5);
-  assert.equal(w.live[0], false, '멀어지면 지워짐');
-  assert.equal(w.mobs.length, 0);
-  M.setInput(w, 'left');
-  run(w, 4);
-  assert.ok(w.live[0], '다시 보이면 섬');
-  assert.ok(w.mobs.length >= R.SPAWN_MIN);
-  assert.ok(w.mobs.every(x => !before.has(x.id)), '전부 새것');
+  const w2 = M.createWorld(big, {}, 6, [{ monster: 'a', area: 0, x: 6, y: 3, aura: null }]);
+  assert.equal(w2.mobs.length, 1);
+  assert.ok(manh(w2.mobs[0], w2.player) > R.AGGRO_SIGHT + 1, `코앞에서 먼 칸으로 (${manh(w2.mobs[0], w2.player)}칸)`);
 });
 
 test('선공은 나를 보면 쫓아와 부딪힌다 — 몬스터가 먼저 닿음', () => {
@@ -161,7 +183,7 @@ test('선공은 제 구역 밖으로 3칸 넘게는 쫓지 않고 돌아간다',
   const a = mob(w, 4, 2, 'aggro');
   const area = m.areas[0];
   let farthest = 0;
-  M.setInput(w, 'right');                        // 달아난다 (나는 초당 5칸, 쫓는 것은 3칸)
+  M.setInput(w, 'right');                        // 달아난다 (나는 초당 10칸, 쫓는 것은 3칸)
   const ev = run(w, 1.6, () => { farthest = Math.max(farthest, a.x - (area.x + area.w - 1)); });
   M.setInput(w, null);
   run(w, 8, () => { farthest = Math.max(farthest, a.x - (area.x + area.w - 1)); });
@@ -256,13 +278,14 @@ test('닿은 뒤에는 한 번 떼야 다시 걷는다', () => {
   M.setInput(w, 'right');
   assert.ok(contact(run(w, 1)));
   M.resolve(w, 'retreat');
+  const at = w.player.x;                         // 밀려난 칸 (몬스터가 어슬렁거려 닿은 칸은 시드마다 다름)
   M.setInput(w, 'right');                        // 누른 채 그대로
   run(w, 1);
-  assert.equal(w.player.x, 1, '안 걸음');
+  assert.equal(w.player.x, at, '안 걸음');
   M.setInput(w, null);
   M.setInput(w, 'right');
-  run(w, 0.1);
-  assert.equal(w.player.x, 2, '떼었다 누르면 걸음');
+  run(w, 0.05);
+  assert.equal(w.player.x, at + 1, '떼었다 누르면 걸음');
 });
 
 test('정예 자리 — 닿으면 싸움, 꺾으면 지나간다 · 닫힌 문은 막고 열리면 들어선다', () => {

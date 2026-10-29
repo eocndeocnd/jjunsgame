@@ -46,14 +46,15 @@ const MapView = (function () {
     const held = [];
     let stickId = null, stickDir = null, face = 'down';
 
-    v.start = (map, start, seed) => { v.world = MapRules.createWorld({ ...map, start: start || map.start }, o.hooks, seed); face = 'down'; };
+    // keep — 저장해 둔 몬스터 (없으면 모든 구역에 새로 섭니다, map.js 의 createWorld)
+    v.start = (map, start, seed, keep) => { v.world = MapRules.createWorld({ ...map, start: start || map.start }, o.hooks, seed, keep); face = 'down'; };
     v.resolve = outcome => { if (v.world) MapRules.resolve(v.world, outcome); };
     const shown = () => !!o.canvas.offsetParent;   // 탭을 옮겨 안 보이면 세계도 멈춥니다
     const live = () => v.world && shown() && !o.paused();
 
     // ---------- 부드럽게 ----------
     // 규칙은 칸 그대로(map.js) — 보이는 자리만 칸 사이를 미끄러져 따라갑니다. 걷는 동안은 살짝 들썩입니다.
-    // 미끄러지는 빠르기는 그 걸음의 빠르기와 같게: 나는 초당 5칸, 몬스터는 초당 3칸 (어슬렁은 미끄러진 뒤 잠깐 섬).
+    // 미끄러지는 빠르기는 그 걸음의 빠르기와 같게: 나는 초당 10칸, 몬스터는 초당 3칸 (어슬렁은 미끄러진 뒤 잠깐 섬).
     const glide = new WeakMap();   // 나 · 몬스터 → 보이는 자리 { x, y, phase }
     function seenAt(e, speed, dt) {
       let g = glide.get(e);
@@ -206,7 +207,7 @@ const MapView = (function () {
         }
         label(mob.monster, cx, oy + gy * T + 1);
       }
-      // 나 — 누른 쪽을 보고, 걷는 동안 한 칸에 두 칸씩 넘김. 그림 1픽셀을 기기 픽셀의 정수 배로 키워 또렷하게
+      // 나 — 누른 쪽을 보고, 걷는 동안 한 칸에 한 장씩 넘김. 그림 1픽셀을 기기 픽셀의 정수 배로 키워 또렷하게
       // (몸 높이가 1.5칸에 가장 가까운 배 — 폰에서는 2배, 약 1.7칸)
       if (p.dir) face = p.dir;
       if (heroImg.complete && heroImg.naturalWidth) {
@@ -214,7 +215,7 @@ const MapView = (function () {
         const fx = Math.round((ox + (gp.x + 0.5) * T) * dpr) / dpr, fy = Math.round((oy + (gp.y + 0.9) * T) * dpr) / dpr;   // 발끝 자리
         ctx.fillStyle = 'rgba(28,16,7,0.3)';
         ctx.beginPath(); ctx.ellipse(fx, fy - k, T * 0.3, T * 0.1, 0, 0, Math.PI * 2); ctx.fill();
-        const n = gp.moving ? (Math.floor(gp.walked * 2) + 1) % 4 : 0;
+        const n = gp.moving ? (Math.floor(gp.walked) + 1) % 4 : 0;
         ctx.imageSmoothingEnabled = false;
         ctx.drawImage(heroImg, n * HERO.w, HERO.row[face] * HERO.h, HERO.w, HERO.h,
           fx - (HERO.w / 2) * k, fy - HERO.foot * k, HERO.w * k, HERO.h * k);

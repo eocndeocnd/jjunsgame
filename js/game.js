@@ -523,10 +523,21 @@ function save() {
 // 끝난 회차도 저장해 둡니다. 다시 열면 끝 화면이 뜨고, 거기서 새 회차를 시작합니다.
 const RUN_SAVE_VERSION = 2;   // 2 — 격 재편 뒤의 지역 번호 (1 은 불러올 때 옮깁니다)
 
+// 지도의 몬스터 — 회차에 한 번 정해지고(기운도) 멀리 가도 그대로, 잡으면 그 구역에 새로 섭니다 (js/map.js).
+// 회차에는 몬스터 · 구역 · 칸 · 기운 id 만 적습니다. 지금 걷는 지도의 몬스터는 ui.js 가 liveMapMobs 로 알려 줍니다.
+// 지금 마주한 몬스터에는 e 를 붙여 둡니다 — 싸우다 다시 열어도 그 몬스터와의 조우로 이어지게 (이기면 사라지고 새로 섬).
+let liveMapMobs = () => null;   // → { id: 지도 id, mobs, fighting: 마주한 몬스터 } | null
+const packMobs = (mobs, fighting) => mobs.map(m => ({ m: m.monster, a: m.area, x: m.x, y: m.y, au: m.aura ? m.aura.id : null, ...(m === fighting ? { e: 1 } : {}) }));
+const unpackMobs = list => Array.isArray(list)
+  ? list.map(k => ({ monster: k.m, area: k.a, x: k.x, y: k.y, aura: (k.au && AURAS.find(a => a.id === k.au)) || null, fighting: !!k.e }))
+  : null;
+
 function saveRun() {
   const run = State.run;
   if (!currentSlot || !run) return;
-  const data = { ...run, v: RUN_SAVE_VERSION, aura: run.aura ? run.aura.id : null, lastResult: null };
+  const live = liveMapMobs();
+  const mapMobs = live ? { ...(run.mapMobs || {}), [live.id]: packMobs(live.mobs, live.fighting) } : run.mapMobs;
+  const data = { ...run, v: RUN_SAVE_VERSION, aura: run.aura ? run.aura.id : null, lastResult: null, mapMobs };
   localStorage.setItem(runKey(currentSlot), JSON.stringify(data));
 }
 
@@ -543,6 +554,7 @@ function loadRun() {
     const run = { ...freshRun(), ...d };
     delete run.v;
     run.aura = d.aura ? (AURAS.find(a => a.id === d.aura) || null) : null;
+    run.mapMobs = d.mapMobs && typeof d.mapMobs === 'object' && !Array.isArray(d.mapMobs) ? d.mapMobs : null;
     run.lastResult = null;
     run.spent = { ...emptySpent(), ...(d.spent || {}) };
     run.downed = Array.isArray(d.downed) ? d.downed : [];
@@ -923,6 +935,7 @@ function freshRun() {
     zonesVisited: [0],   // 이 여정에 들어선 지역 — 지도에서 「…에 들어섰다」는 처음 한 번만
     mapId: null,         // 지금 걷는 지도 (null 이면 지금 지역이 있는 지도 — 지역이 없는 문의 광장에 있을 때만 따로 적힘)
     mapAt: null,         // 그 지도 위에 서 있던 칸 { x, y } — 불러오면 여기서 이어 걷습니다
+    mapMobs: null,       // 지도마다 서 있는 몬스터 { 지도 id: [{ m, a, x, y, au }] } — 아래 packMobs. 없으면 그 지도에 처음 들어설 때 새로 섭니다
     merchant: null,      // 이번 회차의 떠돌이 상인 — { zone, wares, bought } (없으면 null)
     over: false,
     victory: false,

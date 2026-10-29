@@ -19,13 +19,12 @@
   'use strict';
 
   const RULES = {
-    SIGHT: 8,            // 보이는 범위 — 나를 중심으로 가로 · 세로 이만큼 (폰 화면쯤)
-    RESPAWN_DIST: 10,    // 구역이 이보다 멀어지면 남은 것을 지우고, 다시 보일 때 새로 세웁니다
-    SPAWN_MIN: 3,
+    SIGHT: 8,            // 보이는 범위 — 나를 중심으로 가로 · 세로 이만큼 (폰 화면쯤). 잡은 뒤 새로 서는 것은 되도록 이 밖에
+    SPAWN_MIN: 3,        // 구역마다 처음에 세우는 수
     SPAWN_MAX: 4,
     SPAWN_GAP: 2,        // 같이 선 몬스터끼리는 이만큼 떨어지게 (바로 옆 칸 금지)
     SPAWN_CLEAR: 3,      // 내 코앞에는 세우지 않습니다
-    PLAYER_SPEED: 5,     // 초당 칸
+    PLAYER_SPEED: 10,    // 초당 칸
     CHASE_SPEED: 3,
     FLEE_SPEED: 3,
     WANDER_EVERY: 1,     // 어슬렁 — 대략 이 초마다 한 칸
@@ -92,7 +91,7 @@
   // ---------- 세계 (한 지도 위의 지금 상태) ----------
   // hooks
   //   temper(monsterId)  → 'aggro' | 'passive' | 'shy'
-  //   rollAura(monsterId) → 기운(없으면 null) — 스폰할 때마다 굴립니다
+  //   rollAura(monsterId) → 기운(없으면 null) — 세계가 설 때 한 번, 그 뒤로는 잡혀서 새로 설 때마다 굴립니다
   //   postAlive(enemyId) → 그 자리에 아직 서 있는가 (이 여정에서 꺾었거나 아직 안 나타난 히든이면 false)
   //   portOpen(port)     → 그 문이 열렸는가
   function mulberry(seed) {
@@ -104,7 +103,8 @@
     };
   }
 
-  function createWorld(map, hooks, seed) {
+  // keep — 저장해 둔 몬스터 [{ monster, area, x, y, aura }] (없으면 모든 구역에 새로 세웁니다)
+  function createWorld(map, hooks, seed, keep) {
     const w = {
       map,
       rng: seed == null ? Math.random : mulberry(seed),
@@ -113,13 +113,12 @@
       player: { x: map.start.x, y: map.start.y, fromX: map.start.x, fromY: map.start.y, dir: null, wait: 0, needRelease: false },
       mobs: [],
       nextMob: 1,
-      live: map.areas.map(() => false),   // 구역마다 — 지금 몬스터가 세워져 있는가
       encounter: null,                    // 닿아서 싸움 화면이 떠 있는 동안 { mob | post, first }
       lastArea: -1                        // 마지막으로 서 있던 구역 (구역 밖 길 위에서는 그대로)
     };
     const a = areaAt(w, map.start.x, map.start.y);
     if (a) w.lastArea = a.index;
-    updateAreas(w, []);
+    populate(w, keep);
     return w;
   }
 
@@ -156,21 +155,30 @@
   }
 
   // ---------- 스폰 ----------
-  function updateAreas(w, ev) {
-    const p = w.player;
-    for (const a of w.map.areas) {
-      if (!a.monster) continue;                            // 몬스터 없는 이름뿐인 곳 (첫 공간 같은)
-      const g = gap(a, p.x, p.y), d = Math.max(g.dx, g.dy);
-      if (!w.live[a.index] && d <= RULES.SIGHT) {
-        spawn(w, a);
-        w.live[a.index] = true;
-        ev.push({ type: 'spawn', area: a });
-      } else if (w.live[a.index] && d > RULES.RESPAWN_DIST) {
-        w.mobs = w.mobs.filter(m => m.area !== a.index);   // 잡다 남은 것도 지웁니다 — 다시 보일 때 새로 섭니다
-        w.live[a.index] = false;
-        ev.push({ type: 'despawn', area: a });
-      }
+  // 세계가 서면 몬스터가 있는 모든 구역에 3~4마리를 한 번 세웁니다 (기운도 이때 굴림). 멀리 가도 지우지 않고,
+  // 잡으면 그 구역에 하나가 새로 섭니다(resolve). 저장해 둔 것(keep)은 지금 지도와 맞는 것만 되살리고, 하나도 안 남은 구역은 새로 세웁니다.
+  // keep 의 fighting — 마주하던 중에 저장된 그 몬스터. 그 조우로 세계를 세웁니다 (resolve 로 끝낼 때까지 멈춤)
+  function populate(w, keep) {
+    for (const k of keep || []) {
+      const a = w.map.areas[k.area];
+      if (!a || a.monster !== k.monster || !freeForMob(w, k.x, k.y)) continue;
+      const m = newMob(w, a, k.x, k.y, k.aura || null);
+      w.mobs.push(m);
+      if (k.fighting && !w.encounter) w.encounter = { mob: m, first: 'player' };
     }
+    for (const a of w.map.areas) if (a.monster && !w.mobs.some(m => m.area === a.index)) spawn(w, a);
+    // 선공이 알아볼 만큼 가까이 선 것은 제 구역의 먼 칸으로 — 들어서자마자 덤벼들지 않게 (마주한 것은 그대로)
+    const p = w.player;
+    for (const m of w.mobs) {
+      if (manh(m.x, m.y, p.x, p.y) > RULES.AGGRO_SIGHT + 1 || (w.encounter && w.encounter.mob === m)) continue;
+      const c = freeSpot(w, w.map.areas[m.area], m);
+      if (c) { m.x = c.x; m.y = c.y; }
+    }
+  }
+
+  function newMob(w, a, x, y, aura) {
+    return { id: w.nextMob++, monster: a.monster, area: a.index, x, y, temper: w.hooks.temper(a.monster), aura,
+             mode: 'wander', wait: w.rng() * RULES.WANDER_EVERY, frozen: 0, angry: 0 };
   }
 
   function spawn(w, a) {
@@ -185,13 +193,21 @@
       if (placed.some(q => cheb(q.x, q.y, c.x, c.y) < RULES.SPAWN_GAP)) continue;
       placed.push(c);
     }
-    for (const c of placed) {
-      w.mobs.push({
-        id: w.nextMob++, monster: a.monster, area: a.index, x: c.x, y: c.y,
-        temper: w.hooks.temper(a.monster), aura: w.hooks.rollAura(a.monster) || null,
-        mode: 'wander', wait: w.rng() * RULES.WANDER_EVERY, frozen: 0, angry: 0
-      });
-    }
+    for (const c of placed) w.mobs.push(newMob(w, a, c.x, c.y, w.hooks.rollAura(a.monster) || null));
+  }
+
+  // 구역 안의 빈 칸 하나 (self 는 옮기려는 그 몬스터) — 다른 몬스터와 SPAWN_GAP 떨어지고, 되도록 내 시야 밖.
+  // 시야 밖이 없으면 나에게서 가장 먼 칸 (내 코앞이면 null)
+  function freeSpot(w, a, self) {
+    const p = w.player, outOfSight = [], inSight = [];
+    eachCell(w.map, a, (x, y) => {
+      if (!freeForMob(w, x, y) || w.mobs.some(m => m !== self && cheb(m.x, m.y, x, y) < RULES.SPAWN_GAP)) return;
+      (cheb(x, y, p.x, p.y) > RULES.SIGHT ? outOfSight : inSight).push({ x, y });
+    });
+    if (outOfSight.length) return outOfSight[Math.floor(w.rng() * outOfSight.length)];
+    let best = null, bestD = RULES.SPAWN_CLEAR;
+    for (const c of inSight) { const d = manh(c.x, c.y, p.x, p.y) + w.rng() * 0.5; if (d > bestD) { best = c; bestD = d; } }
+    return best;
   }
 
   // ---------- 한 틱 ----------
@@ -200,7 +216,6 @@
   //   { type: 'port', port }    열린 문에 들어섰다
   //   { type: 'closed', port }  닫힌 문에 부딪혔다
   //   { type: 'area', area }    다른 구역에 들어섰다 (밀려나 들어선 것도)
-  //   { type: 'spawn' | 'despawn', area }
   function tick(w, dt) {
     const ev = [];
     if (w.encounter) return ev;
@@ -244,7 +259,6 @@
     if (post) return meet(w, ev, { post, first: 'player' });
     p.fromX = p.x; p.fromY = p.y;
     p.x = nx; p.y = ny;
-    updateAreas(w, ev);
     if (port && port.to) ev.push({ type: 'port', port });
   }
 
@@ -317,14 +331,18 @@
   }
 
   // ---------- 싸움이 끝나면 ----------
-  // outcome: 'win' (그 몬스터는 사라짐) · 'retreat' (물러섬) · 'lose' (짐)
+  // outcome: 'win' (그 몬스터는 사라지고, 그 구역에 하나가 새로 섬 — 기운도 새로 굴림) · 'retreat' (물러섬) · 'lose' (짐)
   // 물러서거나 지면 나는 한 칸 뒤로 밀려나고, 그 몬스터는 잠깐 멈춥니다. 후공은 물러선 나에게 화가 납니다.
   function resolve(w, outcome) {
     const enc = w.encounter;
     if (!enc) return;
     w.encounter = null;
     if (outcome === 'win') {
-      if (enc.mob) w.mobs = w.mobs.filter(m => m !== enc.mob);
+      if (enc.mob) {
+        w.mobs = w.mobs.filter(m => m !== enc.mob);
+        const a = w.map.areas[enc.mob.area], c = a && freeSpot(w, a, null);
+        if (c) w.mobs.push(newMob(w, a, c.x, c.y, w.hooks.rollAura(a.monster) || null));
+      }
       return;
     }
     pushBack(w, enc.mob || enc.post);
@@ -348,7 +366,6 @@
     if (!best) return;
     p.fromX = p.x; p.fromY = p.y;
     p.x = best.x; p.y = best.y;
-    updateAreas(w, []);
   }
 
   const api = { RULES, TEMPER_BY_ARCH, DIRS, temperOf, mulberry, parseTiled, createWorld, setInput, tick, resolve, areaAt, mobAt, postAt, portAt };

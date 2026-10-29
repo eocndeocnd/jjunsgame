@@ -1533,14 +1533,26 @@ function syncMap() {
   mapKey = key;
 }
 
+// 몬스터는 회차에 한 번 정해집니다 — 떠나는 지도(같은 회차일 때만)의 몬스터를 회차에 적어 두고, 들어서는 지도는 적어 둔 것으로 되살립니다.
+// 처음 들어서는 지도면 모든 구역에 새로 섭니다. 코앞에 선 것은 map.js 가 제 구역의 먼 칸으로 옮깁니다.
 function enterMap(data, at) {
-  mapView.start(data, at);
-  // 막 들어선 구역은 비워 둡니다 — 불러오자마자 선공이 덤벼들지 않게. 멀리 갔다 오면 다시 섭니다.
-  const w = mapView.world, here = MapRules.areaAt(w, at.x, at.y);
-  if (here) w.mobs = w.mobs.filter(m => m.area !== here.index);
+  const run = State.run, w0 = mapView.world;
+  if (w0 && mapKey === `${currentSlot}|${State.meta.runCount}`) {
+    run.mapMobs = { ...(run.mapMobs || {}), [w0.map.id]: packMobs(w0.mobs, w0.encounter && w0.encounter.mob) };
+  }
+  const keep = unpackMobs(run.mapMobs && run.mapMobs[data.id]);
+  if (keep && !run.encounter) for (const k of keep) k.fighting = false;   // 조우가 끝난 뒤라면 그냥 서 있는 몬스터
+  mapView.start(data, at, undefined, keep);
   mapShown = data.id;
-  mapZone = State.run.zoneIndex;
+  mapZone = run.zoneIndex;
 }
+
+// 저장할 때 지금 걷는 지도의 몬스터 (game.js 의 saveRun) — 화면의 지도가 이 회차 · 이 지도 것일 때만
+liveMapMobs = () => {
+  const w = mapView && mapView.world, run = State.run;
+  if (!w || !run || mapKey !== `${currentSlot}|${State.meta.runCount}` || w.map.id !== run.mapId) return null;
+  return { id: w.map.id, mobs: w.mobs, fighting: w.encounter && w.encounter.mob };
+};
 
 // 문으로 다른 지도에 — 닿는 곳은 그 지도의 같은 이름 문 바로 앞 (예: hub.overworld = 문의 광장의 「마왕의 성으로」 문 앞).
 // 그 지도가 없으면(손으로 지운 경우 등) 문에 적힌 지역(zone)으로 건너가 그 지역이 있는 지도의 들머리에 섭니다.
@@ -1562,8 +1574,8 @@ function goThroughPort(port) {
   const k = data.areaAt[at.y * data.w + at.x], a = k >= 0 ? data.areas[k] : null;
   if (a && a.zone) walkIntoZone(ZONES.findIndex(z => z.id === a.zone));
   run.mapId = id;
+  enterMap(data, at);                  // 떠나온 지도의 몬스터를 회차에 적은 뒤에 저장하도록 먼저
   rememberMapAt(at.x, at.y, true);
-  enterMap(data, at);
 }
 
 // 문 바로 앞의 걸을 수 있는 칸 (아래 · 위 · 오른쪽 · 왼쪽 순) — 들어서자마자 도로 나가지 않게 문 위가 아니라 그 앞
@@ -1733,8 +1745,9 @@ function wireJourney() {
     const from = logSeq;
     const r = engage();
     if (r) r.pre = pre;
-    // 지도 위라면 이긴 상대는 사라지고, 지면 한 칸 밀려납니다 (보여 주는 건 싸움 창이 닫힌 뒤)
-    if (r && mapView) mapView.resolve(r.win ? 'win' : 'lose');
+    // 지도 위라면 이긴 상대는 사라지고(그 구역에 새로 하나), 지면 한 칸 밀려납니다 (보여 주는 건 싸움 창이 닫힌 뒤).
+    // 곧바로 한 번 더 저장 — 다시 열었을 때 잡은 몬스터가 되살아나지 않게
+    if (r && mapView) { mapView.resolve(r.win ? 'win' : 'lose'); save(); }
     startBattle(r, from);
     render();
   });   // 소리는 전투 화면이 한 줄씩 냅니다

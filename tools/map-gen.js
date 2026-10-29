@@ -329,6 +329,7 @@ const AREA_INSET = 0.2;   // 구역은 제 자리의 가운데만 — 가장자�
 
 // 구역의 자리 [x0, y0, x1, y1] (끝 칸 포함) — 어느 몬스터가 어디 서는지는 길을 따라 정합니다:
 // 그 격에 들어오는 곳(OVERWORLD_ENTRY)에서 멀어지고 보스에 가까워질수록 센 몬스터 (보스 쪽으로 갈수록 강하게, 사용자 결정).
+// 다만 가장 약한 몬스터는 들어오는 곳에서 걸어서 가장 먼저 닿는 구역에 — 처음 만나는 것이 가장 약한 것 (1격은 슬라임).
 // 가장 약한 몬스터의 구역 한가운데가 그 지역 들머리입니다 (불러오면 거기 섭니다).
 const OVERWORLD_AREAS = {
   1: [[31, 84, 45, 91], [9, 84, 28, 91], [48, 84, 65, 91], [31, 74, 45, 81], [9, 74, 28, 81],      // 수로가 가른 아홉 구역 — 계단 앞에서 수문 쪽으로
@@ -443,14 +444,18 @@ function overworld(data) {
     const spots = rects.map(([x0, y0, x1, y1]) => {
       const r = rectOf(x0, y0, x1, y1), ix = Math.max(2, Math.round(r.w * AREA_INSET)), iy = Math.max(2, Math.round(r.h * AREA_INSET));
       const a = { x: r.x + ix, y: r.y + iy, w: r.w - ix * 2, h: r.h - iy * 2 };
-      let sum = 0, n = 0;
+      let sum = 0, n = 0, near = Infinity;
       for (let y = a.y; y < a.y + a.h; y++) for (let x = a.x; x < a.x + a.w; x++) {
         const k = idx(x, y);
-        if (fromEntry[k] >= 0 && toBoss[k] >= 0) { sum += fromEntry[k] - toBoss[k]; n++; }
+        if (fromEntry[k] >= 0 && toBoss[k] >= 0) { sum += fromEntry[k] - toBoss[k]; n++; near = Math.min(near, fromEntry[k]); }
       }
       if (!n) throw new Error(`${rank}격 구역 자리 [${x0}, ${y0}] — 들어오는 곳이나 보스에서 걸어서 닿지 않음`);
-      return { ...a, score: sum / n };
+      return { ...a, score: sum / n, near };
     }).sort((p, q) => p.score - q.score);
+    // 가장 약한 것은 들어오자마자 만나게 — 들어오는 곳에서 걸어서 가장 먼저 닿는 구역 (나머지는 위 순서대로)
+    const first = spots.reduce((b, s) => (s.near < b.near ? s : b));
+    spots.splice(spots.indexOf(first), 1);
+    spots.unshift(first);
     spots.forEach((sp, k) => {
       const a = { name: normals[k].name, x: sp.x, y: sp.y, w: sp.w, h: sp.h, rank, monster: normals[k].id, zone: zone.id };
       areas.push(a);
