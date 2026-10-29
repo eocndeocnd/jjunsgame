@@ -321,14 +321,15 @@ function generate(plan, ranks, data, opts) {
 // 땅 모양 · 격 나누기 · 물 · 흙길 · 다리 · 성벽은 tools/overworld-layout.js 가 정하고 (시안 그림과 같이 씀),
 // 여기서는 그 칸을 게임 칸으로 바꾸고 구역 · 정해진 자리 · 상인 · 문을 시안 그림의 같은 자리에 둡니다.
 //   어둠 → 벽 · 물 · 수로 · 용암 → 물 · 바위 등성이 · 흑요석 벼랑 · 바위턱 → 바위 · 처음의 방을 두른 통바위 → 벽
-// 다음 격은 보스(3×3)가 세 칸 틈을 막고 서서 엽니다 — 1 → 2 (수문의 던전 가디언) · 2 → 3 (성문의 트롤 킹, 3격은 막다른 곳)
-// · 2 → 4 (숲에서 그대로 이어짐) · 4 → 5 (쐐기돌 아치의 거인왕) · 5 → 6 (대성당 뒤 묘실 통로의 불사의 왕) · 왕좌의 방 (벌레의 굴)
+// 다음 격은 보스(3×3)가 세 칸 틈을 막고 서서 엽니다 — 1 → 2 (수문의 던전 가디언) · 2 → 3 · 4 (숲에서 그대로 이어짐, 3격은 막다른 곳)
+// · 4 → 5 (쐐기돌 아치의 거인왕) · 5 → 6 (대성당 뒤 묘실 통로의 불사의 왕) · 왕좌의 방 (벌레의 굴). 트롤 킹은 숲 속 굴에서 막지 않고 기다림
 // 아래 좌표는 모두 시안 칸 (176×112) — 배율을 바꿔도 그대로 둡니다.
 const OVERWORLD_SCALE = 2.5;
 const AREA_INSET = 0.2;   // 구역은 제 자리의 가운데만 — 가장자리 이만큼(변마다)은 몬스터가 없는 빈 땅으로 남겨 쉴 곳을 둠
 
-// 구역의 자리 — 격마다 일반 몬스터 순서(약한 것부터)대로, 들어오는 곳에서 먼 쪽으로. [x0, y0, x1, y1] (끝 칸 포함)
-// 첫 구역 한가운데가 그 지역 들머리입니다 (불러오면 거기 섭니다).
+// 구역의 자리 [x0, y0, x1, y1] (끝 칸 포함) — 어느 몬스터가 어디 서는지는 길을 따라 정합니다:
+// 그 격에 들어오는 곳(OVERWORLD_ENTRY)에서 멀어지고 보스에 가까워질수록 센 몬스터 (보스 쪽으로 갈수록 강하게, 사용자 결정).
+// 가장 약한 몬스터의 구역 한가운데가 그 지역 들머리입니다 (불러오면 거기 섭니다).
 const OVERWORLD_AREAS = {
   1: [[31, 84, 45, 91], [9, 84, 28, 91], [48, 84, 65, 91], [31, 74, 45, 81], [9, 74, 28, 81],      // 수로가 가른 아홉 구역 — 계단 앞에서 수문 쪽으로
       [48, 74, 65, 81], [9, 64, 28, 71], [48, 64, 65, 71], [31, 64, 45, 71]],
@@ -348,7 +349,7 @@ const OVERWORLD_AREAS = {
 const OVERWORLD_POSTS = [
   ['던전 가디언', 'gate'],                                              // 지하수로 수문
   ['고블린 족장', 38, 79], ['미믹', 60, 89],                            // 가운데 석상 · 구석의 보물상자
-  ['트롤 킹', 'gate'],                                                  // 왕국 성벽의 무너진 성문
+  ['트롤 킹', 12, 38, 3],                                               // 숲 북서쪽 시내 상류의 굴 앞 (길은 막지 않음)
   ['오크 장군', 13, 46], ['숲의 마녀', 54, 41],                         // 야영지 · 오두막
   ['몰락한 왕', 14, 13, 3],                                             // 성 안 왕좌
   ['그리핀 로드', 56, 15], ['히드라', 28, 25], ['카벙클', 60, 11],      // 탑 자리 · 물에 잠긴 안뜰 · 바위턱 폭포 밑
@@ -362,6 +363,7 @@ const OVERWORLD_POSTS = [
   ['세계수를 먹는 벌레', 'gate'],                                       // 왕좌의 방으로 가는 굴
   ['마왕', 155, 23, 3], ['관측자', 158, 30]                             // 왕좌 · 문 곁
 ];
+const OVERWORLD_ENTRY = { 1: [39, 91], 2: [38, 60], 3: [44, 28], 4: [66, 50], 5: [116, 48], 6: [136, 39] };   // 계단 위 · 수문 너머 · 옛 성문 자리 · 숲 가장자리 · 아치 너머 · 묘실 입구
 const OVERWORLD_MERCHANTS = { sewer: [33, 86], forest: [34, 58], ruins: [40, 26], giantpass: [70, 46], necropolis: [120, 50], abyss: [128, 37] };
 
 function overworld(data) {
@@ -405,21 +407,6 @@ function overworld(data) {
   const [sx, sy] = L.spot1(39, 101), [dx, dy] = L.spot1(45, 98);
   npcs.push({ name: 'start', x: sx, y: sy }, { name: 'avatarDoor', x: dx, y: dy });
   guard(sx, sy, 1, 1, 2); guard(dx, dy, 1, 1, 1);
-  for (let rank = 1; rank <= 6; rank++) {
-    const zi = data.ZONES.findIndex(z => z.rank === rank), zone = data.ZONES[zi];
-    const normals = data.ENEMIES.filter(e => e.zoneIndex === zi && e.kind === 'normal');
-    const rects = OVERWORLD_AREAS[rank];
-    if (rects.length !== normals.length) throw new Error(`${rank}격 — 구역 ${rects.length}개, 일반 ${normals.length}종`);
-    rects.forEach(([x0, y0, x1, y1], k) => {
-      const r = rectOf(x0, y0, x1, y1), ix = Math.max(2, Math.round(r.w * AREA_INSET)), iy = Math.max(2, Math.round(r.h * AREA_INSET));
-      const a = { name: normals[k].name, x: r.x + ix, y: r.y + iy, w: r.w - ix * 2, h: r.h - iy * 2, rank, monster: normals[k].id, zone: zone.id };
-      areas.push(a);
-      if (k === 0) { gates.push(a); guard(a.x + (a.w >> 1) - 1, a.y + (a.h >> 1) - 1, 3, 3, 0); }   // 들머리는 비워 둠
-    });
-    const [mx, my] = L.spot1(...OVERWORLD_MERCHANTS[zone.id]);
-    npcs.push({ name: 'merchant', x: mx, y: my, zone: zone.id });
-    guard(mx, my, 1, 1, 1);
-  }
   const foes = data.ENEMIES.filter(e => e.rank.n <= 6 && e.kind !== 'normal');
   for (const [name, x, y, size = 1] of OVERWORLD_POSTS) {
     const e = foes.find(f => f.name === name);
@@ -432,6 +419,47 @@ function overworld(data) {
   }
   const missing = foes.filter(e => !posts.some(p => p.enemy === e.id));
   if (missing.length) throw new Error(`정해진 자리가 없는 정예 · 보스 — ${missing.map(e => e.name).join(', ')}`);
+  // 구역 — 길을 따라 약한 것부터: 들어오는 곳에서의 거리 − 보스까지의 거리가 작은 구역부터 (장애물을 두기 전 칸으로 잼)
+  const walkFrom = cells => {
+    const d = new Int32Array(w * h).fill(-1), q = [];
+    for (const k of cells) if (d[k] < 0) { d[k] = 0; q.push(k); }
+    for (let n = 0; n < q.length; n++) {
+      const k = q[n], x = k % w, y = (k / w) | 0;
+      for (const [ex, ey] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const j = idx(x + ex, y + ey);
+        if (inside(x + ex, y + ey) && d[j] < 0 && (tiles[j] === FLOOR || tiles[j] === ROAD)) { d[j] = d[k] + 1; q.push(j); }
+      }
+    }
+    return d;
+  };
+  for (let rank = 1; rank <= 6; rank++) {
+    const zi = data.ZONES.findIndex(z => z.rank === rank), zone = data.ZONES[zi];
+    const normals = data.ENEMIES.filter(e => e.zoneIndex === zi && e.kind === 'normal');
+    const rects = OVERWORLD_AREAS[rank];
+    if (rects.length !== normals.length) throw new Error(`${rank}격 — 구역 ${rects.length}개, 일반 ${normals.length}종`);
+    const boss = posts.find(q => q.enemy === data.ENEMIES.find(e => e.zoneIndex === zi && e.kind === 'boss').id);
+    const fromEntry = walkFrom([idx(...L.spot1(...OVERWORLD_ENTRY[rank]))]);
+    const toBoss = walkFrom([...Array(9).keys()].map(k => idx(boss.x + k % 3, boss.y + ((k / 3) | 0))));
+    const spots = rects.map(([x0, y0, x1, y1]) => {
+      const r = rectOf(x0, y0, x1, y1), ix = Math.max(2, Math.round(r.w * AREA_INSET)), iy = Math.max(2, Math.round(r.h * AREA_INSET));
+      const a = { x: r.x + ix, y: r.y + iy, w: r.w - ix * 2, h: r.h - iy * 2 };
+      let sum = 0, n = 0;
+      for (let y = a.y; y < a.y + a.h; y++) for (let x = a.x; x < a.x + a.w; x++) {
+        const k = idx(x, y);
+        if (fromEntry[k] >= 0 && toBoss[k] >= 0) { sum += fromEntry[k] - toBoss[k]; n++; }
+      }
+      if (!n) throw new Error(`${rank}격 구역 자리 [${x0}, ${y0}] — 들어오는 곳이나 보스에서 걸어서 닿지 않음`);
+      return { ...a, score: sum / n };
+    }).sort((p, q) => p.score - q.score);
+    spots.forEach((sp, k) => {
+      const a = { name: normals[k].name, x: sp.x, y: sp.y, w: sp.w, h: sp.h, rank, monster: normals[k].id, zone: zone.id };
+      areas.push(a);
+      if (k === 0) { gates.push(a); guard(a.x + (a.w >> 1) - 1, a.y + (a.h >> 1) - 1, 3, 3, 0); }   // 들머리는 비워 둠
+    });
+    const [mx, my] = L.spot1(...OVERWORLD_MERCHANTS[zone.id]);
+    npcs.push({ name: 'merchant', x: mx, y: my, zone: zone.id });
+    guard(mx, my, 1, 1, 1);
+  }
   // 마왕 뒤 — 관측자 곁에 문의 광장으로 가는 문 (마왕을 꺾어야 열림) · 시안의 문 그림은 155 · 156 칸 사이가 가운데
   const king = foes.find(e => e.rank.n === 6 && e.kind === 'boss');
   const hub = { name: 'hub', label: '문의 광장', x: Math.round(L.fc(155.5)) - 1, y: L.spot1(0, 31)[1], w: 2, h: 1, to: 'hub.overworld', opensAfter: king.id };

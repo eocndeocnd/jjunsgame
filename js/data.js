@@ -328,7 +328,8 @@ function toughen(s, rankN, isFinal) {
 //   아자토스 ×1.00 → 마지막 벽 무한  ·  ×0.85 → 26회차  ·  ×0.80 → 18회차
 //   (여기까지는 +11~+15 가 지금보다 약하던 때. 그 구간을 세게 바꾼 뒤 ×0.80 → 11회차,
 //    특수장비를 더하고 격 보정을 0.18 로 올린 지금 → 약 8회차)
-const FINAL_BOSS_MULT = { life: 4, damage: 1.28, defense: 2.4, dex: 1.5 };
+// (보스의 생명 배수 ×1.3 을 없앤 뒤에도 아자토스는 그대로이도록 생명은 4 × 1.3 = 5.2)
+const FINAL_BOSS_MULT = { life: 5.2, damage: 1.28, defense: 2.4, dex: 1.5 };
 
 function finalBossStats(level, lifeMult) {
   const s = enemyStats(level, lifeMult);
@@ -647,8 +648,13 @@ const KINDS = {
   normal: { id: 'normal', name: '일반', mult: 1.0, lifeMult: 1.0,  penalty: 'LOSS_PENALTY',       once: false, energy: 0, dropChance: 0.31, gold: 1 },
   elite:  { id: 'elite',  name: '정예', mult: 1.4, lifeMult: 1.2,  penalty: 'LOSS_PENALTY_ELITE', once: true,  energy: 1, dropChance: 0.48, gold: 4 },
   hidden: { id: 'hidden', name: '히든', mult: 1.6, lifeMult: 1.25, penalty: 'LOSS_PENALTY_ELITE', once: true,  energy: 2, dropChance: 1.00, gold: 5 },
-  boss:   { id: 'boss',   name: '격',   mult: 1.8, lifeMult: 1.3,  penalty: 'BOSS_LOSS_PENALTY',  once: true,  energy: 2, dropChance: 0.40, gold: 10 }
+  boss:   { id: 'boss',   name: '격',   mult: 1.8, lifeMult: 1.0,  penalty: 'BOSS_LOSS_PENALTY',  once: true,  energy: 2, dropChance: 0.40, gold: 10 }
 };
+// 보스는 표시된 레벨이 곧 강함입니다 (생명 배수 없음 — 예전엔 ×1.3 이 숨어 있었습니다).
+// 레벨은 지역 사다리의 맨 끝 자리 대신 그 격의 일반 · 정예 가운데 가장 센 것의 BOSS_OVER 배 —
+// 보스 앞의 몬스터와 비슷하되 조금 위라, 보스 앞에서 엄두가 안 나지 않게 (사용자 결정).
+// 일반만 기준으로 하면 정예가 많은 격(5 · 7 · 8 · 12 · 15 · 16격)에서 정예가 보스보다 세져서 정예까지 봅니다. 히든은 빼고, 아자토스는 그대로.
+const BOSS_OVER = 1.2;
 
 function lossPenaltyFor(kind) { return RULES[KINDS[kind].penalty]; }
 
@@ -1790,11 +1796,12 @@ function devourEnergy(foe) {
 ZONES.forEach((zone, zi) => {
   const rank = RANKS.find(r => r.n === zone.rank);
   const count = zone.enemies.length;
+  const topFoe = Math.max(...zone.enemies.map((e, ei) => ((e.kind || 'normal') === 'normal' || e.kind === 'elite' ? rankLevel(rank.n, ei, count) : 0)));
 
   zone.enemies.forEach((e, ei) => {
     const kind = e.kind || 'normal';
     const K = KINDS[kind];
-    const level = rankLevel(rank.n, ei, count);
+    const level = kind === 'boss' && !e.final ? roundSig(topFoe * BOSS_OVER) : rankLevel(rank.n, ei, count);
     const arch = e.a || ENEMY_ARCHETYPE[e.id] || 'guard';
 
     // 각 격의 시작 레벨 = 그 지역 첫 적의 레벨

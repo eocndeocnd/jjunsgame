@@ -31,13 +31,15 @@ const fbm = (x, y, s = 0) => vnoise(x, y, s) * 0.55 + vnoise(x * 2.1, y * 2.1, s
 // ---------- 땅의 종류 ----------
 const VOID = 0, GRASS = 1, DIRT = 2, COBBLE = 3, TILES = 4, WATER = 5, LAVA = 6, OBSID = 7, SNOW = 8, ROCKY = 9, PAVE = 10, CANAL = 11;
 // 격 — 0 첫 공간 · 들 / 1 지하수로 / 2 숲 / 3 무너진 왕국 / 4 거인의 고개 / 5 시체의 도시 / 6 마계
-// 높이(hgt): 지하수로 · 처음의 방 0 / 숲 · 고개 · 묘지 · 마계 1 / 왕국 · 처음 둘레 바위 2 / 등성이 · 벼랑 3
+// 높이(hgt): 지하수로 · 처음의 방 0 / 숲 · 왕국 · 고개 · 묘지 · 마계 1 / 처음 둘레 바위 · 왕국 북쪽 바위턱 2 / 등성이 · 벼랑 · 트롤의 굴 바위 3
 
 // ---- 지하수로 다리 (두 칸 폭) — 가로 수로는 세로로, 세로 수로는 가로로 건넘 (시안 칸) ----
 const BRIDGES = [
   ...[20, 38, 56].flatMap(x => [72, 82].map(y => ({ x, y, len: 2, vertical: true, wide: 2 }))),
   ...[29, 46].flatMap(x => [67, 77, 87].map(y => ({ x, y, len: 2, vertical: false, wide: 2 })))
 ];
+// ---- 숲과 왕국 사이 — 옛 바깥 성벽은 무너진 조각 몇 개와 옛 성문의 탑 둘만 남음 (숲과 왕국은 한 땅, 사용자 결정) ----
+const RUINS = { wall: [[11, 13], [18, 20], [29, 31], [51, 54], [60, 62]], towers: [42, 46], y0: 29, y1: 30 };   // 성벽 조각 [x0, x1] · 탑 x · 줄
 // ---- 몰락한 왕의 성 — 성벽 (동쪽 성문 세 칸 · 남쪽 무너진 틈 둘) · 큰 방의 기둥 (시안 칸) ----
 const CASTLE = {
   walls: [[10, 4, 22, 4], [10, 5, 10, 20], [22, 5, 22, 12], [22, 16, 22, 20], [11, 20, 15, 20], [18, 20, 20, 20]],   // [x0, y0, x1, y1]
@@ -158,7 +160,7 @@ function build(S = 1) {
     if (x < RIDGE(y)) return 4;
     return y < CLIFF(x) ? 6 : 5;
   }
-  const ZONE = { 1: [COBBLE, 1, 0], 2: [GRASS, 2, 1], 3: [GRASS, 3, 2], 4: [GRASS, 4, 1], 5: [GRASS, 5, 1], 6: [OBSID, 6, 1], 7: [ROCKY, 7, 2] };
+  const ZONE = { 1: [COBBLE, 1, 0], 2: [GRASS, 2, 1], 3: [GRASS, 3, 1], 4: [GRASS, 4, 1], 5: [GRASS, 5, 1], 6: [OBSID, 6, 1], 7: [ROCKY, 7, 2] };
   for (let fy = 0; fy < H; fy++) for (let fx = 0; fx < W; fx++) {
     if (ter[idx(fx, fy)] === VOID) continue;
     const z = zoneAt(fx, fy), [t, b, h] = ZONE[z];
@@ -166,12 +168,13 @@ function build(S = 1) {
   }
 
   // ---- 격 사이 — 보스는 3×3 이라 막는 틈은 모두 세 칸 ----
-  // 2격 | 3격: 왕국의 바깥 성벽 (두 줄, 한 단 높음). 가운데 무너진 성문 — 트롤 킹이 막고 섬
-  each(0, 29, 70, 30, (fx, fy, x, y) => {
-    if (R(x) > 70 || (R(y) !== 29 && R(y) !== 30) || ter[idx(fx, fy)] === VOID) return;
-    const gate = inGap(fx, 44);
-    paint(fx, fy, gate ? TILES : COBBLE, 3, 2);
-    wallMask[idx(fx, fy)] = gate ? 0 : 1;
+  // 2격 | 3격: 막지 않음 — 옛 바깥 성벽은 무너진 조각 몇 개와 옛 성문(깐 돌)의 탑 둘만 (RUINS)
+  each(0, RUINS.y0, 70, RUINS.y1, (fx, fy, x, y) => {
+    const cx = R(x), cy = R(y);
+    if (cx > 70 || cy < RUINS.y0 || cy > RUINS.y1 || ter[idx(fx, fy)] === VOID) return;
+    const piece = RUINS.wall.some(([a, b]) => cx >= a && cx <= b) || RUINS.towers.includes(cx);
+    if (piece) { paint(fx, fy, COBBLE, 3, 1); wallMask[idx(fx, fy)] = 1; }
+    else if (cx > RUINS.towers[0] && cx < RUINS.towers[1]) paint(fx, fy, TILES, 3, 1);
   });
   // 1격 | 2격: 지하수로 북쪽 벽 (숲 높이) — 가운데 수문 (던전 가디언) 세 칸은 지하수로 높이
   each(0, 62, 70, 62, (fx, fy, x, y) => {
@@ -194,11 +197,14 @@ function build(S = 1) {
     paint(fx, fy, OBSID, 6, 3);
   });
 
+  // ---- 트롤 킹의 굴 — 숲 북서쪽, 시내 상류의 바위 언덕 (남쪽으로 굴 입구) ----
+  blob(12, 33, 5.5, 2.8, ROCKY, 2, 3, 0.35, 36);
+
   // ---- 물 ----
-  blob(22, 25, 5, 2.4, WATER, 3, 2, 0.4, 33);                                              // 물에 잠긴 안뜰 (히드라) — 넘친 물이 성벽 밑 배수구로
-  road([[22, 32], [25, 38], [23, 45], [26, 52], [29.5, 61]], 2.2, WATER, 2, 1, 0.5, 7);    // 숲 시내 — 왕국 성벽 밑에서 나와 지하수로 벽의 배수구로
-  blob(60, 4, 7, 2.2, ROCKY, 3, 3, 0.4, 34);                                               // 왕국 북쪽 끝 바위턱
-  blob(60, 8, 3.5, 2, WATER, 3, 2, 0.4, 35);                                               // 바위턱 폭포 밑 웅덩이 (카벙클이 숨은 곳)
+  blob(22, 25, 5, 2.4, WATER, 3, 1, 0.4, 33);                                              // 물에 잠긴 안뜰 (히드라) — 넘친 물이 그대로 숲 시내가 됨
+  road([[22, 27], [22, 32], [25, 38], [23, 45], [26, 52], [29.5, 61]], 2.2, WATER, 2, 1, 0.5, 7);   // 숲 시내 — 안뜰에서 흘러나와 지하수로 벽의 배수구로
+  blob(60, 4, 7, 2.2, ROCKY, 3, 2, 0.4, 34);                                               // 왕국 북쪽 끝 바위턱
+  blob(60, 8, 3.5, 2, WATER, 3, 1, 0.4, 35);                                               // 바위턱 폭포 밑 웅덩이 (카벙클이 숨은 곳)
 
   // ---- 1격 수로 — 가로 둘, 세로 둘 (폭 2) ----
   each(0, 72, 70, 83, (fx, fy, x, y) => {
@@ -213,16 +219,17 @@ function build(S = 1) {
   trail([[38, 51], [46, 50], [54, 51], [62, 49], [70, 50], [78, 48], [86, 49], [94, 48], [102, 48], [116, 48]], 1.0, 2);   // 숲 동쪽 길 → 4격 고원 → 쐐기돌 아치
   trail([[38, 51], [31, 48], [25, 46.5], [19, 46], [15, 45]], 1.4, 2);                                           // 서쪽 — 통나무 다리 건너 오크 야영지
   trail([[46, 50], [50, 45], [54, 42]], 1.1, 2);                                                                 // 마녀의 오두막으로 가는 좁은 길
+  trail([[19, 46], [16, 42], [13, 40]], 1.1, 2);                                                                 // 트롤 킹의 굴로 가는 좁은 길
   trail([[88, 48.5], [88, 37]], 1.3, 4);                                                                         // 눈 덮인 봉우리 돌계단
   trail([[96, 48], [98, 44]], 1.3, 4);                                                                           // 돌 고리
   trail([[116, 48], [118, 52], [126, 55], [132, 52], [136, 49]], 2.2, 5);                                         // 아치 → 대성당
   trail([[126, 55], [124, 64], [128, 72], [134, 78]], 1.5, 5);
   trail([[132, 52], [142, 60], [152, 64], [158, 70]], 1.5, 5);
 
-  // ---- 3격 왕국 — 성문에서 북서쪽 성까지 옛 큰길 · 깨진 포석 광장 · 성 ----
-  road([[44, 28], [41, 22], [33, 17], [23, 14]], 3, COBBLE, 3, 2, 0.4);
-  blob(36, 9, 5, 3.5, TILES, 3, 2, 0.5, 31);        // 옛 광장 (마른 분수)
-  box(11, 5, 21, 19, TILES, 8, 2);                  // 몰락한 왕의 성 — 어둑한 돌바닥의 큰 방 (격 3 의 일부, 빛만 따로)
+  // ---- 3격 왕국 — 옛 성문 자리에서 북서쪽 성까지 옛 큰길 · 깨진 포석 광장 · 성 ----
+  road([[44, 28], [41, 22], [33, 17], [23, 14]], 3, COBBLE, 3, 1, 0.4);
+  blob(36, 9, 5, 3.5, TILES, 3, 1, 0.5, 31);        // 옛 광장 (마른 분수)
+  box(11, 5, 21, 19, TILES, 8, 1);                  // 몰락한 왕의 성 — 어둑한 돌바닥의 큰 방 (격 3 의 일부, 빛만 따로)
 
   // ---- 4격 — 눈 덮인 봉우리 · 바위 단 ----
   blob(88, 31, 11, 5.5, SNOW, 4, 2, 0.35, 16);
@@ -260,19 +267,18 @@ function build(S = 1) {
 
   // ---- 보스가 막고 서는 자리 (3×3 의 왼쪽 위 칸) — 틈 세 칸을 이 배율에서 막음 ----
   const rowsOf = r => { const out = []; for (let fy = 0; fy < H; fy++) if (R(toC(fy)) === r) out.push(fy); return out; };
-  const rim = rowsOf(62), wall = rowsOf(30);
+  const rim = rowsOf(62);
   let cliffEnd = 0; while (toC(cliffEnd) <= CLIFF(136) + 1.6) cliffEnd++;
   let bayStart = 0; while (R(toC(bayStart)) < 147) bayStart++;
   const GATES = {
     dungeonguardian: [gap3(38), rim[0] + Math.floor((rim.length - 3) / 2)],   // 지하수로 수문 — 벽 두께를 가운데로
-    trollking: [gap3(44), wall[wall.length - 1] - 1],                         // 왕국 성문 — 숲 쪽 끝
     giantking: [R(fc(RIDGE(48))) - 1, gap3(48)],                              // 쐐기돌 아치 — 등성이 한가운데
     lichking: [gap3(136), cliffEnd],                                          // 대성당 — 벼랑 바로 아래, 묘실 통로 들머리
     worldworm: [bayStart - 2, gap3(25)]                                       // 벌레의 굴 — 어둠으로 내민 곳의 첫 칸까지
   };
 
   return {
-    S, W, H, T, ter, bio, hgt, idx, inMap, T_, toC, fc, span, spot1, spot3, ROADS, pathMask, wallMask, zoneAt, GATES, BRIDGES, CASTLE,
+    S, W, H, T, ter, bio, hgt, idx, inMap, T_, toC, fc, span, spot1, spot3, ROADS, pathMask, wallMask, zoneAt, GATES, BRIDGES, CASTLE, RUINS,
     VOID, WATER, CANAL, LAVA, ROCKY, hash, fbm
   };
 }
@@ -280,5 +286,5 @@ function build(S = 1) {
 module.exports = {
   CW, CH, T, hash, sm, vnoise, fbm,
   VOID, GRASS, DIRT, COBBLE, TILES, WATER, LAVA, OBSID, SNOW, ROCKY, PAVE, CANAL,
-  BRIDGES, CASTLE, build
+  BRIDGES, CASTLE, RUINS, build
 };

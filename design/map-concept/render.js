@@ -22,6 +22,7 @@ const { encodePng } = require('../../tools/map-gen.js');
 const OL = require('../../tools/overworld-layout.js');
 const { hash, sm, vnoise, fbm, VOID, GRASS, DIRT, COBBLE, TILES, WATER, LAVA, OBSID, SNOW, ROCKY, PAVE, CANAL } = OL;
 const { W, H, T, ter, bio, hgt, idx, inMap, T_, ROADS, pathMask, BRIDGES } = OL.build(1);   // 시안은 1배 (게임 지도는 더 크게)
+const { RUINS } = OL;
 const PW = W * T, PH = H * T;
 const OUT = __dirname;
 
@@ -1044,24 +1045,34 @@ for (const y of [72, 82]) {
   waterfall(...P(x0, y + 2, 0, 14), 16, 30); waterfall(...P(x1, y + 2, 0, 14), 16, 30);
 }
 
-// 2격 숲 — 수문 너머 처음 보는 바깥. 빈터 아홉(구역) · 숲의 마녀 오두막 · 오크 장군의 야영지
-// 가운데 큰길이 동쪽으로 숲을 빠져나가 4격 고개로 — 길가에 거인의 발자국. 북쪽 끝 왕국 성벽의 무너진 성문은 트롤 킹이 막음
+// 2격 숲 — 수문 너머 처음 보는 바깥. 빈터 아홉(구역) · 숲의 마녀 오두막 · 오크 장군의 야영지 · 북서쪽 시내 상류의 트롤 킹의 굴
+// 가운데 큰길이 동쪽으로 숲을 빠져나가 4격 고개로 — 길가에 거인의 발자국. 북쪽 끝은 막힘 없이 그대로 왕국으로
 for (const [x, y] of [[47, 57], [56, 45], [30, 40], [16, 56], [60, 57], [14, 36], [50, 36], [26, 56]]) keepClear(x, y, 2.2);
 hut(54, 40); keepClear(54, 40, 4);
 orcCamp(13, 44); keepClear(13, 44, 4.5);
 logBridge(21, 46, 4);
+// 트롤 킹의 굴 — 바위 언덕 남쪽의 어두운 입구, 둘레에 뼈와 부러진 나무. 트롤 킹은 굴 앞에 버티고 섬 (길은 막지 않음)
+add(36 * T + 14, () => {
+  const [x, y] = P(12, 36, 8, 12);
+  for (let j = -22; j < 0; j++) for (let i = -15; i <= 15; i++) {
+    const r = Math.hypot(i / 15, (j + 4) / 18);
+    if (r > 1) continue;
+    put(x + i, y + j, r > 0.82 ? hex('#4a4636') : mix(hex('#0c0a0c'), hex('#1e1a16'), (j + 22) / 30));
+  }
+  glow(x, y - 10, 18, [255, 110, 60], 0.35);                                 // 안쪽 어둠 속 눈빛
+});
+for (const [x, y, r] of [[8, 32, 10], [11, 31, 12], [15, 31, 9], [17, 33, 8], [7, 34, 8], [14, 34, 7]]) rock(...P(x, y, 8, 10), r, '#8a8474');   // 굴을 덮은 바위 언덕
+for (const [x, y] of [[9, 38], [15, 39], [11, 40]]) bones(...P(x, y, 4, 10));
+for (const [x, y] of [[8, 37], [16, 37]]) log(...P(x, y, 0, 12), 16);
+troll(...P(12, 38, 8, 12)); keepClear(12, 38, 3.5);
 for (let k = 0; k < 110; k++) { const x = 6 + hash(k, 1, 70) * 61, y = 31 + hash(k, 2, 70) * 31; if (ter[idx(x | 0, y | 0)] === GRASS && bio[idx(x | 0, y | 0)] === 2) mushroom(...P(x | 0, y | 0, 4 + hash(k, 3, 70) * 8 | 0, 10), hash(k, 4, 70) < 0.5 ? '#7ad0ff' : '#c890ff'); }
 for (let k = 0; k < 90; k++) { const x = 6 + hash(k, 5, 71) * 61, y = 31 + hash(k, 6, 71) * 31; if (bio[idx(x | 0, y | 0)] === 2) firefly(x * T, y * T); }
 
-// 3격 무너진 왕국 — 막다른 곳. 숲에서 성벽의 무너진 성문(트롤 킹)을 지나 옛 큰길을 따라 북서쪽 끝, 버려진 성에서 왕이 조용히 기다림
-// 바깥 성벽 — 군데군데 무너져 낮고, 덩굴이 덮음. 성벽 밑 배수구로 안뜰의 물이 숲으로 흘러나감
-for (const [a, b] of [[9, 43], [46, 66]]) for (let x = a; x < b; x += 3) ruinWall(x, 30, Math.min(3, b - x), hash(x, 3, 104) < 0.25 ? 9 : 18);
-tower(...P(42, 30, 4, 12), 12); tower(...P(46, 30, 12, 12), 12);              // 성문 세 칸 (43~45) 양옆
-stairs(43, 31, 3);
-troll(...P(44, 33, 8, 12)); keepClear(44, 33, 3);
-for (const [x, h] of [[12, 16], [31, 18], [58, 16]]) vines(...P(x, 30, 8, 12), h);
-add(30 * T + 13, () => { const [x, y] = P(22, 30, 0, 12); rect(x - 10, y - 8, 20, 8, hex('#3a3632')); rect(x - 8, y - 6, 16, 6, hex('#141214')); for (let i = -7; i < 8; i += 3) rect(x + i, y - 6, 1, 6, hex('#5a5a60')); });
-waterfall(...P(21, 31, 6, 12), 20, 14);
+// 3격 무너진 왕국 — 막다른 곳. 숲에서 그대로 이어지고, 옛 성문 자리에서 옛 큰길을 따라 북서쪽 끝, 버려진 성에서 왕이 조용히 기다림
+// 옛 바깥 성벽 — 무너진 조각 몇 개와 옛 성문의 탑 둘만 남고 (RUINS), 덩굴이 덮음. 안뜰의 물은 그대로 숲 시내가 됨
+for (const [a, b] of RUINS.wall) ruinWall(a, RUINS.y1, b - a + 1, 9 + (hash(a, 3, 104) * 6 | 0));
+for (const tx of RUINS.towers) tower(...P(tx, RUINS.y1, 8, 12), 12);
+for (const [a, , h] of [[12, 0, 14], [30, 0, 16], [61, 0, 14]]) vines(...P(a, RUINS.y1, 8, 12), h);
 for (const [x, y, w, h, s] of [[46, 18, 4, 3, 1], [30, 21, 4, 3, 2], [44, 4, 5, 3, 3], [50, 9, 4, 3, 4], [54, 22, 3, 3, 5], [58, 15, 4, 3, 6], [35, 24, 3, 3, 7], [60, 21, 3, 3, 8], [26, 8, 3, 3, 9]]) ruinBlock(x, y, w, h, s);
 for (const [x, y, f] of [[27, 12, 0], [30, 19, 1], [35, 14, 0], [36, 22, 0], [42, 18, 1], [45, 24, 0]]) column(...P(x, y, 8, 12), !!f);
 for (const [x, y] of [[34, 20], [48, 26], [28, 9]]) rubble(...P(x, y), 6);

@@ -318,9 +318,9 @@ test('overworld — 1~6격 몬스터가 모두 한 번씩, 구역 48개', () => 
   assert.deepEqual(m.posts.map(p => p.enemy).sort(), foes.filter(e => e.kind !== 'normal').map(e => e.id).sort());
   assert.equal(areaMonsters.length, 48);
   assert.deepEqual(m.ports.map(p => [p.to, p.opensAfter]), [['hub.overworld', 'demonking']]);
-  // 길을 막는 것은 다음 격으로 가는 틈의 보스 넷과 세계수를 먹는 벌레뿐, 그리고 그것들은 3×3
+  // 길을 막는 것은 다음 격으로 가는 틈의 보스 셋과 세계수를 먹는 벌레뿐, 그리고 그것들은 3×3 (숲과 왕국은 한 땅이라 트롤 킹은 막지 않음)
   const blockers = m.posts.filter(p => p.blocks);
-  assert.deepEqual(blockers.map(p => p.enemy).sort(), ['dungeonguardian', 'giantking', 'lichking', 'trollking', 'worldworm']);
+  assert.deepEqual(blockers.map(p => p.enemy).sort(), ['dungeonguardian', 'giantking', 'lichking', 'worldworm']);
   assert.ok(blockers.every(p => p.w === 3 && p.h === 3));
 });
 
@@ -341,7 +341,7 @@ test('overworld — 같은 격 구역끼리는 보스 없이 걸어서 이어지
   }
 });
 
-test('overworld — 한 줄로 열린다: 1격 → 2 · 4격(던전 가디언) · 3격 막다른 곳(트롤 킹) · 5격(거인왕) · 6격(불사의 왕) · 왕좌의 방(벌레)', () => {
+test('overworld — 한 줄로 열린다: 1격 → 2 · 3 · 4격(던전 가디언) · 5격(거인왕) · 6격(불사의 왕) · 왕좌의 방(벌레)', () => {
   const m = M.parseTiled(JSON.parse(fs.readFileSync(path.join(ROOT, 'maps/overworld.tmj'), 'utf8')), 'overworld');
   const start = m.start.y * m.w + m.start.x;
   const allPosts = new Set(m.posts.flatMap(p => cellsOf(m, p)));   // 3×3 보스는 아홉 칸 다
@@ -354,10 +354,9 @@ test('overworld — 한 줄로 열린다: 1격 → 2 · 4격(던전 가디언) �
     return [1, 2, 3, 4, 5, 6].filter(r => m.areas.filter(a => a.rank === r).some(a => cellsOf(m, a).some(i => d[i] >= 0)));
   };
   assert.deepEqual(ranks(allPosts), [1], '처음에는 1격만 — 지하수로에서 4격으로 새는 길 없음');
-  assert.deepEqual(ranks(but('dungeonguardian')), [1, 2, 4], '수문 너머 숲, 숲에서 그대로 4격');
-  assert.deepEqual(ranks(but('dungeonguardian', 'trollking')), [1, 2, 3, 4], '성문 너머 3격');
-  assert.deepEqual(ranks(but('dungeonguardian', 'giantking')), [1, 2, 4, 5], '아치 너머 5격');
-  assert.deepEqual(ranks(but('dungeonguardian', 'giantking', 'lichking')), [1, 2, 4, 5, 6], '묘실 너머 6격 — 3격은 트롤 킹 너머로만 (막다른 곳)');
+  assert.deepEqual(ranks(but('dungeonguardian')), [1, 2, 3, 4], '수문 너머 숲, 숲에서 그대로 왕국 · 4격');
+  assert.deepEqual(ranks(but('dungeonguardian', 'giantking')), [1, 2, 3, 4, 5], '아치 너머 5격');
+  assert.deepEqual(ranks(but('dungeonguardian', 'giantking', 'lichking')), [1, 2, 3, 4, 5, 6], '묘실 너머 6격');
   // 문의 광장 문 — 세계수를 먹는 벌레가 막은 굴 너머 왕좌의 방
   const port = cellsOf(m, m.ports.find(p => p.name === 'hub'));
   const reaches = blocked => { const d = walk(m, [start], blocked); return port.some(i => d[i] >= 0); };
