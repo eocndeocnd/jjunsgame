@@ -11,6 +11,8 @@
 | `hero-preview.png` | 8배 확대 |
 | `base-ai.png` | 다듬기 전 — AI 그림에서 뽑은 색 그대로 (칸 · 위치는 `hero.png` 와 같음). 한 번 뽑아 둔 것이라 `hero.js` 로 다시 만들어지지 않음 |
 | `base-ai-preview.png` | 8배 확대 |
+| `hero-edit.png` | 사용자가 Piskel 에서 고친 판 — 동작의 바탕. Piskel 화면 캡처(약 15배)에서 칸마다 가운데 색을 뽑아 되살리고, 압축으로 틀어진 색은 바탕 PNG 의 색으로 맞춤. 윤곽선 밖의 흐린 점 11개는 지움 |
+| `hero-edit-preview.png` | 8배 확대 |
 
 ## 직접 고치기
 
