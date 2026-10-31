@@ -21,7 +21,7 @@ function render() {
     if (isAvatarModalOpen()) closeAvatarModal();
     closeAllocModal();
     enhMode = false;      // 슬롯 강화 중이었다면 칸이 도로 장비 칸으로
-    if (document.body.dataset.tab !== 'journey') showTab('journey');   // 아래 탭 줄이 숨겨지므로 여정에 머뭅니다
+    if (document.body.dataset.tab !== 'journey') showTab('journey');   // 메뉴 서랍은 닫고 지도 위의 창만
   }
   withHeldSpoils(renderRecords);
   withHeldSpoils(renderHero);      // 레벨 · 경험치 · 스탯도 전투가 끝난 뒤에
@@ -179,7 +179,7 @@ function levelPop() {
     void el.offsetWidth;
     el.classList.add('lv-pop');
   }
-  const host = document.querySelector('.journey-energy');
+  const host = document.querySelector('.hud-lv');   // 지도 위 왼쪽 아래의 레벨 위로
   if (!host || calmMotion()) return;
   const pop = document.createElement('span');
   pop.className = 'lv-up-pop';
@@ -642,40 +642,51 @@ function renderAvatarModal() {
   fillAvatars(body);
 }
 
+// ---------- 지도 위의 것들 ----------
+// 화면 틀을 지도 가득으로 바꾸며(UI 시안 C, 사용자 결정) 예전 지역 창(격 · 지역 이름 · 도감 · 에너지 · 레벨 · 차림)을 지도 위로 흩었습니다.
+//   에너지 — 왼쪽 위의 큰 숫자. 칸으로 그리면 에너지가 늘수록 칸이 잘아져 숫자로만 (적으면 붉게 깜빡)
+//   세트 1 2 3 · 도감 · 스탯 분배(안 찍은 포인트가 있을 때만) — 오른쪽 위
+//   레벨 — 왼쪽 아래, 경험치 — 맨 아래 가장자리의 줄 (싸운 뒤 굴러 올라가는 동안은 paintLevel 이 그림)
+//   지역 이름 — 다른 지역 · 다른 지도에 들어설 때만 가운데 위에 잠깐
+let bannerShown = '', bannerTimer = 0;
+function renderHud(zone) {
+  const run = State.run;
+  $('hudEnergy').classList.toggle('low', run.energy <= 5);
+  $('hudEn').textContent = run.energy;
+  $('hudEnMax').textContent = `/${startEnergy()}`;
+  if (!document.body.classList.contains('lv-rolling')) {
+    $('jeLv').textContent = fmtLevel(run.level);
+    $('jeXpFill').style.width = `${Math.min(100, run.xp / xpToNext(run.level) * 100)}%`;
+  }
+  // 여정 한복판에서 차림을 바꿉니다 — 눈앞의 상대를 보고 정하는 일이라, 서랍을 오가게 만들면 아무도 안 씁니다.
+  // 저장 · 덮어쓰기는 전리품 서랍에 그대로 두고, 여기서는 입기만 합니다. 마주한 때부터 싸움이 끝날 때까지는 숨습니다.
+  $('hudRight').innerHTML = fightLocked() ? '' : `
+    <div class="hud-sets">${Array.from({ length: SET_COUNT }, (_, n) => {
+      const on = isSetActive(n);
+      return `<button class="hud-set ${on ? 'on' : ''}" data-jset="${n}" ${on ? 'disabled' : ''} title="세트 ${n + 1}">${n + 1}</button>`;
+    }).join('')}</div>
+    <button class="hud-chip hud-glass" id="rosterBtn" title="이 지역에 있는 것">도감 ${run.zoneIndex + 1} / ${knownZoneCount()}</button>
+    ${run.unspent > 0 ? '<button class="hud-chip hud-glass ready" id="jAllocBtn">스탯 분배<span class="alloc-pip on"></span></button>' : ''}`;
+  // 지역 이름 — 게임에 들어선 뒤 처음 그릴 때와, 다른 지역이나 지역이 없는 지도(문의 광장)에 들어설 때
+  const name = placeName(zone), key = `${currentSlot}|${State.meta.runCount}|${name}`;
+  if (key !== bannerShown && !fightLocked() && $('title').classList.contains('hidden')) {
+    bannerShown = key;
+    const rank = RANKS.find(r => r.n === zone.rank);
+    $('zbName').textContent = name;
+    $('zbRank').innerHTML = name !== zone.name ? ''
+      : `<span class="rank-chip r${rank.n}">제${rank.n}격 · ${rank.name}<span class="hanja">${rank.hanja}</span></span>`;
+    $('zoneBanner').classList.add('show');
+    clearTimeout(bannerTimer);
+    bannerTimer = setTimeout(() => $('zoneBanner').classList.remove('show'), 2600);
+  }
+}
+
 // ---------- 여정 ----------
 function renderJourney() {
   const run = State.run;
   const zone = ZONES[run.zoneIndex];
-  const rank = RANKS.find(r => r.n === zone.rank);
   const hero = heroStats();
-
-  // 폰에서는 탭을 옮기면 「나」 화면이 안 보이므로, 에너지는 여기에도 둡니다.
-  const max = startEnergy();
-  const low = run.energy <= 5;
-
-  // 창 둘 — 지역 · 에너지 · 차림을 한 창에, 그 아래 무대. 창 사이로 맨 뒤의 지도가 보입니다.
-  // (예전엔 지역과 에너지가 따로 창이었는데, 폰에서 무대가 한 화면에 안 들어와 합쳤습니다)
-  // 지역 소개글(zone.flavor)은 data.js 에만 남겨두고 화면에는 안 씁니다 — 이름이면 충분합니다.
-  // 결과가 뜬 동안에는 이 창을 그리지 않습니다 — 결과 화면이 한 화면에 들어오게 (레벨은 결과의 「레벨」 줄에 있습니다)
-  const showingResult = !!run.lastResult && !(battle && battle.r === run.lastResult);
-  let html = showingResult ? '' : `
-    <div class="frame zone-card ${low ? 'low' : ''}">
-      <div class="zone-head">
-        <span class="rank-chip r${rank.n}">제${rank.n}격 · ${rank.name}<span class="hanja">${rank.hanja}</span></span>
-        <span class="zone-name">${placeName(zone)}</span>
-        <button class="zone-count" id="rosterBtn" title="이 지역에 있는 것">
-          <span class="zc-k">도감</span>${run.zoneIndex + 1} / ${knownZoneCount()}
-        </button>
-      </div>
-      <div class="journey-energy ${low ? 'low' : ''}">
-        <span class="je-k">에너지</span>
-        <span class="je-v">${run.energy}<span class="je-max">/${max}</span></span>
-        <span class="je-lv"><span class="lv-k">Lv.</span><span id="jeLv">${fmtLevel(run.level)}</span></span>
-      </div>
-      <div class="je-xp"><div class="je-xp-fill" id="jeXpFill" style="width:${Math.min(100, run.xp / xpToNext(run.level) * 100)}%"></div></div>
-      ${journeySets()}
-    </div>
-  `;
+  renderHud(zone);
 
   // ----- 무대: 결과 · 조우 중 하나 — 지도 위에 뜬 창 -----
   // 지도를 걷다가 닿으면 조우 · 싸움 · 결과를 지도 위 창에서 봅니다. 아무도 마주하지 않으면 창 없이 지도만.
@@ -703,7 +714,6 @@ function renderJourney() {
   const facing = facingFoe();
   const frame = stage ? `<div class="frame stage ${facing && facing.kind !== 'normal' ? `k-${facing.kind}` : ''}">${stage}</div>` : '';
 
-  $('journey').innerHTML = onMap ? html : html + frame;
   renderMapLayer(onMap, frame);
   renderRoster();
   wireJourney();
@@ -1454,7 +1464,7 @@ function warpButton() {
 // ============================================================
 //  월드맵 — 걷다가 닿으면 조우 · 싸움 · 결과 창이 지도 위에 뜹니다
 // ============================================================
-// 지도 캔버스는 index.html 의 #mapLayer 에 늘 붙어 있고(다시 그릴 때 지워지지 않게), 창만 #mapOverlay 에 그립니다.
+// 지도 캔버스는 index.html 의 #mapStage 에 화면 가득 늘 붙어 있고(다시 그릴 때 지워지지 않게), 창만 #mapOverlay 에 그립니다.
 // 지도는 여러 장(maps/*.tmj) — 1~6격의 overworld, 문의 광장(hub), 7격부터의 일곱 장. 장 사이는 문(ports)으로 오갑니다.
 // 스무 지역이 모두 어느 한 장 위에 있습니다 (tests/map.test.js 가 지킵니다).
 let mapView = null, maps = null, zoneMap = null;   // 읽은 지도들(id → 지도), 지역 id → 그 지역이 있는 지도 id
@@ -1503,6 +1513,7 @@ function mapPaused() {
   const run = State.run;
   const up = id => { const el = $(id); return !!el && !el.classList.contains('hidden'); };
   return !run || run.over || !!run.encounter || !!run.lastResult || !!battle || !onMapZone()
+    || document.body.dataset.tab !== 'journey'   // 메뉴 서랍이 열려 있는 동안
     || isAnyModalOpen() || up('title') || up('tutorial') || up('talk');
 }
 
@@ -1631,35 +1642,15 @@ function merchantMark() {
   return spot ? [{ x: spot.x, y: spot.y, icon: '🎒' }] : [];
 }
 
+// 지도는 늘 화면 가득 — 창(조우 · 싸움 · 결과)이 뜨면 body.facing 으로 지도가 뒤로 물러나고 지도 위의 것들이 숨습니다.
+// 지도를 못 읽었을 때(onMap 이 아님)도 무대의 글은 같은 자리에 뜹니다.
 function renderMapLayer(onMap, frame) {
-  const panel = document.querySelector('.journey-panel'), layer = $('mapLayer');
-  if (!panel || !layer) return;
-  panel.classList.toggle('map-mode', onMap);
-  panel.classList.toggle('facing', onMap && !!frame);
-  layer.classList.toggle('facing', onMap && !!frame);
-  if (!onMap) { $('mapOverlay').innerHTML = ''; return; }
-  syncMap();
+  document.body.classList.toggle('facing', !!frame);
+  if (onMap) syncMap();
   // 아무도 마주하지 않으면 창 없이 지도만 — 상인 · 화신 문이 있으면 위에 작게
-  const hud = warpButton() + merchantRow();
+  const hud = onMap && !frame ? warpButton() + merchantRow() : '';
   $('mapOverlay').innerHTML = frame || (hud ? `<div class="map-hud">${hud}</div>` : '');
-  fitMapLayer();
 }
-
-// 폰에서는 지도가 아래 탭 줄 바로 위까지 화면을 채웁니다 (넓은 화면은 CSS 의 높이 그대로)
-function fitMapLayer() {
-  const layer = $('mapLayer');
-  if (!layer) return;
-  if (window.innerWidth > 860) { layer.style.minHeight = ''; return; }
-  if (fightLocked()) return;            // 싸우는 동안은 탭 줄이 숨어 높이가 달라집니다 — 그대로 둡니다
-  // 다른 탭이라 지도가 숨어 있으면 재지 않습니다 — 꼭대기가 0 으로 잡혀 지도가 화면 아래로 넘치고, 조이스틱이 탭 줄 밑으로 숨습니다.
-  // 여정 탭으로 돌아올 때 showTab 이 다시 잽니다.
-  if (!layer.getClientRects().length) return;
-  const tabs = document.querySelector('.mobile-tabs');
-  const bottom = tabs && tabs.getClientRects().length ? tabs.getBoundingClientRect().top : window.innerHeight;
-  const top = layer.getBoundingClientRect().top + window.scrollY;
-  layer.style.minHeight = `${Math.max(280, Math.floor(bottom - top - 10))}px`;
-}
-window.addEventListener('resize', () => { if (document.querySelector('.journey-panel.map-mode')) fitMapLayer(); });
 
 // 화면을 닫거나 다른 앱으로 넘어갈 때 — 서 있던 칸을 바로 저장합니다 (폰은 그 뒤로 말없이 꺼질 수 있어서)
 function storeMapAt() {
@@ -1697,25 +1688,6 @@ function winFeelOf(c) {
 // 관리자 창에서 「정확한 승률」을 켜면 문장 뒤에 숫자가 붙습니다
 function winFeel(c)      { return winFeelOf(c).text + (Admin.showOdds ? ` · ${Math.round(num(c) * 100)}%` : ''); }
 function winFeelClass(c) { return winFeelOf(c).cls; }
-
-// 여정 한복판에서 차림을 바꿉니다.
-// 갈아입을 이유가 생기는 자리는 전리품 탭이 아니라 여기입니다 —
-// 눈앞의 상대를 보고 정하는 일이라, 탭을 오가게 만들면 아무도 안 씁니다.
-// 저장·덮어쓰기는 전리품 탭에 그대로 두고, 여기서는 입기만 합니다.
-function journeySets() {
-  if (fightLocked()) return '';     // 싸우는 동안은 세트 · 스탯 분배 버튼이 아예 없습니다
-  return `
-    <div class="journey-sets">
-      ${Array.from({ length: SET_COUNT }, (_, n) => {
-        const on = isSetActive(n);
-        // 이름만 — 입는 중인 것은 붉게. 한 줄에 넷(세트 셋 + 스탯 분배)이 폰에서도 들어가게
-        return `<button class="js-set ${on ? 'on' : ''}" data-jset="${n}" ${on ? 'disabled' : ''}>
-                  세트 ${n + 1}
-                </button>`;
-      }).join('')}
-      <button class="js-set js-alloc ${State.run.unspent > 0 ? 'ready' : ''}" id="jAllocBtn">스탯 분배${State.run.unspent > 0 ? '<span class="alloc-pip on"></span>' : ''}</button>
-    </div>`;
-}
 
 function wireJourney() {
   const on = (id, fn) => { const el = $(id); if (el) el.addEventListener('click', fn); };
@@ -1851,28 +1823,43 @@ const KEY_HINT = '<kbd>Space</kbd>';
 // ---------- 하단 탭 (좁은 화면 전용) ----------
 // 넓은 화면에서는 탭 바가 숨겨져 있고 세 패널이 한꺼번에 보이므로,
 // data-tab 을 바꿔도 아무 일도 일어나지 않습니다.
+// 'journey' 는 지도(서랍 닫힘), 'hero' · 'gear' · 'log' 는 메뉴 서랍의 그 칸 — 서랍이 열려 있는 동안 지도는 멈춥니다 (mapPaused)
+let drawerTab = 'hero';   // 손잡이로 다시 열 때 마지막에 본 칸
 function showTab(name) {
   // 탭을 옮기면 열려 있던 부위 창은 닫습니다 (NEW! 도 그때 꺼집니다)
   if (name !== 'gear' && isSlotModalOpen()) closeSlotModal();
+  const was = document.body.dataset.tab;
   document.body.dataset.tab = name;
+  document.body.classList.toggle('drawer-open', name !== 'journey');
+  if (name !== 'journey') drawerTab = name;
   if (name === 'gear') maybeNamelessTalk();
   for (const b of document.querySelectorAll('#mobileTabs button')) {
     b.classList.toggle('on', b.dataset.tab === name);
   }
-  if (name === 'journey') fitMapLayer();   // 숨어 있는 동안 못 잰 지도 높이를 다시
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  const body = $('drawerBody');
+  if (body && name !== was) body.scrollTop = 0;
 }
 
-// 다른 탭에 있어도 새 전리품이 생긴 걸 알 수 있게 점을 찍습니다
+// 서랍이 닫혀 있어도 새 전리품이 생긴 걸 알 수 있게 점을 찍습니다 (서랍의 전리품 칸과 메뉴 손잡이)
 function renderTabBadges() {
+  const fresh = totalFresh() > 0;
   const gear = document.querySelector('#mobileTabs [data-tab="gear"]');
-  if (gear) gear.classList.toggle('has-new', totalFresh() > 0);
+  if (gear) gear.classList.toggle('has-new', fresh);
+  const handle = $('drawerBtn');
+  if (handle) handle.classList.toggle('has-new', fresh);
 }
 
 function wireTabs() {
   for (const b of document.querySelectorAll('#mobileTabs button')) {
     b.addEventListener('click', () => showTab(b.dataset.tab));
   }
+  // 메뉴 손잡이로 열고(새 전리품이 있으면 전리품 칸으로), ✕ · 서랍 밖(어두워진 지도) · Esc 로 닫습니다
+  $('drawerBtn').addEventListener('click', () => { if (!fightLocked()) showTab(totalFresh() > 0 ? 'gear' : drawerTab); });
+  $('drawerX').addEventListener('click', () => showTab('journey'));
+  $('drawerBack').addEventListener('click', () => showTab('journey'));
+  document.addEventListener('keydown', ev => {
+    if (ev.key === 'Escape' && document.body.dataset.tab !== 'journey' && !isAnyModalOpen()) showTab('journey');
+  });
   showTab('journey');
 }
 

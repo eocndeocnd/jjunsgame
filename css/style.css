@@ -248,26 +248,13 @@ h3::before { content: '◆ '; color: var(--wax); }
   letter-spacing: 0.1em;
 }
 
-/* ---------- 레이아웃 ---------- */
-.layout {
-  display: grid;
-  grid-template-columns: 270px minmax(0, 1fr) 310px;
-  gap: 28px;
-  align-items: start;
-}
-@media (max-width: 1100px) {
-  .layout { grid-template-columns: 1fr; }
-}
-
-/* 패널은 이제 창을 담는 빈 그릇입니다. 창 사이로 맨 뒤의 지도가 보입니다. */
+/* 패널은 창을 담는 빈 그릇입니다 — 메뉴 서랍 안에 하나씩 (맨 아래 「화면 틀」). */
 .panel {
   display: flex;
   flex-direction: column;
   gap: 24px;
   min-width: 0;
 }
-.log-panel { margin-top: 28px; }
-#journey { display: flex; flex-direction: column; gap: 24px; }
 
 .hint {
   font-size: 11px;
@@ -651,128 +638,9 @@ h3::before { content: '◆ '; color: var(--wax); }
 .stat-cap { color: var(--text-faint); font-size: 10px; font-weight: 400; margin-left: 5px; }
 .stats li.capped .stat-value, .stats li.capped .stat-cap { color: var(--accent); }
 
-/* ---------- 지역 머리 ---------- */
-.zone-card { padding: 10px 12px; }
-/* 격 · 지역 이름 · 도감을 한 줄에 — 이름이 길면 이름만 줄여 「…」 (예전엔 도감 버튼이 혼자 다음 줄로 떨어졌습니다) */
-.zone-head {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 8px;
-}
-.zone-name {
-  font-family: var(--font-t);
-  font-size: 16px;
-  font-weight: 400;
-  color: var(--text);
-  letter-spacing: 0.02em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-/* 「1 / 11」 은 버튼입니다 — 누르면 이 지역에 누가 있는지 뜹니다.
-   예전엔 여정 맨 아래까지 스크롤해야 볼 수 있었습니다. */
-.zone-count {
-  font-size: 11px;
-  color: var(--text-dim);
-  letter-spacing: 0.06em;
-  font-family: inherit;
-  background: var(--paper-hi);
-  border: 2px solid var(--line);
-  box-shadow: var(--lift);
-  padding: 3px 9px;
-  cursor: pointer;
-  white-space: nowrap;
-}
-.zone-count:hover { border-color: var(--accent); color: var(--accent); }
-.zone-count:active { transform: translate(1px, 1px); box-shadow: none; }
-/* 「1 / 11」 만 있으면 눌러서 뭐가 나오는지 알 수 없어 이름을 붙였습니다 */
-.zc-k { color: var(--text); font-weight: 700; margin-right: 6px; letter-spacing: 0.02em; }
-.zone-count:hover .zc-k { color: var(--accent); }
-
-/* 여정 화면의 에너지와 레벨 — 폰에서 탭을 옮겨도 남은 양이 보여야 합니다.
-   지역 이름과 같은 창에 점선 아래로 들어갑니다. 에너지가 적으면 창 테두리가 붉어집니다. */
-.zone-card { display: flex; flex-direction: column; gap: 8px; }
-.zone-card.low { --fr-in: var(--danger); }
-.journey-energy {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  padding-top: 8px;
-  background: var(--dots) left top / 4px 2px repeat-x;
-}
-/* 초록 막대는 뺐습니다. 레벨이 백억 단위까지 가는데 막대가 가운데 폭을
-   다 먹어서 숫자가 비좁았습니다. 남은 양은 어차피 숫자로 읽습니다. */
-.je-k { font-size: 10px; color: var(--text-faint); letter-spacing: 0.06em; flex: none; }
-.je-v { font-family: var(--font-t); font-size: 16px; line-height: 1.2; color: var(--energy); flex: none; }
-.je-max { font-family: var(--font); font-size: 10px; color: var(--text-faint); }
-/* 레벨은 에너지만큼 자주 보는 값이라 같은 무게로 둡니다.
-   남은 자리를 레벨이 다 가져갑니다 — 백억까지 가는 숫자라 여유가 필요합니다 */
-.je-lv {
-  flex: 1;
-  min-width: 0;
-  text-align: right;
-  font-family: var(--font-t);
-  font-size: 16px;
-  line-height: 1.2;
-  color: var(--accent);
-  padding-left: 11px;
-  margin-left: 2px;
-  border-left: 2px solid var(--line-soft);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.je-lv .lv-k { font-family: var(--font); font-size: 10px; color: var(--text-faint); margin-right: 3px; }
-.journey-energy.low .je-v { color: var(--danger); animation: blink 1.2s steps(1) infinite; }
 @media (prefers-reduced-motion: reduce) {
-  .journey-energy.low .je-v, .alloc-pip.on { animation: none; }
+  .alloc-pip.on { animation: none; }
 }
-
-/* 여정 한복판의 차림 바꾸기 — 상대를 보고 그 자리에서 갈아입습니다.
-   세트 셋 + 스탯 분배를 한 줄에 넷으로 (예전엔 폰에서 두 줄로 흩어졌습니다) */
-.journey-sets {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 6px;
-  padding-top: 10px;
-  background: var(--dots) left top / 4px 2px repeat-x;
-}
-.js-k {
-  font-size: 10px;
-  color: var(--text-faint);
-  letter-spacing: 0.06em;
-  margin-right: 2px;
-}
-.js-set {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  min-width: 0;
-  line-height: 1.3;
-  font: inherit;
-  font-size: 11px;
-  color: var(--text-dim);
-  background: var(--paper-hi);
-  border: 2px solid var(--line);
-  box-shadow: var(--lift);
-  padding: 4px 2px;
-  cursor: pointer;
-}
-.js-set:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
-.js-set:active:not(:disabled) { transform: translate(1px, 1px); box-shadow: none; }
-.js-set.on {
-  color: var(--cream);
-  background: var(--wax);
-  border-color: var(--wax-lo);
-  box-shadow: none;
-  cursor: default;
-}
-
-/* 차림 줄 끝의 「스탯 분배」 — 안 찍은 포인트가 있으면 붉은 밀랍으로 깨어나고 점이 깜빡입니다 */
-.js-set b { font-weight: 700; white-space: nowrap; }
-.js-set span { font-size: 10px; opacity: 0.8; white-space: nowrap; }
-.js-set.js-alloc.ready { color: var(--cream); background: var(--wax); border-color: var(--wax-lo); }
 
 /* ---------- 무대 ---------- */
 .stage { padding: 14px; }
@@ -2010,17 +1878,13 @@ body.test-mode::after {
 /* ============================================================
    좁은 화면 (핸드폰)
    세 패널을 세로로 늘어놓으면 스크롤이 끝없이 깁니다.
-   하단 탭으로 한 번에 하나씩만 봅니다.
    ============================================================ */
-.mobile-tabs { display: none; }
 
 @media (max-width: 860px) {
   body {
     padding: 12px 14px 0;
     font-size: 15px;                       /* 폰에서는 조금 키웁니다 */
     -webkit-text-size-adjust: 100%;
-    /* 하단 탭 높이 + 아이폰 홈 인디케이터 */
-    padding-bottom: calc(76px + env(safe-area-inset-bottom));
   }
 
   /* --- 상단 --- */
@@ -2031,15 +1895,6 @@ body.test-mode::after {
   /* 기본 스타일이 이미 3열 그리드입니다 — 간격만 좁힙니다 */
   .records { gap: 8px 10px; }
   .record-value { font-size: 13px; }
-
-  /* --- 한 번에 한 패널 --- */
-  .layout { grid-template-columns: 1fr; gap: 0; }
-  .log-panel { margin-top: 0; }
-  .hero-panel, .journey-panel, .gear-panel, .log-panel { display: none; }
-  body[data-tab="hero"]    .hero-panel,
-  body[data-tab="journey"] .journey-panel,
-  body[data-tab="gear"]    .gear-panel,
-  body[data-tab="log"]     .log-panel { display: flex; }
 
   .footer { padding: 12px 4px; }
 
@@ -2126,17 +1981,6 @@ body.test-mode::after {
   }
   .thumb-bar #engageBtn  { flex: 1 1 auto; }
   .thumb-bar #retreatBtn { order: -1; flex: 0 0 30%; }
-  /* 고정된 버튼 아래로 **버튼 하나만큼 더** 비워둡니다.
-     86px 일 때는 맨 끝 내용만 겨우 피했을 뿐, 「물러선다」나 「향한다」 처럼
-     중간에 있는 버튼은 끝까지 내려도 고정 버튼에 가려 눌리지 않았습니다.
-     이만큼 있으면 어떤 버튼이든 위로 끌어올릴 수 있습니다. */
-  body[data-tab="journey"] .journey-panel { padding-bottom: 170px; }
-
-  /* 「초기 화면으로」는 설정과 같은 자리에 둡니다 —
-     여정·전리품을 오가다 잘못 눌러 나가버리는 일이 없게. */
-  .footer { display: none; }
-  body[data-tab="log"] .footer { display: flex; }
-
   /* --- 손가락이 닿을 크기로 --- */
   .btn { padding: 11px 14px; font-size: 13px; }
   .btn.small { padding: 9px 12px; }
@@ -2170,40 +2014,6 @@ body.test-mode::after {
   /* --- 목록은 화면만큼 --- */
   .inventory { max-height: none; }
   .log { max-height: 60vh; }
-
-  /* --- 하단 탭 — 나무판 위에 놋쇠 밑줄 --- */
-  .mobile-tabs {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    position: fixed;
-    left: 0; right: 0; bottom: 0;
-    z-index: 40;
-    background: #2a1a0e var(--plank);
-    box-shadow: inset 0 3px 0 var(--frame-in), 0 -3px 0 var(--frame-out);
-    padding: 3px 0 env(safe-area-inset-bottom);
-  }
-  .mobile-tabs button {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 3px;
-    background: none;
-    border: none;
-    color: #b99464;
-    font-family: inherit;
-    font-size: 12px;
-    font-weight: 700;
-    text-shadow: 1px 1px 0 var(--frame-out);
-    padding: 9px 0 10px;
-    cursor: pointer;
-  }
-  .mt-icon { font-size: 13px; font-weight: 400; line-height: 1; }   /* ≡ 는 굵은 꼴에 없습니다 */
-  .mobile-tabs button.on {
-    color: #f3dca0;
-    background: rgba(243, 220, 160, 0.07);
-    box-shadow: inset 0 -4px 0 var(--brass);
-  }
-  .mobile-tabs button.on .mt-icon { color: #e0574f; }
 
   .overlay-card { padding: 24px 18px; }
 }
@@ -2330,8 +2140,7 @@ html:has(body.beyond) { background: #0b0812; }
    그동안 막대는 폭 대신 transform 으로 늘립니다 (ui.js 의 paintLevel) — 왼쪽을 축으로 */
 body.lv-rolling .je-xp-fill, body.lv-rolling .bar-fill.xp { transition: none; transform-origin: left center; will-change: transform; }
 
-/* 다 올라갔을 때 — 레벨 숫자가 한 번 튀고, 여정 창 위로 「레벨 업!」이 떠올랐다 사라집니다 */
-.journey-energy { position: relative; }
+/* 다 올라갔을 때 — 레벨 숫자가 한 번 튀고, 그 위로 「레벨 업!」이 떠올랐다 사라집니다 (지도 위 왼쪽 아래의 레벨) */
 .lv-pop { animation: lv-pop 0.55s ease-out; }
 @keyframes lv-pop {
   0%   { transform: scale(1);    color: var(--accent); }
@@ -2422,12 +2231,6 @@ body.lv-rolling .je-xp-fill, body.lv-rolling .bar-fill.xp { transition: none; tr
 .av-power-desc { font-size: 11px; font-weight: 700; color: #9a6a10; margin-top: 4px; }
 .bt-line.b-power { color: #b07a10; font-weight: 700; }
 
-/* 폰 — 지역 머리의 격 꼬리표에서 한자를 빼 이름 자리를 넓힙니다 */
-@media (max-width: 860px) {
-  .zone-head .rank-chip .hanja { display: none; }
-  .zone-name { font-size: 15px; }
-}
-
 /* ---------- 폰의 창 ----------
    예전엔 아래에서 올라와 화면을 거의 다 덮어서, 위에 있는 「닫기」까지 손가락이 닿기 어려웠습니다.
    이제 가운데에 띄우고 사방을 비워 둡니다 — 비어 있는 가장자리(어두운 바탕)를 누르면 창이 닫힙니다. */
@@ -2441,14 +2244,10 @@ body.lv-rolling .je-xp-fill, body.lv-rolling .bar-fill.xp { transition: none; tr
 
 /* ---------- 폰 — 여정 · 전리품은 한 화면에 ----------
    싸움 화면과 싸움이 끝난 뒤의 결과(전리품까지)가 스크롤 없이 한 화면에 들어오게 줄입니다.
-   - 여정 · 전리품 탭에서는 맨 위 제목 명패를 뺍니다 (「나」 · 「기록」 탭에는 남아 있어 관리자 창도 그대로 열 수 있음)
    - 아래 붙박인 주 버튼(길을 떠난다 · 맞선다 · 계속한다)을 낮춥니다 */
 @media (max-width: 860px) {
-  body[data-tab="journey"] .topbar, body[data-tab="gear"] .topbar { display: none; }
   .btn.thumb, .thumb-bar .btn, .thumb-bar .btn.big { min-height: 50px; padding-top: 8px; padding-bottom: 8px; }
   .btn.big { padding: 11px 16px; }
-  body[data-tab="journey"] .journey-panel { padding-bottom: 136px; }
-  .js-set { padding: 7px 2px; }
 }
 @media (max-width: 860px) {
   /* 결과 아래의 두 버튼(새 전리품 보러 · 스탯 다시 나누기)은 한 줄에 나란히 — 쌓으면 「계속한다」 밑으로 숨습니다 */
@@ -2652,17 +2451,6 @@ body.fight-locked #dollSwapBtn { display: none; }
   text-align: center;
 }
 
-/* 싸우는 동안은 맨 아래 탭 줄과, 레벨 · 에너지 · 경험치 줄도 숨깁니다 — 눈앞의 상대만 보이게 */
-body.fight-locked .mobile-tabs,
-body.fight-locked .journey-energy,
-body.fight-locked .je-xp { display: none; }
-@media (max-width: 860px) {
-  /* 탭 줄이 없으니 붙박이 버튼 띠가 그 자리까지 내려옵니다 */
-  body.fight-locked .btn.thumb,
-  body.fight-locked .thumb-bar { bottom: calc(18px + env(safe-area-inset-bottom)); }
-  body.fight-locked[data-tab="journey"] .journey-panel { padding-bottom: 110px; }
-}
-
 .modal-card .avatars { overflow-y: auto; flex: 1; min-height: 0; padding: 2px; }
 #avatarBody .av-head { display: none; }   /* 창 제목이 이미 「화신」 */
 
@@ -2798,17 +2586,13 @@ body.lv-rolling .res-xp .je-xp-fill { transition: none; transform-origin: left c
 .result > .res-alloc { position: absolute; right: 0; top: 62px; width: auto; margin: 0; padding: 7px 11px; white-space: nowrap; z-index: 2; }
 .result.has-alloc .res-foe { padding-right: 96px; }
 
-/* ---------- 폰 — 붙박이 버튼 띠를 탭 줄에 붙입니다 ----------
-   예전엔 「길을 떠난다」가 탭 줄보다 20px 남짓 위에 떠 있어서, 그 틈으로 뒤의 「향한다」가 비치고 눌렸습니다.
-   이제 띠가 탭 줄 바로 위에 맞닿고 화면 폭을 다 덮습니다 — 사이로 아무것도 비치지 않고 눌리지도 않습니다.
-   싸우는 동안(탭 줄이 숨을 때)은 띠가 화면 맨 아래까지 내려옵니다. */
+/* ---------- 폰 — 붙박이 버튼 띠는 화면 맨 아래 ----------
+   화면 폭을 다 덮어서 사이로 아무것도 비치지 않고 눌리지도 않습니다. 아이폰 홈 표시줄만큼 아래를 비웁니다. */
 @media (max-width: 860px) {
-  :root { --tabs-h: 58px; }
-  .mobile-tabs { height: calc(var(--tabs-h) + env(safe-area-inset-bottom)); box-sizing: border-box; align-items: stretch; }
   .btn.thumb, .thumb-bar {
     left: 0;
     right: 0;
-    bottom: calc(var(--tabs-h) + env(safe-area-inset-bottom));
+    bottom: 0;
   }
   .btn.thumb {
     border-radius: 0;
@@ -2831,10 +2615,8 @@ body.lv-rolling .res-xp .je-xp-fill { transition: none; transform-origin: left c
     background: var(--frame-out) var(--plank);
     box-shadow: 0 -2px 0 var(--brass), 0 -4px 0 var(--frame-out);
   }
-  body.fight-locked .btn.thumb,
-  body.fight-locked .thumb-bar { bottom: 0; }
-  body.fight-locked .btn.thumb { padding-bottom: calc(8px + env(safe-area-inset-bottom)); }
-  body.fight-locked .thumb-bar { padding-bottom: calc(10px + env(safe-area-inset-bottom)); }
+  .btn.thumb { padding-bottom: calc(8px + env(safe-area-inset-bottom)); }
+  .thumb-bar { padding-bottom: calc(10px + env(safe-area-inset-bottom)); }
 }
 @media (max-width: 380px) {
   .btn.thumb { left: 0; right: 0; }
@@ -2860,25 +2642,105 @@ body.beyond .avatar-bar:not(.empty) { border-color: #4a3a6b; }
 body.beyond .ab-ic { box-shadow: inset 0 0 0 2px #8f86a8; }
 body.beyond .avatar-bar.empty .ab-ic { background: rgba(184, 175, 195, 0.45); }
 
-/* ---------- 월드맵 (1~6격) ----------
-   지도는 여정 창 아래에 깔리고, 닿으면 조우 · 싸움 · 결과 창이 그 위에 뜹니다 (ui.js 의 renderMapLayer).
-   7격부터는 지도가 없어 예전 갈림길(「길을 떠난다」)이라 이 칸이 숨습니다. */
-.map-layer { display: none; position: relative; min-height: 560px; background: var(--table);
-             box-shadow: 0 0 0 2px var(--frame-out), 0 0 0 4px var(--brass), 0 0 0 6px var(--frame-out); }
-.journey-panel.map-mode .map-layer { display: block; }
-.map-layer canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
-.map-layer.facing canvas { filter: brightness(0.45) saturate(0.6); }   /* 창이 뜨면 지도는 뒤로 물러납니다 */
-.map-overlay { position: relative; z-index: 1; padding: 12px; display: flex; flex-direction: column; gap: 12px; }
+/* ============================================================
+   화면 틀 — 지도가 화면 가득 (UI 시안 C — design/ui/c.html, 사용자 결정)
+   지도가 맨 뒤에 화면 가득 깔리고, 그 위에는 에너지 숫자 · 세트 · 도감 · 레벨과 경험치 줄 · 지역 이름 · 메뉴 손잡이만 얹습니다.
+   조이스틱은 지도 어디든 누르면 그 자리에 생깁니다 (js/mapview.js). 닿으면 위에 창(#mapOverlay), 폰은 아래에 엄지 단추 띠.
+   나 · 전리품 · 기록은 메뉴 서랍 안 — 폰은 아래에서 올라오고, 넓은 화면은 오른쪽에서 나옵니다.
+   ============================================================ */
+body { padding: 0; max-width: none; height: 100%; overflow: hidden; }
+
+.map-stage { position: fixed; inset: 0; z-index: 0; background: var(--table); }
+.map-stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; transition: filter 0.25s; }
+body.facing .map-stage canvas, body.drawer-open .map-stage canvas { filter: brightness(0.5) saturate(0.7); }   /* 창 · 서랍이 뜨면 지도는 뒤로 물러납니다 */
+
+/* 떠 있는 조이스틱 — 누른 자리에 생겼다가 떼면 사라짐 */
+.map-stick { position: fixed; z-index: 4; width: 112px; height: 112px; margin: -56px 0 0 -56px; border-radius: 50%; pointer-events: none;
+             background: rgba(28, 16, 7, 0.35); box-shadow: 0 0 0 2px rgba(184, 134, 59, 0.85), 0 0 0 4px rgba(28, 16, 7, 0.45);
+             opacity: 0; transition: opacity 0.1s; }
+.map-stick.on { opacity: 1; }
+.map-stick .knob { position: absolute; left: 50%; top: 50%; width: 46px; height: 46px; margin: -23px 0 0 -23px; border-radius: 50%;
+                   background: var(--wood-hi); box-shadow: inset 0 -4px 0 var(--wood-lo), 0 0 0 2px var(--frame-out); }
+
+/* 지도 위의 글씨 — 어두운 유리 바탕이나 어두운 테두리로 어느 바닥에서든 읽히게 */
+.hud-glass { background: rgba(28, 16, 7, 0.66); color: var(--cream); box-shadow: 0 0 0 1px rgba(184, 134, 59, 0.6); }
+/* 에너지는 숫자로만 — 칸으로 그리면 에너지가 늘어날수록 칸이 잘아져 애매합니다 (사용자 결정) */
+.hud-energy { position: fixed; left: 10px; top: calc(env(safe-area-inset-top) + 10px); z-index: 5; pointer-events: none;
+              display: flex; align-items: baseline; gap: 4px; padding: 5px 12px 7px 9px; }
+.hud-energy .ic { font-size: 17px; }
+.hud-energy .n { font-family: var(--font-t); font-size: 28px; line-height: 1; color: #9fe08b; }
+.hud-energy .max { font-size: 13px; color: rgba(246, 231, 195, 0.75); }
+.hud-energy.low .n { color: #ff8a7a; animation: blink 1.2s steps(1) infinite; }
+/* 오른쪽 위 — 세트 1 2 3 · 도감 · (안 찍은 포인트가 있으면) 스탯 분배 */
+.hud-right { position: fixed; right: 10px; top: calc(env(safe-area-inset-top) + 10px); z-index: 5;
+             display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.hud-sets { display: flex; gap: 4px; }
+.hud-set { width: 32px; height: 32px; border: 0; padding: 0; font: inherit; font-family: var(--font-t); font-size: 15px; color: var(--cream);
+           background: rgba(28, 16, 7, 0.72); box-shadow: 0 0 0 1px var(--brass); cursor: pointer; }
+.hud-set.on { background: var(--wax); box-shadow: 0 0 0 1px var(--wax-lo), 0 0 0 2px var(--brass); cursor: default; }
+.hud-chip { border: 0; font: inherit; font-size: 12px; line-height: 1.3; padding: 5px 9px; cursor: pointer; }
+.hud-chip.ready { background: var(--wax); }
+/* 왼쪽 아래 레벨 · 맨 아래 가장자리의 경험치 줄 (id 는 싸운 뒤 굴러 올라가는 연출 — ui.js 의 paintLevel 이 씀) */
+.hud-lv { position: fixed; left: 10px; bottom: calc(env(safe-area-inset-bottom) + 12px); z-index: 5; pointer-events: none;
+          font-family: var(--font-t); font-size: 17px; line-height: 1.2; color: var(--cream); white-space: nowrap;
+          text-shadow: 0 1px 0 var(--frame-out), 0 0 3px var(--frame-out), 0 0 3px var(--frame-out); }
+.hud-lv .lv-k { font-family: var(--font); font-size: 11px; margin-right: 2px; color: rgba(246, 231, 195, 0.8); }
+.hud-lv.lv-pop { transform-origin: left center; }
+.hud-lv .lv-up-pop { right: auto; left: 0; top: -22px; }
+.hud-xp { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; height: calc(env(safe-area-inset-bottom) + 5px);
+          background: rgba(28, 16, 7, 0.78); box-shadow: none; pointer-events: none; }
+.hud-xp .je-xp-fill { height: 5px; }
+/* 메뉴 손잡이 — 가운데 아래. 새 전리품이 있으면 점 */
+.hud-handle { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 12px); transform: translateX(-50%); z-index: 6; }
+.hud-handle::before { content: ""; display: block; width: 34px; height: 4px; border-radius: 2px; background: var(--brass); margin: 0 auto 4px; }
+.hud-handle.has-new::after { content: ""; position: absolute; right: -4px; top: -4px; width: 10px; height: 10px; background: #c690f0; box-shadow: 0 0 0 2px var(--frame-out); }
+/* 지역 이름 — 들어설 때만 가운데 위에 잠깐 */
+.zone-banner { position: fixed; left: 50%; top: calc(env(safe-area-inset-top) + 62px); transform: translateX(-50%); z-index: 6; pointer-events: none;
+               max-width: calc(100% - 24px); padding: 10px 22px 11px; text-align: center; white-space: nowrap; opacity: 0; transition: opacity 0.6s; }
+.zone-banner.show { opacity: 1; }
+.zb-name { font-family: var(--font-t); font-size: 20px; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; }
+.zb-rank { margin-top: 4px; }
+.zb-rank:empty { display: none; }
+
+/* 마주하거나 싸우는 동안 — 지도 위의 것은 에너지만 남깁니다 */
+body.facing .hud-right, body.facing .hud-handle, body.facing .hud-lv, body.facing .hud-xp, body.facing .map-stick,
+body.fight-locked .hud-right, body.fight-locked .hud-handle { display: none; }
+
+/* 조우 · 싸움 · 결과 창 — 지도 위쪽, 에너지 아래 (폰은 아래 엄지 단추 띠 위까지) */
+.map-overlay { position: fixed; left: 10px; right: 10px; top: calc(env(safe-area-inset-top) + 58px); z-index: 7; margin: 0 auto; max-width: 560px;
+               max-height: calc(100% - env(safe-area-inset-top) - 70px); overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+.map-overlay:empty { display: none; }
 .map-hud { display: flex; flex-direction: column; gap: 8px; }
-.map-stick { position: absolute; left: 50%; bottom: 16px; z-index: 2; width: 124px; height: 124px; margin-left: -62px;
-             border-radius: 50%; background: rgba(28, 16, 7, 0.42); box-shadow: 0 0 0 2px var(--brass), 0 0 0 4px rgba(28, 16, 7, 0.6);
-             touch-action: none; user-select: none; -webkit-user-select: none; }
-.map-stick .knob { position: absolute; left: 50%; top: 50%; width: 50px; height: 50px; margin: -25px 0 0 -25px; border-radius: 50%;
-                   background: var(--wood-hi); box-shadow: inset 0 -4px 0 var(--wood-lo), 0 0 0 2px var(--frame-out); pointer-events: none; }
-.map-layer.facing .map-stick { display: none; }
 @media (max-width: 860px) {
-  /* 폰 — 지도가 탭 줄 바로 위까지 차서 아래에 비워 둘 자리가 없습니다 (창이 떴을 때만 붙박이 띠만큼 비움) */
-  body[data-tab="journey"] .journey-panel.map-mode:not(.facing) { padding-bottom: 0; }
-  .map-layer { min-height: 280px; }
-  .map-overlay { padding: 10px; }
+  .map-overlay { max-height: calc(100% - env(safe-area-inset-top) - 58px - 92px - env(safe-area-inset-bottom)); }
+}
+
+/* 메뉴 서랍 — 예전 세 패널(나 · 전리품 · 기록)을 하나씩. 서랍 밖(어두워진 지도)을 누르면 닫힘 */
+.drawer-back { position: fixed; inset: 0; z-index: 19; display: none; }
+body.drawer-open .drawer-back { display: block; }
+.drawer { position: fixed; left: 0; right: 0; bottom: 0; height: 88%; z-index: 20; display: flex; flex-direction: column;
+          background: rgba(28, 16, 7, 0.94) var(--plank); box-shadow: 0 -2px 0 var(--brass), 0 -4px 0 var(--frame-out);
+          transform: translateY(102%); transition: transform 0.25s ease-out; }
+body.drawer-open .drawer { transform: none; }
+.drawer-head { display: flex; align-items: center; gap: 8px; padding: 10px 10px 8px; flex: none; }
+.mobile-tabs { display: flex; gap: 6px; flex: 1; }
+.mobile-tabs button { flex: 1; display: flex; align-items: center; justify-content: center; gap: 5px; border: 0; padding: 9px 0;
+                      font-family: var(--font-t); font-size: 15px; color: var(--text); background: var(--paper-lo); box-shadow: inset 0 -3px 0 #b89a5f; cursor: pointer; }
+.mobile-tabs button.on { color: var(--cream); background: var(--wax); box-shadow: inset 0 -3px 0 var(--wax-lo); }
+.mt-icon { font-size: 12px; line-height: 1; }
+.mobile-tabs button.has-new::after { top: 4px; right: 6px; transform: none; }   /* 새 전리품 점 — 칸 오른쪽 위 구석에 */
+.drawer-x { border: 0; background: none; color: var(--cream); font-size: 22px; line-height: 1; padding: 4px 6px; cursor: pointer; }
+.drawer-body { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+               padding: 6px 14px calc(env(safe-area-inset-bottom) + 22px); }
+.drawer .panel { display: none; }
+body[data-tab="hero"] .hero-panel, body[data-tab="gear"] .gear-panel, body[data-tab="log"] .log-panel { display: flex; }
+.drawer .topbar { margin: 4px 0 0; }
+.drawer .footer { margin-top: 0; }
+@media (min-width: 861px) {
+  .drawer { left: auto; top: 0; width: 460px; height: auto; transform: translateX(102%); box-shadow: -2px 0 0 var(--brass), -4px 0 0 var(--frame-out); }
+  body.drawer-open .drawer { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .drawer, .zone-banner, .map-stage canvas { transition: none; }
+  .hud-energy.low .n { animation: none; }
 }

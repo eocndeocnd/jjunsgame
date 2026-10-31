@@ -32,7 +32,7 @@ const MapView = (function () {
   }
 
   // o: {
-  //   canvas, stick(.knob 를 품은 조이스틱 — 없어도 됨), hooks(MapRules 가 게임에게 묻는 것),
+  //   canvas, stick(.knob 를 품은 떠 있는 조이스틱 — 지도를 누른 자리에 생김, 없어도 됨), hooks(MapRules 가 게임에게 묻는 것),
   //   paused() → 지금은 세계를 멈출 때인가 (싸움 창 · 다른 창이 떠 있을 때),
   //   onEvents(events) → 한 틱에 일어난 일,
   //   marks() → [{ x, y, icon }] 지도에 더 얹을 것 (떠돌이 상인 같은), dots → 몬스터 성격 점을 찍을까 (맵 초안),
@@ -49,7 +49,7 @@ const MapView = (function () {
     // keep — 저장해 둔 몬스터 (없으면 모든 구역에 새로 섭니다, map.js 의 createWorld)
     v.start = (map, start, seed, keep) => { v.world = MapRules.createWorld({ ...map, start: start || map.start }, o.hooks, seed, keep); face = 'down'; };
     v.resolve = outcome => { if (v.world) MapRules.resolve(v.world, outcome); };
-    const shown = () => !!o.canvas.offsetParent;   // 탭을 옮겨 안 보이면 세계도 멈춥니다
+    const shown = () => o.canvas.getClientRects().length > 0;   // 숨어서 안 보이면 세계도 멈춥니다
     const live = () => v.world && shown() && !o.paused();
 
     // ---------- 부드럽게 ----------
@@ -247,38 +247,42 @@ const MapView = (function () {
       if (held.length) MapRules.setInput(v.world, held[held.length - 1]);
     });
 
-    // ---------- 가상 조이스틱 ----------
-    // 칸 단위라 상하좌우 넷으로 끊습니다. 누르고 있으면 계속 걷고, 떼면 섭니다.
-    // 같은 쪽으로 누른 채로는 닿은 뒤 다시 걷지 않습니다 — 손을 떼거나 다른 쪽으로 밀어야.
+    // ---------- 떠 있는 조이스틱 ----------
+    // 지도 어디든 누르면 그 자리에 조이스틱(o.stick — position: fixed, 켜면 .on)이 생기고, 끄는 쪽으로 걷고, 떼면 사라집니다.
+    // (예전엔 화면 아래 가운데에 붙박인 조이스틱이었습니다 — 화면 틀을 지도 가득으로 바꾸며 바꿈, 사용자 결정)
+    // 칸 단위라 상하좌우 넷으로 끊습니다. 같은 쪽으로 누른 채로는 닿은 뒤 다시 걷지 않습니다 — 손을 떼거나 다른 쪽으로 밀어야.
+    const STICK_REACH = 40, STICK_DEAD = 10;   // 손잡이가 움직이는 거리 · 이만큼은 밀어야 걷기 시작 (px)
+    let sx = 0, sy = 0;
     function stickMove(ev) {
-      const r = o.stick.getBoundingClientRect();
-      const dx = ev.clientX - (r.left + r.width / 2), dy = ev.clientY - (r.top + r.height / 2);
-      const len = Math.hypot(dx, dy), max = r.width * 0.3, k = len > max ? max / len : 1;
+      if (ev.pointerId !== stickId) return;
+      const dx = ev.clientX - sx, dy = ev.clientY - sy;
+      const len = Math.hypot(dx, dy), k = len > STICK_REACH ? STICK_REACH / len : 1;
       if (knob) knob.style.transform = `translate(${dx * k}px, ${dy * k}px)`;
-      const dir = len < r.width * 0.1 ? null : Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up');
+      const dir = len < STICK_DEAD ? null : Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up');
       if (v.world && dir !== stickDir) {
         MapRules.setInput(v.world, null);
         MapRules.setInput(v.world, dir);
       }
       stickDir = dir;
     }
-    function stickEnd() {
+    function stickEnd(ev) {
+      if (ev.pointerId !== stickId) return;
       stickId = null;
       stickDir = null;
-      if (knob) knob.style.transform = '';
+      if (o.stick) o.stick.classList.remove('on');
       if (v.world) MapRules.setInput(v.world, null);
     }
-    if (o.stick) {
-      o.stick.addEventListener('pointerdown', ev => {
-        ev.preventDefault();
-        stickId = ev.pointerId;
-        try { o.stick.setPointerCapture(ev.pointerId); } catch (e) { /* 가짜 포인터(시험)면 붙잡지 못해도 됩니다 */ }
-        stickMove(ev);
-      });
-      o.stick.addEventListener('pointermove', ev => { if (ev.pointerId === stickId) stickMove(ev); });
-      o.stick.addEventListener('pointerup', stickEnd);
-      o.stick.addEventListener('pointercancel', stickEnd);
-    }
+    o.canvas.addEventListener('pointerdown', ev => {
+      if (stickId !== null || !live()) return;
+      ev.preventDefault();
+      stickId = ev.pointerId; sx = ev.clientX; sy = ev.clientY;
+      try { o.canvas.setPointerCapture(ev.pointerId); } catch (e) { /* 가짜 포인터(시험)면 붙잡지 못해도 됩니다 */ }
+      if (knob) knob.style.transform = '';
+      if (o.stick) { o.stick.style.left = `${sx}px`; o.stick.style.top = `${sy}px`; o.stick.classList.add('on'); }
+    });
+    o.canvas.addEventListener('pointermove', stickMove);
+    o.canvas.addEventListener('pointerup', stickEnd);
+    o.canvas.addEventListener('pointercancel', stickEnd);
     return v;
   }
 
