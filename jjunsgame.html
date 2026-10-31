@@ -2698,7 +2698,9 @@ body.facing .map-stage canvas, body.drawer-open .map-stage canvas { filter: brig
           background: rgba(28, 16, 7, 0.78); box-shadow: none; pointer-events: none; }
 .hud-xp .je-xp-fill { height: 5px; }
 /* 메뉴 손잡이 — 가운데 아래. 새 전리품이 있으면 점 */
-.hud-handle { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 12px); transform: translateX(-50%); z-index: 6; }
+/* 가운데 맞춤은 transform 대신 양옆 auto 여백으로 — 누르면 .btn:active 의 transform 이 translateX(-50%) 를 덮어써
+   단추가 오른쪽으로 반 폭 튀어서, 왼쪽 절반을 누르면 뗄 때 단추 밖이라 열리지 않았습니다 */
+.hud-handle { position: fixed; left: 0; right: 0; width: max-content; margin: 0 auto; bottom: calc(env(safe-area-inset-bottom) + 12px); z-index: 6; }
 .hud-handle::before { content: ""; display: block; width: 34px; height: 4px; border-radius: 2px; background: var(--brass); margin: 0 auto 4px; }
 .hud-handle.has-new::after { content: ""; position: absolute; right: -4px; top: -4px; width: 10px; height: 10px; background: #c690f0; box-shadow: 0 0 0 2px var(--frame-out); }
 /* 지역 이름 — 들어설 때만 가운데 위에 잠깐 */
