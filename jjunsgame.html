@@ -2795,6 +2795,16 @@ body[data-tab="hero"] .hero-panel, body[data-tab="gear"] .gear-panel, body[data-
                background-repeat: no-repeat; background-size: 400% 400%; background-position: 0 33.333%; image-rendering: pixelated; }
 @media (min-width: 861px) { .battle .bt-hero { width: 48px; } }
 
+/* 싸우는 동안 — 창이 화면 위아래를 다 씁니다 (사용자 결정): 상대 이름 · 체력은 위, 나의 체력 · 기록은 화면 아래에 붙이고,
+   그 사이 가운데를 상대와 나의 싸움이 크게 차지합니다 (ui.js 의 renderJourney 가 body.battling 을 켬) */
+body.battling .map-overlay { bottom: calc(env(safe-area-inset-bottom) + 10px); max-height: none; overflow: hidden; }
+body.battling .map-overlay > .stage { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+body.battling .battle { flex: 1; min-height: 0; width: 100%; max-width: 560px; }
+body.battling .bt-arena { flex: 1; min-height: 0; justify-content: space-evenly; gap: 16px; }
+body.battling .bt-foe { width: min(72%, 300px); }
+body.battling .bt-foe .portrait-ic { font-size: clamp(90px, 34vw, 190px); }
+body.battling .bt-side.hero { margin-top: auto; }
+
 </style>
 </head>
 <body data-tab="journey">
@@ -10451,7 +10461,10 @@ function renderJourney() {
   let stage = '';
   // 결과 화면이 먼저입니다. 마지막 에너지로 잡은 전리품도 보고 나서 끝나야 하니까요.
   // (여정이 끝났어도 결과를 닫기 전까지는 종료 화면을 띄우지 않습니다 — renderOverlay 참고)
-  if (battle && battle.r === run.lastResult) {
+  // 싸우는 동안은 창이 화면 위아래를 다 씁니다 — 상대 체력은 위, 나의 체력 · 기록은 아래에 붙고 가운데가 싸움 (css 의 body.battling)
+  const fighting = !!battle && battle.r === run.lastResult;
+  document.body.classList.toggle('battling', fighting);
+  if (fighting) {
     stage = battleCard(battle);
   } else if (run.lastResult) {
     stage = resultCard(run.lastResult, run);
