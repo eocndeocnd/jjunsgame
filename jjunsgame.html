@@ -11502,6 +11502,9 @@ function fitMapLayer() {
   if (!layer) return;
   if (window.innerWidth > 860) { layer.style.minHeight = ''; return; }
   if (fightLocked()) return;            // 싸우는 동안은 탭 줄이 숨어 높이가 달라집니다 — 그대로 둡니다
+  // 다른 탭이라 지도가 숨어 있으면 재지 않습니다 — 꼭대기가 0 으로 잡혀 지도가 화면 아래로 넘치고, 조이스틱이 탭 줄 밑으로 숨습니다.
+  // 여정 탭으로 돌아올 때 showTab 이 다시 잽니다.
+  if (!layer.getClientRects().length) return;
   const tabs = document.querySelector('.mobile-tabs');
   const bottom = tabs && tabs.getClientRects().length ? tabs.getBoundingClientRect().top : window.innerHeight;
   const top = layer.getBoundingClientRect().top + window.scrollY;
@@ -11707,6 +11710,7 @@ function showTab(name) {
   for (const b of document.querySelectorAll('#mobileTabs button')) {
     b.classList.toggle('on', b.dataset.tab === name);
   }
+  if (name === 'journey') fitMapLayer();   // 숨어 있는 동안 못 잰 지도 높이를 다시
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
