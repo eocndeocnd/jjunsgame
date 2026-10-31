@@ -2789,11 +2789,11 @@ body[data-tab="hero"] .hero-panel, body[data-tab="gear"] .gear-panel, body[data-
 }
 
 /* 싸울 때의 나 — 지도에서 걷는 그 그림의 뒷모습 서기 칸(4×4 칸 중 둘째 줄 첫 칸, 한 칸 32×40). 도트가 뭉개지지 않게 */
-.battle .bt-hero { width: 64px; aspect-ratio: 32 / 40;
+.battle .bt-hero { width: 32px; aspect-ratio: 32 / 40;   /* 그림 그대로의 크기 (사용자 결정 — 64px 의 절반) */
                    background: radial-gradient(ellipse 34% 6% at 50% 94%, rgba(28, 16, 7, 0.5) 0 96%, transparent 100%); box-shadow: none; }
 .hero-sprite { display: block; width: 100%; height: 100%; transform: none;
                background-repeat: no-repeat; background-size: 400% 400%; background-position: 0 33.333%; image-rendering: pixelated; }
-@media (min-width: 861px) { .battle .bt-hero { width: 96px; } }
+@media (min-width: 861px) { .battle .bt-hero { width: 48px; } }
 
 </style>
 </head>
