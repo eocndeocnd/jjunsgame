@@ -394,14 +394,10 @@ function renderHero() {
   $('xpText').textContent = `${fmt(run.xp)} / ${fmt(need)}`;
   $('xpFill').style.width = Math.min(100, (run.xp / need) * 100) + '%';
 
-  // 에너지
-  const maxPips = Math.max(RULES.START_ENERGY, run.energy);
-  $('energyText').textContent = `${run.energy} / ${RULES.START_ENERGY}`;
-  let pips = '';
-  for (let i = 0; i < maxPips; i++) {
-    pips += `<div class="pip ${i < run.energy ? '' : 'spent'}"></div>`;
-  }
-  $('energyPips').innerHTML = pips;
+  // 에너지 — 숫자로만 (지도 위 왼쪽 위와 같은 값 · 같은 최대치)
+  $('energyText').textContent = run.energy;
+  $('energyMax').textContent = `/${startEnergy()}`;
+  $('energyBlock').classList.toggle('low', run.energy <= 5);
 
   // 스탯 — 레벨에서 온 기본값 위에 분배와 전리품이 얼마나 얹혔는지
   $('heroStats').innerHTML = `
@@ -1059,8 +1055,8 @@ function battleLine(e, foeName) {
 
 function hpPct(hp, max) { return `${Math.max(0, Math.min(100, (hp / Math.max(1, max)) * 100))}%`; }
 
-// 내 모습 — 지금은 이모지. 나중에 그림이 들어올 자리
-const HERO_ICON = '🧍';
+// 내 모습 — 지도에서 걷는 그 그림(assets/hero/walk.png)의 뒷모습 서기 칸. 위에 선 상대를 마주 봅니다 (사용자 결정)
+const heroSprite = () => `<span class="portrait-ic hero-sprite" style="background-image:url('${MapView.heroSheet()}')"></span>`;
 
 // 전투 카드 — 처음 그릴 때. 그다음부터는 paintBattle 이 바 · 숫자 · 줄만 바꿉니다.
 // 위에서부터 상대 체력 · 상대 초상(크게) · 내 초상(작게) · 내 체력 · 기록.
@@ -1076,7 +1072,7 @@ function battleCard(b) {
       </div>
       <div class="bt-arena" id="btArena">
         <div class="portrait bt-foe" id="btFoe"><span class="portrait-ic">${foe.icon}</span></div>
-        <div class="portrait bt-hero" id="btHero"><span class="portrait-ic">${HERO_ICON}</span></div>
+        <div class="portrait bt-hero" id="btHero">${heroSprite()}</div>
       </div>
       <div class="bt-side hero">
         <div class="bt-top"><span class="bt-name">${activeAvatar() ? `<span class="avatar-tag">${avatarTitle(activeAvatar())}</span>` : ''}나<span class="lv">Lv.${fmtLevel(r.levelBefore || State.run.level)}</span></span>

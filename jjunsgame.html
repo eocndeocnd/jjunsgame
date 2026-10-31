@@ -384,21 +384,12 @@ h3::before { content: '◆ '; color: var(--wax); }
 .bar-fill { height: 100%; transition: width 0.25s ease; }
 .bar-fill.xp { background: repeating-linear-gradient(135deg, #2b74ad 0 3px, #1d5f8f 3px 6px); }
 
-.energy-block { margin-bottom: 0; }
-.pips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin: 0 0 8px 1px;
-}
-/* 에너지 한 칸 — 초록 보석 */
-.pip {
-  width: 8px;
-  height: 12px;
-  background: #4a8a34;
-  box-shadow: inset 0 2px 0 #7ab45a, inset 0 -3px 0 #2f6420, 0 0 0 1px var(--frame-out);
-}
-.pip.spent { background: var(--paper-lo); box-shadow: inset 0 0 0 1px var(--line); }
+/* 에너지 — 숫자로만 (칸으로 그리면 에너지가 늘어날수록 칸이 잘아져 애매합니다). 적으면 붉게 깜빡 */
+.energy-block { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin: 2px 0 4px; }
+.eb-k { font-size: 11px; color: var(--text-dim); }
+.eb-v { font-family: var(--font-t); font-size: 24px; line-height: 1.1; color: var(--energy); }
+.eb-max { font-family: var(--font); font-size: 12px; color: var(--text-faint); margin-left: 2px; }
+.energy-block.low .eb-v #energyText { color: var(--danger); animation: blink 1.2s steps(1) infinite; }
 
 /* ---------- 스탯 분배 ---------- */
 .alloc { margin-top: 10px; }
@@ -2719,7 +2710,7 @@ body.facing .map-stage canvas, body.drawer-open .map-stage canvas { filter: brig
 .zb-rank:empty { display: none; }
 
 /* 마주하거나 싸우는 동안 — 지도 위의 것은 에너지만 남깁니다 */
-body.facing .hud-right, body.facing .hud-handle, body.facing .hud-lv, body.facing .hud-xp, body.facing .map-stick,
+body.facing .hud-right, body.facing .hud-handle, body.facing .hud-lv, body.facing .hud-xp, body.facing .map-stick, body.facing .zone-banner,
 body.fight-locked .hud-right, body.fight-locked .hud-handle { display: none; }
 
 /* 조우 · 싸움 · 결과 창 — 지도 위쪽, 에너지 아래 (폰은 아래 엄지 단추 띠 위까지) */
@@ -2760,6 +2751,49 @@ body[data-tab="hero"] .hero-panel, body[data-tab="gear"] .gear-panel, body[data-
   .drawer, .zone-banner, .map-stage canvas { transition: none; }
   .hud-energy.low .n { animation: none; }
 }
+
+/* 싸울 때 뜨는 창 (조우 · 싸움 · 결과) — 지도가 비치게 투명하게 (사용자 결정).
+   양피지 · 테두리를 걷어 내고, 창 안의 잉크 · 종이 색 변수를 밝은 글씨 · 어두운 반투명 바탕으로 바꿔 끼웁니다 —
+   안의 규칙들이 이 변수를 쓰므로 한꺼번에 따라옵니다. 글씨는 어두운 테두리를 둘러 어느 바닥에서든 읽히게. */
+.map-overlay .stage {
+  --text: #f6e7c3; --text-dim: #e8d4a8; --text-faint: #cbb185;
+  --paper: transparent; --paper-dot: transparent; --paper-hi: rgba(28, 16, 7, 0.5); --paper-lo: rgba(28, 16, 7, 0.38);
+  --line: rgba(184, 134, 59, 0.8); --line-soft: rgba(184, 134, 59, 0.45);
+  --dots: linear-gradient(90deg, rgba(184, 134, 59, 0.45) 50%, transparent 0);
+  --accent: #ff9a8a; --energy: #9fe08b; --danger: #ff7a6e; --xp: #8cc8f0; --drop: #d8acff; --outer: #c9a0f2;
+  background: none; box-shadow: none; padding: 2px;
+  color: var(--text);
+  text-shadow: 0 1px 0 rgba(28, 16, 7, 0.95), 1px 0 0 rgba(28, 16, 7, 0.6), -1px 0 0 rgba(28, 16, 7, 0.6), 0 0 4px rgba(28, 16, 7, 0.85);
+}
+.map-overlay .stage::before { display: none; }
+.map-overlay .stage .btn, .map-overlay .stage .bt-float { text-shadow: none; }
+.map-overlay .stage .bt-float { text-shadow:
+  2px 0 0 var(--frame-out), -2px 0 0 var(--frame-out), 0 2px 0 var(--frame-out), 0 -2px 0 var(--frame-out),
+  2px 2px 0 var(--frame-out), -2px -2px 0 var(--frame-out), 2px -2px 0 var(--frame-out), -2px 2px 0 var(--frame-out); }
+/* 어두운 바닥 위의 예감 · 싸움 줄 색 — 종이 위 잉크 색을 한 단계씩 밝게 */
+.map-overlay .stage .feel-0 { color: #ff7a6e; }
+.map-overlay .stage .feel-1 { color: #ffa45c; }
+.map-overlay .stage .feel-2 { color: #f2c84e; }
+.map-overlay .stage .feel-3 { color: #cde06c; }
+.map-overlay .stage .feel-4 { color: #8fe08a; }
+.map-overlay .stage .feel-5 { color: #8cc8f0; }
+.map-overlay .stage .bt-line.b-crit { color: #ff8a7a; }
+.map-overlay .stage .bt-line.b-harm { color: #ffb35a; text-shadow: inherit; }
+.map-overlay .stage .bt-line.b-foe { color: #f2b9a0; }
+.map-overlay .stage .res-head { border-bottom-color: var(--line-soft); }
+
+/* 상대의 초상 — 액자 · 종이를 걷고 발밑 그림자만. 기운을 두르면 그림만 그 색으로 빛납니다 */
+.map-overlay .portrait {
+  background: radial-gradient(ellipse 36% 8% at 50% 86%, rgba(28, 16, 7, 0.5) 0 96%, transparent 100%);
+  box-shadow: none;
+}
+
+/* 싸울 때의 나 — 지도에서 걷는 그 그림의 뒷모습 서기 칸(4×4 칸 중 둘째 줄 첫 칸, 한 칸 32×40). 도트가 뭉개지지 않게 */
+.battle .bt-hero { width: 64px; aspect-ratio: 32 / 40;
+                   background: radial-gradient(ellipse 34% 6% at 50% 94%, rgba(28, 16, 7, 0.5) 0 96%, transparent 100%); box-shadow: none; }
+.hero-sprite { display: block; width: 100%; height: 100%; transform: none;
+               background-repeat: no-repeat; background-size: 400% 400%; background-position: 0 33.333%; image-rendering: pixelated; }
+@media (min-width: 861px) { .battle .bt-hero { width: 96px; } }
 
 </style>
 </head>
@@ -2813,9 +2847,10 @@ body[data-tab="hero"] .hero-panel, body[data-tab="gear"] .gear-panel, body[data-
         <div class="bar"><div class="bar-fill xp" id="xpFill"></div></div>
       </div>
 
-      <div class="energy-block">
-        <div class="bar-label"><span>에너지</span><span id="energyText">20 / 20</span></div>
-        <div class="pips" id="energyPips"></div>
+      <!-- 에너지는 숫자로만 — 칸으로 그리면 에너지가 늘어날수록 칸이 잘아져 애매합니다 (지도 위 왼쪽 위와 같게) -->
+      <div class="energy-block" id="energyBlock">
+        <span class="eb-k">에너지</span>
+        <span class="eb-v"><span id="energyText">30</span><span class="eb-max" id="energyMax">/30</span></span>
       </div>
     </div>
 
@@ -9716,7 +9751,10 @@ const MapView = (function () {
     return { text: `Lv.${fmtLevel(f.level)}`, hot: !!State.run && f.level > State.run.level };
   }
 
-  return { create, gameHooks, gameTag, VIEW, KIND_COLOR, TEMPER_COLOR };
+  // 걷기 그림의 주소 — 싸움 화면의 나도 같은 그림을 씁니다 (한 파일 빌드에서는 그림 자체가 든 data: 주소)
+  const heroSheet = () => heroImg.src;
+
+  return { create, gameHooks, gameTag, heroSheet, VIEW, KIND_COLOR, TEMPER_COLOR };
 })();
 
 </script>
@@ -10117,14 +10155,10 @@ function renderHero() {
   $('xpText').textContent = `${fmt(run.xp)} / ${fmt(need)}`;
   $('xpFill').style.width = Math.min(100, (run.xp / need) * 100) + '%';
 
-  // 에너지
-  const maxPips = Math.max(RULES.START_ENERGY, run.energy);
-  $('energyText').textContent = `${run.energy} / ${RULES.START_ENERGY}`;
-  let pips = '';
-  for (let i = 0; i < maxPips; i++) {
-    pips += `<div class="pip ${i < run.energy ? '' : 'spent'}"></div>`;
-  }
-  $('energyPips').innerHTML = pips;
+  // 에너지 — 숫자로만 (지도 위 왼쪽 위와 같은 값 · 같은 최대치)
+  $('energyText').textContent = run.energy;
+  $('energyMax').textContent = `/${startEnergy()}`;
+  $('energyBlock').classList.toggle('low', run.energy <= 5);
 
   // 스탯 — 레벨에서 온 기본값 위에 분배와 전리품이 얼마나 얹혔는지
   $('heroStats').innerHTML = `
@@ -10782,8 +10816,8 @@ function battleLine(e, foeName) {
 
 function hpPct(hp, max) { return `${Math.max(0, Math.min(100, (hp / Math.max(1, max)) * 100))}%`; }
 
-// 내 모습 — 지금은 이모지. 나중에 그림이 들어올 자리
-const HERO_ICON = '🧍';
+// 내 모습 — 지도에서 걷는 그 그림(assets/hero/walk.png)의 뒷모습 서기 칸. 위에 선 상대를 마주 봅니다 (사용자 결정)
+const heroSprite = () => `<span class="portrait-ic hero-sprite" style="background-image:url('${MapView.heroSheet()}')"></span>`;
 
 // 전투 카드 — 처음 그릴 때. 그다음부터는 paintBattle 이 바 · 숫자 · 줄만 바꿉니다.
 // 위에서부터 상대 체력 · 상대 초상(크게) · 내 초상(작게) · 내 체력 · 기록.
@@ -10799,7 +10833,7 @@ function battleCard(b) {
       </div>
       <div class="bt-arena" id="btArena">
         <div class="portrait bt-foe" id="btFoe"><span class="portrait-ic">${foe.icon}</span></div>
-        <div class="portrait bt-hero" id="btHero"><span class="portrait-ic">${HERO_ICON}</span></div>
+        <div class="portrait bt-hero" id="btHero">${heroSprite()}</div>
       </div>
       <div class="bt-side hero">
         <div class="bt-top"><span class="bt-name">${activeAvatar() ? `<span class="avatar-tag">${avatarTitle(activeAvatar())}</span>` : ''}나<span class="lv">Lv.${fmtLevel(r.levelBefore || State.run.level)}</span></span>

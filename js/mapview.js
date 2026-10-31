@@ -303,5 +303,8 @@ const MapView = (function () {
     return { text: `Lv.${fmtLevel(f.level)}`, hot: !!State.run && f.level > State.run.level };
   }
 
-  return { create, gameHooks, gameTag, VIEW, KIND_COLOR, TEMPER_COLOR };
+  // 걷기 그림의 주소 — 싸움 화면의 나도 같은 그림을 씁니다 (한 파일 빌드에서는 그림 자체가 든 data: 주소)
+  const heroSheet = () => heroImg.src;
+
+  return { create, gameHooks, gameTag, heroSheet, VIEW, KIND_COLOR, TEMPER_COLOR };
 })();

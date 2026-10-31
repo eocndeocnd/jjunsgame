@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/galmuri@2.40.3/dist/galmuri.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/neodgm/neodgm-webfont@1.601/neodgm/style.css">
-<link rel="stylesheet" href="css/style.css?v=20261101015958">
+<link rel="stylesheet" href="css/style.css?v=20261101020759">
 </head>
 <body data-tab="journey">
 
@@ -65,9 +65,10 @@
         <div class="bar"><div class="bar-fill xp" id="xpFill"></div></div>
       </div>
 
-      <div class="energy-block">
-        <div class="bar-label"><span>에너지</span><span id="energyText">20 / 20</span></div>
-        <div class="pips" id="energyPips"></div>
+      <!-- 에너지는 숫자로만 — 칸으로 그리면 에너지가 늘어날수록 칸이 잘아져 애매합니다 (지도 위 왼쪽 위와 같게) -->
+      <div class="energy-block" id="energyBlock">
+        <span class="eb-k">에너지</span>
+        <span class="eb-v"><span id="energyText">30</span><span class="eb-max" id="energyMax">/30</span></span>
       </div>
     </div>
 
@@ -283,17 +284,17 @@
 </div>
 
 <!-- 맨 뒤의 헤진 지도. 게임과 상관없이 먼저 그려둡니다. -->
-<script src="js/backdrop.js?v=20261101015958"></script>
+<script src="js/backdrop.js?v=20261101020759"></script>
 <!-- 효과음과 배경음. 소리 파일 없이 그 자리에서 만듭니다. -->
-<script src="js/sound.js?v=20261101015958"></script>
+<script src="js/sound.js?v=20261101020759"></script>
 <!-- 전투 이펙트 — assets/fx 의 그림 두 장에서 프레임을 잘라 씁니다 -->
-<script src="js/fx.js?v=20261101015958"></script>
-<script src="js/data.js?v=20261101015958"></script>
-<script src="js/game.js?v=20261101015958"></script>
+<script src="js/fx.js?v=20261101020759"></script>
+<script src="js/data.js?v=20261101020759"></script>
+<script src="js/game.js?v=20261101020759"></script>
 <!-- 월드맵 — 지도(maps/*.tmj 를 build.py 가 감싼 것) · 걷기 규칙 · 그리기 -->
-<script src="js/maps.js?v=20261101015958"></script>
-<script src="js/map.js?v=20261101015958"></script>
-<script src="js/mapview.js?v=20261101015958"></script>
-<script src="js/ui.js?v=20261101015958"></script>
+<script src="js/maps.js?v=20261101020759"></script>
+<script src="js/map.js?v=20261101020759"></script>
+<script src="js/mapview.js?v=20261101020759"></script>
+<script src="js/ui.js?v=20261101020759"></script>
 </body>
 </html>
