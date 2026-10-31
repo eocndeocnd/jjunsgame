@@ -1623,6 +1623,12 @@ function freshCount(slot) { return (State.meta.fresh[slot] || []).length; }
 function isFresh(itemId, slot) { return (State.meta.fresh[slot] || []).includes(itemId); }
 function totalFresh() { return SLOT_IDS.concat(['special']).reduce((n, s) => n + freshCount(s), 0); }
 
+// 결과 화면에서 바로 낀 것 — 그 물건의 표시만 끕니다 (같은 부위의 다른 새 물건은 그대로)
+function unfreshItem(item) {
+  const f = State.meta.fresh[item.slot];
+  if (f && f.includes(item.id)) { State.meta.fresh[item.slot] = f.filter(id => id !== item.id); save(); }
+}
+
 // 그 부위를 열어봤으면 표시를 끕니다
 function clearFresh(slot) {
   if (State.meta.fresh[slot] && State.meta.fresh[slot].length) {

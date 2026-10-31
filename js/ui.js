@@ -19,7 +19,6 @@ function render() {
     if (isSlotModalOpen()) closeSlotModal();
     if (isSwapModalOpen()) closeSwapModal();
     if (isAvatarModalOpen()) closeAvatarModal();
-    closeAllocModal();
     enhMode = false;      // 슬롯 강화 중이었다면 칸이 도로 장비 칸으로
     if (document.body.dataset.tab !== 'journey') showTab('journey');   // 메뉴 서랍은 닫고 지도 위의 창만
   }
@@ -429,12 +428,6 @@ function renderHero() {
 
   renderAvatars();
 
-  // 안 찍은 포인트가 있으면 버튼에 점을 찍습니다 — 창을 안 열어도 보이게.
-  const pip = $('allocPip');
-  if (pip) pip.classList.toggle('on', run.unspent > 0);
-  const ob = $('openAllocBtn');
-  if (ob) ob.classList.toggle('ready', run.unspent > 0);
-
   renderAlloc(run);
 }
 
@@ -519,14 +512,6 @@ function renderAlloc(run) {
   }
   $('commitBtn').addEventListener('click', () => { commitPoints(); Sound.play('commit'); render(); });
   $('autoAllocBtn').addEventListener('click', () => { setAutoAlloc(!State.meta.autoAlloc); render(); });
-
-  const ob = $('openAllocBtn');
-  if (ob && !ob.dataset.wired) { ob.dataset.wired = '1'; ob.addEventListener('click', openAllocModal); }
-  for (const b of document.querySelectorAll('[data-closealloc]')) {
-    if (b.dataset.wired) continue;
-    b.dataset.wired = '1';
-    b.addEventListener('click', closeAllocModal);
-  }
 }
 
 // value 가 문자열이면 그대로 씁니다 (크리티컬처럼 "27% · ×2.5" 같은 값)
@@ -1317,6 +1302,7 @@ function resultCard(r, run) {
                  <span class="res-tag">${d.isNew ? '새로 얻음' : `분해 · 강화석 +${fmt(d.stones)}`}</span>
                  ${d.autoWorn ? '<span class="res-tag worn-now">바로 착용</span>' : ''}
                </span>
+               ${d.isNew && !d.autoWorn ? dropWear(d.item) : ''}
              </span>
            </div>`).join('')}
          </div>
@@ -1353,6 +1339,18 @@ function resultCard(r, run) {
 //
 // 한 부위만 새로 얻었으면 그 부위 이름을 그대로 적어줍니다.
 // 어디로 가는지 알고 누르는 편이, 눌러보고 아는 것보다 낫습니다.
+// 결과의 새 전리품 — 지금 그 부위에 낀 것과 견준 ▲▼ 와 「낀다」 한 번 (부위 창까지 가지 않고 그 자리에서, 사용자 결정).
+// 알아서 갈아끼우지는 않습니다 — 고르는 건 내 몫. 이미 끼고 있으면 「끼는 중」.
+// 특수장비는 열린 빈 칸이 있을 때만 (어느 칸에 낄지 고를 일이 없을 때) — 아니면 아래 「보러 간다」로.
+function dropWear(item) {
+  if (equippedSlotOf(item.id)) return '<span class="res-tag worn-now">끼는 중</span>';
+  const to = item.slot === 'special' ? SPECIAL_SLOT_IDS.find(s => isSlotOpen(s) && !State.meta.equipped[s]) : item.slot;
+  if (!to || !isSlotOpen(to)) return '';
+  const worn = getItem(State.meta.equipped[to]);
+  return `<span class="res-diff">${itemDiffText(item, worn, slotMult(to))}</span>
+    <button class="btn tiny res-wear" data-wear="${item.id}" data-wslot="${to}">낀다</button>`;
+}
+
 function gearJumpButton(r) {
   if (!r.win || !r.drops) return '';
   const fresh = r.drops.filter(d => d.isNew);
@@ -1702,7 +1700,7 @@ function wireJourney() {
     b.addEventListener('click', () => { if (fightLocked()) return; switchSet(Number(b.dataset.jset)); Sound.play('equip'); render(); });
   }
   on('rosterBtn',    openRosterModal);
-  on('jAllocBtn',    openAllocHere);   // 여정 화면 그대로 분배 창만 띄웁니다
+  on('jAllocBtn',    openAlloc);       // 「나」 칸 안의 분배판으로
   on('shopBtn',      () => { Sound.play('encounter'); openShop(); });
   const rab = $('rosterAllBtn');
   if (rab && !rab.dataset.wired) {
@@ -1735,18 +1733,34 @@ function wireJourney() {
   });   // 소리는 전투 화면이 한 줄씩 냅니다
   on('retreatBtn',   () => { retreat(); if (mapView) mapView.resolve('retreat'); Sound.play('retreat'); render(); });
   on('continueBtn',  () => { dismissResult();  render(); });
-  on('toAllocBtn',   openAllocHere);   // 결과는 그대로 두고 분배 창만 띄웁니다
+  on('toAllocBtn',   openAlloc);       // 결과는 그대로 두고 서랍의 분배판만
+  // 결과의 「낀다」 — 새로 얻은 물건을 그 자리에서 끼고, 그 물건의 NEW 표시도 끕니다
+  for (const b of document.querySelectorAll('[data-wear]')) {
+    b.addEventListener('click', () => {
+      const item = getItem(b.dataset.wear);
+      if (fightLocked() || !item) return;
+      equip(item.id, b.dataset.wslot);
+      unfreshItem(item);
+      Sound.play('equip');
+      render();
+    });
+  }
   on('toGearBtn',    () => {
     const slot = $('toGearBtn').dataset.goslot;
     dismissResult(); render(); spotlightGear(slot);
   });
 }
 
-// 분배판을 바로 띄웁니다 — 결과 화면의 「스탯을 다시 나눈다」가 부릅니다.
-function spotlightAlloc() {
-  openAllocModal();
-  const el = $('alloc');
-  if (!el) return;
+// 스탯 분배 — 서랍의 「나」 칸을 열고 그 안의 분배판까지 내려가 한 번 반짝입니다.
+// 지도 위 · 결과의 「스탯 분배」가 부릅니다. 결과는 그대로 둔 채 서랍만 열리고, 닫으면 결과로 돌아옵니다.
+// (예전엔 따로 창을 띄웠는데 서랍 칸 안에 바로 펼쳐 두는 쪽으로 바꿨습니다 — 사용자 결정)
+function openAlloc() {
+  if (fightLocked()) return;
+  showTab('hero');
+  render();
+  const frame = $('allocFrame'), el = $('alloc');
+  if (!frame || !el) return;
+  frame.scrollIntoView({ block: 'start', behavior: 'smooth' });
   el.classList.remove('spotlight');
   void el.offsetWidth;            // 애니메이션 재시작용
   el.classList.add('spotlight');
@@ -1805,7 +1819,6 @@ function wireKeys() {
         else if (isShopOpen()) closeShop();
         else if (isSlotModalOpen()) closeSlotModal();
         else if (isRosterModalOpen()) closeRosterModal();
-        else closeAllocModal();
       } else if (ev.code === 'Space') {
         // 세이브 코드 칸처럼 글을 쓰는 곳에서는 막지 않습니다
         const t = ev.target;
@@ -2442,32 +2455,7 @@ function renderShop() {
   }
 }
 
-// ---------- 스탯 분배 창 ----------
-// 분배판은 「나」 패널 맨 아래에 있어서 한 번 찍으려면 매번 스크롤해야 했습니다.
-// 레벨 바로 옆 버튼으로 띄웁니다.
-function openAllocModal() {
-  if (fightLocked()) return;
-  showTab('hero');
-  render();
-  const m = $('allocModal');
-  if (m) m.classList.remove('hidden');
-}
-// 여정의 「스탯 분배」 — 탭을 「나」로 옮기지 않고 창만 띄웁니다
-function openAllocHere() {
-  if (fightLocked()) return;
-  render();
-  const m = $('allocModal');
-  if (m) m.classList.remove('hidden');
-}
-function closeAllocModal() {
-  const m = $('allocModal');
-  if (m) m.classList.add('hidden');
-}
-function isAllocModalOpen() {
-  const m = $('allocModal');
-  return !!m && !m.classList.contains('hidden');
-}
-function isAnyModalOpen() { return isAvatarModalOpen() || isSlotModalOpen() || isSwapModalOpen() || isShopOpen() || isAllocModalOpen() || isRosterModalOpen() || isSaveModalOpen() || isAdminOpen(); }
+function isAnyModalOpen() { return isAvatarModalOpen() || isSlotModalOpen() || isSwapModalOpen() || isShopOpen() || isRosterModalOpen() || isSaveModalOpen() || isAdminOpen(); }
 
 // 그 부위의 강화를 반영한 실제 수치를 보여줍니다 — 장부상 수치가 아니라 몸에 붙는 값.
 // 강화는 부위에 붙으므로, 목록에 있는 것 무엇을 끼든 이 값이 됩니다.

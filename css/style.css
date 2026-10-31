@@ -270,9 +270,6 @@ h3::before { content: '◆ '; color: var(--wax); }
   gap: 10px;
   margin-bottom: 12px;
 }
-/* 안 찍은 포인트가 있으면 버튼이 붉은 밀랍으로 깨어납니다 — 창을 안 열어도 보이게 */
-#openAllocBtn { flex: none; white-space: nowrap; }
-#openAllocBtn.ready { --b: var(--wax); --b-hi: var(--wax-hi); --b-lo: var(--wax-lo); }
 .alloc-pip {
   display: none;
   width: 6px; height: 6px;
@@ -376,6 +373,8 @@ h3::before { content: '◆ '; color: var(--wax); }
 .energy-block.low .eb-v #energyText { color: var(--danger); animation: blink 1.2s steps(1) infinite; }
 
 /* ---------- 스탯 분배 ---------- */
+/* 「나」 칸 안의 분배판 (예전엔 따로 뜨는 창) */
+.alloc-title { font-size: 14px; }
 .alloc { margin-top: 10px; }
 
 /* 행 전체가 버튼입니다 — 누르면 그 스탯이 한 칸 늘어납니다 */
@@ -2414,8 +2413,7 @@ body.lv-rolling .je-xp-fill, body.lv-rolling .bar-fill.xp { transition: none; tr
 }
 
 /* ---------- 싸우는 동안 ----------
-   마주한 때부터 싸움이 끝날 때까지 세트 바꾸기 · 스탯 분배 버튼은 숨깁니다 (ui.js 의 fightLocked) */
-body.fight-locked #openAllocBtn,
+   마주한 때부터 싸움이 끝날 때까지 세트 바꾸기 버튼은 숨깁니다 (ui.js 의 fightLocked) */
 body.fight-locked .doll-sets { display: none; }
 body.fight-locked #dollModeBtn,
 body.fight-locked #dollSwapBtn { display: none; }
@@ -2805,3 +2803,10 @@ body.meeting .enc-portrait { width: min(72%, 300px, 40vh); }
 body.meeting .enc-portrait .portrait-ic { font-size: clamp(90px, 34vw, 190px); }
 /* 마주할 때의 상대 · 나 — 싸울 때의 .bt-arena 와 같은 늘어놓음 */
 .enc-arena { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+
+/* 결과의 새 전리품 — 지금 그 부위에 낀 것과 견준 ▲▼ 와 「낀다」 (ui.js 의 dropWear) */
+.res-diff { display: flex; flex-wrap: wrap; justify-content: center; gap: 0 5px; font-size: 10px; line-height: 1.45; font-weight: 700; }
+.res-diff .up   { color: var(--energy); }
+.res-diff .down { color: var(--danger); }
+.res-diff .same { color: var(--text-faint); font-weight: 400; }
+.res-wear { margin-top: 4px; padding: 5px 14px; }

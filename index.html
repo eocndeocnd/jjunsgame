@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/galmuri@2.40.3/dist/galmuri.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/neodgm/neodgm-webfont@1.601/neodgm/style.css">
-<link rel="stylesheet" href="css/style.css?v=20261101023253">
+<link rel="stylesheet" href="css/style.css?v=20261101024509">
 </head>
 <body data-tab="journey">
 
@@ -53,9 +53,6 @@
     <div class="frame">
       <div class="level-row">
         <span class="level-badge" id="heroLevel">Lv.1</span>
-        <!-- 분배는 패널 맨 아래에 있어서 찍으려면 매번 스크롤해야 했습니다.
-             레벨 옆에 두고 창으로 띄웁니다. -->
-        <button class="btn tiny" id="openAllocBtn">스탯 분배<span class="alloc-pip" id="allocPip"></span></button>
       </div>
 
       <div class="hero-rank" id="heroRank"></div>
@@ -70,6 +67,13 @@
         <span class="eb-k">에너지</span>
         <span class="eb-v"><span id="energyText">30</span><span class="eb-max" id="energyMax">/30</span></span>
       </div>
+    </div>
+
+    <!-- 스탯 분배 — 예전엔 레벨 옆 단추로 창을 띄웠는데, 이 칸 안에 바로 펼쳐 둡니다.
+         지도 위 · 결과의 「스탯 분배」도 이리로 옵니다 (ui.js 의 openAlloc) -->
+    <div class="frame alloc-frame" id="allocFrame">
+      <h3 class="alloc-title">스탯 분배 <span class="count" id="pointCount"></span></h3>
+      <div id="alloc" class="alloc"></div>
     </div>
 
     <div class="frame"><ul class="stats" id="heroStats"></ul></div>
@@ -186,18 +190,6 @@
   </div>
 </div>
 
-<!-- 스탯 분배 창. 레벨 옆 버튼으로 엽니다. -->
-<div id="allocModal" class="modal hidden">
-  <div class="modal-back" data-closealloc></div>
-  <div class="modal-card">
-    <div class="modal-head">
-      <h3>스탯 분배 <span class="count" id="pointCount"></span></h3>
-      <button class="btn tiny" data-closealloc>닫기</button>
-    </div>
-    <div id="alloc" class="alloc"></div>
-  </div>
-</div>
-
 <!-- 관리자 — 왼쪽 위 이름표(제목 명패)를 빠르게 다섯 번 누르면 열립니다 -->
 <div id="adminModal" class="modal hidden">
   <div class="modal-back" data-closeadmin></div>
@@ -284,17 +276,17 @@
 </div>
 
 <!-- 맨 뒤의 헤진 지도. 게임과 상관없이 먼저 그려둡니다. -->
-<script src="js/backdrop.js?v=20261101023253"></script>
+<script src="js/backdrop.js?v=20261101024509"></script>
 <!-- 효과음과 배경음. 소리 파일 없이 그 자리에서 만듭니다. -->
-<script src="js/sound.js?v=20261101023253"></script>
+<script src="js/sound.js?v=20261101024509"></script>
 <!-- 전투 이펙트 — assets/fx 의 그림 두 장에서 프레임을 잘라 씁니다 -->
-<script src="js/fx.js?v=20261101023253"></script>
-<script src="js/data.js?v=20261101023253"></script>
-<script src="js/game.js?v=20261101023253"></script>
+<script src="js/fx.js?v=20261101024509"></script>
+<script src="js/data.js?v=20261101024509"></script>
+<script src="js/game.js?v=20261101024509"></script>
 <!-- 월드맵 — 지도(maps/*.tmj 를 build.py 가 감싼 것) · 걷기 규칙 · 그리기 -->
-<script src="js/maps.js?v=20261101023253"></script>
-<script src="js/map.js?v=20261101023253"></script>
-<script src="js/mapview.js?v=20261101023253"></script>
-<script src="js/ui.js?v=20261101023253"></script>
+<script src="js/maps.js?v=20261101024509"></script>
+<script src="js/map.js?v=20261101024509"></script>
+<script src="js/mapview.js?v=20261101024509"></script>
+<script src="js/ui.js?v=20261101024509"></script>
 </body>
 </html>
