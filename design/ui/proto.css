@@ -1,0 +1,91 @@
+/* ============================================================
+   UI 시안 — 함께 쓰는 꾸밈 (design/ui/*.html)
+   색 · 글꼴은 게임(css/style.css)의 양피지 · 나무 · 밀랍 그대로, 틀만 시안마다 다릅니다.
+   ============================================================ */
+:root {
+  --table: #1c1007;
+  --paper: #ead6a6; --paper-dot: #e3cc95; --paper-hi: #f2e2b8; --paper-lo: #d8bf86;
+  --frame-in: #8b5a2b; --frame-out: #1c1007; --brass: #b8863b;
+  --wood: #7b4a22; --wood-hi: #a8703a; --wood-lo: #3f240f;
+  --wax: #a8262b; --wax-hi: #d0473f; --wax-lo: #5c1012;
+  --cream: #f6e7c3;
+  --text: #3a2312; --text-dim: #7a5634; --text-faint: #977650;
+  --xp: #1d5f8f; --energy: #286b25; --danger: #b3171e; --drop: #6a2c8f;
+  --r1: #6b6152; --r2: #4f6b30; --r3: #7a4f2a; --r4: #5c6570; --r5: #5e3a72; --r6: #8c1f24;
+  --font: 'Galmuri11', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+  --font-t: 'NeoDunggeunmo', 'Galmuri11', 'Malgun Gothic', sans-serif;
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-t: env(safe-area-inset-top, 0px);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: var(--table); color: var(--cream);
+             font: 13px/1.4 var(--font); -webkit-tap-highlight-color: transparent; overscroll-behavior: none; }
+button { font: inherit; color: inherit; cursor: pointer; }
+
+/* 지도 — 화면 전체 */
+.stage { position: fixed; inset: 0; overflow: hidden; }
+.stage > canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; transition: filter .25s; }
+.stage.dim > canvas { filter: brightness(0.5) saturate(0.7); }
+
+/* 양피지 창 */
+.paper { background: var(--paper); color: var(--text);
+         background-image: radial-gradient(var(--paper-dot) 1px, transparent 1.2px); background-size: 4px 4px;
+         box-shadow: inset 0 0 0 2px var(--frame-in), 0 0 0 2px var(--frame-out), 0 4px 0 2px rgba(28, 16, 7, 0.35); }
+.wood { background: var(--wood); color: var(--cream);
+        box-shadow: inset 0 2px 0 var(--wood-hi), inset 0 -3px 0 var(--wood-lo), 0 0 0 2px var(--frame-out); }
+.glass { background: rgba(28, 16, 7, 0.62); color: var(--cream); box-shadow: 0 0 0 1px rgba(184, 134, 59, 0.55); backdrop-filter: blur(2px); }
+
+/* 나무 · 밀랍 단추 */
+.btn { border: 0; padding: 10px 14px; font-family: var(--font-t); font-size: 15px; background: var(--wood); color: var(--cream);
+       box-shadow: inset 0 2px 0 var(--wood-hi), inset 0 -3px 0 var(--wood-lo), 0 0 0 2px var(--frame-out); }
+.btn:active { transform: translateY(1px); box-shadow: inset 0 2px 0 var(--wood-lo), 0 0 0 2px var(--frame-out); }
+.btn.wax { background: var(--wax); box-shadow: inset 0 2px 0 var(--wax-hi), inset 0 -3px 0 var(--wax-lo), 0 0 0 2px var(--frame-out); }
+.btn.ghost { background: var(--paper-lo); color: var(--text); box-shadow: inset 0 -3px 0 #b89a5f, 0 0 0 2px var(--frame-out); }
+.btn:disabled { opacity: .45; }
+
+/* 격 꼬리표 */
+.rank { display: inline-block; padding: 1px 6px; font-family: var(--font-t); font-size: 12px; color: var(--cream); background: var(--r1); }
+.rank.r2 { background: var(--r2); } .rank.r3 { background: var(--r3); } .rank.r4 { background: var(--r4); }
+.rank.r5 { background: var(--r5); } .rank.r6 { background: var(--r6); }
+
+/* 막대 */
+.bar { height: 6px; background: rgba(28, 16, 7, 0.55); box-shadow: 0 0 0 1px rgba(28, 16, 7, 0.8); overflow: hidden; }
+.bar > i { display: block; height: 100%; background: #4f9bd4; }
+.bar.en > i { background: #5fae4f; }
+
+/* 마주한 상대 · 결과 (proto.js 가 그림) */
+.foe { display: flex; gap: 12px; align-items: center; }
+.foe-ic { font-size: 40px; width: 58px; height: 58px; display: grid; place-items: center; background: var(--paper-hi);
+          box-shadow: inset 0 0 0 2px var(--frame-in); flex: none; }
+.foe-name { font-family: var(--font-t); font-size: 18px; }
+.foe-sub { color: var(--text-dim); font-size: 12px; }
+.feel { font-family: var(--font-t); font-size: 14px; margin-top: 2px; }
+.feel.f0 { color: #b3171e; } .feel.f1 { color: #c2561c; } .feel.f2 { color: #8a6400; }
+.feel.f3 { color: #5d7a1f; } .feel.f4 { color: #286b25; } .feel.f5 { color: #1d5f8f; }
+.aura-tag { font-size: 12px; font-family: var(--font-t); }
+.res-head { font-family: var(--font-t); font-size: 20px; }
+.res-head.win { color: var(--energy); } .res-head.lose { color: var(--danger); }
+.res-line { color: var(--text-dim); }
+.drops { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 3px; }
+.drops li { background: var(--paper-hi); padding: 3px 6px; box-shadow: inset 0 0 0 1px var(--paper-lo); }
+.drops .new { color: var(--drop); font-family: var(--font-t); margin-left: 4px; }
+
+/* 목록 (나 · 차림 · 기록) */
+.rows { display: grid; gap: 2px; }
+.rows > div { display: flex; justify-content: space-between; gap: 10px; padding: 5px 8px; background: var(--paper-hi); box-shadow: inset 0 0 0 1px var(--paper-lo); }
+.rows .k { color: var(--text-dim); }
+.rows .v { font-family: var(--font-t); }
+.gear-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 6px; }
+.gear-grid > div { background: var(--paper-hi); box-shadow: inset 0 0 0 2px var(--paper-lo); padding: 6px; min-height: 52px; }
+.gear-grid .k { font-size: 11px; color: var(--text-faint); }
+.gear-grid .v { font-size: 12px; }
+.log { display: grid; gap: 4px; font-size: 12px; }
+.log > div { border-bottom: 1px dashed var(--paper-lo); padding-bottom: 3px; }
+.sets { display: flex; gap: 6px; }
+.sets .btn { flex: 1; padding: 8px 0; font-size: 14px; }
+.sets .btn.on { background: var(--wax); box-shadow: inset 0 2px 0 var(--wax-hi), inset 0 -3px 0 var(--wax-lo), 0 0 0 2px var(--frame-out); }
+
+/* 시안 이름표 — 오른쪽 가장자리 한가운데에 세로 글씨 (어느 시안도 거기엔 아무것도 두지 않음). 목록으로 돌아가는 고리 */
+.proto-tag { position: fixed; right: 2px; top: 50%; transform: translateY(-50%); writing-mode: vertical-rl; z-index: 50; font-size: 10px;
+             color: rgba(246, 231, 195, 0.6); text-shadow: 0 1px 0 #1c1007; pointer-events: none; }
+.proto-tag a { pointer-events: auto; color: inherit; }

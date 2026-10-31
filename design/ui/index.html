@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<base href="../../">
+<title>UI 시안 — 지도가 화면 가득</title>
+<!-- UI 시안 목록. 셋 다 게임과 같은 지도 · 몬스터 · 싸움 규칙으로 걸어 볼 수 있고, 아무것도 저장하지 않습니다. -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/galmuri@2.40.3/dist/galmuri.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/neodgm/neodgm-webfont@1.601/neodgm/style.css">
+<link rel="stylesheet" href="design/ui/proto.css">
+<style>
+  html, body { overflow: auto; height: auto; }
+  main { max-width: 520px; margin: 0 auto; padding: calc(var(--safe-t) + 18px) 16px calc(var(--safe-b) + 24px); display: grid; gap: 14px; }
+  h1 { margin: 0; font-family: var(--font-t); font-weight: normal; font-size: 22px; }
+  .lead { color: rgba(246, 231, 195, 0.8); margin: 0; }
+  a.card { display: block; padding: 14px 16px; text-decoration: none; }
+  a.card b { font-family: var(--font-t); font-weight: normal; font-size: 18px; display: block; margin-bottom: 4px; }
+  a.card ul { margin: 6px 0 0; padding-left: 18px; color: var(--text-dim); }
+  .foot { font-size: 12px; color: rgba(246, 231, 195, 0.6); }
+  .foot a { color: inherit; }
+</style>
+</head>
+<body>
+<main>
+  <h1>UI 시안 — 지도가 화면 가득</h1>
+  <p class="lead">셋 다 진짜 지도 위를 걸을 수 있고, 몬스터에 닿으면 게임 규칙 그대로 싸웁니다(전투 연출만 없음). 아무것도 저장하지 않으니 마음껏 눌러 보세요.</p>
+
+  <a class="card paper" href="design/ui/a.html">
+    <b>A · 떠 있는 칩</b>
+    <ul>
+      <li>위에 작은 칩 둘 — 지역 · 레벨 · 경험치 / 에너지 · 골드</li>
+      <li>왼쪽 아래 조이스틱, 오른쪽 아래 둥근 단추 셋(가방 · 나 · 기록)과 세트 1 2 3</li>
+      <li>메뉴 · 조우 · 결과는 아래에서 반쯤 올라오는 서랍 — 지도가 계속 보임</li>
+    </ul>
+  </a>
+
+  <a class="card paper" href="design/ui/b.html">
+    <b>B · RPG 창</b>
+    <ul>
+      <li>왼쪽 위 얼굴 창(레벨 · 에너지 · 경험치), 오른쪽 위 작은 지도 — 어디로 갈지 보임</li>
+      <li>아래 글 창에 방금 일어난 일. 닿으면 글 창에서 「▶ 맞선다 / 물러선다」를 고름</li>
+      <li>☰ 메뉴는 화면 전체를 덮는 옛 RPG 메뉴(능력치 · 차림 · 기록)</li>
+    </ul>
+  </a>
+
+  <a class="card paper" href="design/ui/c.html">
+    <b>C · 몰입</b>
+    <ul>
+      <li>지도 위에 거의 아무것도 없음 — 화면 어디든 누르면 그 자리에 조이스틱</li>
+      <li>에너지는 위 가장자리의 칸, 경험치는 아래 가장자리의 줄, 지역 이름은 들어설 때만 잠깐</li>
+      <li>메뉴는 아래 손잡이를 끌어올리는 서랍, 조우는 위에 상대 · 아래에 엄지 단추 둘</li>
+    </ul>
+  </a>
+
+  <p class="foot">고르면 그 틀로 게임 화면을 다시 짭니다. 섞어도 됩니다 (예: C 의 떠 있는 조이스틱 + B 의 작은 지도). · <a href="index.html">게임으로</a></p>
+</main>
+</body>
+</html>

@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<base href="../../">
+<title>UI 시안 B — RPG 창</title>
+<!-- UI 시안 B — RPG 창: 왼쪽 위 얼굴 창(레벨 · 에너지 · 경험치), 오른쪽 위 작은 지도와 메뉴, 아래는 글 창.
+     닿으면 글 창이 커지며 「▶ 맞선다 / 물러선다」를 고릅니다. 메뉴는 화면 전체를 덮는 RPG 메뉴. 아무것도 저장하지 않습니다. -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/galmuri@2.40.3/dist/galmuri.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/neodgm/neodgm-webfont@1.601/neodgm/style.css">
+<link rel="stylesheet" href="design/ui/proto.css">
+<style>
+  .who { position: fixed; left: 10px; top: calc(var(--safe-t) + 10px); z-index: 5; display: flex; gap: 8px; padding: 6px 10px 7px 6px; width: 190px; }
+  .who canvas { width: 48px; height: 44px; image-rendering: pixelated; background: var(--paper-hi); box-shadow: inset 0 0 0 2px var(--frame-in); flex: none; }
+  .who .meta { flex: 1; display: grid; gap: 3px; align-content: center; }
+  .who .name { font-family: var(--font-t); font-size: 14px; display: flex; justify-content: space-between; }
+  .who .row { display: flex; gap: 5px; align-items: center; font-size: 11px; color: var(--text-dim); }
+  .who .row .bar { flex: 1; height: 5px; }
+  .zone { position: fixed; left: 10px; top: calc(var(--safe-t) + 74px); z-index: 5; padding: 3px 8px; font-family: var(--font-t); font-size: 12px; }
+
+  .mini { position: fixed; right: 10px; top: calc(var(--safe-t) + 10px); z-index: 5; padding: 4px; display: grid; gap: 6px; }
+  .mini canvas { width: 98px; height: 98px; image-rendering: pixelated; display: block; box-shadow: inset 0 0 0 2px var(--frame-in); }
+  .mini .btn { padding: 6px 0; font-size: 14px; }
+
+  .map-stick { position: fixed; right: 18px; bottom: calc(var(--safe-b) + 120px); z-index: 4; width: 118px; height: 118px; border-radius: 50%;
+               background: rgba(28, 16, 7, 0.42); box-shadow: 0 0 0 2px var(--brass), 0 0 0 4px rgba(28, 16, 7, 0.6); touch-action: none; user-select: none; }
+  .map-stick .knob { position: absolute; left: 50%; top: 50%; width: 48px; height: 48px; margin: -24px 0 0 -24px; border-radius: 50%;
+                     background: var(--wood-hi); box-shadow: inset 0 -4px 0 var(--wood-lo), 0 0 0 2px var(--frame-out); pointer-events: none; }
+
+  .msg { position: fixed; left: 10px; right: 10px; bottom: calc(var(--safe-b) + 10px); z-index: 6; padding: 12px 14px; min-height: 94px; font-size: 14px; }
+  .msg .lines { display: grid; gap: 4px; color: var(--text); }
+  .msg .lines .old { color: var(--text-faint); font-size: 12px; }
+  .choices { display: grid; gap: 6px; margin-top: 10px; }
+  .choices button { text-align: left; border: 0; padding: 10px 12px; font-family: var(--font-t); font-size: 17px; background: var(--paper-hi); color: var(--text); box-shadow: inset 0 0 0 2px var(--paper-lo); }
+  .choices button::before { content: '▶ '; color: transparent; }
+  .choices button.sel { box-shadow: inset 0 0 0 2px var(--wax); }
+  .choices button.sel::before, .choices button:active::before { color: var(--wax); }
+  body.facing .map-stick { display: none; }
+
+  .menu { position: fixed; inset: 0; z-index: 20; display: none; padding: calc(var(--safe-t) + 12px) 12px calc(var(--safe-b) + 12px); background: rgba(28, 16, 7, 0.6); }
+  .menu.open { display: block; }
+  .menu .box { height: 100%; display: grid; grid-template-columns: 104px 1fr; gap: 10px; padding: 12px; }
+  .menu .list { display: grid; align-content: start; gap: 4px; border-right: 2px dashed var(--paper-lo); padding-right: 8px; }
+  .menu .list button { text-align: left; border: 0; background: none; padding: 8px 4px; font-family: var(--font-t); font-size: 16px; color: var(--text); }
+  .menu .list button.on { color: var(--wax); }
+  .menu .list button.on::before { content: '▶'; margin-right: 4px; }
+  .menu .list .close { margin-top: 14px; color: var(--text-dim); }
+  .menu .content { overflow: auto; display: grid; gap: 10px; align-content: start; }
+  .menu .content h4 { margin: 0; font-family: var(--font-t); font-weight: normal; font-size: 16px; }
+</style>
+</head>
+<body>
+<div class="stage" id="stage"><canvas id="map"></canvas></div>
+
+<div class="who paper">
+  <canvas id="face" width="48" height="44"></canvas>
+  <div class="meta">
+    <div class="name"><span>주인공</span><span id="lv"></span></div>
+    <div class="row"><span>⚡</span><div class="bar en"><i id="enBar"></i></div><span id="en"></span></div>
+    <div class="row"><span>EXP</span><div class="bar"><i id="xp"></i></div></div>
+  </div>
+</div>
+<div class="zone glass" id="zone"></div>
+
+<div class="mini paper">
+  <canvas id="mini"></canvas>
+  <button class="btn" id="menuBtn">☰ 메뉴</button>
+</div>
+
+<div id="stick" class="map-stick"><div class="knob"></div></div>
+
+<div class="msg paper" id="msg"></div>
+
+<div class="menu" id="menu">
+  <div class="box paper">
+    <div class="list" id="menuList">
+      <button data-tab="me" class="on">능력치</button>
+      <button data-tab="bag">차림</button>
+      <button data-tab="log">기록</button>
+      <button class="close" id="menuX">✕ 닫기</button>
+    </div>
+    <div class="content" id="menuBody"></div>
+  </div>
+</div>
+
+<div class="proto-tag">시안 B · RPG 창 · <a href="design/ui/index.html">목록</a></div>
+
+<script src="js/data.js"></script>
+<script src="js/game.js"></script>
+<script src="js/maps.js"></script>
+<script src="js/map.js"></script>
+<script src="js/mapview.js"></script>
+<script src="design/ui/proto.js"></script>
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+let menuTab = null, facing = null;   // facing: 'enc' | 'res' | null
+
+function hud() {
+  const z = Proto.zone(), s = Proto.status();
+  $('lv').textContent = `Lv.${s.level}`;
+  $('en').textContent = `${s.energy}/${s.max}`;
+  $('enBar').style.width = `${Math.min(100, s.energy / s.max * 100)}%`;
+  $('xp').style.width = `${s.xp * 100}%`;
+  $('zone').innerHTML = `<span class="rank r${z.rank}">${z.rank}격</span> ${z.name}`;
+  if (!facing) idle();
+  if (menuTab) fillMenu(menuTab);
+}
+
+// 평소 — 최근 일 두 줄
+function idle() {
+  const last = State.log.slice(-2).reverse();
+  $('msg').innerHTML = `<div class="lines">${last.length ? last.map((l, i) => `<div class="${i ? 'old' : ''}">${l.text}</div>`).join('') : '<div>조이스틱으로 걸어 보세요. 몬스터에 닿으면 싸웁니다.</div>'}</div>`;
+}
+
+function choose(items) {   // [[글, 할 일, 강조]]
+  $('msg').insertAdjacentHTML('beforeend', `<div class="choices">${items.map(([t, , sel], i) => `<button data-i="${i}" class="${sel ? 'sel' : ''}">${t}</button>`).join('')}</div>`);
+  for (const b of $('msg').querySelectorAll('.choices button')) b.onclick = () => items[Number(b.dataset.i)][1]();
+}
+
+function showEnc(e) {
+  facing = 'enc';
+  document.body.classList.add('facing'); $('stage').classList.add('dim');
+  $('msg').innerHTML = `<div class="lines"><div>${e.foe.icon} ${e.foe.name}${josa(e.foe.name, '이', '가')} ${e.first === 'foe' ? '덤벼들었다!' : '앞에 섰다.'}</div></div>` + Proto.encounterHTML(e);
+  choose([['맞선다', () => Proto.fight(), true], ['물러선다', () => { Proto.flee(); done(); }]]);
+}
+function showRes(r) {
+  facing = 'res';
+  $('msg').innerHTML = Proto.resultHTML(r);
+  const over = State.run.over;
+  choose([[over ? '새 여정' : '계속', () => { Proto.closeResult(); done(); if (over) Proto.restart(); }, true]]);
+}
+function done() { facing = null; document.body.classList.remove('facing'); $('stage').classList.remove('dim'); idle(); }
+
+function fillMenu(tab) {
+  menuTab = tab;
+  for (const b of $('menuList').querySelectorAll('[data-tab]')) b.classList.toggle('on', b.dataset.tab === tab);
+  const s = Proto.status();
+  $('menuBody').innerHTML = tab === 'me' ? `<h4>능력치 · Lv.${s.level}</h4>${Proto.statsHTML()}<div class="rows"><div><span class="k">골드</span><span class="v">${s.gold}</span></div><div><span class="k">모은 전리품</span><span class="v">${s.owned}</span></div></div>`
+    : tab === 'bag' ? `<h4>차림</h4>${Proto.setsHTML()}${Proto.gearHTML()}`
+    : `<h4>기록</h4>${Proto.logHTML(30)}`;
+  Proto.wireSets($('menuBody'));
+}
+$('menuBtn').onclick = () => { fillMenu('me'); $('menu').classList.add('open'); };
+$('menuX').onclick = () => { menuTab = null; $('menu').classList.remove('open'); };
+for (const b of $('menuList').querySelectorAll('[data-tab]')) b.onclick = () => fillMenu(b.dataset.tab);
+
+Proto.start({ canvas: $('map'), stick: $('stick'), paused: () => !!menuTab, onEncounter: showEnc, onResult: showRes, onChange: hud });
+Proto.face($('face'));
+setInterval(() => Proto.minimap($('mini'), 24), 250);
+</script>
+</body>
+</html>

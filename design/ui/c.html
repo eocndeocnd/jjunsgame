@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<base href="../../">
+<title>UI 시안 C — 몰입</title>
+<!-- UI 시안 C — 몰입: 지도 위에 거의 아무것도 없습니다. 화면 어디든 누르면 그 자리에 조이스틱이 생깁니다.
+     에너지는 위 가장자리의 칸, 경험치는 아래 가장자리의 줄. 지역에 들어서면 이름이 잠깐 떴다 사라지고,
+     메뉴는 아래 손잡이로 끌어올리는 서랍. 닿으면 위에 상대, 아래에 엄지 단추 둘. 아무것도 저장하지 않습니다. -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/galmuri@2.40.3/dist/galmuri.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/neodgm/neodgm-webfont@1.601/neodgm/style.css">
+<link rel="stylesheet" href="design/ui/proto.css">
+<style>
+  .energy { position: fixed; left: 8px; right: 8px; top: calc(var(--safe-t) + 6px); z-index: 5; display: flex; gap: 2px; pointer-events: none; }
+  .energy i { flex: 1; height: 6px; background: #5fae4f; box-shadow: 0 0 0 1px rgba(28, 16, 7, 0.85); }
+  .energy i.gone { background: rgba(28, 16, 7, 0.55); }
+  .energy-n { position: fixed; right: 10px; top: calc(var(--safe-t) + 16px); z-index: 5; font-family: var(--font-t); font-size: 13px; color: #9fe08b;
+              text-shadow: 0 1px 0 #1c1007, 0 0 3px #1c1007; pointer-events: none; }
+  .xpline { position: fixed; left: 0; right: 0; bottom: 0; height: calc(var(--safe-b) + 5px); z-index: 5; background: rgba(28, 16, 7, 0.75); pointer-events: none; }
+  .xpline i { display: block; height: 5px; background: #4f9bd4; }
+  .lvtag { position: fixed; left: 10px; bottom: calc(var(--safe-b) + 10px); z-index: 5; font-family: var(--font-t); font-size: 14px; color: var(--cream);
+           text-shadow: 0 1px 0 #1c1007, 0 0 3px #1c1007; pointer-events: none; }
+
+  .banner { position: fixed; left: 50%; top: calc(var(--safe-t) + 54px); z-index: 6; transform: translateX(-50%); text-align: center; padding: 10px 22px;
+            opacity: 0; transition: opacity .6s; pointer-events: none; white-space: nowrap; }
+  .banner.show { opacity: 1; }
+  .banner .big { font-family: var(--font-t); font-size: 20px; }
+  .banner .small { font-size: 12px; margin-top: 2px; }
+
+  .float-stick { position: fixed; z-index: 4; width: 110px; height: 110px; margin: -55px 0 0 -55px; border-radius: 50%; pointer-events: none;
+                 background: rgba(28, 16, 7, 0.35); box-shadow: 0 0 0 2px rgba(184, 134, 59, 0.8); opacity: 0; transition: opacity .1s; }
+  .float-stick.on { opacity: 1; }
+  .float-stick .knob { position: absolute; left: 50%; top: 50%; width: 46px; height: 46px; margin: -23px 0 0 -23px; border-radius: 50%;
+                       background: var(--wood-hi); box-shadow: inset 0 -4px 0 var(--wood-lo), 0 0 0 2px var(--frame-out); }
+  .hint { position: fixed; left: 50%; bottom: calc(var(--safe-b) + 110px); transform: translateX(-50%); z-index: 5; pointer-events: none;
+          white-space: nowrap; padding: 4px 10px; background: rgba(28, 16, 7, 0.6); font-size: 12px; color: var(--cream); transition: opacity .5s; }
+
+  .handle { position: fixed; left: 50%; bottom: calc(var(--safe-b) + 12px); transform: translateX(-50%); z-index: 6; border: 0; padding: 6px 18px 8px;
+            font-family: var(--font-t); font-size: 13px; }
+  .handle::before { content: ''; display: block; width: 36px; height: 4px; border-radius: 2px; background: var(--brass); margin: 0 auto 4px; }
+
+  .drawer { position: fixed; left: 0; right: 0; bottom: 0; height: 88vh; z-index: 20; transform: translateY(102%); transition: transform .25s ease-out;
+            display: flex; flex-direction: column; padding: 10px 14px calc(var(--safe-b) + 14px); }
+  .drawer.open { transform: none; }
+  .drawer .grip { width: 48px; height: 5px; border-radius: 3px; background: var(--paper-lo); margin: 0 auto 10px; }
+  .tabs { display: flex; gap: 6px; margin-bottom: 10px; }
+  .tabs button { flex: 1; border: 0; padding: 9px 0; font-family: var(--font-t); font-size: 15px; background: var(--paper-lo); color: var(--text); box-shadow: inset 0 -3px 0 #b89a5f; }
+  .tabs button.on { background: var(--wax); color: var(--cream); box-shadow: inset 0 -3px 0 var(--wax-lo); }
+  .drawer .body { overflow: auto; display: grid; gap: 10px; align-content: start; flex: 1; }
+
+  .foecard { position: fixed; left: 12px; right: 12px; top: calc(var(--safe-t) + 30px); z-index: 8; padding: 12px; display: none; }
+  .thumbs { position: fixed; left: 12px; right: 12px; bottom: calc(var(--safe-b) + 18px); z-index: 8; display: none; gap: 12px; }
+  .thumbs .btn { flex: 1; padding: 18px 0; font-size: 19px; }
+  body.facing .foecard { display: block; }
+  body.facing .thumbs { display: flex; }
+  body.facing .handle, body.facing .lvtag, body.facing .hint { display: none; }
+</style>
+</head>
+<body>
+<div class="stage" id="stage"><canvas id="map"></canvas></div>
+
+<div class="energy" id="energy"></div>
+<div class="energy-n" id="enN"></div>
+<div class="banner glass" id="banner"><div class="big" id="bannerBig"></div><div class="small" id="bannerSmall"></div></div>
+<div class="lvtag" id="lv"></div>
+<div class="xpline"><i id="xp"></i></div>
+<div class="hint" id="hint">화면 아무 데나 누르고 끌어서 걷기</div>
+
+<div class="float-stick" id="stick"><div class="knob"></div></div>
+<button class="handle wood" id="handle">메뉴</button>
+
+<div class="foecard paper" id="foe"></div>
+<div class="thumbs" id="thumbs"></div>
+
+<div class="drawer paper" id="drawer">
+  <div class="grip" id="grip"></div>
+  <div class="tabs" id="tabs">
+    <button data-tab="me" class="on">나</button>
+    <button data-tab="bag">가방</button>
+    <button data-tab="log">기록</button>
+  </div>
+  <div class="body" id="drawerBody"></div>
+</div>
+
+<div class="proto-tag">시안 C · 몰입 · <a href="design/ui/index.html">목록</a></div>
+
+<script src="js/data.js"></script>
+<script src="js/game.js"></script>
+<script src="js/maps.js"></script>
+<script src="js/map.js"></script>
+<script src="js/mapview.js"></script>
+<script src="design/ui/proto.js"></script>
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+let tab = null, facing = false, bannerTimer = 0;
+
+function hud() {
+  const s = Proto.status();
+  const n = Math.min(s.max, 40);   // 칸이 너무 잘아지지 않게 — 에너지 1 = 1칸 (40 넘으면 비율)
+  const on = Math.round(s.energy / s.max * n);
+  $('energy').innerHTML = Array.from({ length: n }, (_, i) => `<i class="${i < on ? '' : 'gone'}"></i>`).join('');
+  $('enN').textContent = `⚡${s.energy}`;
+  $('lv').textContent = `Lv.${s.level}`;
+  $('xp').style.width = `${s.xp * 100}%`;
+  if (tab) fill(tab);
+}
+
+function banner(z) {
+  $('bannerBig').textContent = z.name;
+  $('bannerSmall').innerHTML = `<span class="rank r${z.rank}">제${z.rank}격 · ${z.rankName}</span>`;
+  $('banner').classList.add('show');
+  clearTimeout(bannerTimer);
+  bannerTimer = setTimeout(() => $('banner').classList.remove('show'), 2600);
+}
+
+function fill(t) {
+  tab = t;
+  for (const b of $('tabs').querySelectorAll('button')) b.classList.toggle('on', b.dataset.tab === t);
+  const s = Proto.status();
+  $('drawerBody').innerHTML = t === 'me' ? `${Proto.statsHTML()}<div class="rows"><div><span class="k">골드</span><span class="v">${s.gold}</span></div><div><span class="k">모은 전리품</span><span class="v">${s.owned}</span></div></div>`
+    : t === 'bag' ? Proto.setsHTML() + Proto.gearHTML() : Proto.logHTML(30);
+  Proto.wireSets($('drawerBody'));
+}
+function openDrawer() { fill(tab || 'me'); $('drawer').classList.add('open'); $('stage').classList.add('dim'); }
+function closeDrawer() { tab = null; $('drawer').classList.remove('open'); $('stage').classList.remove('dim'); }
+$('handle').onclick = openDrawer;
+$('grip').onclick = closeDrawer;
+for (const b of $('tabs').querySelectorAll('button')) b.onclick = () => fill(b.dataset.tab);
+// 손잡이를 위로 쓸어 올려도 열림 · 서랍을 아래로 쓸어내리면 닫힘
+let sy = null;
+$('handle').addEventListener('pointerdown', ev => { sy = ev.clientY; });
+$('handle').addEventListener('pointerup', ev => { if (sy !== null && sy - ev.clientY > 30) openDrawer(); sy = null; });
+$('drawer').addEventListener('pointerdown', ev => { if (ev.target.closest('.body')) return; sy = ev.clientY; });
+$('drawer').addEventListener('pointerup', ev => { if (sy !== null && ev.clientY - sy > 40) closeDrawer(); sy = null; });
+
+function setFacing(on) { facing = on; document.body.classList.toggle('facing', on); $('stage').classList.toggle('dim', on); }
+function showEnc(e) {
+  $('foe').innerHTML = Proto.encounterHTML(e);
+  $('thumbs').innerHTML = `<button class="btn" id="back">물러선다</button><button class="btn wax" id="go">맞선다</button>`;
+  $('go').onclick = () => Proto.fight();
+  $('back').onclick = () => { Proto.flee(); setFacing(false); };
+  setFacing(true);
+}
+function showRes(r) {
+  $('foe').innerHTML = Proto.resultHTML(r);
+  const over = State.run.over;
+  $('thumbs').innerHTML = `<button class="btn ${over ? 'wax' : ''}" id="ok">${over ? '새 여정' : '계속'}</button>`;
+  $('ok').onclick = () => { Proto.closeResult(); setFacing(false); if (over) Proto.restart(); };
+}
+
+Proto.start({ canvas: $('map'), paused: () => !!tab, onEncounter: showEnc, onResult: showRes, onZone: banner, onChange: hud });
+Proto.floatingStick($('map'), $('stick'));
+$('map').addEventListener('pointerdown', () => { $('hint').style.opacity = 0; }, { once: true });
+banner(Proto.zone());
+</script>
+</body>
+</html>

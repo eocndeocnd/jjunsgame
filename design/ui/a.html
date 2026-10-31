@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<!-- 모든 상대 주소는 저장소 꼭대기 기준 (js/ · assets/ · design/ui/) -->
+<base href="../../">
+<title>UI 시안 A — 떠 있는 칩</title>
+<!-- UI 시안 A — 떠 있는 칩: 위에 작은 정보 칩 둘, 왼쪽 아래 조이스틱, 오른쪽 아래 둥근 단추 셋.
+     가방 · 나 · 기록은 아래에서 반쯤 올라오는 서랍, 조우 · 결과도 같은 서랍. 아무것도 저장하지 않습니다. -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/galmuri@2.40.3/dist/galmuri.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/neodgm/neodgm-webfont@1.601/neodgm/style.css">
+<link rel="stylesheet" href="design/ui/proto.css">
+<style>
+  .chip { position: fixed; top: calc(var(--safe-t) + 10px); z-index: 5; padding: 7px 10px; }
+  .chip.l { left: 10px; min-width: 150px; }
+  .chip.r { right: 10px; text-align: right; }
+  .chip .z { font-family: var(--font-t); font-size: 14px; display: flex; gap: 6px; align-items: center; white-space: nowrap; }
+  .chip .lv { display: flex; gap: 6px; align-items: center; margin-top: 5px; font-family: var(--font-t); }
+  .chip .lv .bar { flex: 1; }
+  .chip .en { font-family: var(--font-t); font-size: 16px; color: #8fd47e; }
+  .chip .gold { font-size: 12px; color: #e7c76a; margin-top: 2px; }
+
+  .map-stick { position: fixed; left: 22px; bottom: calc(var(--safe-b) + 24px); z-index: 4; width: 120px; height: 120px; border-radius: 50%;
+               background: rgba(28, 16, 7, 0.42); box-shadow: 0 0 0 2px var(--brass), 0 0 0 4px rgba(28, 16, 7, 0.6); touch-action: none; user-select: none; }
+  .map-stick .knob { position: absolute; left: 50%; top: 50%; width: 48px; height: 48px; margin: -24px 0 0 -24px; border-radius: 50%;
+                     background: var(--wood-hi); box-shadow: inset 0 -4px 0 var(--wood-lo), 0 0 0 2px var(--frame-out); pointer-events: none; }
+
+  .dock { position: fixed; right: 14px; bottom: calc(var(--safe-b) + 24px); z-index: 4; display: grid; gap: 12px; justify-items: center; }
+  .round { width: 58px; height: 58px; border-radius: 50%; border: 0; display: grid; place-items: center; padding: 0; line-height: 1;
+           font-size: 22px; background: var(--wood); box-shadow: inset 0 2px 0 var(--wood-hi), inset 0 -4px 0 var(--wood-lo), 0 0 0 2px var(--frame-out), 0 0 0 4px var(--brass); }
+  .round small { display: block; font-size: 10px; font-family: var(--font); color: var(--cream); margin-top: -8px; }
+  .round:active { transform: translateY(1px); }
+  .setpills { display: flex; gap: 4px; }
+  .setpills button { width: 22px; height: 22px; border: 0; padding: 0; font-family: var(--font-t); font-size: 12px; background: rgba(28, 16, 7, 0.7); color: var(--cream); box-shadow: 0 0 0 1px var(--brass); }
+  .setpills button.on { background: var(--wax); }
+
+  .sheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; max-height: 70vh; display: flex; flex-direction: column;
+           transform: translateY(105%); transition: transform .22s ease-out; padding: 12px 14px calc(var(--safe-b) + 14px); }
+  .sheet.open { transform: none; }
+  .sheet .head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .sheet .head b { font-family: var(--font-t); font-size: 17px; font-weight: normal; }
+  .sheet .x { border: 0; background: none; font-size: 22px; color: var(--text-dim); padding: 0 4px; }
+  .sheet .body { overflow: auto; display: grid; gap: 10px; }
+  .sheet .act { display: flex; gap: 10px; margin-top: 12px; }
+  .sheet .act .btn { flex: 1; padding: 13px 0; font-size: 17px; }
+  .grip { width: 44px; height: 5px; border-radius: 3px; background: var(--paper-lo); margin: -4px auto 8px; }
+  body.facing .map-stick, body.facing .dock { display: none; }
+</style>
+</head>
+<body>
+<div class="stage" id="stage"><canvas id="map"></canvas></div>
+
+<div class="chip l glass">
+  <div class="z" id="zone"></div>
+  <div class="lv"><span id="lv"></span><div class="bar"><i id="xp"></i></div></div>
+</div>
+<div class="chip r glass">
+  <div class="en" id="en"></div>
+  <div class="gold" id="gold"></div>
+</div>
+
+<div id="stick" class="map-stick"><div class="knob"></div></div>
+<div class="dock">
+  <div class="setpills" id="pills"></div>
+  <button class="round" data-open="bag">🎒<small>가방</small></button>
+  <button class="round" data-open="me">🧍<small>나</small></button>
+  <button class="round" data-open="log">📜<small>기록</small></button>
+</div>
+
+<div class="sheet paper" id="sheet">
+  <div class="grip"></div>
+  <div class="head"><b id="sheetTitle"></b><button class="x" id="sheetX">✕</button></div>
+  <div class="body" id="sheetBody"></div>
+  <div class="act" id="sheetAct"></div>
+</div>
+
+<div class="proto-tag">시안 A · 떠 있는 칩 · <a href="design/ui/index.html">목록</a></div>
+
+<script src="js/data.js"></script>
+<script src="js/game.js"></script>
+<script src="js/maps.js"></script>
+<script src="js/map.js"></script>
+<script src="js/mapview.js"></script>
+<script src="design/ui/proto.js"></script>
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+let panel = null;   // 'bag' | 'me' | 'log' | 'enc' | 'res' | null
+
+function hud() {
+  const z = Proto.zone(), s = Proto.status();
+  $('zone').innerHTML = `<span class="rank r${z.rank}">${z.rank}격</span>${z.name}`;
+  $('lv').textContent = `Lv.${s.level}`;
+  $('xp').style.width = `${s.xp * 100}%`;
+  $('en').textContent = `⚡ ${s.energy}/${s.max}`;
+  $('gold').textContent = `💰 ${s.gold} · 전리품 ${s.owned}`;
+  $('pills').innerHTML = Array.from({ length: SET_COUNT }, (_, n) => `<button data-set="${n}" class="${isSetActive(n) ? 'on' : ''}">${n + 1}</button>`).join('');
+  Proto.wireSets($('pills'));
+  if (panel === 'bag' || panel === 'me' || panel === 'log') fill(panel);
+}
+
+const TITLES = { bag: '가방 — 차림', me: '나', log: '기록' };
+function fill(kind) {
+  $('sheetTitle').textContent = TITLES[kind];
+  $('sheetBody').innerHTML = kind === 'bag' ? Proto.setsHTML() + Proto.gearHTML()
+    : kind === 'me' ? Proto.statsHTML() : Proto.logHTML(20);
+  Proto.wireSets($('sheetBody'));
+  $('sheetAct').innerHTML = '';
+}
+function open(kind) {
+  panel = kind;
+  document.body.classList.toggle('facing', kind === 'enc' || kind === 'res');
+  $('stage').classList.add('dim');
+  $('sheet').classList.add('open');
+  $('sheetX').style.display = kind === 'enc' || kind === 'res' ? 'none' : '';
+}
+function close() {
+  panel = null;
+  document.body.classList.remove('facing');
+  $('stage').classList.remove('dim');
+  $('sheet').classList.remove('open');
+}
+
+function showEnc(e) {
+  $('sheetTitle').textContent = e.first === 'foe' ? '덤벼들었다!' : '마주쳤다';
+  $('sheetBody').innerHTML = Proto.encounterHTML(e);
+  $('sheetAct').innerHTML = `<button class="btn wax" id="go">맞선다</button><button class="btn" id="back">물러선다</button>`;
+  $('go').onclick = () => Proto.fight();
+  $('back').onclick = () => { Proto.flee(); close(); };
+  open('enc');
+}
+function showRes(r) {
+  $('sheetTitle').textContent = r.win ? '이겼다' : '졌다';
+  $('sheetBody').innerHTML = Proto.resultHTML(r);
+  const over = State.run.over;
+  $('sheetAct').innerHTML = `<button class="btn ${over ? 'wax' : ''}" id="ok">${over ? '새 여정' : '계속'}</button>`;
+  $('ok').onclick = () => { Proto.closeResult(); close(); if (over) Proto.restart(); };
+  open('res');
+}
+
+for (const b of document.querySelectorAll('[data-open]')) b.addEventListener('click', () => { fill(b.dataset.open); open(b.dataset.open); });
+$('sheetX').onclick = close;
+$('stage').addEventListener('pointerdown', () => { if (panel && panel !== 'enc' && panel !== 'res') close(); });
+
+Proto.start({ canvas: $('map'), stick: $('stick'), paused: () => !!panel, onEncounter: showEnc, onResult: showRes, onChange: hud });
+</script>
+</body>
+</html>
