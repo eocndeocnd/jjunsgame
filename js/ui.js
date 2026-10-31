@@ -690,9 +690,12 @@ function renderJourney() {
   let stage = '';
   // 결과 화면이 먼저입니다. 마지막 에너지로 잡은 전리품도 보고 나서 끝나야 하니까요.
   // (여정이 끝났어도 결과를 닫기 전까지는 종료 화면을 띄우지 않습니다 — renderOverlay 참고)
-  // 싸우는 동안은 창이 화면 위아래를 다 씁니다 — 상대 체력은 위, 나의 체력 · 기록은 아래에 붙고 가운데가 싸움 (css 의 body.battling)
+  // 마주한 동안 · 싸우는 동안은 창이 화면 위아래를 다 씁니다 (css 의 body.meeting · body.battling) —
+  // 상대는 가운데에 크게, 마주할 때와 싸울 때 같은 자리 같은 크기라 「맞선다」를 눌러도 튀지 않습니다.
+  // 싸울 때는 상대 체력이 위, 나의 체력 · 기록은 아래에 붙습니다.
   const fighting = !!battle && battle.r === run.lastResult;
   document.body.classList.toggle('battling', fighting);
+  document.body.classList.toggle('meeting', !fighting && !run.lastResult && !run.over && !!run.encounter);
   if (fighting) {
     stage = battleCard(battle);
   } else if (run.lastResult) {
@@ -1413,7 +1416,11 @@ function encounterCard(foe, isBoss, hero, aura) {
         </div>
         <div class="enc-chance chance-value ${winFeelClass(chance)}">${winFeel(chance)}</div>
       </div>
-      <div class="portrait enc-portrait"><span class="portrait-ic">${foe.icon}</span></div>
+      <!-- 상대와, 그 아래 상대를 마주 본 나 — 싸움 화면(battleCard)과 같은 늘어놓음이라 「맞선다」를 눌러도 튀지 않습니다 -->
+      <div class="enc-arena">
+        <div class="portrait enc-portrait"><span class="portrait-ic">${foe.icon}</span></div>
+        <div class="portrait enc-hero">${heroSprite()}</div>
+      </div>
       ${dropStrip(foe)}
     </div>
     <!-- 넓은 화면에서는 맞선다 위 · 물러선다 아래로 쌓고,
@@ -1485,7 +1492,8 @@ function initMap() {
     tag: MapView.gameTag,
     paused: mapPaused,
     marks: merchantMark,
-    onEvents: onMapEvents
+    onEvents: onMapEvents,
+    hideActors: () => document.body.classList.contains('facing')   // 조우 · 싸움 · 결과 창이 떠 있으면 땅만
   });
 }
 

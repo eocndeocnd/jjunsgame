@@ -36,7 +36,8 @@ const MapView = (function () {
   //   paused() → 지금은 세계를 멈출 때인가 (싸움 창 · 다른 창이 떠 있을 때),
   //   onEvents(events) → 한 틱에 일어난 일,
   //   marks() → [{ x, y, icon }] 지도에 더 얹을 것 (떠돌이 상인 같은), dots → 몬스터 성격 점을 찍을까 (맵 초안),
-  //   tag(enemyId) → { text, hot } 머리 위에 쓸 글 (레벨 — hot 이면 나보다 셈)
+  //   tag(enemyId) → { text, hot } 머리 위에 쓸 글 (레벨 — hot 이면 나보다 셈),
+  //   hideActors() → 땅만 그릴까 (싸움 창이 떠 있을 때 — 없어도 됨)
   // }
   function create(o) {
     const v = { world: null };
@@ -170,6 +171,8 @@ const MapView = (function () {
           ctx.fillText(port.label + (open ? '' : ' 🔒'), tx, ty);
         }
       }
+      // 싸움 창이 떠 있는 동안은 땅까지만 — 비치는 창 뒤에 지도 위의 나 · 몬스터 · 정예 자리 · 상인이 겹쳐 보이지 않게
+      if (o.hideActors && o.hideActors()) return;
       for (const mk of (o.marks ? o.marks() : [])) if (seen(mk.x, mk.y)) glyph(mk.x + 0.5, mk.y + 0.5, mk.icon);
       for (const post of m.posts) {
         if (!seen(post.x, post.y, post.w, post.h) || !w.hooks.postAlive(post.enemy)) continue;

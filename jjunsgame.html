@@ -2789,21 +2789,36 @@ body[data-tab="hero"] .hero-panel, body[data-tab="gear"] .gear-panel, body[data-
 }
 
 /* 싸울 때의 나 — 지도에서 걷는 그 그림의 뒷모습 서기 칸(4×4 칸 중 둘째 줄 첫 칸, 한 칸 32×40). 도트가 뭉개지지 않게 */
-.battle .bt-hero { width: 32px; aspect-ratio: 32 / 40;   /* 그림 그대로의 크기 (사용자 결정 — 64px 의 절반) */
+.battle .bt-hero, .encounter .enc-hero { width: 48px; aspect-ratio: 32 / 40;   /* 그림의 1.5배 (사용자 결정 — 64 → 32 → 48px) */
                    background: radial-gradient(ellipse 34% 6% at 50% 94%, rgba(28, 16, 7, 0.5) 0 96%, transparent 100%); box-shadow: none; }
 .hero-sprite { display: block; width: 100%; height: 100%; transform: none;
                background-repeat: no-repeat; background-size: 400% 400%; background-position: 0 33.333%; image-rendering: pixelated; }
-@media (min-width: 861px) { .battle .bt-hero { width: 48px; } }
+@media (min-width: 861px) { .battle .bt-hero, .encounter .enc-hero { width: 72px; } }
 
 /* 싸우는 동안 — 창이 화면 위아래를 다 씁니다 (사용자 결정): 상대 이름 · 체력은 위, 나의 체력 · 기록은 화면 아래에 붙이고,
    그 사이 가운데를 상대와 나의 싸움이 크게 차지합니다 (ui.js 의 renderJourney 가 body.battling 을 켬) */
 body.battling .map-overlay { bottom: calc(env(safe-area-inset-bottom) + 10px); max-height: none; overflow: hidden; }
 body.battling .map-overlay > .stage { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 body.battling .battle { flex: 1; min-height: 0; width: 100%; max-width: 560px; }
-body.battling .bt-arena { flex: 1; min-height: 0; justify-content: space-evenly; gap: 16px; }
-body.battling .bt-foe { width: min(72%, 300px); }
+/* 가운데에 모아 둡니다. 위를 비우는 64px 은 마주할 때의 이름 · 예감 칸이 싸울 때의 이름 · 체력 줄보다 그만큼 높아서 — 상대가 같은 자리에 섭니다 */
+body.battling .bt-arena { flex: 1; min-height: 0; justify-content: center; gap: 16px; padding-top: 64px; }
+body.battling .bt-foe { width: min(72%, 300px, 40vh); }   /* 마주할 때(body.meeting)와 같은 크기 */
 body.battling .bt-foe .portrait-ic { font-size: clamp(90px, 34vw, 190px); }
 body.battling .bt-side.hero { margin-top: auto; }
+
+/* 마주한 동안 — 싸울 때와 같은 틀: 이름 · 예감은 위, 상대는 가운데에 싸울 때와 같은 크기로, 남은 전리품은 아래.
+   「맞선다」를 눌러 싸움으로 넘어가도 상대가 튀지 않습니다 (ui.js 의 renderJourney 가 body.meeting 을 켬) */
+body.meeting .map-overlay { bottom: calc(env(safe-area-inset-bottom) + 10px); max-height: none; overflow: hidden; }
+@media (max-width: 860px) {
+  body.meeting .map-overlay { bottom: calc(env(safe-area-inset-bottom) + 92px); }   /* 아래 엄지 단추 띠 위까지 */
+}
+body.meeting .map-overlay > .stage { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+body.meeting .encounter { flex: 1; min-height: 0; width: 100%; max-width: 560px; margin-bottom: 0; }
+body.meeting .enc-arena { flex: 1; min-height: 0; justify-content: center; }   /* 싸울 때의 .bt-arena 와 같게 */
+body.meeting .enc-portrait { width: min(72%, 300px, 40vh); }
+body.meeting .enc-portrait .portrait-ic { font-size: clamp(90px, 34vw, 190px); }
+/* 마주할 때의 상대 · 나 — 싸울 때의 .bt-arena 와 같은 늘어놓음 */
+.enc-arena { display: flex; flex-direction: column; align-items: center; gap: 16px; }
 
 </style>
 </head>
@@ -9494,7 +9509,8 @@ const MapView = (function () {
   //   paused() → 지금은 세계를 멈출 때인가 (싸움 창 · 다른 창이 떠 있을 때),
   //   onEvents(events) → 한 틱에 일어난 일,
   //   marks() → [{ x, y, icon }] 지도에 더 얹을 것 (떠돌이 상인 같은), dots → 몬스터 성격 점을 찍을까 (맵 초안),
-  //   tag(enemyId) → { text, hot } 머리 위에 쓸 글 (레벨 — hot 이면 나보다 셈)
+  //   tag(enemyId) → { text, hot } 머리 위에 쓸 글 (레벨 — hot 이면 나보다 셈),
+  //   hideActors() → 땅만 그릴까 (싸움 창이 떠 있을 때 — 없어도 됨)
   // }
   function create(o) {
     const v = { world: null };
@@ -9628,6 +9644,8 @@ const MapView = (function () {
           ctx.fillText(port.label + (open ? '' : ' 🔒'), tx, ty);
         }
       }
+      // 싸움 창이 떠 있는 동안은 땅까지만 — 비치는 창 뒤에 지도 위의 나 · 몬스터 · 정예 자리 · 상인이 겹쳐 보이지 않게
+      if (o.hideActors && o.hideActors()) return;
       for (const mk of (o.marks ? o.marks() : [])) if (seen(mk.x, mk.y)) glyph(mk.x + 0.5, mk.y + 0.5, mk.icon);
       for (const post of m.posts) {
         if (!seen(post.x, post.y, post.w, post.h) || !w.hooks.postAlive(post.enemy)) continue;
@@ -10461,9 +10479,12 @@ function renderJourney() {
   let stage = '';
   // 결과 화면이 먼저입니다. 마지막 에너지로 잡은 전리품도 보고 나서 끝나야 하니까요.
   // (여정이 끝났어도 결과를 닫기 전까지는 종료 화면을 띄우지 않습니다 — renderOverlay 참고)
-  // 싸우는 동안은 창이 화면 위아래를 다 씁니다 — 상대 체력은 위, 나의 체력 · 기록은 아래에 붙고 가운데가 싸움 (css 의 body.battling)
+  // 마주한 동안 · 싸우는 동안은 창이 화면 위아래를 다 씁니다 (css 의 body.meeting · body.battling) —
+  // 상대는 가운데에 크게, 마주할 때와 싸울 때 같은 자리 같은 크기라 「맞선다」를 눌러도 튀지 않습니다.
+  // 싸울 때는 상대 체력이 위, 나의 체력 · 기록은 아래에 붙습니다.
   const fighting = !!battle && battle.r === run.lastResult;
   document.body.classList.toggle('battling', fighting);
+  document.body.classList.toggle('meeting', !fighting && !run.lastResult && !run.over && !!run.encounter);
   if (fighting) {
     stage = battleCard(battle);
   } else if (run.lastResult) {
@@ -11184,7 +11205,11 @@ function encounterCard(foe, isBoss, hero, aura) {
         </div>
         <div class="enc-chance chance-value ${winFeelClass(chance)}">${winFeel(chance)}</div>
       </div>
-      <div class="portrait enc-portrait"><span class="portrait-ic">${foe.icon}</span></div>
+      <!-- 상대와, 그 아래 상대를 마주 본 나 — 싸움 화면(battleCard)과 같은 늘어놓음이라 「맞선다」를 눌러도 튀지 않습니다 -->
+      <div class="enc-arena">
+        <div class="portrait enc-portrait"><span class="portrait-ic">${foe.icon}</span></div>
+        <div class="portrait enc-hero">${heroSprite()}</div>
+      </div>
       ${dropStrip(foe)}
     </div>
     <!-- 넓은 화면에서는 맞선다 위 · 물러선다 아래로 쌓고,
@@ -11256,7 +11281,8 @@ function initMap() {
     tag: MapView.gameTag,
     paused: mapPaused,
     marks: merchantMark,
-    onEvents: onMapEvents
+    onEvents: onMapEvents,
+    hideActors: () => document.body.classList.contains('facing')   // 조우 · 싸움 · 결과 창이 떠 있으면 땅만
   });
 }
 
