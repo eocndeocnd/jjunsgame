@@ -1529,12 +1529,13 @@ function mapEntrance(data, zi) {
   return a ? { x: a.x + (a.w >> 1), y: a.y + (a.h >> 1) } : data.start;
 }
 
-// 저장해 둔 칸 — 지도 안의 걸을 수 있는 칸이고, 그 칸의 지역이 지금 지역과 맞을 때만 (구역 밖 길 위면 그대로 믿습니다)
+// 저장해 둔 칸 — 지도 안의 걸을 수 있는 칸이고, 그 칸의 지역이 지금 지역과 맞을 때만 (구역 밖 길 위면 그대로 믿습니다).
+// 정해진 자리 안이면 버림 — 지도를 다시 뽑아 자리가 커졌을 때 그 몸 안에서 시작하지 않게
 function savedMapAt(run, data) {
   const at = run.mapAt;
   if (!at || !(at.x >= 0 && at.y >= 0 && at.x < data.w && at.y < data.h)) return null;
   const k = at.y * data.w + at.x;
-  if (data.solid[k]) return null;
+  if (data.solid[k] || MapRules.postAt({ map: data, hooks: { postAlive: () => true } }, at.x, at.y)) return null;
   const a = data.areaAt[k] >= 0 ? data.areas[data.areaAt[k]] : null;
   const zi = a ? (a.zone ? ZONES.findIndex(z => z.id === a.zone) : 0) : run.zoneIndex;
   return zi === run.zoneIndex ? { x: at.x, y: at.y } : null;
