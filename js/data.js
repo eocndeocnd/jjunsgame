@@ -1783,6 +1783,52 @@ const COLLECTION_BONUS = 0.01;
 // ============================================================
 //  위 데이터를 펼쳐서 실제로 쓰는 배열 만들기
 // ============================================================
+// ---------- 지도에서 차지하는 크기 (n × n 칸) ----------
+// 몸집 · 컨셉대로 (사용자 결정) — 일반 1~3 · 정예 · 히든 2~4 · 보스 3~5. 적어 두지 않은 것은 그 종류의 가장 작은 크기.
+// 지도 위에서 그만큼 칸을 차지하고(어느 칸에 닿아도 싸움), 길을 막는 보스 · 정예는 그 크기만큼 넓은 고갯길을 막고 섭니다 (tools/map-gen.js).
+const SIZE_RANGE = { normal: [1, 3], elite: [2, 4], hidden: [2, 4], boss: [3, 5] };
+const ENEMY_SIZE = {
+  // 일반 — 사람만 한 것은 1, 말 · 큰 짐승 · 골렘은 2, 거인 · 용 · 산만 한 것은 3
+  cavespider: 2, ogre: 2, treant: 3, basilisk: 2,
+  minotaur: 2, wyvern: 2, chimera: 2, manticore: 2, stonegolem: 2, irongolem: 2,
+  hillgiant: 3, cyclops: 3, ettin: 3, goliath: 2, yeti: 2, roc: 3, mammoth: 3,
+  bonedragon: 3, demonlord: 2, balrog: 3,
+  archdemon: 2, abysstentacle: 3, elderdragon: 3, demongeneral: 2, apocalypsebeast: 3,
+  dragonknight: 2,
+  yeongsa: 2, sangun: 2, hwarin: 2, yeonggu: 3,
+  unicorn: 2, pegasus: 2, phoenix: 2, hippogriff: 2,
+  throneangel: 2, cherub: 2, seraph: 2,
+  legion: 2, moloch: 2, baphomet: 2, astaroth: 2,
+  titanmyth: 3, jormungandr: 3, fenrir: 3, apophis: 3, vritra: 3, orochi: 3,
+  quetzalcoatl: 3,
+  yig: 2, ithaqua: 3, chaugnar: 2, glaaki: 3, shoggoth: 3, atlachnacha: 2,
+  shubniggurath: 3, ubbosathla: 3, abhoth: 3, daoloth: 2, voidlordmyth: 2, tulzscha: 2, yibbtstll: 2, ghroth: 3,
+  // 정예 — 사람 · 화신은 2, 말 탄 것 · 큰 짐승 · 머리 여럿은 3, 거인 · 용 · 바다만 한 것은 4
+  griffinlord: 3, hydra: 4,
+  stonegiant: 4, frostgiant: 4, firegiant: 4, cloudgiant: 4,
+  whitehorse: 3, redhorse: 3, blackhorse: 3, palehorse: 3,
+  sinsloth: 3, singluttony: 4, sinpride: 3, sinwrath: 3, singreed: 3, worldworm: 4,
+  azuredragon: 4, gumiho: 3, whitetiger: 3, vermilionbird: 3, geumsijo: 4, blacktortoise: 4,
+  nemeanlion: 3, sphinx: 3, erymanthianboar: 3, stymphalianbirds: 3, cretanbull: 3, kraken: 4, mares: 3,
+  geryon: 4, cerberus: 3, ladon: 4,
+  bael: 3, beleth: 3, beelzebub: 3, paimon: 3, purson: 3, belial: 3, balam: 3,
+  poseidon: 3,
+  behemoth: 4, leviathan: 4, typhon: 4, ziz: 4, ymir: 4,
+  brahma: 3, shiva: 3,
+  dagon: 4, hastur: 3, cthugha: 4, tsathoggua: 3,
+  yogsothoth: 4, nyarlathotep: 3,
+  // 히든
+  observer: 3, bonghwang: 3,
+  // 보스 — 사람 · 화신의 왕은 3, 거인 · 마왕 · 신들의 왕은 4, 용 · 바다 · 혼돈은 5
+  trollking: 4, giantking: 5, lichking: 4, demonking: 4,
+  imugi: 5, sanctdragon: 5, michael: 4, lucifer: 4, hades: 4, tiamat: 5, zeus: 4, cthulhu: 5, azathoth: 5
+};
+function enemySize(id, kind) {
+  const [lo, hi] = SIZE_RANGE[kind], n = ENEMY_SIZE[id] || lo;
+  if (n < lo || n > hi) throw new Error(`크기 — ${id} 는 ${kind}(${lo}~${hi}) 인데 ${n}`);
+  return n;
+}
+
 const ENEMIES = [];
 const ITEMS = [];
 
@@ -1814,6 +1860,7 @@ ZONES.forEach((zone, zi) => {
       level,
       icon: e.icon,
       kind,                       // normal | elite | hidden | boss
+      size: enemySize(e.id, kind), // 지도에서 차지하는 n × n 칸 (ENEMY_SIZE)
       arch,                       // 이 적이 남기는 전리품의 성격
       boss: kind === 'boss',
       once: K.once,               // 한 회차에 한 번만 만날 수 있는가

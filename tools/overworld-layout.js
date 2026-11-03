@@ -4,9 +4,9 @@
 //  시안 그림(design/map-concept/render.js)과 게임 지도(tools/map-gen.js 의 overworld)가 같이 씁니다 —
 //  여기서 고치면 둘 다 바뀝니다.
 //
-//  좌표는 모두 시안 칸(176×112) 단위로 적습니다. build(S) 가 S 배 촘촘한 칸으로 짜서 돌려줍니다 —
+//  좌표는 모두 시안 칸(176×112) 단위로 적습니다. build(S, sizes) 가 S 배 촘촘한 칸으로 짜서 돌려줍니다 —
 //  시안 그림은 1배, 게임 지도는 더 크게. 칸마다 「그 칸 가운데가 시안의 어디인가」로 땅을 정하므로
-//  모양은 배율과 상관없이 같고, 보스(3×3)가 막는 틈만은 어느 배율에서도 세 칸입니다.
+//  모양은 배율과 상관없이 같고, 보스가 막는 틈만은 어느 배율에서도 그 보스의 크기(sizes — 적 id → n, 없으면 3)만큼입니다.
 //    ter(땅의 종류) · bio(격 — 그림의 빛과 색) · hgt(높이) · ROADS · pathMask(흙길) · BRIDGES(다리)
 //    wallMask(게임에서 못 지나가는 성벽 · 수로 벽) · zoneAt(그 칸이 몇 격인가) · GATES(보스가 막고 서는 자리)
 // ============================================================
@@ -46,7 +46,8 @@ const CASTLE = {
   columns: [15, 17, 19, 21].flatMap(x => [[x, 10], [x, 17]])
 };
 
-function build(S = 1) {
+function build(S = 1, sizes = {}) {
+  const G = { dungeonguardian: 3, giantking: 3, lichking: 3, worldworm: 3, ...sizes };   // 틈을 막는 것의 크기 (n × n)
   const W = Math.round(CW * S), H = Math.round(CH * S);
   const ter = new Uint8Array(W * H), bio = new Uint8Array(W * H), hgt = new Uint8Array(W * H);
   const wallMask = new Uint8Array(W * H);           // 게임에서 못 지나가는 벽 (시안은 이 자리에 성벽 그림 조각을 그림)
@@ -56,12 +57,12 @@ function build(S = 1) {
   const R = Math.round;
   const toC = f => (f + 0.5) / S - 0.5;             // 칸 → 시안 좌표 (칸 가운데)
   const fc = c => (c + 0.5) * S - 0.5;              // 시안 좌표 → 칸 (실수)
-  const gap3 = c => R(fc(c)) - 1;                   // 시안 c 를 가운데로 한 세 칸 틈의 첫 칸
-  const inGap = (f, c) => f >= gap3(c) && f <= gap3(c) + 2;
+  const gapN = (c, n) => R(fc(c)) - (n >> 1);       // 시안 c 를 가운데로 한 n 칸 틈의 첫 칸
+  const inGap = (f, c, n) => f >= gapN(c, n) && f < gapN(c, n) + n;
   // 시안 칸 a~b (끝 포함)를 덮는 칸 [첫 칸, 끝 칸]
   const span = (a, b) => [Math.ceil(a * S - 0.5), Math.ceil((b + 1) * S - 0.5) - 1];
   const spot1 = (x, y) => [R(fc(x)), R(fc(y))];     // 시안 칸 하나 → 그 가운데 칸
-  const spot3 = (x, y) => [R(fc(x)) - 1, R(fc(y)) - 1];   // 시안 칸을 가운데로 한 3×3 의 왼쪽 위
+  const spotN = (x, y, n) => [R(fc(x)) - ((n - 1) >> 1), R(fc(y)) - ((n - 1) >> 1)];   // 시안 칸을 가운데로 한 n × n 의 왼쪽 위
 
   function paint(x, y, t, b, h) {
     if (!inMap(x, y)) return;
@@ -167,7 +168,7 @@ function build(S = 1) {
     paint(fx, fy, z === 4 && toC(fx) > 76 + wob(toC(fy), 54, 6) ? ROCKY : t, b, h);   // 4격은 숲에서 높은 풀밭으로, 동쪽으로 갈수록 바위
   }
 
-  // ---- 격 사이 — 보스는 3×3 이라 막는 틈은 모두 세 칸 ----
+  // ---- 격 사이 — 막는 틈은 그 보스의 크기만큼 (G) ----
   // 2격 | 3격: 막지 않음 — 옛 바깥 성벽은 무너진 조각 몇 개와 옛 성문(깐 돌)의 탑 둘만 (RUINS)
   each(0, RUINS.y0, 70, RUINS.y1, (fx, fy, x, y) => {
     const cx = R(x), cy = R(y);
@@ -176,24 +177,24 @@ function build(S = 1) {
     if (piece) { paint(fx, fy, COBBLE, 3, 1); wallMask[idx(fx, fy)] = 1; }
     else if (cx > RUINS.towers[0] && cx < RUINS.towers[1]) paint(fx, fy, TILES, 3, 1);
   });
-  // 1격 | 2격: 지하수로 북쪽 벽 (숲 높이) — 가운데 수문 (던전 가디언) 세 칸은 지하수로 높이
+  // 1격 | 2격: 지하수로 북쪽 벽 (숲 높이) — 가운데 수문 (던전 가디언) 은 지하수로 높이
   each(0, 62, 70, 62, (fx, fy, x, y) => {
     if (R(x) > 70 || R(y) !== 62 || ter[idx(fx, fy)] === VOID || zoneAt(fx, fy) !== 1) return;
-    const gate = inGap(fx, 38);
+    const gate = inGap(fx, 38, G.dungeonguardian);
     paint(fx, fy, COBBLE, 1, gate ? 0 : 1);
     wallMask[idx(fx, fy)] = gate ? 0 : 1;
   });
   // 처음 | 1격: 바위 속 둥근 방 — 북쪽 계단으로만 지하수로에 닿음
   blob(39, 101, 9, 6, COBBLE, 7, 0, 0.3, 13);
   box(37, 92, 41, 96, COBBLE, 7, 0);
-  // 4격 | 5 · 6격: 바위 등성이 — 쐐기돌 아치(거인왕)가 선 세 칸 고개만 트임
+  // 4격 | 5 · 6격: 바위 등성이 — 쐐기돌 아치(거인왕)가 선 고개만 트임
   each(104, 0, 122, CH - 1, (fx, fy, x, y) => {
     if (R(x) < 104 || R(x) > 122 || ter[idx(fx, fy)] === VOID || Math.abs(x - RIDGE(y)) > 2.5) return;
-    paint(fx, fy, ROCKY, 4, inGap(fy, 48) ? 1 : 3);
+    paint(fx, fy, ROCKY, 4, inGap(fy, 48, G.giantking) ? 1 : 3);
   });
-  // 5격 | 6격: 흑요석 벼랑 — 대성당 뒤 세 칸 묘실 통로(불사의 왕이 막음)로만 지나감
+  // 5격 | 6격: 흑요석 벼랑 — 대성당 뒤 묘실 통로(불사의 왕이 막음)로만 지나감
   each(100, 36, CW - 1, 48, (fx, fy, x, y) => {
-    if (R(x) < 100 || R(y) < 36 || R(y) > 48 || ter[idx(fx, fy)] === VOID || x < RIDGE(y) || Math.abs(y - CLIFF(x)) > 1.6 || inGap(fx, 136)) return;
+    if (R(x) < 100 || R(y) < 36 || R(y) > 48 || ter[idx(fx, fy)] === VOID || x < RIDGE(y) || Math.abs(y - CLIFF(x)) > 1.6 || inGap(fx, 136, G.lichking)) return;
     paint(fx, fy, OBSID, 6, 3);
   });
 
@@ -243,14 +244,14 @@ function build(S = 1) {
   // ---- 6격 — 용암 강 · 칠죄종 홀 · 벌레의 굴 · 왕좌 ----
   road([[117, 32], [118, 24], [123, 14], [134, 9], [146, 8]], 2.4, LAVA, 6, 1, 0.8, 41);
   box(124, 19, 143, 32, TILES, 6, 1);               // 칠죄종 홀 바닥
-  each(144, 24, 149, 26, (fx, fy, x, y) => {        // 벌레가 막은 굴 (세 칸 — 벌레가 막고 섬)
-    if (R(x) >= 144 && R(x) <= 149 && inGap(fy, 25)) paint(fx, fy, OBSID, 6, 1);
+  each(144, 23, 149, 27, (fx, fy, x, y) => {        // 벌레가 막은 굴 (벌레의 크기만큼 — 벌레가 막고 섬)
+    if (R(x) >= 144 && R(x) <= 149 && inGap(fy, 25, G.worldworm)) paint(fx, fy, OBSID, 6, 1);
   });
   box(150, 15, 159, 32, TILES, 6, 1);               // 왕좌의 방
   // 왕좌의 방은 어둠으로 내민 끝 — 세계수를 먹는 벌레의 굴로만 들어감
   each(147, 0, CW - 1, 37, (fx, fy, x, y) => {
     if (R(x) < 147 || R(y) > 37) return;
-    const room = R(x) >= 150 && R(x) <= 159 && R(y) >= 15 && R(y) <= 32, tunnel = R(x) <= 149 && inGap(fy, 25);
+    const room = R(x) >= 150 && R(x) <= 159 && R(y) >= 15 && R(y) <= 32, tunnel = R(x) <= 149 && inGap(fy, 25, G.worldworm);
     if (!room && !tunnel) paint(fx, fy, VOID);
   });
 
@@ -265,20 +266,20 @@ function build(S = 1) {
     if (x >= 0 && y >= 0 && x < CW && y < CH && pathC[y * CW + x]) pathMask[idx(fx, fy)] = 1;
   }
 
-  // ---- 보스가 막고 서는 자리 (3×3 의 왼쪽 위 칸) — 틈 세 칸을 이 배율에서 막음 ----
+  // ---- 보스가 막고 서는 자리 (n × n 의 왼쪽 위 칸) — 그만큼 넓힌 틈을 이 배율에서 막음 ----
   const rowsOf = r => { const out = []; for (let fy = 0; fy < H; fy++) if (R(toC(fy)) === r) out.push(fy); return out; };
   const rim = rowsOf(62);
   let cliffEnd = 0; while (toC(cliffEnd) <= CLIFF(136) + 1.6) cliffEnd++;
   let bayStart = 0; while (R(toC(bayStart)) < 147) bayStart++;
   const GATES = {
-    dungeonguardian: [gap3(38), rim[0] + Math.floor((rim.length - 3) / 2)],   // 지하수로 수문 — 벽 두께를 가운데로
-    giantking: [R(fc(RIDGE(48))) - 1, gap3(48)],                              // 쐐기돌 아치 — 등성이 한가운데
-    lichking: [gap3(136), cliffEnd],                                          // 대성당 — 벼랑 바로 아래, 묘실 통로 들머리
-    worldworm: [bayStart - 2, gap3(25)]                                       // 벌레의 굴 — 어둠으로 내민 곳의 첫 칸까지
+    dungeonguardian: [gapN(38, G.dungeonguardian), rim[0] + Math.floor((rim.length - G.dungeonguardian) / 2)],   // 지하수로 수문 — 벽 두께를 가운데로
+    giantking: [R(fc(RIDGE(48))) - (G.giantking >> 1), gapN(48, G.giantking)],                             // 쐐기돌 아치 — 등성이 한가운데
+    lichking: [gapN(136, G.lichking), cliffEnd],                                                            // 대성당 — 벼랑 바로 아래, 묘실 통로 들머리
+    worldworm: [bayStart - 2, gapN(25, G.worldworm)]                                                        // 벌레의 굴 — 어둠으로 내민 곳의 첫 칸까지
   };
 
   return {
-    S, W, H, T, ter, bio, hgt, idx, inMap, T_, toC, fc, span, spot1, spot3, ROADS, pathMask, wallMask, zoneAt, GATES, BRIDGES, CASTLE, RUINS,
+    S, W, H, T, ter, bio, hgt, idx, inMap, T_, toC, fc, span, spot1, spotN, ROADS, pathMask, wallMask, zoneAt, GATES, BRIDGES, CASTLE, RUINS,
     VOID, WATER, CANAL, LAVA, ROCKY, hash, fbm
   };
 }

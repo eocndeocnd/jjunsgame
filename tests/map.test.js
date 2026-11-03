@@ -311,6 +311,114 @@ test('정예 자리 — 닿으면 싸움, 꺾으면 지나간다 · 닫힌 문�
   assert.ok(ev2.some(x => x.type === 'port' && x.port.to === 'next'), '열린 문으로 들어섬');
 });
 
+// ---------- 큰 몬스터 (n × n 칸) ----------
+// 몸 둘 사이의 체비쇼프 거리 (맞닿으면 1) · 몸이 그 칸을 덮는가
+const apart = (a, b) => Math.max(b.x - (a.x + a.w), a.x - (b.x + b.w), b.y - (a.y + a.h), a.y - (b.y + b.h)) + 1;
+const covers = (a, x, y) => x >= a.x && y >= a.y && x < a.x + a.w && y < a.y + a.h;
+function bigMob(w, x, y, n, temper) { const m = mob(w, x, y, temper); m.w = m.h = n; return m; }
+
+test('큰 몬스터 — 몸이 다 들어가는 곳에만 서고, 서로 붙지 않고, 내 코앞엔 없다', () => {
+  const m = mapOf([
+    '##################',
+    '#aaaaaaaaaaaaaaaa#',
+    '#aaaaaaaaaaaaaaaa#',
+    '#aaaaaaaaaaaaaaaa#',
+    '#aaaaaaaaaaaaaaaa#',
+    '#aaaaaaaaaaaaaaaa#',
+    '#aaaaaaaaaaaaaaaa#',
+    '#aaaaaaaaaaaaaaaa#',
+    '#.......@........#',
+    '##################'
+  ]);
+  const a = m.areas[0];
+  for (let seed = 1; seed <= 20; seed++) {
+    const w = M.createWorld(m, { size: () => 3 }, seed);
+    assert.ok(w.mobs.length >= R.SPAWN_MIN, `시드 ${seed} — ${w.mobs.length}마리`);
+    for (const x of w.mobs) {
+      assert.equal(x.w, 3); assert.equal(x.h, 3);
+      assert.ok(x.x >= a.x && x.y >= a.y && x.x + 3 <= a.x + a.w && x.y + 3 <= a.y + a.h, '몸이 다 제 구역 안');
+      assert.ok(apart(x, { x: w.player.x, y: w.player.y, w: 1, h: 1 }) > R.SPAWN_CLEAR, '내 코앞엔 없음');
+      for (const y of w.mobs) if (x !== y) assert.ok(apart(x, y) >= R.SPAWN_GAP, '서로 붙지 않음');
+    }
+  }
+});
+
+test('큰 몬스터 — 몸 어느 칸에 닿아도 싸움, 쫓아와 몸이 닿으면 몬스터가 먼저', () => {
+  const m = mapOf([
+    '############',
+    '#aaaaaaaaaa#',
+    '#aaaaaaaaaa#',
+    '#aaaaaaaaaa#',
+    '#aaaaaaaaaa#',
+    '#aaaaaaaaaa#',
+    '#....@.....#',
+    '############'
+  ]);
+  const w = M.createWorld(m, {}, 1);
+  w.mobs = [];
+  const foe = bigMob(w, 3, 2, 2, 'passive');
+  for (const [x, y] of [[3, 2], [4, 2], [3, 3], [4, 3]]) assert.equal(M.mobAt(w, x, y), foe, `몸 (${x},${y})`);
+  assert.equal(M.mobAt(w, 5, 2), null);
+  // 오른쪽 아래 칸으로 — 옆에서 걸어 들어가면 싸움
+  w.player.x = 5; w.player.y = 3;
+  M.setInput(w, 'left');
+  const e = contact(run(w, 0.5));
+  assert.ok(e && e.mob === foe && e.first === 'player', '옆 칸에서 들어감');
+  M.resolve(w, 'retreat');
+  assert.ok(!covers(foe, w.player.x, w.player.y), '밀려나 몸 밖으로');
+
+  // 선공 3×3 — 쫓아와 몸이 닿음 (내 칸을 덮지는 않음 — 닿는 걸음에서 멈춰 싸움)
+  w.mobs = [];
+  w.encounter = null;
+  w.player.x = 9; w.player.y = 6; w.player.needRelease = false; w.player.dir = null;
+  const big = bigMob(w, 5, 2, 3, 'aggro');                       // 몸에서 내 칸까지 가로 2 · 세로 2 — 알아보는 거리 안
+  const ev = contact(run(w, 6));
+  assert.ok(ev && ev.mob === big && ev.first === 'foe', '몬스터가 먼저 닿음');
+  assert.ok(!covers(big, w.player.x, w.player.y), '내 칸과 겹쳐 서지 않음');
+  assert.equal(apart(big, { x: w.player.x, y: w.player.y, w: 1, h: 1 }), 1, '맞닿은 채');
+});
+
+test('큰 몬스터 — 몸이 안 들어가는 좁은 길로는 쫓아오지 못하고, 어슬렁대도 몸이 제 구역 · 벽 · 서로를 넘지 않는다', () => {
+  const m = mapOf([
+    '############',
+    '#aaaaaaa####',
+    '#aaaaaaa####',
+    '#aaaaaaa...@',
+    '#aaaaaaa####',
+    '#aaaaaaa####',
+    '############'
+  ]);
+  const w = M.createWorld(m, {}, 2);
+  w.mobs = [];
+  const big = bigMob(w, 5, 2, 3, 'aggro');                       // 몸 오른쪽 끝이 좁은 길 들머리 — 내 칸까지 4칸
+  assert.ok(!contact(run(w, 5)), '한 칸 길에는 3×3 이 못 들어감');
+  assert.ok(big.x + 3 <= 8, '구역 밖 벽으로 몸이 나가지 않음');
+
+  const field = mapOf([
+    '##############',
+    '#aaaaaaaaaaaa#',
+    '#aaaaaaaaaaaa#',
+    '#aaaa##aaaaaa#',
+    '#aaaa##aaaaaa#',
+    '#aaaaaaaaaaaa#',
+    '#aaaaaaaaaaaa#',
+    '#aaaaaaaaaaaa#',
+    '#.....@......#',
+    '##############'
+  ]);
+  const w2 = M.createWorld(field, {}, 4);
+  w2.mobs = [];
+  const herd = [bigMob(w2, 1, 1, 2, 'passive'), bigMob(w2, 8, 1, 3, 'passive'), bigMob(w2, 2, 5, 2, 'shy')];
+  const a = field.areas[0];
+  run(w2, 30, () => {
+    for (const x of herd) {
+      assert.ok(x.x >= a.x && x.y >= a.y && x.x + x.w <= a.x + a.w && x.y + x.h <= a.y + a.h, '몸이 제 구역 안');
+      for (let j = x.y; j < x.y + x.h; j++) for (let i = x.x; i < x.x + x.w; i++) assert.equal(field.solid[j * field.w + i], 0, '벽 위에 서지 않음');
+      for (const y of herd) if (x !== y) assert.ok(apart(x, y) >= 1, '서로 겹치지 않음');
+    }
+  });
+});
+
 // ---------- 실제 임시 지도 (maps/overworld.tmj) ----------
 function loadData() {
   const text = fs.readFileSync(path.join(ROOT, 'js/data.js'), 'utf8');
@@ -341,10 +449,12 @@ test('overworld — 1~6격 몬스터가 모두 한 번씩, 구역 48개', () => 
   assert.deepEqual(m.posts.map(p => p.enemy).sort(), foes.filter(e => e.kind !== 'normal').map(e => e.id).sort());
   assert.equal(areaMonsters.length, 48);
   assert.deepEqual(m.ports.map(p => [p.to, p.opensAfter]), [['hub.overworld', 'demonking']]);
-  // 길을 막는 것은 다음 격으로 가는 틈의 보스 셋과 세계수를 먹는 벌레뿐, 그리고 그것들은 3×3 (숲과 왕국은 한 땅이라 트롤 킹은 막지 않음)
+  // 길을 막는 것은 다음 격으로 가는 틈의 보스 셋과 세계수를 먹는 벌레뿐 (숲과 왕국은 한 땅이라 트롤 킹은 막지 않음) — 크기는 data.js 그대로
   const blockers = m.posts.filter(p => p.blocks);
   assert.deepEqual(blockers.map(p => p.enemy).sort(), ['dungeonguardian', 'giantking', 'lichking', 'worldworm']);
-  assert.ok(blockers.every(p => p.w === 3 && p.h === 3));
+  const sizeOf = id => data.ENEMIES.find(e => e.id === id).size;
+  assert.ok(blockers.every(p => p.w === sizeOf(p.enemy) && p.h === sizeOf(p.enemy)));
+  assert.ok(blockers.some(p => p.w > 3), '큰 보스가 막는 틈은 그만큼 넓음');
 });
 
 test('overworld — 같은 격 구역끼리는 보스 없이 걸어서 이어지고, 숲 · 고원은 넓게 트였다', () => {
@@ -367,7 +477,7 @@ test('overworld — 같은 격 구역끼리는 보스 없이 걸어서 이어지
 test('overworld — 한 줄로 열린다: 1격 → 2 · 3 · 4격(던전 가디언) · 5격(거인왕) · 6격(불사의 왕) · 왕좌의 방(벌레)', () => {
   const m = M.parseTiled(JSON.parse(fs.readFileSync(path.join(ROOT, 'maps/overworld.tmj'), 'utf8')), 'overworld');
   const start = m.start.y * m.w + m.start.x;
-  const allPosts = new Set(m.posts.flatMap(p => cellsOf(m, p)));   // 3×3 보스는 아홉 칸 다
+  const allPosts = new Set(m.posts.flatMap(p => cellsOf(m, p)));   // 큰 자리는 몸 칸 다
   const but = (...ids) => {
     const gone = new Set(m.posts.filter(p => ids.includes(p.enemy)).flatMap(p => cellsOf(m, p)));
     return new Set([...allPosts].filter(i => !gone.has(i)));
@@ -439,6 +549,38 @@ test('지도 전부 — 스무 지역이 저마다 한 장에만, 296마리가 �
   for (const z of data.ZONES) assert.equal(zoneMaps[z.id] && zoneMaps[z.id].size, 1, `${z.rank}격 ${z.name}`);
   assert.deepEqual(normals.sort(), data.ENEMIES.filter(e => e.kind === 'normal').map(e => e.id).sort());
   assert.deepEqual(posts.sort(), data.ENEMIES.filter(e => e.kind !== 'normal').map(e => e.id).sort());
+});
+
+test('지도 전부 — 정해진 자리는 그 적의 크기만큼, 걸을 수 있는 칸에 서로 겹치지 않고 닿을 수 있게 · 큰 몬스터도 구역마다 3마리 넘게', () => {
+  const data = loadData();
+  const foe = id => data.ENEMIES.find(e => e.id === id);
+  const overlap = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+  for (const name of allMapNames()) {
+    const m = loadMap(name);
+    for (const p of m.posts) {
+      const n = foe(p.enemy).size;
+      assert.ok(p.w === n && p.h === n, `${name} ${p.name} — ${n}×${n} 인데 ${p.w}×${p.h}`);
+      assert.ok(cellsOf(m, p).every(i => !m.solid[i]), `${name} ${p.name} — 벽 위에 섬`);
+      for (const q of m.posts) if (q !== p) assert.ok(!overlap(p, q), `${name} ${p.name} · ${q.name} 겹침`);
+      for (const q of m.ports) assert.ok(!overlap(p, q), `${name} ${p.name} · 문 겹침`);
+    }
+    // 길막을 다 꺾었다면 — 길을 막지 않는 자리는 그대로 두고도 모든 자리에 다가가 닿을 수 있음 (홀의 묶음 정예가 서로를 가두지 않음)
+    const still = new Set(m.posts.filter(p => !p.blocks).flatMap(p => cellsOf(m, p)));
+    const d = walk(m, [m.start.y * m.w + m.start.x], still);
+    for (const p of m.posts) {
+      const near = [];
+      for (let x = p.x; x < p.x + p.w; x++) near.push((p.y - 1) * m.w + x, (p.y + p.h) * m.w + x);
+      for (let y = p.y; y < p.y + p.h; y++) near.push(y * m.w + p.x - 1, y * m.w + p.x + p.w);
+      assert.ok(near.some(i => d[i] >= 0), `${name} ${p.name} 에 닿음`);
+    }
+    for (const a of m.areas) assert.ok(cellsOf(m, a).some(i => d[i] >= 0), `${name} ${a.name} 구역에 닿음`);
+    // 크기대로 세워 봄 — 몸이 다 들어가는 곳이 구역마다 넉넉
+    const w = M.createWorld(m, { size: id => foe(id).size }, 1);
+    for (const a of m.areas.filter(x => x.monster)) {
+      const mine = w.mobs.filter(x => x.area === a.index);
+      assert.ok(mine.length >= R.SPAWN_MIN, `${name} ${a.name}(${foe(a.monster).size}×${foe(a.monster).size}) — ${mine.length}마리`);
+    }
+  }
 });
 
 test('일곱 장 — 어귀의 문은 문의 광장의 그 장 문으로, 광장의 문은 그 장의 어귀로', () => {

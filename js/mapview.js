@@ -185,19 +185,23 @@ const MapView = (function () {
         label(post.enemy, ox + (post.x + post.w / 2) * T, oy + post.y * T - 1);
       }
       for (const mob of w.mobs) {
-        const g = seenAt(mob, R.CHASE_SPEED, dt);
-        if (!seen(Math.floor(g.x), Math.floor(g.y), 2, 2)) continue;
+        const g = seenAt(mob, R.CHASE_SPEED, dt), n = mob.w || 1;   // 큰 몬스터는 n × n 칸 — 그림 · 기운도 그만큼
+        if (!seen(Math.floor(g.x), Math.floor(g.y), n + 1, n + 1)) continue;
         const gy = g.y + bob(g) / T;                          // 들썩임까지 얹은 보이는 줄
-        const cx = ox + (g.x + 0.5) * T, cy = oy + (gy + 0.5) * T;
+        const cx = ox + (g.x + n / 2) * T, cy = oy + (gy + n / 2) * T;
+        if (n > 1) {   // 차지한 칸 — 옅은 그림자 (어느 칸에 닿아도 싸움)
+          ctx.fillStyle = 'rgba(28,16,7,0.16)';
+          ctx.fillRect(ox + g.x * T + 1, oy + g.y * T + 1, n * T - 2, n * T - 2);
+        }
         if (mob.aura) {   // 기운 — 그 색으로 빛남
           ctx.save();
           ctx.shadowColor = mob.aura.color; ctx.shadowBlur = T * 0.6;
           ctx.strokeStyle = mob.aura.color; ctx.lineWidth = line + 1;
-          ctx.beginPath(); ctx.arc(cx, cy, T * 0.45, 0, Math.PI * 2); ctx.stroke();
+          ctx.beginPath(); ctx.arc(cx, cy, T * 0.45 * n, 0, Math.PI * 2); ctx.stroke();
           ctx.restore();
         }
         ctx.globalAlpha = mob.frozen > 0 ? 0.45 : 1;
-        glyph(g.x + 0.5, gy + 0.5, getEnemy(mob.monster).icon);
+        glyph(g.x + n / 2, gy + n / 2, getEnemy(mob.monster).icon, 0.72 * n);
         ctx.globalAlpha = 1;
         if (o.dots) {
           ctx.fillStyle = TEMPER_COLOR[mob.temper];
@@ -206,7 +210,7 @@ const MapView = (function () {
         if (mob.mode === 'chase') {   // 쫓아오는 중
           ctx.fillStyle = '#d0473f';
           ctx.font = `bold ${Math.round(T * 0.55)}px sans-serif`;
-          ctx.fillText('!', ox + (g.x + 0.85) * T, oy + (gy + 0.2) * T);
+          ctx.fillText('!', ox + (g.x + n - 0.15) * T, oy + (gy + 0.2) * T);
         }
         label(mob.monster, cx, oy + gy * T + 1);
       }
@@ -295,7 +299,8 @@ const MapView = (function () {
       temper: id => MapRules.temperOf(getEnemy(id).arch),
       rollAura: () => rollAura(),
       postAlive: id => { const f = getEnemy(id); return !!f && !isDowned(id) && isRevealed(f); },   // 이 여정에 꺾었거나 아직 안 나타난 히든은 없음
-      portOpen: p => !p.opensAfter || isDowned(p.opensAfter)
+      portOpen: p => !p.opensAfter || isDowned(p.opensAfter),
+      size: id => (getEnemy(id) || {}).size || 1   // 지도에서 차지하는 n × n 칸 (data.js ENEMY_SIZE)
     };
   }
 

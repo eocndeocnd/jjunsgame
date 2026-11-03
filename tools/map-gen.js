@@ -98,9 +98,9 @@ function encodePng(W, H, px) {
 //           (N 은 그 지도가 품은 격 목록에서 몇 번째인가)
 // 7~20격 일곱 장이 씁니다 — 1~6격(overworld)은 시안 배치를 그대로 옮긴 것이라 아래 overworld() 가 따로 짭니다.
 //   잇기    - | 트인 길(8~10칸) · ~ 강(건너편이 보이기만) · ? 숨은 샛길 · b 보스가 막은 고갯길 · e 정예가 막은 고갯길 · = 들판을 터서 하나로
-// 좁은 곳은 고갯길(3칸)뿐입니다 — 3×3 크기의 보스(또는 길막 정예)가 막고 섭니다.
+// 좁은 곳은 고갯길뿐입니다 — 막고 선 보스(또는 길막 정예)의 크기(n × n, data.js ENEMY_SIZE)만큼 넓고, 그 몸이 꼭 맞게 막습니다.
 const FIELD_W = 20, FIELD_H = 14, GAP = 4, PITCH_X = FIELD_W + GAP, PITCH_Y = FIELD_H + GAP;
-const OPEN = 10, PASS = 3, BIG = 3, CLUMPS = 6;
+const OPEN = 10, CLUMPS = 6;
 
 function layoutFromPlan(plan) {
   // 들판 줄은 짝수 줄, 그 아래 홀수 줄은 세로 잇기. 들판은 3글자 간격, 가로 잇기는 들판 바로 뒤 글자.
@@ -163,15 +163,24 @@ function generate(plan, ranks, data, opts) {
   const center = room => { const o = origin(room); return { x: o.x + (FIELD_W >> 1), y: o.y + (FIELD_H >> 1) }; };
   for (const room of rooms) room.rank = room.slot ? ranks[room.slot - 1] : 0;
 
-  // 1) 들판 — 가장자리는 0~2칸 들쭉날쭉, 모서리는 둥글게
+  // 1) 들판 — 가장자리는 0~2칸 들쭉날쭉, 모서리는 둥글게. 정예의 홀(E)은 반듯한 방 (네 귀퉁이 칸만 깎음 — 큰 정예가 벽을 따라 늘어서게)
   for (const room of rooms) {
     const o = origin(room);
     for (let y = 0; y < FIELD_H; y++) for (let x = 0; x < FIELD_W; x++) {
       const ex = Math.min(x, FIELD_W - 1 - x), ey = Math.min(y, FIELD_H - 1 - y);
-      const m = Math.floor(noise((o.x + x) * 0.22, (o.y + y) * 0.22) * 3);
-      if (ex >= m && ey >= m && ex + ey >= 3) tiles[idx(o.x + x, o.y + y)] = FLOOR;
+      const m = room.kind === 'E' ? 0 : Math.floor(noise((o.x + x) * 0.22, (o.y + y) * 0.22) * 3);
+      if (ex >= m && ey >= m && ex + ey >= (room.kind === 'E' ? 1 : 3)) tiles[idx(o.x + x, o.y + y)] = FLOOR;
     }
   }
+  // 고갯길을 막고 설 것 — b 는 그 격의 보스, e 는 그 격의 묶음 밖 정예를 차례로 (아래 3) 에서 같은 차례로 세움)
+  const foesOf = rank => { const zi = data.ZONES.findIndex(z => z.rank === rank); return data.ENEMIES.filter(e => e.zoneIndex === zi); };
+  const eUsed = new Map();
+  const blockerOf = (how, rank) => {
+    if (how === 'b') return foesOf(rank).find(e => e.kind === 'boss');
+    const k = eUsed.get(rank) || 0;
+    eUsed.set(rank, k + 1);
+    return foesOf(rank).filter(e => e.kind === 'elite' && !e.set)[k];
+  };
 
   // 2) 잇기 — 틈(4칸)을 뚫고 양쪽 들판 안으로 몇 칸 더 파서 들쭉날쭉한 가장자리에 막히지 않게
   const posts = [], secrets = [], gates = [];
@@ -194,10 +203,12 @@ function generate(plan, ranks, data, opts) {
       span(from, 2, 0, WALL);                                // 틈 안은 벽으로 그려 두고 지나갈 수 있게
       secrets.push(H ? { name: '숨은 샛길', x: g0, y: o.y + from, w: GAP, h: 2 } : { name: '숨은 샛길', x: o.x + from, y: g0, w: 2, h: GAP });
     } else if (l.how === 'b' || l.how === 'e') {
-      const from = (len - PASS) >> 1;
-      span(from, PASS, 3, FLOOR, true);
-      span(from, PASS, 0, ROAD);
-      gates.push({ how: l.how, rank: l.a.rank || l.b.rank, x: H ? g0 : o.x + from, y: H ? o.y + from : g0 });
+      const rank = l.a.rank || l.b.rank, foe = blockerOf(l.how, rank);
+      if (!foe) throw new Error(`${rank}격 — 고갯길(${l.how})을 막을 ${l.how === 'b' ? '보스' : '정예'}가 없음`);
+      const n = foe.size, from = (len - n) >> 1, along = g0 + Math.floor((GAP - n) / 2);   // 틈(4칸)의 가운데 — 5칸이면 양쪽 들판으로 반 칸씩
+      span(from, n, 3, FLOOR, true);
+      span(from, n, 0, ROAD);
+      gates.push({ how: l.how, rank, foe, x: H ? along : o.x + from, y: H ? o.y + from : along });
     } else {
       const open = Math.min(OPEN, len - 4);
       const from = 2 + Math.floor(rng() * (len - 4 - open + 1));
@@ -231,10 +242,13 @@ function generate(plan, ranks, data, opts) {
     fill(e.x - 2, e.y - 2, e.w + 4, e.h + 4, null, true);
   }
 
-  const post = (e, x, y, size, blocks) => {
-    posts.push(size > 1 ? { name: e.name, x, y, w: size, h: size, enemy: e.id, blocks } : { name: e.name, x, y, enemy: e.id, blocks });
-    fill(x - 2, y - 2, size + 4, size + 4, null, true);
+  // 정해진 자리 — 그 적의 크기(n × n)만큼. at(c) 는 칸 c 를 가운데로 한 n × n 의 왼쪽 위
+  const post = (e, x, y, blocks) => {
+    const n = e.size;
+    posts.push(n > 1 ? { name: e.name, x, y, w: n, h: n, enemy: e.id, blocks } : { name: e.name, x, y, enemy: e.id, blocks });
+    fill(x - 2, y - 2, n + 4, n + 4, null, true);
   };
+  const at = (e, c) => [c.x - ((e.size - 1) >> 1), c.y - ((e.size - 1) >> 1)];
   for (const rank of ranks) {
     const zi = data.ZONES.findIndex(z => z.rank === rank);
     const zone = data.ZONES[zi];
@@ -252,37 +266,44 @@ function generate(plan, ranks, data, opts) {
     npcs.push({ name: 'merchant', x: fo.x + 3, y: fo.y + 3, zone: zone.id });
     fill(fo.x + 2, fo.y + 2, 3, 3, null, true);
 
-    // 정해진 자리 — 묶음 정예는 홀에 둥글게, 묶음 밖 정예는 길막(e)부터 채우고 남으면 들판 한가운데
+    // 정해진 자리 — 묶음 정예는 홀 벽을 따라 두 줄로, 묶음 밖 정예는 길막(e)부터 채우고 남으면 들판 한가운데
     const sets = foes.filter(e => e.kind === 'elite' && e.set);
     const loose = foes.filter(e => e.kind === 'elite' && !e.set);
     const boss = foes.find(e => e.kind === 'boss'), hidden = foes.find(e => e.kind === 'hidden');
     const mineGates = gates.filter(g => g.rank === rank);
-    for (const g of mineGates.filter(g => g.how === 'e')) { const e = loose.shift(); if (e) post(e, g.x, g.y, BIG, true); }
+    for (const g of mineGates.filter(g => g.how === 'e')) { const e = loose.shift(); if (e !== g.foe) throw new Error(`${rank}격 — 길막 정예 차례가 어긋남`); post(e, g.x, g.y, true); }
     loose.forEach((e, i) => {
-      const c = center(fields[Math.round((i + 1) * fields.length / (loose.length + 1)) - 1]);
-      post(e, c.x, c.y, 1, false);
+      let k = Math.round((i + 1) * fields.length / (loose.length + 1)) - 1;
+      if (k === 0 && fields.length > 1) k = 1;               // 첫 들판 한가운데는 그 지역 들머리 — 비워 둠
+      post(e, ...at(e, center(fields[k])), false);
     });
     const halls = mine('E');
     if (sets.length) {
-      const hall = halls[0], o = origin(hall);
-      const wide = halls.length > 1;                         // 들판 둘을 튼 큰 홀 — 가운데 길을 비우고 위아래를 따라
-      sets.forEach((e, i) => {
-        if (wide) {
-          const top = i < Math.ceil(sets.length / 2), k = top ? i : i - Math.ceil(sets.length / 2), n = top ? Math.ceil(sets.length / 2) : Math.floor(sets.length / 2);
-          post(e, o.x + Math.round((k + 1) * (FIELD_W * 2 + GAP) / (n + 1)), top ? o.y + 2 : o.y + FIELD_H - 3, 1, false);
-        } else {                                             // 홀 한가운데를 둘러 둥글게
-          const c = center(hall), t = (i + 0.5) / sets.length * Math.PI * 2;
-          post(e, c.x + Math.round(Math.cos(t) * 6), c.y + Math.round(Math.sin(t) * 4), 1, false);
-        }
+      // 홀 위 · 아래 벽을 따라 한 줄씩 — 두 줄 중 긴 쪽이 가장 짧아지게 나누고, 줄 안에서는 원래 차례대로 고르게 띄움.
+      // 가운데 두 줄(6 · 7번째 줄)은 비워 지나가는 길, 둘레 한 칸과 서로의 사이 한 칸도 비움 (들판 둘을 튼 큰 홀이면 그 너비 전부)
+      const o = origin(halls.reduce((a, b) => (b.c < a.c ? b : a))), W = halls.length > 1 ? FIELD_W * 2 + GAP : FIELD_W;
+      const width = row => row.reduce((t, e) => t + e.size + 1, -1);
+      let rows = null, best = Infinity;
+      for (let mask = 0; mask < 1 << sets.length; mask++) {
+        const split = [sets.filter((e, i) => !(mask >> i & 1)), sets.filter((e, i) => mask >> i & 1)];
+        const score = Math.max(...split.map(width)) * 100 + Math.abs(split[0].length - split[1].length);
+        if (score < best) { best = score; rows = split; }
+      }
+      rows.forEach((row, r) => {
+        const room = W - 2 - width(row);                       // 사이 한 칸씩 띄우고 남는 칸 — 고르게 나눔
+        if (room < 0) throw new Error(`${rank}격 — 묶음 정예가 홀 한 줄(${W - 2}칸)에 다 안 들어감`);
+        let x = o.x + 1;
+        row.forEach((e, i) => {
+          x += Math.floor(room * (i + 1) / (row.length + 1)) - Math.floor(room * i / (row.length + 1));
+          post(e, x, r ? o.y + 8 : o.y + 6 - e.size, false);  // 위 줄은 아래 끝을 · 아래 줄은 위 끝을 맞춤
+          x += e.size + 1;
+        });
       });
     }
     const bossGate = mineGates.find(g => g.how === 'b');
-    if (bossGate) post(boss, bossGate.x, bossGate.y, BIG, true);
-    else { const c = center(mine('B')[0]); post(boss, c.x - 1, c.y - 1, BIG, false); }
-    if (hidden) {
-      const hRoom = mine('H')[0], c = center(hRoom);
-      post(hidden, c.x, c.y, 1, false);
-    }
+    if (bossGate) post(boss, bossGate.x, bossGate.y, true);
+    else post(boss, ...at(boss, center(mine('B')[0])), false);
+    if (hidden) post(hidden, ...at(hidden, center(mine('H')[0])), false);
   }
 
   // 4) 장애물 — 지나가는 곳과 구역 들판에만, 작은 덤불처럼 몇 무더기
@@ -321,7 +342,7 @@ function generate(plan, ranks, data, opts) {
 // 땅 모양 · 격 나누기 · 물 · 흙길 · 다리 · 성벽은 tools/overworld-layout.js 가 정하고 (시안 그림과 같이 씀),
 // 여기서는 그 칸을 게임 칸으로 바꾸고 구역 · 정해진 자리 · 상인 · 문을 시안 그림의 같은 자리에 둡니다.
 //   어둠 → 벽 · 물 · 수로 · 용암 → 물 · 바위 등성이 · 흑요석 벼랑 · 바위턱 → 바위 · 처음의 방을 두른 통바위 → 벽
-// 다음 격은 보스(3×3)가 세 칸 틈을 막고 서서 엽니다 — 1 → 2 (수문의 던전 가디언) · 2 → 3 · 4 (숲에서 그대로 이어짐, 3격은 막다른 곳)
+// 다음 격은 보스가 제 크기만큼의 틈을 막고 서서 엽니다 — 1 → 2 (수문의 던전 가디언) · 2 → 3 · 4 (숲에서 그대로 이어짐, 3격은 막다른 곳)
 // · 4 → 5 (쐐기돌 아치의 거인왕) · 5 → 6 (대성당 뒤 묘실 통로의 불사의 왕) · 왕좌의 방 (벌레의 굴). 트롤 킹은 숲 속 굴에서 막지 않고 기다림
 // 아래 좌표는 모두 시안 칸 (176×112) — 배율을 바꿔도 그대로 둡니다.
 const OVERWORLD_SCALE = 2.5;
@@ -345,14 +366,14 @@ const OVERWORLD_AREAS = {
   6: [[131, 33, 146, 40], [114, 33, 130, 40], [113, 5, 123, 32], [124, 19, 143, 32], [124, 5, 146, 18]]   // 묘실 입구 → 용암 강 → 칠죄종 홀 → 북쪽
 };
 // 정해진 자리 — 시안 그림의 그 그림 조각 자리 (앞에 서는 것은 한 칸 아래)
-//   [이름, x, y] 그 칸에 한 칸짜리 · [이름, x, y, 3] 그 칸을 가운데로 3×3 (길을 막지 않는 보스)
-//   [이름, 'gate'] 길을 막는 3×3 — 자리는 overworld-layout.js 의 GATES (어느 배율에서도 세 칸 틈을 막도록)
+//   [이름, x, y] 그 칸을 가운데로 그 적의 크기(n × n, data.js ENEMY_SIZE)만큼
+//   [이름, 'gate'] 길을 막는 자리 — overworld-layout.js 의 GATES (그 크기만큼 넓힌 틈을 꼭 맞게 막도록)
 const OVERWORLD_POSTS = [
   ['던전 가디언', 'gate'],                                              // 지하수로 수문
   ['고블린 족장', 38, 79], ['미믹', 60, 89],                            // 가운데 석상 · 구석의 보물상자
-  ['트롤 킹', 12, 38, 3],                                               // 숲 북서쪽 시내 상류의 굴 앞 (길은 막지 않음)
+  ['트롤 킹', 12, 38],                                               // 숲 북서쪽 시내 상류의 굴 앞 (길은 막지 않음)
   ['오크 장군', 13, 46], ['숲의 마녀', 54, 41],                         // 야영지 · 오두막
-  ['몰락한 왕', 14, 13, 3],                                             // 성 안 왕좌
+  ['몰락한 왕', 14, 13],                                             // 성 안 왕좌
   ['그리핀 로드', 56, 15], ['히드라', 28, 25], ['카벙클', 60, 11],      // 탑 자리 · 물에 잠긴 안뜰 · 바위턱 폭포 밑
   ['돌 거인', 98, 39], ['서리 거인', 101, 41], ['불의 거인', 98, 43], ['구름 거인', 95, 41],   // 돌 고리
   ['거인왕', 'gate'],                                                   // 쐐기돌 아치
@@ -362,13 +383,19 @@ const OVERWORLD_POSTS = [
   ['칠죄종 · 탐욕', 127, 21], ['칠죄종 · 질투', 133, 21], ['칠죄종 · 색욕', 139, 21], ['칠죄종 · 폭식', 127, 30],
   ['칠죄종 · 오만', 133, 30], ['칠죄종 · 분노', 139, 30], ['칠죄종 · 나태', 142, 25],          // 홀의 불꽃 받침
   ['세계수를 먹는 벌레', 'gate'],                                       // 왕좌의 방으로 가는 굴
-  ['마왕', 155, 23, 3], ['관측자', 158, 30]                             // 왕좌 · 문 곁
+  ['마왕', 155, 23], ['관측자', 158, 30]                             // 왕좌 · 문 곁
 ];
 const OVERWORLD_ENTRY = { 1: [39, 91], 2: [38, 60], 3: [44, 28], 4: [66, 50], 5: [116, 48], 6: [136, 39] };   // 계단 위 · 수문 너머 · 옛 성문 자리 · 숲 가장자리 · 아치 너머 · 묘실 입구
 const OVERWORLD_MERCHANTS = { sewer: [33, 86], forest: [34, 58], ruins: [40, 26], giantpass: [70, 46], necropolis: [120, 50], abyss: [128, 37] };
 
 function overworld(data) {
-  const L = require('./overworld-layout.js').build(OVERWORLD_SCALE);
+  // 길을 막는 것의 크기만큼 틈을 넓혀 땅을 짭니다
+  const gateSize = Object.fromEntries(OVERWORLD_POSTS.filter(([, x]) => x === 'gate').map(([name]) => {
+    const e = data.ENEMIES.find(f => f.name === name && f.rank.n <= 6);
+    if (!e) throw new Error(`정해진 자리 — ${name} 이(가) 1~6격에 없음`);
+    return [e.id, e.size];
+  }));
+  const L = require('./overworld-layout.js').build(OVERWORLD_SCALE, gateSize);
   const w = L.W, h = L.H, idx = L.idx;
   const inside = (x, y) => x >= 0 && y >= 0 && x < w && y < h;
   const tiles = new Uint8Array(w * h);
@@ -409,14 +436,14 @@ function overworld(data) {
   npcs.push({ name: 'start', x: sx, y: sy }, { name: 'avatarDoor', x: dx, y: dy });
   guard(sx, sy, 1, 1, 2); guard(dx, dy, 1, 1, 1);
   const foes = data.ENEMIES.filter(e => e.rank.n <= 6 && e.kind !== 'normal');
-  for (const [name, x, y, size = 1] of OVERWORLD_POSTS) {
+  for (const [name, x, y] of OVERWORLD_POSTS) {
     const e = foes.find(f => f.name === name);
     if (!e) throw new Error(`정해진 자리 — ${name} 이(가) 1~6격에 없음`);
-    const blocks = x === 'gate', big = blocks || size > 1;
+    const blocks = x === 'gate', n = e.size;
     if (blocks && !L.GATES[e.id]) throw new Error(`길막 자리 — ${name}(${e.id}) 이(가) GATES 에 없음`);
-    const [px, py] = blocks ? L.GATES[e.id] : big ? L.spot3(x, y) : L.spot1(x, y);
-    posts.push(big ? { name, x: px, y: py, w: 3, h: 3, enemy: e.id, blocks } : { name, x: px, y: py, enemy: e.id, blocks });
-    guard(px, py, big ? 3 : 1, big ? 3 : 1, 2);
+    const [px, py] = blocks ? L.GATES[e.id] : L.spotN(x, y, n);
+    posts.push(n > 1 ? { name, x: px, y: py, w: n, h: n, enemy: e.id, blocks } : { name, x: px, y: py, enemy: e.id, blocks });
+    guard(px, py, n, n, 2);
   }
   const missing = foes.filter(e => !posts.some(p => p.enemy === e.id));
   if (missing.length) throw new Error(`정해진 자리가 없는 정예 · 보스 — ${missing.map(e => e.name).join(', ')}`);
@@ -440,7 +467,7 @@ function overworld(data) {
     if (rects.length !== normals.length) throw new Error(`${rank}격 — 구역 ${rects.length}개, 일반 ${normals.length}종`);
     const boss = posts.find(q => q.enemy === data.ENEMIES.find(e => e.zoneIndex === zi && e.kind === 'boss').id);
     const fromEntry = walkFrom([idx(...L.spot1(...OVERWORLD_ENTRY[rank]))]);
-    const toBoss = walkFrom([...Array(9).keys()].map(k => idx(boss.x + k % 3, boss.y + ((k / 3) | 0))));
+    const toBoss = walkFrom([...Array(boss.w * boss.h).keys()].map(k => idx(boss.x + k % boss.w, boss.y + ((k / boss.w) | 0))));
     const spots = rects.map(([x0, y0, x1, y1]) => {
       const r = rectOf(x0, y0, x1, y1), ix = Math.max(2, Math.round(r.w * AREA_INSET)), iy = Math.max(2, Math.round(r.h * AREA_INSET));
       const a = { x: r.x + ix, y: r.y + iy, w: r.w - ix * 2, h: r.h - iy * 2 };
