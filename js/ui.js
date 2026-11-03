@@ -692,7 +692,7 @@ function renderJourney() {
   } else if (run.over) {
     stage = `<p class="stage-msg">여정이 끝났다.</p>`;
   } else if (run.encounter) {
-    stage = encounterCard(getEnemy(run.encounter), run.onBoss, hero, run.aura);
+    stage = encounterCard(getEnemy(run.encounter), hero, run.aura);
   } else if (!onMap) {
     // 모든 지역이 지도 위에 있어서 여기엔 오지 않습니다 — 지도 파일(js/maps.js)을 못 읽었을 때만
     stage = `<p class="stage-msg">지도를 읽지 못했다. 새로 고쳐 주세요.</p>`;
@@ -1401,7 +1401,7 @@ function dropStrip(foe) {
 // 마주한 적 카드 — 위에서부터 이름 · 레벨 · 느낌 한 줄, 초상(큰 그림), 남은 전리품, 맞선다 / 물러선다.
 // 설명은 레벨과 「잡기 쉬울 것 같다」 같은 한 줄만 둡니다 — 스탯 · 경험치 · 전리품 확률 · 졌을 때의 에너지는 뺐습니다.
 // 초상은 지금은 이모지입니다. 나중에 그림이 들어올 자리.
-function encounterCard(foe, isBoss, hero, aura) {
+function encounterCard(foe, hero, aura) {
   const chance = winChance(hero, foe);
   const style = aura ? `style="--aura:${aura.color}"` : '';
 
@@ -1423,9 +1423,9 @@ function encounterCard(foe, isBoss, hero, aura) {
     </div>
     <!-- 넓은 화면에서는 맞선다 위 · 물러선다 아래로 쌓고,
          폰에서는 화면 아래 붙박인 띠에 물러선다(왼쪽 작게) · 맞선다(오른쪽 크게)를 나란히 둡니다 -->
-    <div class="enc-actions thumb-bar ${isBoss ? 'solo' : ''}">
+    <div class="enc-actions thumb-bar">
       <button id="engageBtn" class="btn primary big"><span class="btn-line">맞선다${KEY_HINT}</span></button>
-      ${isBoss ? '' : '<button id="retreatBtn" class="btn">물러선다</button>'}
+      <button id="retreatBtn" class="btn">물러선다</button>
     </div>`;
 }
 
@@ -1530,7 +1530,7 @@ function mapEntrance(data, zi) {
 }
 
 // 저장해 둔 칸 — 지도 안의 걸을 수 있는 칸이고, 그 칸의 지역이 지금 지역과 맞을 때만 (구역 밖 길 위면 그대로 믿습니다).
-// 정해진 자리 안이면 버림 — 지도를 다시 뽑아 자리가 커졌을 때 그 몸 안에서 시작하지 않게
+// 정해진 자리 안이면 버림 — 지도를 다시 뽑아 자리가 커졌을 때 그 몸 안에서 시작해 걸을 때마다 부딪히지 않게
 function savedMapAt(run, data) {
   const at = run.mapAt;
   if (!at || !(at.x >= 0 && at.y >= 0 && at.x < data.w && at.y < data.h)) return null;
@@ -2785,7 +2785,7 @@ const TUTORIAL = [
   { t: '길 끝에는 누가 서 있다',
     b: '지도를 걷다가 <b>몬스터에 닿으면 싸움</b>이 됩니다 (폰은 아래 조이스틱, 키보드는 방향키). 보자마자 쫓아오는 놈도, 달아나는 놈도 있습니다. <b>정예와 보스는 정해진 자리</b>에 서 있고, 한 여정에 한 번만 만날 수 있습니다. 대신 좋은 것을 남깁니다.' },
   { t: '이길 수 있을 것 같나',
-    b: '싸우기 전에 <b>이길 만한지 예감</b>이 듭니다 — 「잡기 쉬울 것 같다」부터 「불가능할 것 같다」까지. 에너지는 <b>맞설 때만</b> 듭니다 — 물러서면 그대로입니다. 정예와 보스 앞에서는 물러설 수 없습니다.' },
+    b: '싸우기 전에 <b>이길 만한지 예감</b>이 듭니다 — 「잡기 쉬울 것 같다」부터 「불가능할 것 같다」까지. 에너지는 <b>맞설 때만</b> 듭니다 — 물러서면 그대로입니다. 정예와 보스 앞에서도 물러설 수 있습니다.' },
   { t: '같은 것이 또 나오면',
     b: '이미 가진 전리품은 <b>자동으로 분해되어 그 부위의 강화석</b>이 됩니다. 강화석으로 부위를 강화하면 그 칸에 무엇을 끼든 강해집니다. 높이 올릴수록 실패하기 쉽습니다.' }
 ];

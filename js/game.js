@@ -559,6 +559,7 @@ function loadRun() {
     run.spent = { ...emptySpent(), ...(d.spent || {}) };
     run.downed = Array.isArray(d.downed) ? d.downed : [];
     run.spentOn = (d.spentOn && typeof d.spentOn === 'object') ? d.spentOn : {};
+    run.postAura = (d.postAura && typeof d.postAura === 'object') ? d.postAura : {};
     State.run = run;
 
     State.log = [];
@@ -925,6 +926,7 @@ function freshRun() {
     zoneIndex: 0,        // 지금 있는 지역
     zoneCleared: false,  // 이 지역 보스를 꺾어서 길이 열렸는가
     spentOn: {},         // 정예·히든·보스별로 마지막 도전에 쓴 에너지 — 꺾으면 그것만 돌려받습니다
+    postAura: {},        // 정예·히든·보스별로 이 여정에 두른 기운 id (없으면 null) — 처음 닿을 때 굴리고 그 뒤로는 그대로 (approachPost)
     downed: [],          // 이 여정에서 이미 꺾은 정예·보스 id — 다시 못 만납니다
     progress: 0,         // 이 지역에서 이긴 횟수
     encounter: null,     // 지금 마주한 적 id (없으면 null)
@@ -1101,7 +1103,7 @@ function travel() {
 
 // ---------- 지도에서 (1~6격) ----------
 // 지도 위를 걷다 닿으면 여기를 거칩니다. 「길을 떠난다」와 달리 닿기만 해서는 에너지를 안 씁니다 —
-// 맞설 때 1 (engage), 물러서면 공짜. 정해진 자리(정예 · 히든 · 보스)는 지금처럼 닿는 순간 1이고 물러설 수 없습니다.
+// 맞설 때 1 (engage), 물러서면 공짜. 정해진 자리(정예 · 히든 · 보스)도 똑같습니다 (사용자 결정 — 예전엔 닿는 순간 1이고 물러설 수 없었음).
 //   aura  — 서 있을 때부터 두르고 있던 기운 (지도에서 빛나 보이던 그것)
 //   first — 'foe' 면 몬스터가 먼저 덤볐다
 function meetOnMap(foeId, aura, first) {
@@ -1240,30 +1242,33 @@ function buyWare(id) {
 // 이 여정에서 이미 꺾었는가 (정예·보스 전용)
 function isDowned(enemyId) { return State.run.downed.includes(enemyId); }
 
-// 정해진 자리에 선 것(정예 또는 보스)에게 향한다.
-// 늘 그 자리에 있으므로 언제든 갈 수 있지만, 마주하면 물러설 수 없습니다.
-// 그리고 한 번 꺾으면 이 여정에선 다시 만날 수 없습니다.
+// 정해진 자리에 선 것(정예 · 히든 · 보스)에게 향한다. 늘 그 자리에 있으므로 언제든 갈 수 있고,
+// 일반처럼 닿기만 해서는 에너지를 안 쓰고(맞설 때 1 — engage) 물러설 수도 있습니다. 한 번 꺾으면 이 여정에선 다시 만날 수 없습니다.
+// 두른 기운은 이 여정에 처음 닿을 때 굴리고 그 뒤로는 그대로 — 물러섰다 다시 닿아 기운을 다시 굴리지 못하게 (지도의 몬스터와 같게)
 function approachPost(enemyId) {
   if (!canAct()) return;
   const foe = getEnemy(enemyId);
   if (!foe || !foe.once || isDowned(enemyId)) return;
 
   const run = State.run;
-  run.energy -= RULES.TRAVEL_COST;
-  setSpentOn(foe.id, RULES.TRAVEL_COST);
-  const aura = beginEncounter(foe, true);
+  beginEncounter(foe, true);
+  if (!run.postAura) run.postAura = {};
+  if (foe.id in run.postAura) run.aura = run.postAura[foe.id] ? (AURAS.find(a => a.id === run.postAura[foe.id]) || null) : null;
+  else run.postAura[foe.id] = run.aura ? run.aura.id : null;
+  run.metOnMap = true;
+  const aura = run.aura;
 
   pushLog('rank', foe.kind === 'boss'
-    ? `━ ${foe.icon} ${foe.name}${josa(foe.name, '이', '가')} 길을 막았다. 물러설 수 없다 ━`
-    : `━ ${foe.icon} ${foe.name} 앞에 섰다. 물러설 수 없다 ━`);
+    ? `━ ${foe.icon} ${foe.name}${josa(foe.name, '이', '가')} 길을 막았다 ━`
+    : `━ ${foe.icon} ${foe.name} 앞에 섰다 ━`);
   if (aura) pushLog('aura', `✦ 게다가 ${aura.name} 기운을 두르고 있다 — ${aura.desc} ✦`);
   save();
 }
 
-// 물러선다 — 에너지는 이미 썼으니 그냥 날아갑니다 (지도에서 닿은 것은 아직 안 썼으니 공짜). 보스한테는 못 씁니다.
+// 물러선다 — 지도에서 닿은 것은 아직 에너지를 안 썼으니 공짜 (정예 · 히든 · 보스도). 예전 저장본처럼 이미 썼으면 그냥 날아갑니다.
 function retreat() {
   const run = State.run;
-  if (run.over || !run.encounter || run.onBoss) return;
+  if (run.over || !run.encounter) return;
   const foe = getEnemy(run.encounter);
   pushLog('info', run.metOnMap ? `${foe.name} 앞에서 물러섰다.` : `${foe.name} 앞에서 물러섰다. 발걸음만 축냈다.`);
   run.encounter = null;
@@ -1277,11 +1282,12 @@ function retreat() {
 function engage() {
   const run = State.run;
   if (run.over || !run.encounter) return null;
-  // 지도에서 닿은 일반은 맞서는 지금 에너지를 씁니다
+  // 지도에서 닿은 것은 맞서는 지금 에너지를 씁니다 — 정해진 자리면 꺾을 때 돌려받을 몫으로 적어 둠
   if (run.metOnMap) {
     if (run.energy < RULES.TRAVEL_COST) return null;
     run.energy -= RULES.TRAVEL_COST;
     run.metOnMap = false;
+    if (getEnemy(run.encounter).once) setSpentOn(run.encounter, RULES.TRAVEL_COST);
   }
 
   const enemy = getEnemy(run.encounter);

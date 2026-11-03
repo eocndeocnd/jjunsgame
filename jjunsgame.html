@@ -7865,6 +7865,7 @@ function loadRun() {
     run.spent = { ...emptySpent(), ...(d.spent || {}) };
     run.downed = Array.isArray(d.downed) ? d.downed : [];
     run.spentOn = (d.spentOn && typeof d.spentOn === 'object') ? d.spentOn : {};
+    run.postAura = (d.postAura && typeof d.postAura === 'object') ? d.postAura : {};
     State.run = run;
 
     State.log = [];
@@ -8231,6 +8232,7 @@ function freshRun() {
     zoneIndex: 0,        // 지금 있는 지역
     zoneCleared: false,  // 이 지역 보스를 꺾어서 길이 열렸는가
     spentOn: {},         // 정예·히든·보스별로 마지막 도전에 쓴 에너지 — 꺾으면 그것만 돌려받습니다
+    postAura: {},        // 정예·히든·보스별로 이 여정에 두른 기운 id (없으면 null) — 처음 닿을 때 굴리고 그 뒤로는 그대로 (approachPost)
     downed: [],          // 이 여정에서 이미 꺾은 정예·보스 id — 다시 못 만납니다
     progress: 0,         // 이 지역에서 이긴 횟수
     encounter: null,     // 지금 마주한 적 id (없으면 null)
@@ -8407,7 +8409,7 @@ function travel() {
 
 // ---------- 지도에서 (1~6격) ----------
 // 지도 위를 걷다 닿으면 여기를 거칩니다. 「길을 떠난다」와 달리 닿기만 해서는 에너지를 안 씁니다 —
-// 맞설 때 1 (engage), 물러서면 공짜. 정해진 자리(정예 · 히든 · 보스)는 지금처럼 닿는 순간 1이고 물러설 수 없습니다.
+// 맞설 때 1 (engage), 물러서면 공짜. 정해진 자리(정예 · 히든 · 보스)도 똑같습니다 (사용자 결정 — 예전엔 닿는 순간 1이고 물러설 수 없었음).
 //   aura  — 서 있을 때부터 두르고 있던 기운 (지도에서 빛나 보이던 그것)
 //   first — 'foe' 면 몬스터가 먼저 덤볐다
 function meetOnMap(foeId, aura, first) {
@@ -8546,30 +8548,33 @@ function buyWare(id) {
 // 이 여정에서 이미 꺾었는가 (정예·보스 전용)
 function isDowned(enemyId) { return State.run.downed.includes(enemyId); }
 
-// 정해진 자리에 선 것(정예 또는 보스)에게 향한다.
-// 늘 그 자리에 있으므로 언제든 갈 수 있지만, 마주하면 물러설 수 없습니다.
-// 그리고 한 번 꺾으면 이 여정에선 다시 만날 수 없습니다.
+// 정해진 자리에 선 것(정예 · 히든 · 보스)에게 향한다. 늘 그 자리에 있으므로 언제든 갈 수 있고,
+// 일반처럼 닿기만 해서는 에너지를 안 쓰고(맞설 때 1 — engage) 물러설 수도 있습니다. 한 번 꺾으면 이 여정에선 다시 만날 수 없습니다.
+// 두른 기운은 이 여정에 처음 닿을 때 굴리고 그 뒤로는 그대로 — 물러섰다 다시 닿아 기운을 다시 굴리지 못하게 (지도의 몬스터와 같게)
 function approachPost(enemyId) {
   if (!canAct()) return;
   const foe = getEnemy(enemyId);
   if (!foe || !foe.once || isDowned(enemyId)) return;
 
   const run = State.run;
-  run.energy -= RULES.TRAVEL_COST;
-  setSpentOn(foe.id, RULES.TRAVEL_COST);
-  const aura = beginEncounter(foe, true);
+  beginEncounter(foe, true);
+  if (!run.postAura) run.postAura = {};
+  if (foe.id in run.postAura) run.aura = run.postAura[foe.id] ? (AURAS.find(a => a.id === run.postAura[foe.id]) || null) : null;
+  else run.postAura[foe.id] = run.aura ? run.aura.id : null;
+  run.metOnMap = true;
+  const aura = run.aura;
 
   pushLog('rank', foe.kind === 'boss'
-    ? `━ ${foe.icon} ${foe.name}${josa(foe.name, '이', '가')} 길을 막았다. 물러설 수 없다 ━`
-    : `━ ${foe.icon} ${foe.name} 앞에 섰다. 물러설 수 없다 ━`);
+    ? `━ ${foe.icon} ${foe.name}${josa(foe.name, '이', '가')} 길을 막았다 ━`
+    : `━ ${foe.icon} ${foe.name} 앞에 섰다 ━`);
   if (aura) pushLog('aura', `✦ 게다가 ${aura.name} 기운을 두르고 있다 — ${aura.desc} ✦`);
   save();
 }
 
-// 물러선다 — 에너지는 이미 썼으니 그냥 날아갑니다 (지도에서 닿은 것은 아직 안 썼으니 공짜). 보스한테는 못 씁니다.
+// 물러선다 — 지도에서 닿은 것은 아직 에너지를 안 썼으니 공짜 (정예 · 히든 · 보스도). 예전 저장본처럼 이미 썼으면 그냥 날아갑니다.
 function retreat() {
   const run = State.run;
-  if (run.over || !run.encounter || run.onBoss) return;
+  if (run.over || !run.encounter) return;
   const foe = getEnemy(run.encounter);
   pushLog('info', run.metOnMap ? `${foe.name} 앞에서 물러섰다.` : `${foe.name} 앞에서 물러섰다. 발걸음만 축냈다.`);
   run.encounter = null;
@@ -8583,11 +8588,12 @@ function retreat() {
 function engage() {
   const run = State.run;
   if (run.over || !run.encounter) return null;
-  // 지도에서 닿은 일반은 맞서는 지금 에너지를 씁니다
+  // 지도에서 닿은 것은 맞서는 지금 에너지를 씁니다 — 정해진 자리면 꺾을 때 돌려받을 몫으로 적어 둠
   if (run.metOnMap) {
     if (run.energy < RULES.TRAVEL_COST) return null;
     run.energy -= RULES.TRAVEL_COST;
     run.metOnMap = false;
+    if (getEnemy(run.encounter).once) setSpentOn(run.encounter, RULES.TRAVEL_COST);
   }
 
   const enemy = getEnemy(run.encounter);
@@ -10651,7 +10657,7 @@ function renderJourney() {
   } else if (run.over) {
     stage = `<p class="stage-msg">여정이 끝났다.</p>`;
   } else if (run.encounter) {
-    stage = encounterCard(getEnemy(run.encounter), run.onBoss, hero, run.aura);
+    stage = encounterCard(getEnemy(run.encounter), hero, run.aura);
   } else if (!onMap) {
     // 모든 지역이 지도 위에 있어서 여기엔 오지 않습니다 — 지도 파일(js/maps.js)을 못 읽었을 때만
     stage = `<p class="stage-msg">지도를 읽지 못했다. 새로 고쳐 주세요.</p>`;
@@ -11360,7 +11366,7 @@ function dropStrip(foe) {
 // 마주한 적 카드 — 위에서부터 이름 · 레벨 · 느낌 한 줄, 초상(큰 그림), 남은 전리품, 맞선다 / 물러선다.
 // 설명은 레벨과 「잡기 쉬울 것 같다」 같은 한 줄만 둡니다 — 스탯 · 경험치 · 전리품 확률 · 졌을 때의 에너지는 뺐습니다.
 // 초상은 지금은 이모지입니다. 나중에 그림이 들어올 자리.
-function encounterCard(foe, isBoss, hero, aura) {
+function encounterCard(foe, hero, aura) {
   const chance = winChance(hero, foe);
   const style = aura ? `style="--aura:${aura.color}"` : '';
 
@@ -11382,9 +11388,9 @@ function encounterCard(foe, isBoss, hero, aura) {
     </div>
     <!-- 넓은 화면에서는 맞선다 위 · 물러선다 아래로 쌓고,
          폰에서는 화면 아래 붙박인 띠에 물러선다(왼쪽 작게) · 맞선다(오른쪽 크게)를 나란히 둡니다 -->
-    <div class="enc-actions thumb-bar ${isBoss ? 'solo' : ''}">
+    <div class="enc-actions thumb-bar">
       <button id="engageBtn" class="btn primary big"><span class="btn-line">맞선다${KEY_HINT}</span></button>
-      ${isBoss ? '' : '<button id="retreatBtn" class="btn">물러선다</button>'}
+      <button id="retreatBtn" class="btn">물러선다</button>
     </div>`;
 }
 
@@ -11489,7 +11495,7 @@ function mapEntrance(data, zi) {
 }
 
 // 저장해 둔 칸 — 지도 안의 걸을 수 있는 칸이고, 그 칸의 지역이 지금 지역과 맞을 때만 (구역 밖 길 위면 그대로 믿습니다).
-// 정해진 자리 안이면 버림 — 지도를 다시 뽑아 자리가 커졌을 때 그 몸 안에서 시작하지 않게
+// 정해진 자리 안이면 버림 — 지도를 다시 뽑아 자리가 커졌을 때 그 몸 안에서 시작해 걸을 때마다 부딪히지 않게
 function savedMapAt(run, data) {
   const at = run.mapAt;
   if (!at || !(at.x >= 0 && at.y >= 0 && at.x < data.w && at.y < data.h)) return null;
@@ -12744,7 +12750,7 @@ const TUTORIAL = [
   { t: '길 끝에는 누가 서 있다',
     b: '지도를 걷다가 <b>몬스터에 닿으면 싸움</b>이 됩니다 (폰은 아래 조이스틱, 키보드는 방향키). 보자마자 쫓아오는 놈도, 달아나는 놈도 있습니다. <b>정예와 보스는 정해진 자리</b>에 서 있고, 한 여정에 한 번만 만날 수 있습니다. 대신 좋은 것을 남깁니다.' },
   { t: '이길 수 있을 것 같나',
-    b: '싸우기 전에 <b>이길 만한지 예감</b>이 듭니다 — 「잡기 쉬울 것 같다」부터 「불가능할 것 같다」까지. 에너지는 <b>맞설 때만</b> 듭니다 — 물러서면 그대로입니다. 정예와 보스 앞에서는 물러설 수 없습니다.' },
+    b: '싸우기 전에 <b>이길 만한지 예감</b>이 듭니다 — 「잡기 쉬울 것 같다」부터 「불가능할 것 같다」까지. 에너지는 <b>맞설 때만</b> 듭니다 — 물러서면 그대로입니다. 정예와 보스 앞에서도 물러설 수 있습니다.' },
   { t: '같은 것이 또 나오면',
     b: '이미 가진 전리품은 <b>자동으로 분해되어 그 부위의 강화석</b>이 됩니다. 강화석으로 부위를 강화하면 그 칸에 무엇을 끼든 강해집니다. 높이 올릴수록 실패하기 쉽습니다.' }
 ];
