@@ -27,6 +27,7 @@ function tiledProps(o) {
 
 // spec: { w, h, tiles(칸마다 위의 타일 번호), areas, posts, ports, secrets, npcs } — 좌표는 칸 단위
 // posts 는 w · h 가 있으면 사각형(큰 보스), 없으면 점(한 칸)으로 적습니다.
+// areas 는 polygon(x · y 에서 잰 꼭짓점들, 칸 단위)이 있으면 다각형, 없으면 사각형으로 적습니다.
 function buildTmj(spec) {
   let nextId = 1;
   const rectObj = ({ name = '', x, y, w, h, ...p }) =>
@@ -34,10 +35,13 @@ function buildTmj(spec) {
   const pointObj = ({ name = '', x, y, ...p }) =>
     ({ id: nextId++, name, type: '', point: true, x: (x + 0.5) * TILE, y: (y + 0.5) * TILE, width: 0, height: 0, rotation: 0, visible: true, properties: tiledProps(p) });
   const postObj = o => (o.w ? rectObj(o) : pointObj(o));
+  const polyObj = ({ name = '', x, y, polygon, ...p }) =>
+    ({ id: nextId++, name, type: '', x: x * TILE, y: y * TILE, width: 0, height: 0, rotation: 0, visible: true,
+       polygon: polygon.map(q => ({ x: q.x * TILE, y: q.y * TILE })), properties: tiledProps(p) });
   const group = (id, name, objects) => ({ id, name, type: 'objectgroup', draworder: 'topdown', opacity: 1, visible: true, x: 0, y: 0, objects });
   const layers = [
     { id: 1, name: 'ground', type: 'tilelayer', width: spec.w, height: spec.h, x: 0, y: 0, opacity: 1, visible: true, data: Array.from(spec.tiles, t => t + 1) },
-    group(2, 'areas', (spec.areas || []).map(rectObj)),
+    group(2, 'areas', (spec.areas || []).map(o => (o.polygon ? polyObj(o) : rectObj(o)))),
     group(3, 'posts', (spec.posts || []).map(postObj)),
     group(4, 'ports', (spec.ports || []).map(rectObj)),
     group(5, 'secrets', (spec.secrets || []).map(rectObj)),
@@ -346,12 +350,15 @@ function generate(plan, ranks, data, opts) {
 // · 4 → 5 (쐐기돌 아치의 거인왕) · 5 → 6 (대성당 뒤 묘실 통로의 불사의 왕) · 왕좌의 방 (벌레의 굴). 트롤 킹은 숲 속 굴에서 막지 않고 기다림
 // 아래 좌표는 모두 시안 칸 (176×112) — 배율을 바꿔도 그대로 둡니다.
 const OVERWORLD_SCALE = 2.5;
-const AREA_INSET = 0.2;   // 구역은 제 자리의 가운데만 — 가장자리 이만큼(변마다)은 몬스터가 없는 빈 땅으로 남겨 쉴 곳을 둠
+// 구역은 네모가 아니라 땅 모양대로 — 아래 자리의 한가운데에서 그 격의 땅을 따라 퍼집니다 (나무 · 물 · 벼랑을 넘지 않고 늘 한 덩어리).
+// 이웃 구역 자리와의 사이(땅을 따라 잰 거리)의 AREA_SHARE 까지만 차지하고(그 사이는 몬스터 없는 쉴 땅, 사용자 결정),
+// 막다른 곳에서도 AREA_REACH 칸 넘게는 퍼지지 않습니다. 가장자리는 AREA_WOBBLE 칸쯤 들쭉날쭉하게.
+const AREA_SHARE = 0.4, AREA_REACH = 18, AREA_WOBBLE = 3;
 
-// 구역의 자리 [x0, y0, x1, y1] (끝 칸 포함) — 어느 몬스터가 어디 서는지는 길을 따라 정합니다:
+// 구역의 자리 [x0, y0, x1, y1] (끝 칸 포함 — 이 네모의 한가운데가 그 구역이 퍼져 나가는 곳) — 어느 몬스터가 어디 서는지는 길을 따라 정합니다:
 // 그 격에 들어오는 곳(OVERWORLD_ENTRY)에서 멀어지고 보스에 가까워질수록 센 몬스터 (보스 쪽으로 갈수록 강하게, 사용자 결정).
 // 다만 가장 약한 몬스터는 들어오는 곳에서 걸어서 가장 먼저 닿는 구역에 — 처음 만나는 것이 가장 약한 것 (1격은 슬라임).
-// 가장 약한 몬스터의 구역 한가운데가 그 지역 들머리입니다 (불러오면 거기 섭니다).
+// 가장 약한 몬스터의 구역 들머리(구역 한가운데에 가장 가까운 걸을 수 있는 칸 — js/map.js 의 areaMid)가 그 지역 들머리입니다 (불러오면 거기 섭니다).
 const OVERWORLD_AREAS = {
   1: [[31, 84, 45, 91], [9, 84, 28, 91], [48, 84, 65, 91], [31, 74, 45, 81], [9, 74, 28, 81],      // 수로가 가른 아홉 구역 — 계단 앞에서 수문 쪽으로
       [48, 74, 65, 81], [9, 64, 28, 71], [48, 64, 65, 71], [31, 64, 45, 71]],
@@ -388,6 +395,36 @@ const OVERWORLD_POSTS = [
 const OVERWORLD_ENTRY = { 1: [39, 91], 2: [38, 60], 3: [44, 28], 4: [66, 50], 5: [116, 48], 6: [136, 39] };   // 계단 위 · 수문 너머 · 옛 성문 자리 · 숲 가장자리 · 아치 너머 · 묘실 입구
 const OVERWORLD_MERCHANTS = { sewer: [33, 86], forest: [34, 58], ruins: [40, 26], giantpass: [70, 46], necropolis: [120, 50], abyss: [128, 37] };
 
+// 칸 모음(구멍 없는 한 덩어리) → 둘레를 시계 방향으로 도는 다각형. 꼭짓점은 칸 모서리 (칸 단위, x · y 에서 잰 값).
+// 둘레의 변마다 「구역이 오른쪽」 방향으로 잇고, 곧게 이어지는 꼭짓점은 뺍니다
+function outline(mine, box) {
+  const W = box.w + 1, key = (x, y) => (y - box.y) * W + (x - box.x), next = new Map();
+  const has = (x, y) => mine.has(y * OUT_W + x);
+  for (const k of mine) {
+    const x = k % OUT_W, y = (k / OUT_W) | 0;
+    if (!has(x, y - 1)) next.set(key(x, y), [x + 1, y]);
+    if (!has(x + 1, y)) next.set(key(x + 1, y), [x + 1, y + 1]);
+    if (!has(x, y + 1)) next.set(key(x + 1, y + 1), [x, y + 1]);
+    if (!has(x - 1, y)) next.set(key(x, y + 1), [x, y]);
+  }
+  const k0 = next.keys().next().value, pts = [];
+  let k = k0, guardN = 0;
+  do {
+    const [x, y] = next.get(k);
+    pts.push([x, y]);
+    k = key(x, y);
+    if (++guardN > next.size) throw new Error('구역 둘레가 한 바퀴로 이어지지 않음');
+  } while (k !== k0);
+  if (pts.length !== next.size) throw new Error('구역 둘레가 둘 이상 — 구멍이 남았거나 떨어진 조각');
+  const corner = pts.filter((p, i) => {
+    const a = pts[(i + pts.length - 1) % pts.length], b = pts[(i + 1) % pts.length];
+    return (p[0] - a[0]) * (b[1] - p[1]) !== (p[1] - a[1]) * (b[0] - p[0]);
+  });
+  const x0 = Math.min(...corner.map(p => p[0])), y0 = Math.min(...corner.map(p => p[1]));
+  return { x: x0, y: y0, polygon: corner.map(([x, y]) => ({ x: x - x0, y: y - y0 })) };
+}
+let OUT_W = 0;   // outline 이 칸 번호를 x · y 로 풀 때 쓰는 지도 너비 (overworld 가 정함)
+
 function overworld(data) {
   // 길을 막는 것의 크기만큼 틈을 넓혀 땅을 짭니다
   const gateSize = Object.fromEntries(OVERWORLD_POSTS.filter(([, x]) => x === 'gate').map(([name]) => {
@@ -397,6 +434,7 @@ function overworld(data) {
   }));
   const L = require('./overworld-layout.js').build(OVERWORLD_SCALE, gateSize);
   const w = L.W, h = L.H, idx = L.idx;
+  OUT_W = w;
   const inside = (x, y) => x >= 0 && y >= 0 && x < w && y < h;
   const tiles = new Uint8Array(w * h);
   const keep = new Uint8Array(w * h);                        // 장애물을 두지 않을 칸 — 정해진 자리 곁 · 들머리 · 상인 · 시작점 · 문 · 길가
@@ -429,7 +467,7 @@ function overworld(data) {
   for (const [x, y] of L.CASTLE.columns) fillRect(rectOf(x, y, x, y), ROCK);
 
   // 2) 구역 · 정해진 자리 · 상인 · 시작점 · 문
-  const areas = [], posts = [], npcs = [], ports = [], gates = [];
+  const areas = [], posts = [], npcs = [], ports = [], seeds = {};
   const sewer = data.ZONES.find(z => z.rank === 1);
   areas.push({ name: '첫 공간', ...rectOf(30, 95, 48, 107), zone: sewer.id });
   const [sx, sy] = L.spot1(39, 101), [dx, dy] = L.spot1(45, 98);
@@ -447,7 +485,6 @@ function overworld(data) {
   }
   const missing = foes.filter(e => !posts.some(p => p.enemy === e.id));
   if (missing.length) throw new Error(`정해진 자리가 없는 정예 · 보스 — ${missing.map(e => e.name).join(', ')}`);
-  // 구역 — 길을 따라 약한 것부터: 들어오는 곳에서의 거리 − 보스까지의 거리가 작은 구역부터 (장애물을 두기 전 칸으로 잼)
   const walkFrom = cells => {
     const d = new Int32Array(w * h).fill(-1), q = [];
     for (const k of cells) if (d[k] < 0) { d[k] = 0; q.push(k); }
@@ -460,33 +497,15 @@ function overworld(data) {
     }
     return d;
   };
+  // 구역이 퍼져 나갈 곳 — 시안의 구역 자리 한가운데 (나무가 덮지 않게 비워 둠). 구역 모양은 나무까지 다 둔 뒤 5) 에서
   for (let rank = 1; rank <= 6; rank++) {
     const zi = data.ZONES.findIndex(z => z.rank === rank), zone = data.ZONES[zi];
     const normals = data.ENEMIES.filter(e => e.zoneIndex === zi && e.kind === 'normal');
-    const rects = OVERWORLD_AREAS[rank];
-    if (rects.length !== normals.length) throw new Error(`${rank}격 — 구역 ${rects.length}개, 일반 ${normals.length}종`);
-    const boss = posts.find(q => q.enemy === data.ENEMIES.find(e => e.zoneIndex === zi && e.kind === 'boss').id);
-    const fromEntry = walkFrom([idx(...L.spot1(...OVERWORLD_ENTRY[rank]))]);
-    const toBoss = walkFrom([...Array(boss.w * boss.h).keys()].map(k => idx(boss.x + k % boss.w, boss.y + ((k / boss.w) | 0))));
-    const spots = rects.map(([x0, y0, x1, y1]) => {
-      const r = rectOf(x0, y0, x1, y1), ix = Math.max(2, Math.round(r.w * AREA_INSET)), iy = Math.max(2, Math.round(r.h * AREA_INSET));
-      const a = { x: r.x + ix, y: r.y + iy, w: r.w - ix * 2, h: r.h - iy * 2 };
-      let sum = 0, n = 0, near = Infinity;
-      for (let y = a.y; y < a.y + a.h; y++) for (let x = a.x; x < a.x + a.w; x++) {
-        const k = idx(x, y);
-        if (fromEntry[k] >= 0 && toBoss[k] >= 0) { sum += fromEntry[k] - toBoss[k]; n++; near = Math.min(near, fromEntry[k]); }
-      }
-      if (!n) throw new Error(`${rank}격 구역 자리 [${x0}, ${y0}] — 들어오는 곳이나 보스에서 걸어서 닿지 않음`);
-      return { ...a, score: sum / n, near };
-    }).sort((p, q) => p.score - q.score);
-    // 가장 약한 것은 들어오자마자 만나게 — 들어오는 곳에서 걸어서 가장 먼저 닿는 구역 (나머지는 위 순서대로)
-    const first = spots.reduce((b, s) => (s.near < b.near ? s : b));
-    spots.splice(spots.indexOf(first), 1);
-    spots.unshift(first);
-    spots.forEach((sp, k) => {
-      const a = { name: normals[k].name, x: sp.x, y: sp.y, w: sp.w, h: sp.h, rank, monster: normals[k].id, zone: zone.id };
-      areas.push(a);
-      if (k === 0) { gates.push(a); guard(a.x + (a.w >> 1) - 1, a.y + (a.h >> 1) - 1, 3, 3, 0); }   // 들머리는 비워 둠
+    if (OVERWORLD_AREAS[rank].length !== normals.length) throw new Error(`${rank}격 — 구역 ${OVERWORLD_AREAS[rank].length}개, 일반 ${normals.length}종`);
+    seeds[rank] = OVERWORLD_AREAS[rank].map(([x0, y0, x1, y1]) => {
+      const r = rectOf(x0, y0, x1, y1), c = { x: r.x + (r.w >> 1), y: r.y + (r.h >> 1), rect: [x0, y0, x1, y1] };
+      guard(c.x - 1, c.y - 1, 3, 3, 0);
+      return c;
     });
     const [mx, my] = L.spot1(...OVERWORLD_MERCHANTS[zone.id]);
     npcs.push({ name: 'merchant', x: mx, y: my, zone: zone.id });
@@ -536,7 +555,7 @@ function overworld(data) {
     }
   };
   const stand = [...posts.flatMap(p => { const out = []; for (let j = 0; j < (p.h || 1); j++) for (let i = 0; i < (p.w || 1); i++) out.push([p.name, p.x + i, p.y + j]); return out; }),
-    ...npcs.map(n => [n.name, n.x, n.y]), ...gates.map(a => [`${a.name} 구역 한가운데(들머리)`, a.x + (a.w >> 1), a.y + (a.h >> 1)])];
+    ...npcs.map(n => [n.name, n.x, n.y])];
   for (const [, x, y] of stand) {
     const k = idx(x, y);
     if (seen[k] || !open(k)) continue;
@@ -551,6 +570,147 @@ function overworld(data) {
   // 서는 자리는 모두 걸을 수 있는 칸이어야 — 시안을 고쳐 어긋나면 여기서 알림
   const bad = stand.filter(([, x, y]) => !seen[idx(x, y)]);
   if (bad.length) throw new Error(`걸을 수 없는 자리 — ${bad.map(([n, x, y]) => `${n}(${x},${y})`).join(', ')}`);
+
+  // 5) 구역 — 땅 모양대로 (AREA_SHARE · AREA_REACH · AREA_WOBBLE). 그 격의 걸을 수 있는 땅(성 안은 뺌) 위에서, 구역 자리마다 땅을 따라 잰 거리
+  //    (대각선은 1.41 — 트인 곳에서 둥글게)로 나눔: 가장 가까운 자리의 구역이 되, 그 자리까지가 둘째로 가까운 자리까지와 합친 거리의
+  //    AREA_SHARE 이하 · AREA_REACH 칸 이하인 칸만 (가장자리는 잡음으로 들쭉날쭉). 그 가운데 자리에서 걸어서 이어지는 한 덩어리만 남기고,
+  //    구역 속에 갇힌 나무 · 바위는 구역에 넣어 구멍 없이.
+  //    약한 것부터 길을 따라: 들어오는 곳에서의 거리 − 보스까지의 거리가 작은 구역부터, 가장 약한 것은 들어오는 곳에서 걸어서 가장 먼저 닿는 구역
+  for (let rank = 1; rank <= 6; rank++) {
+    const zi = data.ZONES.findIndex(z => z.rank === rank), zone = data.ZONES[zi];
+    const normals = data.ENEMIES.filter(e => e.zoneIndex === zi && e.kind === 'normal');
+    const land = k => seen[k] && open(k) && L.zoneAt(k % w, (k / w) | 0) === rank && L.bio[k] !== 8;
+    const walkLand = from => {                                // 땅을 따라 잰 거리 — 대각선은 1.41 (두 옆 칸이 다 땅일 때만), 못 가면 -1
+      const d = new Float64Array(w * h).fill(-1), heap = [[0, from]];
+      const push = it => { heap.push(it); for (let i = heap.length - 1; i > 0;) { const p = (i - 1) >> 1; if (heap[p][0] <= heap[i][0]) break; [heap[p], heap[i]] = [heap[i], heap[p]]; i = p; } };
+      const pop = () => {
+        const top = heap[0], last = heap.pop();
+        if (heap.length) {
+          heap[0] = last;
+          for (let i = 0; ;) {
+            const l = i * 2 + 1, r = l + 1; let m = i;
+            if (l < heap.length && heap[l][0] < heap[m][0]) m = l;
+            if (r < heap.length && heap[r][0] < heap[m][0]) m = r;
+            if (m === i) break;
+            [heap[m], heap[i]] = [heap[i], heap[m]]; i = m;
+          }
+        }
+        return top;
+      };
+      while (heap.length) {
+        const [dk, k] = pop();
+        if (d[k] >= 0) continue;
+        d[k] = dk;
+        const x = k % w, y = (k / w) | 0;
+        for (let ey = -1; ey <= 1; ey++) for (let ex = -1; ex <= 1; ex++) {
+          if (!ex && !ey) continue;
+          const nx = x + ex, ny = y + ey, j = idx(nx, ny);
+          if (!inside(nx, ny) || d[j] >= 0 || !land(j)) continue;
+          if (ex && ey && (!land(idx(x + ex, y)) || !land(idx(x, y + ey)))) continue;
+          push([dk + (ex && ey ? Math.SQRT2 : 1), j]);
+        }
+      }
+      return d;
+    };
+    const starts = seeds[rank].map(c => {                     // 자리 한가운데에서 가장 가까운 그 격의 땅
+      let best = -1, bestD = Infinity;
+      for (let y = c.y - 12; y <= c.y + 12; y++) for (let x = c.x - 12; x <= c.x + 12; x++) {
+        if (!inside(x, y) || !land(idx(x, y))) continue;
+        const dd = (x - c.x) ** 2 + (y - c.y) ** 2;
+        if (dd < bestD) { bestD = dd; best = idx(x, y); }
+      }
+      if (best < 0) throw new Error(`${rank}격 구역 자리 [${c.rect}] — 가까이에 그 격의 걸을 수 있는 땅이 없음`);
+      return best;
+    });
+    const dist = starts.map(walkLand);
+    const near = new Int16Array(w * h).fill(-1);               // 잡음을 얹은 조건을 지키는 칸의 가장 가까운 자리
+    for (let k = 0; k < w * h; k++) {
+      let a = -1, d1 = Infinity, d2 = Infinity;
+      dist.forEach((d, i) => { const v = d[k]; if (v < 0) return; if (v < d1) { d2 = d1; d1 = v; a = i; } else if (v < d2) d2 = v; });
+      if (a < 0) continue;
+      const e = d1 + (L.fbm((k % w) * 0.12, ((k / w) | 0) * 0.12, 90 + rank) - 0.5) * 2 * AREA_WOBBLE;
+      if (e <= AREA_REACH && (d2 === Infinity || e <= AREA_SHARE * (d1 + d2))) near[k] = a;
+    }
+    const owner = new Int16Array(w * h).fill(-1);              // 그 자리에서 걸어서(네 방향) 이어지는 것만 — 늘 한 덩어리
+    starts.forEach((s0, i) => {
+      if (near[s0] !== i) near[s0] = i;
+      const q = [s0];
+      owner[s0] = i;
+      while (q.length) {
+        const k = q.pop(), x = k % w, y = (k / w) | 0;
+        for (const [ex, ey] of STEP) {
+          const j = idx(x + ex, y + ey);
+          if (inside(x + ex, y + ey) && owner[j] < 0 && near[j] === i) { owner[j] = i; q.push(j); }
+        }
+      }
+    });
+    const fromEntry = walkFrom([idx(...L.spot1(...OVERWORLD_ENTRY[rank]))]);
+    const boss = posts.find(q => q.enemy === data.ENEMIES.find(e => e.zoneIndex === zi && e.kind === 'boss').id);
+    const toBoss = walkFrom([...Array(boss.w * boss.h).keys()].map(k => idx(boss.x + k % boss.w, boss.y + ((k / boss.w) | 0))));
+    const regions = starts.map((s0, i) => {
+      const cells = [];
+      for (let k = 0; k < w * h; k++) if (owner[k] === i) cells.push(k);
+      const xs = cells.map(k => k % w), ys = cells.map(k => (k / w) | 0);
+      const box = { x: Math.min(...xs) - 1, y: Math.min(...ys) - 1, w: Math.max(...xs) - Math.min(...xs) + 3, h: Math.max(...ys) - Math.min(...ys) + 3 };
+      const mine = new Set(cells);
+      // 구멍 메우기 — 둘레 밖에서 구역이 아닌 칸을 따라 퍼져 닿지 않는 칸은 구역에 갇힌 것
+      const outsideCell = new Set(), q = [];
+      for (let y = box.y; y < box.y + box.h; y++) for (let x = box.x; x < box.x + box.w; x++)
+        if ((x === box.x || y === box.y || x === box.x + box.w - 1 || y === box.y + box.h - 1) && !mine.has(idx(x, y))) { outsideCell.add(idx(x, y)); q.push([x, y]); }
+      while (q.length) {
+        const [x, y] = q.pop();
+        for (const [ex, ey] of STEP) {
+          const nx = x + ex, ny = y + ey, j = idx(nx, ny);
+          if (nx < box.x || ny < box.y || nx >= box.x + box.w || ny >= box.y + box.h || mine.has(j) || outsideCell.has(j)) continue;
+          outsideCell.add(j); q.push([nx, ny]);
+        }
+      }
+      for (let y = box.y + 1; y < box.y + box.h - 1; y++) for (let x = box.x + 1; x < box.x + box.w - 1; x++) {
+        const j = idx(x, y);
+        if (mine.has(j) || outsideCell.has(j)) continue;
+        if (owner[j] >= 0) throw new Error(`${rank}격 — 한 구역이 다른 구역을 감쌈`);
+        mine.add(j);
+      }
+      let sum = 0, n = 0, near = Infinity;
+      for (const k of mine) if (fromEntry[k] >= 0 && toBoss[k] >= 0) { sum += fromEntry[k] - toBoss[k]; n++; near = Math.min(near, fromEntry[k]); }
+      if (!n) throw new Error(`${rank}격 구역 자리 [${seeds[rank][i].rect}] — 들어오는 곳이나 보스에서 걸어서 닿지 않음`);
+      return { mine, box, score: sum / n, near };
+    }).sort((p, q) => p.score - q.score);
+    // 가장 약한 것은 들어오자마자 만나게 — 들어오는 곳에서 걸어서 가장 먼저 닿는 구역 (나머지는 위 순서대로)
+    const first = regions.reduce((b, r) => (r.near < b.near ? r : b));
+    regions.splice(regions.indexOf(first), 1);
+    regions.unshift(first);
+    regions.forEach((r, k) => {
+      clearMid(r);
+      const { x, y, polygon } = outline(r.mine, r.box);
+      areas.push({ name: normals[k].name, x, y, polygon, rank, monster: normals[k].id, zone: zone.id });
+    });
+  }
+
+  // 구역 들머리(js/map.js 의 areaMid 와 같은 셈 — 구역 칸들의 무게중심에 가장 가까운 걸을 수 있는 칸, 같으면 위 · 왼쪽) 둘레 나무를 베어 비워 둠.
+  // 벤 칸이 더 가까우면 들머리가 그리로 옮겨 가니, 들머리가 더 안 바뀔 때까지 되풀이합니다
+  function clearMid(r) {
+    let sx = 0, sy = 0;
+    for (const k of r.mine) { sx += k % w; sy += (k / w) | 0; }
+    const tx = sx / r.mine.size, ty = sy / r.mine.size;
+    const nearest = () => {
+      let best = -1, bestD = Infinity;
+      for (let y = r.box.y; y < r.box.y + r.box.h; y++) for (let x = r.box.x; x < r.box.x + r.box.w; x++) {
+        const k = idx(x, y);
+        if (!r.mine.has(k) || !open(k)) continue;
+        const d = (x - tx) ** 2 + (y - ty) ** 2;
+        if (d < bestD) { bestD = d; best = k; }
+      }
+      return best;
+    };
+    for (let mid = nearest(), guardN = 0; guardN < 20; guardN++) {
+      const x = mid % w, y = (mid / w) | 0;
+      for (let j = y - 1; j <= y + 1; j++) for (let i = x - 1; i <= x + 1; i++) { const k = idx(i, j); if (r.mine.has(k) && tiles[k] === TREE) tiles[k] = FLOOR; }
+      const next = nearest();
+      if (next === mid) break;
+      mid = next;
+    }
+  }
 
   return buildTmj({ w, h, tiles, areas, posts, ports, npcs });
 }

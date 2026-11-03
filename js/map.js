@@ -7,7 +7,8 @@
 //
 //  지도는 Tiled(무료 지도 편집기)가 바로 여는 JSON(.tmj)입니다 — parseTiled 가 읽습니다.
 //    ground   타일 층 — 타일셋에서 solid 속성이 붙은 타일은 지나갈 수 없습니다 (벽 · 물)
-//    areas    사각형 — 구역. 속성 rank · monster(적 id) · zone(지역 id). monster 가 없으면 이름뿐인 곳(첫 공간)
+//    areas    사각형 또는 다각형 — 구역. 속성 rank · monster(적 id) · zone(지역 id). monster 가 없으면 이름뿐인 곳(첫 공간)
+//             다각형이면 땅 모양을 따라 그린 구역 — 칸 가운데가 다각형 안에 드는 칸이 그 구역입니다
 //    posts    점 또는 사각형 — 정예 · 보스 · 히든 자리. 속성 enemy · blocks(길을 막는가)
 //    ports    사각형 — 드나드는 문. 이름 = 그 지도 안의 문 이름. 속성 to(「지도.문」 행선지) · opensAfter(꺾어야 열리는 보스 id)
 //             · label(문 위에 쓰는 글) · zone(행선지 지도가 아직 없을 때 나설 지역)
@@ -76,9 +77,29 @@
     const cell = o => ({ x: Math.floor(o.x / tw), y: Math.floor(o.y / th) });
 
     for (const o of objects('secrets')) eachCell(m, rect(o), (x, y) => { m.secret[y * w + x] = 1; m.solid[y * w + x] = 0; });
-    m.areas = objects('areas').map((o, i) => ({ index: i, name: o.name, ...rect(o), ...props(o) }));
+    // 구역 — x · y · w · h 는 다각형이면 그것을 감싸는 네모. 어느 칸이 어느 구역인지는 areaAt (겹치면 뒤의 것)
     m.areaAt = new Int16Array(w * h).fill(-1);
-    for (const a of m.areas) eachCell(m, a, (x, y) => { m.areaAt[y * w + x] = a.index; });
+    m.areas = objects('areas').map((o, i) => {
+      if (!o.polygon) return { index: i, name: o.name, ...rect(o), ...props(o) };
+      const pts = o.polygon.map(q => ({ x: (o.x + q.x) / tw, y: (o.y + q.y) / th }));
+      const x0 = Math.floor(Math.min(...pts.map(q => q.x))), y0 = Math.floor(Math.min(...pts.map(q => q.y)));
+      return { index: i, name: o.name, x: x0, y: y0, w: Math.ceil(Math.max(...pts.map(q => q.x))) - x0,
+               h: Math.ceil(Math.max(...pts.map(q => q.y))) - y0, poly: pts, ...props(o) };
+    });
+    for (const a of m.areas) {
+      if (!a.poly) { eachCell(m, a, (x, y) => { m.areaAt[y * w + x] = a.index; }); continue; }
+      for (let y = Math.max(0, a.y); y < Math.min(h, a.y + a.h); y++) {   // 줄마다 칸 가운데 높이에서 다각형 변과 만나는 곳 사이를 채움
+        const Y = y + 0.5, xs = [];
+        a.poly.forEach((q, k) => {
+          const r = a.poly[(k + 1) % a.poly.length];
+          if ((q.y <= Y) !== (r.y <= Y)) xs.push(q.x + (Y - q.y) * (r.x - q.x) / (r.y - q.y));
+        });
+        xs.sort((p1, p2) => p1 - p2);
+        for (let k = 0; k + 1 < xs.length; k += 2)
+          for (let x = Math.max(0, Math.ceil(xs[k] - 0.5)); x < Math.min(w, Math.ceil(xs[k + 1] - 0.5)); x++) m.areaAt[y * w + x] = a.index;
+      }
+    }
+    for (const a of m.areas) a.mid = areaMid(m, a);
     // 정해진 자리 — 점이면 한 칸, 사각형이면 그만큼 (큰 보스는 제 크기 n × n 으로 고갯길을 막고 섭니다)
     m.posts = objects('posts').map(o => ({ name: o.name, ...(o.point || !o.width ? { ...cell(o), w: 1, h: 1 } : rect(o)), ...props(o) }));
     m.ports = objects('ports').map(o => ({ name: o.name, ...rect(o), ...props(o) }));
@@ -86,6 +107,25 @@
     const start = m.npcs.find(n => n.name === 'start');
     m.start = start ? { x: start.x, y: start.y } : { x: 1, y: 1 };
     return m;
+  }
+
+  // 구역의 들머리 — 네모면 한가운데 칸, 다각형이면 구역 칸들의 무게중심에 가장 가까운 걸을 수 있는 구역 칸
+  // (가까운 것이 여럿이면 위 · 왼쪽 것). 불러오면 그 지역 첫 구역의 들머리에 섭니다. tools/map-gen.js 의 들머리와 같은 셈
+  function areaMid(m, a) {
+    let tx = a.x + (a.w >> 1), ty = a.y + (a.h >> 1);
+    if (a.poly) {
+      let sx = 0, sy = 0, n = 0;
+      eachCell(m, a, (x, y) => { if (m.areaAt[y * m.w + x] === a.index) { sx += x; sy += y; n++; } });
+      if (n) { tx = sx / n; ty = sy / n; }
+    }
+    let best = null, bestD = Infinity;
+    eachCell(m, a, (x, y) => {
+      const k = y * m.w + x;
+      if (m.areaAt[k] !== a.index || m.solid[k]) return;
+      const d = (x - tx) ** 2 + (y - ty) ** 2;
+      if (d < bestD) { bestD = d; best = { x, y }; }
+    });
+    return best || { x: a.x + (a.w >> 1), y: a.y + (a.h >> 1) };
   }
 
   // ---------- 세계 (한 지도 위의 지금 상태) ----------
@@ -115,7 +155,8 @@
       mobs: [],
       nextMob: 1,
       encounter: null,                    // 닿아서 싸움 화면이 떠 있는 동안 { mob | post, first }
-      lastArea: -1                        // 마지막으로 서 있던 구역 (구역 밖 길 위에서는 그대로)
+      lastArea: -1,                       // 마지막으로 서 있던 구역 (구역 밖 길 위에서는 그대로)
+      fields: {}                          // 구역 · 몸 크기마다 「제 구역까지 몇 걸음」 (homeField)
     };
     const a = areaAt(w, map.start.x, map.start.y);
     if (a) w.lastArea = a.index;
@@ -141,8 +182,6 @@
   const overlaps = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
   // 두 몸 사이의 체비쇼프 거리 (한 칸짜리끼리면 가로 · 세로 중 큰 차이 — 맞닿으면 1, 겹치면 0 이하)
   const apart = (a, b) => Math.max(b.x - (a.x + a.w), a.x - (b.x + b.w), b.y - (a.y + a.h), a.y - (b.y + b.h)) + 1;
-  // 몸 전체가 구역 안에 드는 왼쪽 위 칸들의 사각형 — 큰 몬스터의 「제 구역」
-  const home = (a, n) => ({ x: a.x, y: a.y, w: Math.max(1, a.w - n + 1), h: Math.max(1, a.h - n + 1) });
 
   function areaAt(w, x, y) {
     const i = w.map.areaAt[y * w.map.w + x];
@@ -156,6 +195,48 @@
     const port = portAt(w, x, y);
     return !!port && !w.hooks.portOpen(port);             // 닫힌 문은 벽과 같습니다
   }
+  // ---------- 제 구역 ----------
+  // 몬스터가 「제 구역 안」이라는 것은 몸(n × n)의 모든 칸이 그 구역 칸이라는 것 — 구역이 네모가 아니어도 그대로.
+  // 구역마다 몸의 왼쪽 위 칸이 어디에 있으면 제 구역까지 몇 걸음인지를 한 번 재 둡니다 (안이면 0 · 벽은 못 지나감).
+  // 구역을 감싸는 네모에서 가장자리 밖 LEASH + 5칸까지만 잽니다 — 쫓다가도 그보다 멀리는 안 나가니까.
+  // 몸 크기마다 따로 잽니다 (n — 그 구역 몬스터의 크기)
+  function homeField(w, a, n) {
+    const key = a.index * 8 + n;
+    if (w.fields[key]) return w.fields[key];
+    const m = w.map, P = RULES.LEASH + 5;
+    const x0 = Math.max(0, a.x - P), y0 = Math.max(0, a.y - P);
+    const fw = Math.min(m.w, a.x + a.w + P) - x0, fh = Math.min(m.h, a.y + a.h + P) - y0;
+    const d = new Int16Array(fw * fh).fill(-1), q = [];
+    const body = (x, y, ok) => {
+      if (x + n > m.w || y + n > m.h) return false;
+      for (let j = y; j < y + n; j++) for (let i = x; i < x + n; i++) if (!ok(j * m.w + i)) return false;
+      return true;
+    };
+    for (let j = 0; j < fh; j++) for (let i = 0; i < fw; i++)
+      if (body(x0 + i, y0 + j, k => m.areaAt[k] === a.index)) { d[j * fw + i] = 0; q.push(j * fw + i); }
+    for (let k = 0; k < q.length; k++) {
+      const i = q[k] % fw, j = (q[k] / fw) | 0;
+      for (const [dx, dy] of STEPS) {
+        const ni = i + dx, nj = j + dy, nk = nj * fw + ni;
+        if (ni < 0 || nj < 0 || ni >= fw || nj >= fh || d[nk] >= 0 || !body(x0 + ni, y0 + nj, c => !m.solid[c])) continue;
+        d[nk] = d[q[k]] + 1; q.push(nk);
+      }
+    }
+    return (w.fields[key] = { x0, y0, fw, fh, d });
+  }
+  // 몸의 왼쪽 위 칸이 x · y 일 때 제 구역까지 몇 걸음 (안이면 0, 잰 곳 밖이거나 막혀 못 가면 Infinity)
+  function homeDist(f, x, y) {
+    const i = x - f.x0, j = y - f.y0;
+    if (i < 0 || j < 0 || i >= f.fw || j >= f.fh) return Infinity;
+    const v = f.d[j * f.fw + i];
+    return v < 0 ? Infinity : v;
+  }
+  // 몸이 제 구역 안에 드는 왼쪽 위 칸마다 fn(x, y)
+  function eachHome(w, a, n, fn) {
+    const f = homeField(w, a, n);
+    for (let j = 0; j < f.fh; j++) for (let i = 0; i < f.fw; i++) if (f.d[j * f.fw + i] === 0) fn(f.x0 + i, f.y0 + j);
+  }
+
   // 몬스터(n × n, 왼쪽 위 x · y)가 들어설 수 있는가 — 몸이 닿는 칸 어디에도 벽 · 다른 몬스터 · 정예 자리 · 문 · 내가 없어야 합니다.
   // self 는 움직이려는 그 몬스터 (제 몸과는 안 부딪힘)
   function freeForMob(w, x, y, n = 1, self = null) {
@@ -199,7 +280,7 @@
     const p = w.player;
     const n = RULES.SPAWN_MIN + Math.floor(w.rng() * (RULES.SPAWN_MAX - RULES.SPAWN_MIN + 1));
     const s = w.hooks.size(a.monster) || 1, me = body(p.x, p.y, 1), free = [];
-    eachCell(w.map, home(a, s), (x, y) => {
+    eachHome(w, a, s, (x, y) => {
       if (freeForMob(w, x, y, s) && apart(body(x, y, s), me) > RULES.SPAWN_CLEAR) free.push(body(x, y, s));
     });
     for (let i = free.length - 1; i > 0; i--) { const j = Math.floor(w.rng() * (i + 1)); [free[i], free[j]] = [free[j], free[i]]; }
@@ -217,7 +298,7 @@
   function freeSpot(w, a, self) {
     const p = w.player, me = body(p.x, p.y, 1), outOfSight = [], inSight = [];
     const s = w.hooks.size(a.monster) || 1;
-    eachCell(w.map, home(a, s), (x, y) => {
+    eachHome(w, a, s, (x, y) => {
       const b = body(x, y, s);
       if (!freeForMob(w, x, y, s, self) || w.mobs.some(m => m !== self && apart(body(m.x, m.y, sizeOf(m)), b) < RULES.SPAWN_GAP)) return;
       (apart(b, me) > RULES.SIGHT ? outOfSight : inSight).push({ x, y });
@@ -282,8 +363,8 @@
 
   // 지금 무엇을 할지 — 어슬렁(wander) · 쫓기(chase) · 달아나기(flee) · 제 구역으로 돌아가기(return)
   function think(w, m) {
-    const p = w.player, a = w.map.areas[m.area], n = sizeOf(m);
-    const d = outside(body(m.x, m.y, n), p.x, p.y), out = outside(home(a, n), m.x, m.y);   // 내 칸까지 · 제 구역 밖으로 — 몸 기준
+    const p = w.player, n = sizeOf(m);
+    const d = outside(body(m.x, m.y, n), p.x, p.y), out = homeDist(homeField(w, w.map.areas[m.area], n), m.x, m.y);   // 내 칸까지 · 제 구역 밖으로 — 몸 기준
     const before = m.mode;
     if (m.mode === 'return' && out > 0) return;
     if (m.temper === 'aggro' || m.angry > 0) {
@@ -297,7 +378,7 @@
   }
 
   function act(w, m, ev) {
-    const p = w.player, n = sizeOf(m), mine = home(w.map.areas[m.area], n);
+    const p = w.player, n = sizeOf(m), a = w.map.areas[m.area], f = homeField(w, a, n);
     if (m.mode === 'chase') {
       const s = toward(w, m, (x, y) => gap(body(x, y, n), p.x, p.y), true);
       if (s && inRect(body(s.x, s.y, n), p.x, p.y)) return meet(w, ev, { mob: m, first: 'foe' });
@@ -308,12 +389,12 @@
       if (s) { m.x = s.x; m.y = s.y; }
       m.wait = 1 / RULES.FLEE_SPEED;
     } else if (m.mode === 'return') {
-      const s = toward(w, m, (x, y) => gap(mine, x, y), false);
+      const s = homeward(w, m, a, f);
       if (s) { m.x = s.x; m.y = s.y; }
       m.wait = 1 / RULES.CHASE_SPEED;
     } else {
       const opts = STEPS.map(([dx, dy]) => ({ x: m.x + dx, y: m.y + dy }))
-        .filter(c => inRect(mine, c.x, c.y) && freeForMob(w, c.x, c.y, n, m));
+        .filter(c => homeDist(f, c.x, c.y) === 0 && freeForMob(w, c.x, c.y, n, m));
       if (opts.length && w.rng() < 0.75) { const c = opts[Math.floor(w.rng() * opts.length)]; m.x = c.x; m.y = c.y; }
       m.wait = RULES.WANDER_EVERY * (0.6 + w.rng() * 0.8);
     }
@@ -335,13 +416,25 @@
     return best;
   }
 
+  // 제 구역 쪽으로 한 걸음 — 잰 걸음 수가 줄어드는 칸으로. 잰 곳 밖까지 벗어났으면 구역을 감싸는 네모 쪽으로
+  function homeward(w, m, a, f) {
+    const here = homeDist(f, m.x, m.y);
+    if (here === Infinity) return toward(w, m, (x, y) => gap(a, x, y), false);
+    let best = null, bestScore = here;
+    for (const [dx, dy] of STEPS) {
+      const x = m.x + dx, y = m.y + dy, score = homeDist(f, x, y) + w.rng() * 0.5;
+      if (score < bestScore && freeForMob(w, x, y, sizeOf(m), m)) { best = { x, y }; bestScore = score; }
+    }
+    return best;
+  }
+
   // 제 구역 안에서 나와 더 멀어지는 칸. 더 멀어질 데가 없으면(구석) null — 몰면 잡힙니다.
   function away(w, m) {
-    const p = w.player, n = sizeOf(m), mine = home(w.map.areas[m.area], n);
+    const p = w.player, n = sizeOf(m), f = homeField(w, w.map.areas[m.area], n);
     let best = null, bestD = outside(body(m.x, m.y, n), p.x, p.y);
     for (const [dx, dy] of STEPS) {
       const x = m.x + dx, y = m.y + dy;
-      if (!inRect(mine, x, y) || !freeForMob(w, x, y, n, m)) continue;
+      if (homeDist(f, x, y) !== 0 || !freeForMob(w, x, y, n, m)) continue;
       const d = outside(body(x, y, n), p.x, p.y) + w.rng() * 0.1;
       if (d > bestD) { best = { x, y }; bestD = d; }
     }

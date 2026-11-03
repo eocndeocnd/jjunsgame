@@ -116,7 +116,7 @@ function beginRun(custom) {   // 여정 하나 — 다음 여정은 레벨 1 · 
   let start = map.start;
   if (rank) {
     const a = firstArea(rank);
-    start = { x: a.x + (a.w >> 1), y: a.y + (a.h >> 1) };
+    start = { x: a.mid.x, y: a.mid.y };
     run.zoneIndex = ZONES.findIndex(z => z.rank === rank);
   }
   if (custom) {

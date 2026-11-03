@@ -439,6 +439,8 @@ function walk(m, sources, blocked) {
   return d;
 }
 const cellsOf = (m, a) => { const out = []; for (let y = a.y; y < a.y + a.h; y++) for (let x = a.x; x < a.x + a.w; x++) out.push(y * m.w + x); return out; };
+// 구역의 칸 — 다각형 구역은 감싸는 네모가 아니라 그 안에 드는 칸만
+const areaCells = (m, a) => cellsOf(m, a).filter(i => m.areaAt[i] === a.index);
 
 test('overworld — 1~6격 몬스터가 모두 한 번씩, 구역 48개', () => {
   const data = loadData();
@@ -462,13 +464,13 @@ test('overworld — 같은 격 구역끼리는 보스 없이 걸어서 이어지
   const posts = new Set(m.posts.flatMap(p => cellsOf(m, p)));
   for (let rank = 1; rank <= 6; rank++) {
     const mine = m.areas.filter(a => a.rank === rank), first = mine[0];
-    const d = walk(m, [(first.y + (first.h >> 1)) * m.w + first.x + (first.w >> 1)], posts);
-    for (const a of mine) assert.ok(cellsOf(m, a).some(i => d[i] >= 0), `${rank}격 ${a.name} 구역`);
+    const d = walk(m, [first.mid.y * m.w + first.mid.x], posts);
+    for (const a of mine) assert.ok(areaCells(m, a).some(i => d[i] >= 0), `${rank}격 ${a.name} 구역`);
   }
   // 덩어리 숲 — 땅(바닥 · 길 · 나무 · 바위) 가운데 나무 · 바위는 적게
   const [FLOOR, , , TREE, ROCK, ROAD] = [0, 1, 2, 3, 4, 5];
   for (const rank of [2, 4]) {
-    const land = m.areas.filter(a => a.rank === rank).flatMap(a => cellsOf(m, a)).filter(i => [FLOOR, TREE, ROCK, ROAD].includes(m.tile[i]));
+    const land = m.areas.filter(a => a.rank === rank).flatMap(a => areaCells(m, a)).filter(i => [FLOOR, TREE, ROCK, ROAD].includes(m.tile[i]));
     const open = land.filter(i => m.tile[i] === FLOOR || m.tile[i] === ROAD).length / land.length;
     assert.ok(open >= 0.7, `${rank}격 트인 칸 ${Math.round(open * 100)}%`);
   }
@@ -484,7 +486,7 @@ test('overworld — 한 줄로 열린다: 1격 → 2 · 3 · 4격(던전 가디�
   };
   const ranks = blocked => {                                       // 그 격의 구역 하나라도 닿는 격들
     const d = walk(m, [start], blocked);
-    return [1, 2, 3, 4, 5, 6].filter(r => m.areas.filter(a => a.rank === r).some(a => cellsOf(m, a).some(i => d[i] >= 0)));
+    return [1, 2, 3, 4, 5, 6].filter(r => m.areas.filter(a => a.rank === r).some(a => areaCells(m, a).some(i => d[i] >= 0)));
   };
   assert.deepEqual(ranks(allPosts), [1], '처음에는 1격만 — 지하수로에서 4격으로 새는 길 없음');
   assert.deepEqual(ranks(but('dungeonguardian')), [1, 2, 3, 4], '수문 너머 숲, 숲에서 그대로 왕국 · 4격');
@@ -497,11 +499,11 @@ test('overworld — 한 줄로 열린다: 1격 → 2 · 3 · 4격(던전 가디�
   assert.ok(reaches(but('dungeonguardian', 'giantking', 'lichking', 'worldworm', 'demonking')), '벌레를 꺾으면 문까지');
   // 지도 전체가 이어져 있다
   const all = walk(m, [start]);
-  assert.ok(m.areas.every(a => cellsOf(m, a).filter(i => !m.solid[i]).every(i => all[i] >= 0)), '모든 구역의 걸을 수 있는 칸에 닿음');
+  assert.ok(m.areas.every(a => areaCells(m, a).filter(i => !m.solid[i]).every(i => all[i] >= 0)), '모든 구역의 걸을 수 있는 칸에 닿음');
   // 들머리(첫 구역 한가운데) · 상인 자리는 걸을 수 있는 칸
   for (const a of m.areas.filter(x => x.monster)) {
     const first = m.areas.find(x => x.zone === a.zone && x.monster);
-    assert.ok(!m.solid[(first.y + (first.h >> 1)) * m.w + first.x + (first.w >> 1)], `${a.zone} 들머리`);
+    assert.ok(!m.solid[first.mid.y * m.w + first.mid.x] && m.areaAt[first.mid.y * m.w + first.mid.x] === first.index, `${a.zone} 들머리`);
   }
   for (const n of m.npcs) assert.ok(!m.solid[n.y * m.w + n.x], `${n.name} 자리`);
 });
@@ -581,6 +583,41 @@ test('지도 전부 — 정해진 자리는 그 적의 크기만큼, 걸을 수 
       assert.ok(mine.length >= R.SPAWN_MIN, `${name} ${a.name}(${foe(a.monster).size}×${foe(a.monster).size}) — ${mine.length}마리`);
     }
   }
+});
+
+test('지도 전부 — 구역마다 걸을 수 있는 칸이 한 덩어리 (나무 · 물 · 벼랑이 구역을 가르지 않음) · overworld 구역은 땅 모양대로(다각형) · 들머리는 그 구역 안 걸을 수 있는 칸', () => {
+  for (const name of allMapNames()) {
+    const m = loadMap(name);
+    for (const a of m.areas.filter(x => x.monster)) {
+      const cells = areaCells(m, a).filter(i => !m.solid[i]), mine = new Set(cells);
+      const seen = new Set([cells[0]]), q = [cells[0]];
+      while (q.length) {
+        const i = q.pop();
+        for (const j of [i - 1, i + 1, i - m.w, i + m.w]) if (mine.has(j) && !seen.has(j) && Math.abs((j % m.w) - (i % m.w)) <= 1) { seen.add(j); q.push(j); }
+      }
+      assert.equal(seen.size, cells.length, `${name} ${a.name} — ${cells.length}칸 가운데 ${seen.size}칸만 이어짐`);
+      const k = a.mid.y * m.w + a.mid.x;
+      assert.ok(m.areaAt[k] === a.index && !m.solid[k], `${name} ${a.name} 들머리`);
+      if (name === 'overworld') assert.ok(a.poly, `${a.name} — 다각형`);
+    }
+  }
+});
+
+test('다각형 구역 — 칸 가운데가 안에 드는 칸만, 들머리는 무게중심에 가장 가까운 걸을 수 있는 칸', () => {
+  // ㄱ자 구역 (칸 단위 꼭짓점 → 픽셀) — 가로 0~6 × 세로 0~2, 그 아래 세로 줄 0~2 × 2~6
+  const tmj = gen.buildTmj({ w: 8, h: 8, tiles: new Array(64).fill(gen.FLOOR),
+    areas: [{ name: 'L', x: 0, y: 0, polygon: [{ x: 0, y: 0 }, { x: 6, y: 0 }, { x: 6, y: 2 }, { x: 2, y: 2 }, { x: 2, y: 6 }, { x: 0, y: 6 }], monster: 'm', rank: 1 }] });
+  const m = M.parseTiled(tmj, 'L');
+  const a = m.areas[0], inA = (x, y) => m.areaAt[y * m.w + x] === 0;
+  assert.deepEqual([a.x, a.y, a.w, a.h], [0, 0, 6, 6]);
+  assert.equal(areaCells(m, a).length, 6 * 2 + 2 * 4);
+  assert.ok(inA(5, 1) && inA(1, 5) && !inA(3, 3) && !inA(6, 0) && !inA(0, 6));
+  assert.ok(inA(a.mid.x, a.mid.y));
+  // 구역 밖으로 나가지 않고 어슬렁 — 꺾인 모양 그대로
+  const w = M.createWorld(m, {}, 3);
+  w.mobs = [];
+  const foe = mob(w, 4, 0, 'passive');
+  run(w, 20, () => assert.ok(inA(foe.x, foe.y), `구역 안 (${foe.x},${foe.y})`));
 });
 
 test('일곱 장 — 어귀의 문은 문의 광장의 그 장 문으로, 광장의 문은 그 장의 어귀로', () => {

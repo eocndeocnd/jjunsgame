@@ -1522,11 +1522,11 @@ function mapPaused() {
     || isAnyModalOpen() || up('title') || up('tutorial') || up('talk');
 }
 
-// 그 지도에서 그 지역의 들머리 — 가장 약한 일반의 구역 한가운데. 첫 지역이거나 지역이 없는 지도(문의 광장)면 그 지도의 시작점.
+// 그 지도에서 그 지역의 들머리 — 가장 약한 일반의 구역 들머리(구역 한가운데, map.js 의 areaMid). 첫 지역이거나 지역이 없는 지도(문의 광장)면 그 지도의 시작점.
 function mapEntrance(data, zi) {
   const weakest = zi > 0 && ENEMIES.find(e => e.zoneIndex === zi && e.kind === 'normal');
   const a = weakest && data.areas.find(x => x.monster === weakest.id);
-  return a ? { x: a.x + (a.w >> 1), y: a.y + (a.h >> 1) } : data.start;
+  return a ? { x: a.mid.x, y: a.mid.y } : data.start;
 }
 
 // 저장해 둔 칸 — 지도 안의 걸을 수 있는 칸이고, 그 칸의 지역이 지금 지역과 맞을 때만 (구역 밖 길 위면 그대로 믿습니다).
