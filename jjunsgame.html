@@ -2740,7 +2740,8 @@ body.drawer-open .drawer { transform: none; }
 .drawer-body { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
                padding: 6px 14px calc(env(safe-area-inset-bottom) + 22px); }
 .drawer .panel { display: none; }
-body[data-tab="hero"] .hero-panel, body[data-tab="gear"] .gear-panel, body[data-tab="log"] .log-panel { display: flex; }
+body[data-tab="stats"] .stats-panel, body[data-tab="gear"] .gear-panel, body[data-tab="hero"] .hero-panel,
+body[data-tab="settings"] .settings-panel { display: flex; }
 .drawer .topbar { margin: 4px 0 0; }
 .drawer .footer { margin-top: 0; }
 @media (min-width: 861px) {
@@ -2846,24 +2847,32 @@ body.meeting .enc-portrait .portrait-ic { font-size: clamp(90px, 34vw, 190px); }
 <button class="btn hud-handle" id="drawerBtn">메뉴</button>
 <div id="mapOverlay" class="map-overlay"></div>
 
-<!-- 메뉴 서랍 — 나 · 전리품 · 기록 (예전 세 패널 그대로). 폰은 아래에서, 넓은 화면은 오른쪽에서 나옵니다 (ui.js 의 showTab) -->
+<!-- 메뉴 서랍 — 스탯 · 전리품 · 나 · 설정. 폰은 아래에서, 넓은 화면은 오른쪽에서 나옵니다 (ui.js 의 showTab) -->
 <div class="drawer-back" id="drawerBack"></div>
 <div class="drawer" id="drawer">
   <div class="drawer-head">
     <nav class="mobile-tabs" id="mobileTabs">
-      <button data-tab="hero"><span class="mt-icon">◆</span>나</button>
+      <button data-tab="stats"><span class="mt-icon">▲</span>스탯</button>
       <button data-tab="gear"><span class="mt-icon">■</span>전리품</button>
-      <button data-tab="log"><span class="mt-icon">≡</span>기록</button>
+      <button data-tab="hero"><span class="mt-icon">◆</span>나</button>
+      <button data-tab="settings"><span class="mt-icon">≡</span>설정</button>
     </nav>
     <button class="drawer-x" id="drawerX" aria-label="닫기">✕</button>
   </div>
   <div class="drawer-body" id="drawerBody">
 
-  <!-- 나 -->
-  <section class="panel hero-panel">
-    <!-- 여태까지의 기록. 회차를 넘겨도 남는 것들입니다. -->
-    <div class="frame"><div class="records" id="records"></div></div>
+  <!-- 스탯 — 분배판과 스탯 목록. 지도 위 · 결과의 「스탯 분배」도 이 칸으로 옵니다 (ui.js 의 openAlloc) -->
+  <section class="panel stats-panel">
+    <div class="frame alloc-frame" id="allocFrame">
+      <h3 class="alloc-title">스탯 분배 <span class="count" id="pointCount"></span></h3>
+      <div id="alloc" class="alloc"></div>
+    </div>
 
+    <div class="frame"><ul class="stats" id="heroStats"></ul></div>
+  </section>
+
+  <!-- 나 — 레벨 · 격 · 경험치 · 에너지, 여태까지의 기록 -->
+  <section class="panel hero-panel">
     <div class="frame">
       <div class="level-row">
         <span class="level-badge" id="heroLevel">Lv.1</span>
@@ -2883,15 +2892,8 @@ body.meeting .enc-portrait .portrait-ic { font-size: clamp(90px, 34vw, 190px); }
       </div>
     </div>
 
-    <!-- 스탯 분배 — 예전엔 레벨 옆 단추로 창을 띄웠는데, 이 칸 안에 바로 펼쳐 둡니다.
-         지도 위 · 결과의 「스탯 분배」도 이리로 옵니다 (ui.js 의 openAlloc) -->
-    <div class="frame alloc-frame" id="allocFrame">
-      <h3 class="alloc-title">스탯 분배 <span class="count" id="pointCount"></span></h3>
-      <div id="alloc" class="alloc"></div>
-    </div>
-
-    <div class="frame"><ul class="stats" id="heroStats"></ul></div>
-
+    <!-- 여태까지의 기록. 회차를 넘겨도 남는 것들입니다. -->
+    <div class="frame"><div class="records" id="records"></div></div>
   </section>
 
   <!-- 전리품 -->
@@ -2908,8 +2910,8 @@ body.meeting .enc-portrait .portrait-ic { font-size: clamp(90px, 34vw, 190px); }
     </div>
   </section>
 
-  <!-- 기록 + 설정 — 맨 위 이름표(제목 명패)를 빠르게 다섯 번 누르면 관리자 창. 기록은 길어서 접혀 있고 「보기」로 펼칩니다 -->
-  <section class="panel log-panel">
+  <!-- 설정 — 기록 + 설정. 맨 위 이름표(제목 명패)를 빠르게 다섯 번 누르면 관리자 창. 기록은 길어서 접혀 있고 「보기」로 펼칩니다 -->
+  <section class="panel settings-panel">
     <header class="topbar">
       <div class="brand">
         <span class="logo">◣◥</span>
@@ -10237,7 +10239,7 @@ function renderHero() {
   const total = heroStats();
 
   $('heroLevel').textContent = 'Lv.' + fmtLevel(run.level);
-  // 회차는 바로 위 기록 칸에 있습니다 — 여기 또 적으면 한 패널에 같은 숫자가 두 번 찍힙니다
+  // 회차는 바로 아래 기록 칸에 있습니다 — 여기 또 적으면 한 패널에 같은 숫자가 두 번 찍힙니다
 
   // 내 격 — 레벨이 올라가면 격이 바뀝니다.
   // 아직 모르는 격(마왕 너머)은 이름도, 다음 단계가 있다는 것도 보이지 않습니다.
@@ -11565,7 +11567,7 @@ function wireJourney() {
     b.addEventListener('click', () => { if (fightLocked()) return; switchSet(Number(b.dataset.jset)); Sound.play('equip'); render(); });
   }
   on('rosterBtn',    openRosterModal);
-  on('jAllocBtn',    openAlloc);       // 「나」 칸 안의 분배판으로
+  on('jAllocBtn',    openAlloc);       // 「스탯」 칸의 분배판으로
   on('shopBtn',      () => { Sound.play('encounter'); openShop(); });
   const rab = $('rosterAllBtn');
   if (rab && !rab.dataset.wired) {
@@ -11616,12 +11618,12 @@ function wireJourney() {
   });
 }
 
-// 스탯 분배 — 서랍의 「나」 칸을 열고 그 안의 분배판까지 내려가 한 번 반짝입니다.
+// 스탯 분배 — 서랍의 「스탯」 칸을 열고 맨 위 분배판을 한 번 반짝입니다.
 // 지도 위 · 결과의 「스탯 분배」가 부릅니다. 결과는 그대로 둔 채 서랍만 열리고, 닫으면 결과로 돌아옵니다.
 // (예전엔 따로 창을 띄웠는데 서랍 칸 안에 바로 펼쳐 두는 쪽으로 바꿨습니다 — 사용자 결정)
 function openAlloc() {
   if (fightLocked()) return;
-  showTab('hero');
+  showTab('stats');
   render();
   const frame = $('allocFrame'), el = $('alloc');
   if (!frame || !el) return;
@@ -11705,11 +11707,10 @@ function wireKeys() {
 
 const KEY_HINT = '<kbd>Space</kbd>';
 
-// ---------- 하단 탭 (좁은 화면 전용) ----------
-// 넓은 화면에서는 탭 바가 숨겨져 있고 세 패널이 한꺼번에 보이므로,
-// data-tab 을 바꿔도 아무 일도 일어나지 않습니다.
-// 'journey' 는 지도(서랍 닫힘), 'hero' · 'gear' · 'log' 는 메뉴 서랍의 그 칸 — 서랍이 열려 있는 동안 지도는 멈춥니다 (mapPaused)
-let drawerTab = 'hero';   // 손잡이로 다시 열 때 마지막에 본 칸
+// ---------- 메뉴 서랍의 칸 ----------
+// 'journey' 는 지도(서랍 닫힘), 'stats' · 'gear' · 'hero' · 'settings' 는 메뉴 서랍의 스탯 · 전리품 · 나 · 설정 칸
+// — 서랍이 열려 있는 동안 지도는 멈춥니다 (mapPaused)
+let drawerTab = 'stats';   // 손잡이로 다시 열 때 마지막에 본 칸
 function showTab(name) {
   // 탭을 옮기면 열려 있던 부위 창은 닫습니다 (NEW! 도 그때 꺼집니다)
   if (name !== 'gear' && isSlotModalOpen()) closeSlotModal();

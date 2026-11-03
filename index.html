@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/galmuri@2.40.3/dist/galmuri.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/neodgm/neodgm-webfont@1.601/neodgm/style.css">
-<link rel="stylesheet" href="css/style.css?v=20261103192924">
+<link rel="stylesheet" href="css/style.css?v=20261103202021">
 </head>
 <body data-tab="journey">
 
@@ -32,24 +32,32 @@
 <button class="btn hud-handle" id="drawerBtn">메뉴</button>
 <div id="mapOverlay" class="map-overlay"></div>
 
-<!-- 메뉴 서랍 — 나 · 전리품 · 기록 (예전 세 패널 그대로). 폰은 아래에서, 넓은 화면은 오른쪽에서 나옵니다 (ui.js 의 showTab) -->
+<!-- 메뉴 서랍 — 스탯 · 전리품 · 나 · 설정. 폰은 아래에서, 넓은 화면은 오른쪽에서 나옵니다 (ui.js 의 showTab) -->
 <div class="drawer-back" id="drawerBack"></div>
 <div class="drawer" id="drawer">
   <div class="drawer-head">
     <nav class="mobile-tabs" id="mobileTabs">
-      <button data-tab="hero"><span class="mt-icon">◆</span>나</button>
+      <button data-tab="stats"><span class="mt-icon">▲</span>스탯</button>
       <button data-tab="gear"><span class="mt-icon">■</span>전리품</button>
-      <button data-tab="log"><span class="mt-icon">≡</span>기록</button>
+      <button data-tab="hero"><span class="mt-icon">◆</span>나</button>
+      <button data-tab="settings"><span class="mt-icon">≡</span>설정</button>
     </nav>
     <button class="drawer-x" id="drawerX" aria-label="닫기">✕</button>
   </div>
   <div class="drawer-body" id="drawerBody">
 
-  <!-- 나 -->
-  <section class="panel hero-panel">
-    <!-- 여태까지의 기록. 회차를 넘겨도 남는 것들입니다. -->
-    <div class="frame"><div class="records" id="records"></div></div>
+  <!-- 스탯 — 분배판과 스탯 목록. 지도 위 · 결과의 「스탯 분배」도 이 칸으로 옵니다 (ui.js 의 openAlloc) -->
+  <section class="panel stats-panel">
+    <div class="frame alloc-frame" id="allocFrame">
+      <h3 class="alloc-title">스탯 분배 <span class="count" id="pointCount"></span></h3>
+      <div id="alloc" class="alloc"></div>
+    </div>
 
+    <div class="frame"><ul class="stats" id="heroStats"></ul></div>
+  </section>
+
+  <!-- 나 — 레벨 · 격 · 경험치 · 에너지, 여태까지의 기록 -->
+  <section class="panel hero-panel">
     <div class="frame">
       <div class="level-row">
         <span class="level-badge" id="heroLevel">Lv.1</span>
@@ -69,15 +77,8 @@
       </div>
     </div>
 
-    <!-- 스탯 분배 — 예전엔 레벨 옆 단추로 창을 띄웠는데, 이 칸 안에 바로 펼쳐 둡니다.
-         지도 위 · 결과의 「스탯 분배」도 이리로 옵니다 (ui.js 의 openAlloc) -->
-    <div class="frame alloc-frame" id="allocFrame">
-      <h3 class="alloc-title">스탯 분배 <span class="count" id="pointCount"></span></h3>
-      <div id="alloc" class="alloc"></div>
-    </div>
-
-    <div class="frame"><ul class="stats" id="heroStats"></ul></div>
-
+    <!-- 여태까지의 기록. 회차를 넘겨도 남는 것들입니다. -->
+    <div class="frame"><div class="records" id="records"></div></div>
   </section>
 
   <!-- 전리품 -->
@@ -94,8 +95,8 @@
     </div>
   </section>
 
-  <!-- 기록 + 설정 — 맨 위 이름표(제목 명패)를 빠르게 다섯 번 누르면 관리자 창. 기록은 길어서 접혀 있고 「보기」로 펼칩니다 -->
-  <section class="panel log-panel">
+  <!-- 설정 — 기록 + 설정. 맨 위 이름표(제목 명패)를 빠르게 다섯 번 누르면 관리자 창. 기록은 길어서 접혀 있고 「보기」로 펼칩니다 -->
+  <section class="panel settings-panel">
     <header class="topbar">
       <div class="brand">
         <span class="logo">◣◥</span>
@@ -276,17 +277,17 @@
 </div>
 
 <!-- 맨 뒤의 헤진 지도. 게임과 상관없이 먼저 그려둡니다. -->
-<script src="js/backdrop.js?v=20261103192924"></script>
+<script src="js/backdrop.js?v=20261103202021"></script>
 <!-- 효과음과 배경음. 소리 파일 없이 그 자리에서 만듭니다. -->
-<script src="js/sound.js?v=20261103192924"></script>
+<script src="js/sound.js?v=20261103202021"></script>
 <!-- 전투 이펙트 — assets/fx 의 그림 두 장에서 프레임을 잘라 씁니다 -->
-<script src="js/fx.js?v=20261103192924"></script>
-<script src="js/data.js?v=20261103192924"></script>
-<script src="js/game.js?v=20261103192924"></script>
+<script src="js/fx.js?v=20261103202021"></script>
+<script src="js/data.js?v=20261103202021"></script>
+<script src="js/game.js?v=20261103202021"></script>
 <!-- 월드맵 — 지도(maps/*.tmj 를 build.py 가 감싼 것) · 걷기 규칙 · 그리기 -->
-<script src="js/maps.js?v=20261103192924"></script>
-<script src="js/map.js?v=20261103192924"></script>
-<script src="js/mapview.js?v=20261103192924"></script>
-<script src="js/ui.js?v=20261103192924"></script>
+<script src="js/maps.js?v=20261103202021"></script>
+<script src="js/map.js?v=20261103202021"></script>
+<script src="js/mapview.js?v=20261103202021"></script>
+<script src="js/ui.js?v=20261103202021"></script>
 </body>
 </html>

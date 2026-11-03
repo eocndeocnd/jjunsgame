@@ -373,7 +373,7 @@ function renderHero() {
   const total = heroStats();
 
   $('heroLevel').textContent = 'Lv.' + fmtLevel(run.level);
-  // 회차는 바로 위 기록 칸에 있습니다 — 여기 또 적으면 한 패널에 같은 숫자가 두 번 찍힙니다
+  // 회차는 바로 아래 기록 칸에 있습니다 — 여기 또 적으면 한 패널에 같은 숫자가 두 번 찍힙니다
 
   // 내 격 — 레벨이 올라가면 격이 바뀝니다.
   // 아직 모르는 격(마왕 너머)은 이름도, 다음 단계가 있다는 것도 보이지 않습니다.
@@ -1701,7 +1701,7 @@ function wireJourney() {
     b.addEventListener('click', () => { if (fightLocked()) return; switchSet(Number(b.dataset.jset)); Sound.play('equip'); render(); });
   }
   on('rosterBtn',    openRosterModal);
-  on('jAllocBtn',    openAlloc);       // 「나」 칸 안의 분배판으로
+  on('jAllocBtn',    openAlloc);       // 「스탯」 칸의 분배판으로
   on('shopBtn',      () => { Sound.play('encounter'); openShop(); });
   const rab = $('rosterAllBtn');
   if (rab && !rab.dataset.wired) {
@@ -1752,12 +1752,12 @@ function wireJourney() {
   });
 }
 
-// 스탯 분배 — 서랍의 「나」 칸을 열고 그 안의 분배판까지 내려가 한 번 반짝입니다.
+// 스탯 분배 — 서랍의 「스탯」 칸을 열고 맨 위 분배판을 한 번 반짝입니다.
 // 지도 위 · 결과의 「스탯 분배」가 부릅니다. 결과는 그대로 둔 채 서랍만 열리고, 닫으면 결과로 돌아옵니다.
 // (예전엔 따로 창을 띄웠는데 서랍 칸 안에 바로 펼쳐 두는 쪽으로 바꿨습니다 — 사용자 결정)
 function openAlloc() {
   if (fightLocked()) return;
-  showTab('hero');
+  showTab('stats');
   render();
   const frame = $('allocFrame'), el = $('alloc');
   if (!frame || !el) return;
@@ -1841,11 +1841,10 @@ function wireKeys() {
 
 const KEY_HINT = '<kbd>Space</kbd>';
 
-// ---------- 하단 탭 (좁은 화면 전용) ----------
-// 넓은 화면에서는 탭 바가 숨겨져 있고 세 패널이 한꺼번에 보이므로,
-// data-tab 을 바꿔도 아무 일도 일어나지 않습니다.
-// 'journey' 는 지도(서랍 닫힘), 'hero' · 'gear' · 'log' 는 메뉴 서랍의 그 칸 — 서랍이 열려 있는 동안 지도는 멈춥니다 (mapPaused)
-let drawerTab = 'hero';   // 손잡이로 다시 열 때 마지막에 본 칸
+// ---------- 메뉴 서랍의 칸 ----------
+// 'journey' 는 지도(서랍 닫힘), 'stats' · 'gear' · 'hero' · 'settings' 는 메뉴 서랍의 스탯 · 전리품 · 나 · 설정 칸
+// — 서랍이 열려 있는 동안 지도는 멈춥니다 (mapPaused)
+let drawerTab = 'stats';   // 손잡이로 다시 열 때 마지막에 본 칸
 function showTab(name) {
   // 탭을 옮기면 열려 있던 부위 창은 닫습니다 (NEW! 도 그때 꺼집니다)
   if (name !== 'gear' && isSlotModalOpen()) closeSlotModal();

@@ -2724,7 +2724,8 @@ body.drawer-open .drawer { transform: none; }
 .drawer-body { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
                padding: 6px 14px calc(env(safe-area-inset-bottom) + 22px); }
 .drawer .panel { display: none; }
-body[data-tab="hero"] .hero-panel, body[data-tab="gear"] .gear-panel, body[data-tab="log"] .log-panel { display: flex; }
+body[data-tab="stats"] .stats-panel, body[data-tab="gear"] .gear-panel, body[data-tab="hero"] .hero-panel,
+body[data-tab="settings"] .settings-panel { display: flex; }
 .drawer .topbar { margin: 4px 0 0; }
 .drawer .footer { margin-top: 0; }
 @media (min-width: 861px) {
