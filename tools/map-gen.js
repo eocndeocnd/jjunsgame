@@ -17,6 +17,11 @@ const TILE = 16;
 const FLOOR = 0, WALL = 1, WATER = 2, TREE = 3, ROCK = 4, ROAD = 5;
 const TILE_KINDS = 6;
 const SOLID = [WALL, WATER, TREE, ROCK];
+// 겉모습 층(look) — 칸마다 땅의 종류(아래 네 비트) · 격(위 네 비트). 그림(js/mapart.js)이 이걸로 무늬를 고릅니다 (막히는지는 바닥 층이 정함).
+// 땅의 종류 번호는 tools/overworld-layout.js 의 것. 타일셋 looks.png 는 16×16 = 256칸 (Tiled 에서 보기용 색 견본)
+const OL = require('./overworld-layout.js');
+const LOOK_GID = 1 + TILE_KINDS;
+const look = (ter, bio) => ((bio & 15) << 4) | (ter & 15);
 
 // ---------- Tiled JSON ----------
 function tiledProps(o) {
@@ -41,6 +46,7 @@ function buildTmj(spec) {
   const group = (id, name, objects) => ({ id, name, type: 'objectgroup', draworder: 'topdown', opacity: 1, visible: true, x: 0, y: 0, objects });
   const layers = [
     { id: 1, name: 'ground', type: 'tilelayer', width: spec.w, height: spec.h, x: 0, y: 0, opacity: 1, visible: true, data: Array.from(spec.tiles, t => t + 1) },
+    ...(spec.look ? [{ id: 8, name: 'look', type: 'tilelayer', width: spec.w, height: spec.h, x: 0, y: 0, opacity: 0.6, visible: false, data: Array.from(spec.look, c => LOOK_GID + c) }] : []),
     group(2, 'areas', (spec.areas || []).map(o => (o.polygon ? polyObj(o) : rectObj(o)))),
     group(3, 'posts', (spec.posts || []).map(postObj)),
     group(4, 'ports', (spec.ports || []).map(rectObj)),
@@ -50,14 +56,32 @@ function buildTmj(spec) {
   ];
   return {
     compressionlevel: -1, type: 'map', version: '1.10', tiledversion: '1.10.2', orientation: 'orthogonal', renderorder: 'right-down', infinite: false,
-    width: spec.w, height: spec.h, tilewidth: TILE, tileheight: TILE, nextlayerid: 8, nextobjectid: nextId, layers,
+    width: spec.w, height: spec.h, tilewidth: TILE, tileheight: TILE, nextlayerid: 9, nextobjectid: nextId, layers,
     properties: tiledProps(spec.props || {}),
     tilesets: [{
       firstgid: 1, name: 'draft', image: 'tiles.png', imagewidth: TILE * TILE_KINDS, imageheight: TILE, tilewidth: TILE, tileheight: TILE,
       tilecount: TILE_KINDS, columns: TILE_KINDS, margin: 0, spacing: 0,
       tiles: SOLID.map(id => ({ id, properties: tiledProps({ solid: true, water: id === WATER || undefined }) }))
-    }]
+    }, ...(spec.look ? [{
+      firstgid: LOOK_GID, name: 'looks', image: 'looks.png', imagewidth: TILE * 16, imageheight: TILE * 16, tilewidth: TILE, tileheight: TILE,
+      tilecount: 256, columns: 16, margin: 0, spacing: 0
+    }] : [])]
   };
+}
+
+// 겉모습 타일셋 그림 — 칸마다 그 땅의 종류 · 격의 대표 색 (Tiled 에서 겉모습 층을 칠할 때 보기용)
+function looksPng() {
+  const W = TILE * 16, H = TILE * 16, px = Buffer.alloc(W * H * 4);
+  const base = { [OL.GRASS]: [111, 160, 74], [OL.DIRT]: [180, 138, 90], [OL.COBBLE]: [141, 138, 130], [OL.TILES]: [185, 173, 148], [OL.WATER]: [31, 90, 150],
+    [OL.LAVA]: [194, 48, 26], [OL.OBSID]: [44, 34, 50], [OL.SNOW]: [232, 238, 244], [OL.ROCKY]: [142, 138, 112], [OL.PAVE]: [110, 108, 120], [OL.CANAL]: [95, 176, 192] };
+  for (let code = 0; code < 256; code++) {
+    const ter = code & 15, bio = code >> 4, c = base[ter] || [12, 10, 18], k = 0.7 + (bio % 8) * 0.06;
+    for (let y = 0; y < TILE; y++) for (let x = 0; x < TILE; x++) {
+      const i = (((code >> 4) * TILE + y) * W + (code & 15) * TILE + x) * 4, edge = x === 0 || y === 0;
+      px[i] = Math.min(255, c[0] * (edge ? 0.6 : k)); px[i + 1] = Math.min(255, c[1] * (edge ? 0.6 : k)); px[i + 2] = Math.min(255, c[2] * (edge ? 0.6 : k)); px[i + 3] = 255;
+    }
+  }
+  return encodePng(W, H, px);
 }
 
 // 타일셋 그림 — 바닥 · 벽 · 물 · 나무 · 바위 · 길 (Tiled 가 지도를 열 때 필요합니다)
@@ -150,6 +174,7 @@ function valueNoise(seed) {
 // ranks: 그림의 N 번째 = 몇 격인가 · opts: { seed, plaza(어귀 이름), obstacle(rank) → 그 격 들판에 흩어질 장애물 타일, entry(어귀) → 문의 광장으로 가는 문,
 //   square(모든 방을 반듯하게) · open(트인 길의 폭 — 주면 맞닿은 변 가운데에) · order({ 격: ['칸,줄', …] } — 그 격 일반을 약한 것부터 세울 들판 차례),
 //   exit({ name, label, to } — 마지막 격 보스 방 위쪽 막다른 틈 안의 구멍. 보스가 그 앞을 꼭 맞게 막고 섬),
+//   look((그 칸의 방 | null, 바닥 타일) → 겉모습 번호 — 주면 겉모습 층을 적음, 그림 js/mapart.js),
 //   chests([{ id, room: '칸,줄', corner: nw | ne | sw | se, big }] — 그 방 구석(가장자리에서 두 칸 안)의 보물상자),
 //   autoChests(격마다 큰 상자 하나 · 작은 상자 둘을 알아서 — 큰 것은 숨은 방 → 보스 방 → 가장 먼 들판, 작은 것은 남은 가장 먼 들판과 가운데쯤 들판) }
 function generate(plan, ranks, data, opts) {
@@ -400,7 +425,17 @@ function generate(plan, ranks, data, opts) {
   }
   for (let k = 0; k < w * h; k++) if (!seen[k] && (tiles[k] === FLOOR || tiles[k] === ROAD)) tiles[k] = WALL;
 
-  return buildTmj({ w, h, tiles, areas, posts, ports, secrets, npcs, chests });
+  // 겉모습 — 칸마다 가까운 방(틈 · 길은 반씩 나눔)의 것
+  let lookLayer;
+  if (opts.look) {
+    const at = new Map(rooms.map(o => [`${o.c},${o.r}`, o]));
+    lookLayer = new Uint8Array(w * h);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const room = at.get(`${Math.floor((x - (GAP >> 1)) / PITCH_X)},${Math.floor((y - (GAP >> 1)) / PITCH_Y)}`) || null;
+      lookLayer[idx(x, y)] = opts.look(room, tiles[idx(x, y)]);
+    }
+  }
+  return buildTmj({ w, h, tiles, areas, posts, ports, secrets, npcs, chests, look: lookLayer });
 }
 
 // ---------- 처음 + 1격 — 지하수로 (sewer) ----------
@@ -440,6 +475,8 @@ function sewer(data) {
     open: 4,
     order: { 1: SEWER.order },
     chests: SEWER.chests,
+    look: (room, t) => t === WATER ? look(OL.WATER, 1)
+      : room && room.kind === 'S.' ? look(OL.COBBLE, 7) : room && room.kind === 'B' ? look(OL.TILES, 8) : look(OL.COBBLE, 1),
     exit: { name: 'out', label: '바깥', to: 'overworld.sewer' }
   });
 }
@@ -875,7 +912,10 @@ function overworld(data) {
     });
   }
 
-  return buildTmj({ w, h, tiles, areas, posts, ports, npcs, chests });
+  // 겉모습 — 시안의 땅 종류 · 격 그대로 (흙길 칸은 흙, 다리도 흙길)
+  const lookLayer = new Uint8Array(w * h);
+  for (let i = 0; i < w * h; i++) lookLayer[i] = look(tiles[i] === ROAD ? OL.DIRT : L.ter[i], L.bio[i]);
+  return buildTmj({ w, h, tiles, areas, posts, ports, npcs, chests, look: lookLayer });
 }
 
 // ---------- 숨은 굴 (SECRET_ROOMS) — 히든 하나만 있는 작은 굴 ----------
@@ -905,7 +945,8 @@ function secretRoom(data, s) {
     for (let j = y - 1; j <= y + 1; j++) for (let i = x - 1; i <= x + 1; i++) if (tiles[j * W + i] !== FLOOR) throw new Error(`숨은 굴 — 상자 둘레가 바닥이 아님 (${i},${j})`);
     chests.push({ name: '보물상자', x, y, chest: `r${foe.rank.n}-big`, rank: foe.rank.n, big: true, item });
   }
-  return buildTmj({ w: W, h: H, tiles, posts: [post], ports: [out], npcs: [{ name: 'start', x: cx, y: oy - 1 }], chests, props: { title: s.title } });
+  const lookLayer = Uint8Array.from(tiles, t => (t === WATER ? look(OL.WATER, 7) : look(OL.ROCKY, 7)));
+  return buildTmj({ w: W, h: H, tiles, posts: [post], ports: [out], npcs: [{ name: 'start', x: cx, y: oy - 1 }], chests, look: lookLayer, props: { title: s.title } });
 }
 
 // ---------- 7~20격 — 비슷한 것끼리 일곱 장 (docs/MAP-REFERENCE-PLAN.md 2-2) ----------
@@ -1021,4 +1062,4 @@ function allMaps(data) {
   return out;
 }
 
-module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, encodePng, generate, sewer, overworld, hub, secretRoom, allMaps, layoutFromPlan, HUB_DOORS, REALMS, SEWER, SECRET_ROOMS };
+module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, looksPng, encodePng, generate, sewer, overworld, hub, secretRoom, allMaps, layoutFromPlan, HUB_DOORS, REALMS, SEWER, SECRET_ROOMS };

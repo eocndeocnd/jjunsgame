@@ -114,21 +114,35 @@ const MapView = (function () {
       const bob = g => -Math.abs(Math.sin(g.phase)) * T * 0.08;
       const x0 = Math.max(0, Math.floor(-ox / T)), y0 = Math.max(0, Math.floor(-oy / T));
       const x1 = Math.min(m.w, Math.ceil((cw - ox) / T)), y1 = Math.min(m.h, Math.ceil((ch - oy) / T));
-      for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
-        const k = y * m.w + x, px = ox + x * T, py = oy + y * T, t = m.tile[k];
-        ctx.fillStyle = TILE_COLOR[t] || '#000';
-        ctx.fillRect(px, py, T, T);
-        const a = m.areaAt[k] >= 0 ? m.areas[m.areaAt[k]] : null;
-        if (a && a.rank) { ctx.globalAlpha = 0.2; ctx.fillStyle = rankColor(a.rank); ctx.fillRect(px, py, T, T); ctx.globalAlpha = 1; }
-        if (t === TREE) {
-          ctx.fillStyle = '#4a5e2a'; ctx.beginPath(); ctx.arc(px + T / 2, py + T / 2, T * 0.42, 0, Math.PI * 2); ctx.fill();
-          ctx.fillStyle = '#5c7434'; ctx.beginPath(); ctx.arc(px + T * 0.42, py + T * 0.4, T * 0.2, 0, Math.PI * 2); ctx.fill();
-        } else if (t === ROCK) {
-          ctx.fillStyle = '#7a7062'; ctx.fillRect(px + T * 0.12, py + T * 0.22, T * 0.76, T * 0.66);
-          ctx.fillStyle = '#968c7c'; ctx.fillRect(px + T * 0.12, py + T * 0.22, T * 0.76, T * 0.22);
+      // 땅 — 겉모습 층이 있는 지도는 도트 그림(js/mapart.js, 덩어리로 미리 그려 붙임), 없으면 예전 색칸.
+      // 그림 덩어리가 아직 안 그려진 곳(한 장면에 몇 개씩만 새로 그림)은 그동안 색칸으로
+      const art = typeof MapArt !== 'undefined' && MapArt.has(m);
+      const flat = (xa, ya, xb, yb) => {
+        for (let y = ya; y < yb; y++) for (let x = xa; x < xb; x++) {
+          const k = y * m.w + x, px = ox + x * T, py = oy + y * T, t = m.tile[k];
+          ctx.fillStyle = TILE_COLOR[t] || '#000';
+          ctx.fillRect(px, py, T, T);
+          if (t === TREE) {
+            ctx.fillStyle = '#4a5e2a'; ctx.beginPath(); ctx.arc(px + T / 2, py + T / 2, T * 0.42, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#5c7434'; ctx.beginPath(); ctx.arc(px + T * 0.42, py + T * 0.4, T * 0.2, 0, Math.PI * 2); ctx.fill();
+          } else if (t === ROCK) {
+            ctx.fillStyle = '#7a7062'; ctx.fillRect(px + T * 0.12, py + T * 0.22, T * 0.76, T * 0.66);
+            ctx.fillStyle = '#968c7c'; ctx.fillRect(px + T * 0.12, py + T * 0.22, T * 0.76, T * 0.22);
+          }
         }
+      };
+      if (art) {
+        const CHK = MapArt.CH;
+        for (const [cx, cy] of MapArt.drawGround(ctx, m, ox, oy, T, x0, y0, x1, y1))
+          flat(Math.max(x0, cx * CHK), Math.max(y0, cy * CHK), Math.min(x1, (cx + 1) * CHK), Math.min(y1, (cy + 1) * CHK));
+      } else flat(x0, y0, x1, y1);
+      for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
+        const k = y * m.w + x, px = ox + x * T, py = oy + y * T;
+        const a = m.areaAt[k] >= 0 ? m.areas[m.areaAt[k]] : null;
+        if (a && a.rank) { ctx.globalAlpha = art ? 0.1 : 0.2; ctx.fillStyle = rankColor(a.rank); ctx.fillRect(px, py, T, T); ctx.globalAlpha = 1; }   // 구역 — 그림 위엔 더 옅게
         if (m.secret[k]) { ctx.fillStyle = 'rgba(234,214,166,0.1)'; ctx.fillRect(px, py, T, T); }   // 아주 옅게 — 눈썰미 있는 사람만
       }
+      if (art) MapArt.drawTrees(ctx, m, ox, oy, T, x0, y0, x1, y1);
       const seen = (x, y, sw = 1, sh = 1) => x + sw >= x0 && y + sh >= y0 && x <= x1 && y <= y1;
       // cx · cy 는 칸 단위의 한가운데 (한 칸짜리면 x + 0.5)
       const glyph = (cx, cy, icon, size = 0.72) => {

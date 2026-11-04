@@ -7,6 +7,7 @@
 //
 //  지도는 Tiled(무료 지도 편집기)가 바로 여는 JSON(.tmj)입니다 — parseTiled 가 읽습니다.
 //    ground   타일 층 — 타일셋에서 solid 속성이 붙은 타일은 지나갈 수 없습니다 (벽 · 물)
+//    look     타일 층(있으면) — 겉모습: 칸마다 땅의 종류 · 격 (타일셋 looks 의 번호). 그림(js/mapart.js)만 씀 — 막히는지와는 상관없음
 //    areas    사각형 또는 다각형 — 구역. 속성 rank · monster(적 id) · zone(지역 id). monster 가 없으면 이름뿐인 곳(첫 공간)
 //             다각형이면 땅 모양을 따라 그린 구역 — 칸 가운데가 다각형 안에 드는 칸이 그 구역입니다
 //    posts    점 또는 사각형 — 정예 · 보스 · 히든 자리. 속성 enemy · blocks(길을 막는가)
@@ -74,6 +75,11 @@
       const gid = ground[i] & 0x1fffffff;                 // 위쪽 세 비트는 Tiled 의 뒤집기 표시
       m.tile[i] = gid ? gid - ts.firstgid : -1;
       m.solid[i] = !gid || solidTiles.has(m.tile[i]) ? 1 : 0;
+    }
+    const lookLayer = layer('look'), lts = tmj.tilesets.find(t => t.name === 'looks');
+    if (lookLayer && lts) {
+      m.look = new Uint8Array(w * h);
+      for (let i = 0; i < w * h; i++) { const gid = lookLayer.data[i] & 0x1fffffff; m.look[i] = gid ? gid - lts.firstgid : 0; }
     }
     const rect = o => ({ x: Math.floor(o.x / tw), y: Math.floor(o.y / th),
                          w: Math.max(1, Math.round((o.width || 0) / tw)), h: Math.max(1, Math.round((o.height || 0) / th)) });
