@@ -1291,19 +1291,7 @@ function resultCard(r, run) {
   const drops = r.win && r.drops.length
     ? `<div class="res-drops">
          <div class="res-drop-list" style="grid-template-columns:repeat(${Math.min(3, r.drops.length)}, minmax(0, 1fr))">
-         ${r.drops.map((d, i) => `
-           <div class="res-drop ${fx && i >= shown ? 'veiled' : ''} ${d.isNew ? 'is-new' : 'is-stone'}" data-drop="${i}">
-             <span class="res-art ${d.item.grade !== 'normal' ? `g-${d.item.grade}` : ''}"><span class="res-art-ic">${d.item.fromIcon}</span></span>
-             <span class="res-body">
-               <span class="res-name">${d.item.grade !== 'normal' ? `<span class="grade-tag ${d.item.grade}">${KINDS[d.item.grade].name}</span>` : ''}${d.item.name}</span>
-               <span class="res-meta">
-                 <span class="res-slot">${SLOT_NAMES[d.item.slot]}</span>
-                 <span class="res-tag">${d.isNew ? '새로 얻음' : `분해 · 강화석 +${fmt(d.stones)}`}</span>
-                 ${d.autoWorn ? '<span class="res-tag worn-now">바로 착용</span>' : ''}
-               </span>
-               ${d.isNew && !d.autoWorn ? dropWear(d.item) : ''}
-             </span>
-           </div>`).join('')}
+         ${r.drops.map((d, i) => dropCard(d, i, fx && i >= shown)).join('')}
          </div>
        </div>`
     : '';
@@ -1340,6 +1328,60 @@ function resultCard(r, run) {
 // 결과의 새 전리품 — 지금 그 부위에 낀 것과 견준 ▲▼ 와 「낀다」 한 번 (부위 창까지 가지 않고 그 자리에서, 사용자 결정).
 // 알아서 갈아끼우지는 않습니다 — 고르는 건 내 몫. 이미 끼고 있으면 「끼는 중」.
 // 특수장비는 열린 빈 칸이 있을 때만 (어느 칸에 낄지 고를 일이 없을 때) — 아니면 아래 「보러 간다」로.
+// 얻은 것 한 칸 — 물건의 모습 · 이름 · 부위 · 얻은 방식, 새것이면 「낀다」 (결과 창 · 보물상자 창이 같이 씀)
+function dropCard(d, i, veiled) {
+  return `
+           <div class="res-drop ${veiled ? 'veiled' : ''} ${d.isNew ? 'is-new' : 'is-stone'}" data-drop="${i}">
+             <span class="res-art ${d.item.grade !== 'normal' ? `g-${d.item.grade}` : ''}"><span class="res-art-ic">${d.item.fromIcon}</span></span>
+             <span class="res-body">
+               <span class="res-name">${d.item.grade !== 'normal' ? `<span class="grade-tag ${d.item.grade}">${KINDS[d.item.grade].name}</span>` : ''}${d.item.name}</span>
+               <span class="res-meta">
+                 <span class="res-slot">${SLOT_NAMES[d.item.slot]}</span>
+                 <span class="res-tag">${d.isNew ? '새로 얻음' : `분해 · 강화석 +${fmt(d.stones)}`}</span>
+                 ${d.autoWorn ? '<span class="res-tag worn-now">바로 착용</span>' : ''}
+               </span>
+               ${d.isNew && !d.autoWorn ? dropWear(d.item) : ''}
+             </span>
+           </div>`;
+}
+
+// ---------- 보물상자 창 — 지도의 상자에 닿으면 (game.js 의 openChest) ----------
+// 골드 · 강화석(어느 부위로 들어갔는지) · 상자 전용 장비(결과 창과 같은 칸 — 「낀다」). 닫으면 지도로
+let chestShown = null;
+function showChest(r) {
+  chestShown = r;
+  const lines = [];
+  if (r.gold) lines.push(row('골드', `+${fmt(r.gold)}`));
+  if (r.stones) lines.push(row('강화석', `+${fmt(r.stones.n)}`, SLOT_NAMES[r.stones.slot]));
+  $('chestBody').innerHTML = `
+    <div class="res-lines">${lines.join('')}</div>
+    ${r.drop ? `<div class="res-drop-list" style="grid-template-columns:minmax(0, 1fr)">${dropCard(r.drop, 0, false)}</div>` : ''}
+    <div class="chest-actions"><button class="btn primary" id="chestOkBtn">닫는다</button></div>`;
+  $('chestOkBtn').addEventListener('click', closeChest);
+  for (const b of $('chestBody').querySelectorAll('[data-wear]')) {
+    b.addEventListener('click', () => {
+      const item = getItem(b.dataset.wear);
+      if (!item) return;
+      equip(item.id, b.dataset.wslot);
+      unfreshItem(item);
+      Sound.play('equip');
+      render();
+      showChest(chestShown);                                 // 「끼는 중」으로
+    });
+  }
+  $('chestModal').classList.remove('hidden');
+}
+function closeChest() {
+  chestShown = null;
+  const m = $('chestModal');
+  if (m) m.classList.add('hidden');
+  render();
+}
+function isChestOpen() {
+  const m = $('chestModal');
+  return !!m && !m.classList.contains('hidden');
+}
+
 // 결과 창에서는 달라지는 능력치를 앞의 둘까지만 — 나머지는 「…」 (다 보려면 부위 창). 「낀다」가 스크롤 없이 보이게
 const RES_DIFF_MAX = 2;
 function dropWear(item) {
@@ -1648,6 +1690,10 @@ function onMapEvents(evs) {
       if (meetOnMap(id, e.mob ? e.mob.aura : null, e.first)) soundEncounter();
       else mapView.resolve('retreat');   // 에너지가 모자라 여정이 끝났다
       changed = true;
+    } else if (e.type === 'chest') {
+      const got = openChest(e.chest.chest);
+      if (got) { Sound.play('drop'); showChest(got); }
+      changed = true;
     } else if (e.type === 'port' && e.port.to) {
       fadeThrough(() => goThroughPort(e.port));   // 화면이 까매졌다가 다음 지도의 문(구멍) 앞에서 밝아짐
       changed = true;
@@ -1840,6 +1886,7 @@ function wireKeys() {
         else if (isAdminOpen()) closeAdmin();
         else if (isAvatarModalOpen()) closeAvatarModal();
         else if (isSwapModalOpen()) closeSwapModal();    // 교환 창은 강화 창 위에도 뜹니다
+        else if (isChestOpen()) closeChest();
         else if (isBuyOpen()) closeBuy();                // 구매 창은 상점 창 위에 뜹니다
         else if (isShopOpen()) closeShop();
         else if (isSlotModalOpen()) closeSlotModal();
@@ -2165,7 +2212,7 @@ function renderGear() {
   // 특수장비 칸 넷은 같은 목록(특수장비 전부)을 봅니다.
   const fk = freshKey(selectedSlot);
   // 못 얻은 것 목록도 아는 격까지만 — 마왕 너머의 전리품은 몇 개인지조차 보이지 않습니다
-  const all = itemsInSlot(special ? 'special' : selectedSlot).filter(i => owns(i.id) || (knownRank(i.rank.n) && !i.ware));
+  const all = itemsInSlot(special ? 'special' : selectedSlot).filter(i => owns(i.id) || (knownRank(i.rank.n) && !(i.ware || i.chest)));
   const have = all.filter(i => owns(i.id));
   const lockedCount = all.length - have.length;
 
@@ -2524,7 +2571,7 @@ function isBuyOpen() {
   return !!m && !m.classList.contains('hidden');
 }
 
-function isAnyModalOpen() { return isAvatarModalOpen() || isSlotModalOpen() || isSwapModalOpen() || isShopOpen() || isBuyOpen() || isRosterModalOpen() || isSaveModalOpen() || isAdminOpen(); }
+function isAnyModalOpen() { return isAvatarModalOpen() || isSlotModalOpen() || isSwapModalOpen() || isShopOpen() || isBuyOpen() || isChestOpen() || isRosterModalOpen() || isSaveModalOpen() || isAdminOpen(); }
 
 // 그 부위의 강화를 반영한 실제 수치를 보여줍니다 — 장부상 수치가 아니라 몸에 붙는 값.
 // 강화는 부위에 붙으므로, 목록에 있는 것 무엇을 끼든 이 값이 됩니다.
@@ -3128,6 +3175,7 @@ function init() {
   for (const b of document.querySelectorAll('[data-closeavatar]')) b.addEventListener('click', closeAvatarModal);
   for (const b of document.querySelectorAll('[data-closeshop]')) b.addEventListener('click', closeShop);
   for (const b of document.querySelectorAll('#buyModal > [data-closebuy], #buyModal .modal-head [data-closebuy]')) b.addEventListener('click', closeBuy);
+  for (const b of document.querySelectorAll('[data-closechest]')) b.addEventListener('click', closeChest);
 
   const ago = $('agOk');
   if (ago) ago.addEventListener('click', () => $('avatarGain').classList.add('hidden'));

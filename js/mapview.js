@@ -180,6 +180,31 @@ const MapView = (function () {
           ctx.fillText(port.label + (open ? '' : ' 🔒'), tx, ty);
         }
       }
+      // 보물상자 — 닫힌 것은 뚜껑 덮인 나무 상자(상자 전용 장비가 든 큰 상자는 금테 · 은은한 빛), 연 것은 뚜껑이 젖혀진 빈 상자
+      for (const c of m.chests) {
+        if (!seen(c.x, c.y)) continue;
+        const open = w.hooks.chestOpen(c.chest), big = !!(typeof CHESTS !== 'undefined' && CHESTS[c.chest] && CHESTS[c.chest].item);
+        const x = ox + c.x * T, y = oy + c.y * T, u = T / 16;
+        if (big && !open) {
+          ctx.save(); ctx.shadowColor = '#ffd76a'; ctx.shadowBlur = T * 0.5;
+          ctx.fillStyle = 'rgba(255, 215, 106, 0.25)'; ctx.fillRect(x + 1 * u, y + 3 * u, 14 * u, 12 * u);
+          ctx.restore();
+        }
+        ctx.fillStyle = 'rgba(28,16,7,0.3)'; ctx.fillRect(x + 2 * u, y + 14 * u, 12 * u, 2 * u);   // 그림자
+        ctx.fillStyle = '#3a2412'; ctx.fillRect(x + 2 * u, y + 7 * u, 12 * u, 7 * u);            // 몸통 테
+        ctx.fillStyle = '#8a5428'; ctx.fillRect(x + 3 * u, y + 8 * u, 10 * u, 5 * u);            // 몸통
+        if (open) {
+          ctx.fillStyle = '#1c1007'; ctx.fillRect(x + 3 * u, y + 7 * u, 10 * u, 2 * u);          // 빈 속
+          ctx.fillStyle = '#3a2412'; ctx.fillRect(x + 2 * u, y + 2 * u, 12 * u, 4 * u);          // 젖혀진 뚜껑
+          ctx.fillStyle = '#6e4220'; ctx.fillRect(x + 3 * u, y + 3 * u, 10 * u, 2 * u);
+        } else {
+          ctx.fillStyle = '#3a2412'; ctx.fillRect(x + 2 * u, y + 4 * u, 12 * u, 4 * u);          // 뚜껑 테
+          ctx.fillStyle = '#a8662f'; ctx.fillRect(x + 3 * u, y + 5 * u, 10 * u, 2 * u);          // 뚜껑
+          ctx.fillStyle = big ? '#ffd76a' : '#d9b04a';
+          ctx.fillRect(x + 7 * u, y + 7 * u, 2 * u, 3 * u);                                       // 자물쇠
+          if (big) { ctx.fillRect(x + 2 * u, y + 7 * u, 12 * u, u); ctx.fillRect(x + 2 * u, y + 13 * u, 12 * u, u); }   // 금테
+        }
+      }
       // 싸움 창이 떠 있는 동안은 땅까지만 — 비치는 창 뒤에 지도 위의 나 · 몬스터 · 정예 자리 · 상인이 겹쳐 보이지 않게
       if (o.hideActors && o.hideActors()) return;
       for (const mk of (o.marks ? o.marks() : [])) if (seen(mk.x, mk.y)) glyph(mk.x + 0.5, mk.y + 0.5, mk.icon);
@@ -309,7 +334,8 @@ const MapView = (function () {
       rollAura: () => rollAura(),
       postAlive: id => { const f = getEnemy(id); return !!f && !isDowned(id) && isRevealed(f); },   // 이 여정에 꺾었거나 아직 안 나타난 히든은 없음
       portOpen: p => !p.opensAfter || isDowned(p.opensAfter),
-      size: id => (getEnemy(id) || {}).size || 1   // 지도에서 차지하는 n × n 칸 (data.js ENEMY_SIZE)
+      size: id => (getEnemy(id) || {}).size || 1,  // 지도에서 차지하는 n × n 칸 (data.js ENEMY_SIZE)
+      chestOpen: id => !!State.meta && State.meta.chestsOpened.includes(id)   // 연 보물상자 (game.js 의 openChest)
     };
   }
 

@@ -423,7 +423,7 @@ test('큰 몬스터 — 몸이 안 들어가는 좁은 길로는 쫓아오지 �
 function loadData() {
   const text = fs.readFileSync(path.join(ROOT, 'js/data.js'), 'utf8');
   // JSON 으로 한 번 거쳐 이쪽 배열로 — vm 안에서 만든 배열은 deepEqual 이 다른 것으로 봅니다
-  return JSON.parse(vm.runInNewContext(`${text}\n;JSON.stringify({ ENEMIES, ZONES })`, {}));
+  return JSON.parse(vm.runInNewContext(`${text}\n;JSON.stringify({ ENEMIES, ZONES, CHESTS, ITEMS })`, {}));
 }
 function walk(m, sources, blocked) {
   const d = new Int32Array(m.w * m.h).fill(-1), q = [];
@@ -550,6 +550,56 @@ test('지하수로(sewer) — 첫 공간에서 위로 1 → 9번 방이 레벨 �
   assert.ok(!reach(posts), '던전 가디언이 막음');
   assert.ok(reach(new Set([...posts].filter(i => !cellsOf(m, boss).includes(i)))), '꺾으면 구멍까지');
   assert.ok(fields.every(a => a.y > boss.y), '보스 방이 맨 위');
+});
+
+test('보물상자 — 그 칸은 막히고, 닫힌 상자에 닿으면 선 채로 열고(한 번 떼야 다시 걷는다), 연 상자는 그냥 막힌 칸 · 몬스터도 못 선다', () => {
+  const m = mapOf([
+    '#######',
+    '#@.aaa#',
+    '#######'
+  ]);
+  m.chests.push({ name: '보물상자', x: 3, y: 1, chest: 'box' });   // 구역 a 의 첫 칸
+  const opened = new Set();
+  const w = M.createWorld(m, { chestOpen: id => opened.has(id) }, 1);
+  w.mobs = [];
+  M.setInput(w, 'right');
+  const ev = run(w, 0.5).filter(e => e.type === 'chest');
+  assert.equal(ev.length, 1, '닿으면 한 번');
+  assert.equal(ev[0].chest.chest, 'box');
+  assert.equal(w.player.x, 2, '상자 앞에 선 채로');
+  opened.add('box');
+  M.setInput(w, null); M.setInput(w, 'right');
+  const ev2 = run(w, 0.5);
+  assert.ok(!ev2.some(e => e.type === 'chest'), '연 상자는 다시 안 열림');
+  assert.equal(w.player.x, 2, '그래도 막힘');
+  assert.equal(M.chestAt(w, 3, 1).chest, 'box');
+  const foe = mob(w, 5, 1, 'passive');
+  run(w, 10, () => assert.ok(!(foe.x === 3 && foe.y === 1), '몬스터는 상자 칸에 안 섬'));
+});
+
+test('지하수로의 보물상자 — data.js 의 CHESTS 그대로 넷(큰 상자 하나), 걸을 수 있는 방 구석에 서고 길을 막지 않는다', () => {
+  const data = loadData();
+  const m = loadMap('sewer');
+  const ids = Object.keys(data.CHESTS).filter(id => id.startsWith('sewer-'));
+  assert.deepEqual(m.chests.map(c => c.chest).sort(), ids.sort());
+  assert.equal(ids.filter(id => data.CHESTS[id].item).length, 1, '큰 상자 하나');
+  for (const id of ids) {
+    const c = data.CHESTS[id];
+    if (c.item) assert.ok(data.ITEMS.some(i => i.id === c.item && i.chest), `${id} — 상자 전용 장비 ${c.item}`);
+  }
+  const start = m.start.y * m.w + m.start.x;
+  const box = new Set(m.chests.map(c => c.y * m.w + c.x));
+  const posts = new Set(m.posts.flatMap(p => cellsOf(m, p)));
+  const d = walk(m, [start], new Set([...box, ...posts]));
+  for (const c of m.chests) {
+    const k = c.y * m.w + c.x;
+    assert.ok(!m.solid[k], `${c.chest} — 바닥 위`);
+    assert.ok(!posts.has(k) && !m.ports.some(p => c.x >= p.x && c.y >= p.y && c.x < p.x + p.w && c.y < p.y + p.h), `${c.chest} — 정해진 자리 · 문과 안 겹침`);
+    assert.ok([k - 1, k + 1, k - m.w, k + m.w].some(i => d[i] >= 0), `${c.chest} — 걸어서 닿음`);
+  }
+  // 상자를 다 벽으로 쳐도 모든 구역 · 보스 자리 앞에 닿음 (길을 막지 않음)
+  const all = walk(m, [start], box);
+  for (const a of m.areas) assert.ok(areaCells(m, a).filter(i => !m.solid[i] && !box.has(i)).every(i => all[i] >= 0), `${a.name} — 상자 때문에 갇힌 칸 없음`);
 });
 
 test('열리기 전엔 없는 문(appears) — 보이지도 막히지도 않는 땅이다가, 열리면 들어서는 문', () => {

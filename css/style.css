@@ -2432,6 +2432,12 @@ body.fight-locked #dollSwapBtn { display: none; }
 .buy-ask { text-align: center; font-weight: 700; font-size: 14px; margin-top: 2px; }
 .buy-actions { display: flex; gap: 8px; }
 .buy-actions .btn { flex: 1; }
+/* 보물상자 창 — 연 것 (골드 · 강화석 줄, 상자 전용 장비 칸) */
+.chest-modal .modal-card { max-width: 360px; }
+.chest-body { overflow-y: auto; flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; padding: 2px; }
+.chest-body .res-lines { margin-bottom: 0; }
+.chest-actions { display: flex; }
+.chest-actions .btn { flex: 1; }
 
 /* 「슬롯 강화」 — 올릴 수 있는 칸이 있으면 앞에 그 수가 초록 알약으로 */
 .doll-mode.ready { background: #f0f5dc; box-shadow: 2px 2px 0 var(--frame-out), 0 0 0 2px rgba(63, 122, 58, 0.35); }

@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/galmuri@2.40.3/dist/galmuri.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/neodgm/neodgm-webfont@1.601/neodgm/style.css">
-<link rel="stylesheet" href="css/style.css?v=20261104153403">
+<link rel="stylesheet" href="css/style.css?v=20261104154648">
 </head>
 <body data-tab="journey">
 
@@ -180,6 +180,18 @@
   </div>
 </div>
 
+<!-- 보물상자 — 지도의 상자에 닿으면 연 것을 보여 줌 (ui.js 의 showChest) -->
+<div id="chestModal" class="modal enh-modal chest-modal hidden">
+  <div class="modal-back" data-closechest></div>
+  <div class="modal-card">
+    <div class="modal-head">
+      <h3>보물상자</h3>
+      <button class="btn tiny" data-closechest>닫기</button>
+    </div>
+    <div id="chestBody" class="chest-body"></div>
+  </div>
+</div>
+
 <!-- 상인에게서 장비를 살 때 — 값 단추를 누르면 그 장비의 능력치를 다 보여 주고 「구매하시겠습니까?」 (ui.js 의 openBuy) -->
 <div id="buyModal" class="modal enh-modal buy-modal hidden">
   <div class="modal-back" data-closebuy></div>
@@ -291,17 +303,17 @@
 </div>
 
 <!-- 맨 뒤의 헤진 지도. 게임과 상관없이 먼저 그려둡니다. -->
-<script src="js/backdrop.js?v=20261104153403"></script>
+<script src="js/backdrop.js?v=20261104154648"></script>
 <!-- 효과음과 배경음. 소리 파일 없이 그 자리에서 만듭니다. -->
-<script src="js/sound.js?v=20261104153403"></script>
+<script src="js/sound.js?v=20261104154648"></script>
 <!-- 전투 이펙트 — assets/fx 의 그림 두 장에서 프레임을 잘라 씁니다 -->
-<script src="js/fx.js?v=20261104153403"></script>
-<script src="js/data.js?v=20261104153403"></script>
-<script src="js/game.js?v=20261104153403"></script>
+<script src="js/fx.js?v=20261104154648"></script>
+<script src="js/data.js?v=20261104154648"></script>
+<script src="js/game.js?v=20261104154648"></script>
 <!-- 월드맵 — 지도(maps/*.tmj 를 build.py 가 감싼 것) · 걷기 규칙 · 그리기 -->
-<script src="js/maps.js?v=20261104153403"></script>
-<script src="js/map.js?v=20261104153403"></script>
-<script src="js/mapview.js?v=20261104153403"></script>
-<script src="js/ui.js?v=20261104153403"></script>
+<script src="js/maps.js?v=20261104154648"></script>
+<script src="js/map.js?v=20261104154648"></script>
+<script src="js/mapview.js?v=20261104154648"></script>
+<script src="js/ui.js?v=20261104154648"></script>
 </body>
 </html>

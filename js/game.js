@@ -243,6 +243,7 @@ const State = {
     bossesBeaten: [],                 // 지금까지 꺾어본 보스 id — 영구 경험치 배수의 근거
     banked: [],                       // 격을 삼켜 에너지를 영구 적립한 적 id
     specialOpened: [],                // 특수장비 칸을 열어준 히든 id — 이 수만큼 칸이 열려 있습니다
+    chestsOpened: [],                 // 연 보물상자 id — 한 번만 열립니다 (data.js 의 CHESTS)
     runCount: 0,
     bestLevel: 1,
     bestKill: 0,                      // 지금까지 꺾은 가장 높은 레벨
@@ -414,7 +415,7 @@ function knownZoneCount() {
 // 지역 하나에 격 하나라, 아는 격도 같은 수입니다
 function knownRank(n) { return n <= knownZoneCount(); }
 // 상인의 물건은 사기 전까지 도감에 없습니다 — 몇 개나 있는지조차 보이지 않습니다
-function knownItems() { return ITEMS.filter(i => knownRank(i.rank.n) && (!i.ware || owns(i.id))); }
+function knownItems() { return ITEMS.filter(i => knownRank(i.rank.n) && (!(i.ware || i.chest) || owns(i.id))); }
 
 // 히든이 모습을 드러냈는가 — 그 지역 보스를 한 번이라도 꺾은 뒤.
 // 관측자도 마찬가지로 마왕이 쓰러진 뒤에야 나타납니다 (예전엔 보스 다섯을 꺾으면 마왕보다 먼저 나왔습니다).
@@ -587,6 +588,7 @@ function load() {
     State.meta.bossesBeaten = Array.isArray(data.bossesBeaten) ? data.bossesBeaten : [];
     State.meta.banked = Array.isArray(data.banked) ? data.banked : [];
     State.meta.specialOpened = Array.isArray(data.specialOpened) ? data.specialOpened : [];
+    State.meta.chestsOpened = Array.isArray(data.chestsOpened) ? data.chestsOpened.filter(id => CHESTS[id]) : [];
     State.meta.gold = Math.max(0, Math.floor(num(data.gold)));
     State.meta.avatars = Array.isArray(data.avatars) ? data.avatars.filter(id => canBecomeAvatar(getEnemy(id))) : [];
     State.meta.avatar = State.meta.avatars.includes(data.avatar) ? data.avatar : null;
@@ -663,6 +665,7 @@ function freshMeta() {
     bossesBeaten: [],
     banked: [],
     specialOpened: [],
+    chestsOpened: [],
     gold: 0,                          // 골드 — 회차가 끝나도 남습니다
     avatars: [],                      // 얻은 화신 (적 id) — 회차가 끝나도 남습니다
     avatar: null,                     // 지금 삼은 화신 — 한 번에 하나
@@ -1237,6 +1240,40 @@ function buyWare(id) {
   pushLog('drop', `떠돌이 상인에게서 『${it.name}』${josa(it.name, '을', '를')} 샀다 — ${fmt(it.price)} 골드`);
   save();
   return true;
+}
+
+// ---------- 보물상자 ----------
+// 지도의 상자에 닿으면 엽니다 — 한 번만 (State.meta.chestsOpened, 회차가 끝나도 그대로). 에너지는 안 씁니다.
+// 골드 · 가장 덜 강화된 부위의 강화석 · 상자 전용 장비 (data.js 의 CHESTS). 연 것을 돌려줍니다 (ui.js 의 showChest)
+function chestOpened(id) { return State.meta.chestsOpened.includes(id); }
+function openChest(id) {
+  const c = CHESTS[id], run = State.run;
+  if (!c || chestOpened(id) || !run || run.over) return null;
+  State.meta.chestsOpened.push(id);
+  const gold = c.gold ? Math.max(1, Math.round(goldFor({ rank: { n: c.rank }, kind: 'normal' }) * c.gold * goldMult())) : 0;
+  State.meta.gold = num(State.meta.gold) + gold;
+  let stones = null;
+  if (c.stones) {
+    const low = Math.min(...SLOT_IDS.map(enhanceLevel));
+    const pick = SLOT_IDS.filter(s => enhanceLevel(s) === low);
+    const slot = pick[Math.floor(Math.random() * pick.length)];
+    State.meta.stones[slot] = stonesOf(slot) + c.stones;
+    stones = { slot, n: c.stones };
+  }
+  let drop = null;
+  const it = c.item ? getItem(c.item) : null;
+  if (it && owns(it.id)) {                                   // 이미 가졌으면(관리자로 받았던 것 등) 분해 — 전리품과 같게
+    const n = stoneYield(it);
+    State.meta.stones[it.slot] = stonesOf(it.slot) + n;
+    drop = { item: it, isNew: false, stones: n };
+  } else if (it) {
+    State.meta.owned[it.id] = 1;
+    markFresh(it);
+    drop = { item: it, isNew: true, autoWorn: autoEquipIfBetter(it) };
+  }
+  pushLog('drop', `보물상자를 열었다 — ${[gold && `골드 +${fmt(gold)}`, stones && `${SLOT_NAMES[stones.slot]} 강화석 +${fmt(stones.n)}`, drop && `『${it.name}』`].filter(Boolean).join(' · ')}`);
+  save();
+  return { id, gold, stones, drop };
 }
 
 // 이 여정에서 이미 꺾었는가 (정예·보스 전용)

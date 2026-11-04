@@ -18,7 +18,7 @@
 ## 개수
 
 - 몬스터 297개 (일반 157 · 정예 114 · 히든 6 · 보스 20) — 이 중 **화신 215명**은 몬스터 그림을 화신 그림으로도 씁니다
-- 전리품 517개 — 부위별: weapon 55 · offhand 38 · helm 43 · armor 45 · shoulder 35 · gloves 35 · belt 29 · greaves 34 · boots 33 · cloak 37 · ring 33 · necklace 39 · bracelet 36 · special 25
+- 전리품 518개 — 부위별: weapon 55 · offhand 39 · helm 43 · armor 45 · shoulder 35 · gloves 35 · belt 29 · greaves 34 · boots 33 · cloak 37 · ring 33 · necklace 39 · bracelet 36 · special 25
 
 ## 그 밖의 그림
 
@@ -2975,6 +2975,7 @@
 - `ware_ring` **안쪽에 날짜가 새겨진 반지** (ring, 제6격 성능) → `assets/items/ware_ring.png` — 날짜는 오늘보다 한참 전이다.
 - `ware_greaves` **무릎보호대** (greaves, 제6격 성능) → `assets/items/ware_greaves.png` — 한쪽만 심하게 닳았다.
 - `ware_scarf` **색 바랜 목도리** (shoulder, 제6격 성능) → `assets/items/ware_scarf.png` — 누가 떠 준 것인지 모르는 채 두르게 된다.
+- `chest_sewer_lamp` **꺼지지 않는 수로 등** (offhand, 제1격 성능) → `assets/items/chest_sewer_lamp.png` — 
 
 ---
 

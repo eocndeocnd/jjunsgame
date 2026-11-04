@@ -1,12 +1,12 @@
 {
 "game": "아무도 안 시킨 세계 구하기",
-"data_hash": "facbe2ba",
+"data_hash": "703d6bc3",
 "counts": {
  "monsters": 297,
- "items": 517,
+ "items": 518,
  "items_by_slot": {
   "weapon": 55,
-  "offhand": 38,
+  "offhand": 39,
   "helm": 43,
   "armor": 45,
   "shoulder": 35,
@@ -1038,7 +1038,8 @@
   {"id":"ware_bat","name":"손잡이만 감긴 쇠파이프","slot":"weapon","slot_en":"weapon (sword/axe/staff etc.)","grade":"normal","grade_ko":"일반","rank":6,"rank_name":"마왕","zone":null,"from_monster_id":null,"from_monster":"떠돌이 상인","archetype":"brutal","archetype_note":"분쇄 — 느리지만 한 방이 무겁다","special_kind":null,"specials":["크리 확률","관통"],"note":"테이프는 새것이고, 쇠는 닳아 있다.","placeholder_emoji":"🔧","file":"assets/items/ware_bat.png","size":"256x256","prompt":"weapon 아이템 아이콘: 손잡이만 감긴 쇠파이프. 떠돌이 상인이 파는 먼저 온 이들의 소지품(현대적 일상용품, 낡고 사연이 있어 보이게; 누구의 것인지는 암시하지 말 것). 성격: 분쇄 — 느리지만 한 방이 무겁다. 메모: 테이프는 새것이고, 쇠는 닳아 있다. 평범한 외형. 단일 물체, 도트 일러스트, 투명 배경.","style":"16-bit pixel art, crisp 1px dark outline, limited color palette, centered, no text, transparent background"},
   {"id":"ware_ring","name":"안쪽에 날짜가 새겨진 반지","slot":"ring","slot_en":"ring","grade":"normal","grade_ko":"일반","rank":6,"rank_name":"마왕","zone":null,"from_monster_id":null,"from_monster":"떠돌이 상인","archetype":"lucky","archetype_note":"행운 — 싸움은 약해지고 전리품이 늘어난다","special_kind":null,"specials":["전리품 확률","골드 획득"],"note":"날짜는 오늘보다 한참 전이다.","placeholder_emoji":"💍","file":"assets/items/ware_ring.png","size":"256x256","prompt":"ring 아이템 아이콘: 안쪽에 날짜가 새겨진 반지. 떠돌이 상인이 파는 먼저 온 이들의 소지품(현대적 일상용품, 낡고 사연이 있어 보이게; 누구의 것인지는 암시하지 말 것). 성격: 행운 — 싸움은 약해지고 전리품이 늘어난다. 메모: 날짜는 오늘보다 한참 전이다. 평범한 외형. 단일 물체, 도트 일러스트, 투명 배경.","style":"16-bit pixel art, crisp 1px dark outline, limited color palette, centered, no text, transparent background"},
   {"id":"ware_greaves","name":"무릎보호대","slot":"greaves","slot_en":"leg armor/shin guards","grade":"normal","grade_ko":"일반","rank":6,"rank_name":"마왕","zone":null,"from_monster_id":null,"from_monster":"떠돌이 상인","archetype":"ward","archetype_note":"보호 — 오래 버틴다","special_kind":null,"specials":["흡혈","막기"],"note":"한쪽만 심하게 닳았다.","placeholder_emoji":"🦵","file":"assets/items/ware_greaves.png","size":"256x256","prompt":"leg armor/shin guards 아이템 아이콘: 무릎보호대. 떠돌이 상인이 파는 먼저 온 이들의 소지품(현대적 일상용품, 낡고 사연이 있어 보이게; 누구의 것인지는 암시하지 말 것). 성격: 보호 — 오래 버틴다. 메모: 한쪽만 심하게 닳았다. 평범한 외형. 단일 물체, 도트 일러스트, 투명 배경.","style":"16-bit pixel art, crisp 1px dark outline, limited color palette, centered, no text, transparent background"},
-  {"id":"ware_scarf","name":"색 바랜 목도리","slot":"shoulder","slot_en":"shoulder guards/pauldrons","grade":"normal","grade_ko":"일반","rank":6,"rank_name":"마왕","zone":null,"from_monster_id":null,"from_monster":"떠돌이 상인","archetype":"leech","archetype_note":"흡혈 — 때린 만큼 회복","special_kind":null,"specials":["흡혈"],"note":"누가 떠 준 것인지 모르는 채 두르게 된다.","placeholder_emoji":"🧣","file":"assets/items/ware_scarf.png","size":"256x256","prompt":"shoulder guards/pauldrons 아이템 아이콘: 색 바랜 목도리. 떠돌이 상인이 파는 먼저 온 이들의 소지품(현대적 일상용품, 낡고 사연이 있어 보이게; 누구의 것인지는 암시하지 말 것). 성격: 흡혈 — 때린 만큼 회복. 메모: 누가 떠 준 것인지 모르는 채 두르게 된다. 평범한 외형. 단일 물체, 도트 일러스트, 투명 배경.","style":"16-bit pixel art, crisp 1px dark outline, limited color palette, centered, no text, transparent background"}
+  {"id":"ware_scarf","name":"색 바랜 목도리","slot":"shoulder","slot_en":"shoulder guards/pauldrons","grade":"normal","grade_ko":"일반","rank":6,"rank_name":"마왕","zone":null,"from_monster_id":null,"from_monster":"떠돌이 상인","archetype":"leech","archetype_note":"흡혈 — 때린 만큼 회복","special_kind":null,"specials":["흡혈"],"note":"누가 떠 준 것인지 모르는 채 두르게 된다.","placeholder_emoji":"🧣","file":"assets/items/ware_scarf.png","size":"256x256","prompt":"shoulder guards/pauldrons 아이템 아이콘: 색 바랜 목도리. 떠돌이 상인이 파는 먼저 온 이들의 소지품(현대적 일상용품, 낡고 사연이 있어 보이게; 누구의 것인지는 암시하지 말 것). 성격: 흡혈 — 때린 만큼 회복. 메모: 누가 떠 준 것인지 모르는 채 두르게 된다. 평범한 외형. 단일 물체, 도트 일러스트, 투명 배경.","style":"16-bit pixel art, crisp 1px dark outline, limited color palette, centered, no text, transparent background"},
+  {"id":"chest_sewer_lamp","name":"꺼지지 않는 수로 등","slot":"offhand","slot_en":"off-hand (shield/book/lantern etc.)","grade":"normal","grade_ko":"일반","rank":1,"rank_name":"잡졸","zone":"초심자의 지하수로","from_monster_id":null,"from_monster":"보물상자","archetype":"ward","archetype_note":"보호 — 오래 버틴다","special_kind":null,"specials":["흡혈","막기"],"note":"","placeholder_emoji":"🏮","file":"assets/items/chest_sewer_lamp.png","size":"256x256","prompt":"off-hand 아이템 아이콘: 꺼지지 않는 수로 등. 초심자의 지하수로의 보물상자에서만 나오는 물건(제1격 잡졸, 오래 묻혀 있던 보물처럼). 성격: 보호 — 오래 버틴다. 평범한 외형. 단일 물체, 도트 일러스트, 투명 배경.","style":"16-bit pixel art, crisp 1px dark outline, limited color palette, centered, no text, transparent background"}
 ],
 "other": [
   {"id":"hero_fresh","what":"주인공 — 기본 차림 (재킷에 가방을 멘 헌터)","file":"assets/hero/hunter.webp","status":"있음","note":"지금은 체크무늬 배경이 박힌 그림을 코드가 걷어냄. 진짜 투명 PNG 로 바꾸면 처리 불필요"},

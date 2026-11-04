@@ -16,6 +16,7 @@
 //    (지도 자체의 속성 title — 지역이 없는 지도의 이름, 문의 광장 같은)
 //    secrets  사각형 — 숨은 입구. 벽으로 그려져 있어도 지나갈 수 있습니다
 //    npc      점 — start(시작점) · merchant(상인 자리) · avatarDoor(화신 문)
+//    chests   점 — 보물상자. 속성 chest(상자 id — data.js 의 CHESTS). 그 칸은 막히고, 닫힌 상자에 닿으면 연다
 // ============================================================
 (function (root) {
   'use strict';
@@ -105,6 +106,7 @@
     m.posts = objects('posts').map(o => ({ name: o.name, ...(o.point || !o.width ? { ...cell(o), w: 1, h: 1 } : rect(o)), ...props(o) }));
     m.ports = objects('ports').map(o => ({ name: o.name, ...rect(o), ...props(o) }));
     m.npcs = objects('npc').map(o => ({ name: o.name, ...cell(o), ...props(o) }));
+    m.chests = objects('chests').map(o => ({ name: o.name, ...cell(o), ...props(o) }));
     const start = m.npcs.find(n => n.name === 'start');
     m.start = start ? { x: start.x, y: start.y } : { x: 1, y: 1 };
     return m;
@@ -136,6 +138,7 @@
   //   postAlive(enemyId) → 그 자리에 아직 서 있는가 (이 여정에서 꺾었거나 아직 안 나타난 히든이면 false)
   //   portOpen(port)     → 그 문이 열렸는가
   //   size(monsterId)    → 지도에서 차지하는 n × n 칸 (없으면 1). 몬스터의 x · y 는 왼쪽 위 칸이고 w · h 가 그 크기
+  //   chestOpen(chestId) → 그 보물상자를 이미 열었는가 (열린 상자는 그냥 막힌 칸)
   function mulberry(seed) {
     return () => {
       seed = seed + 0x6D2B79F5 | 0;
@@ -150,7 +153,7 @@
     const w = {
       map,
       rng: seed == null ? Math.random : mulberry(seed),
-      hooks: { temper: () => 'passive', rollAura: () => null, postAlive: () => true, portOpen: () => true, size: () => 1, ...hooks },
+      hooks: { temper: () => 'passive', rollAura: () => null, postAlive: () => true, portOpen: () => true, size: () => 1, chestOpen: () => false, ...hooks },
       time: 0,
       player: { x: map.start.x, y: map.start.y, fromX: map.start.x, fromY: map.start.y, dir: null, wait: 0, needRelease: false },
       mobs: [],
@@ -190,6 +193,7 @@
   }
   function mobAt(w, x, y) { return w.mobs.find(m => x >= m.x && y >= m.y && x < m.x + sizeOf(m) && y < m.y + sizeOf(m)) || null; }
   function postAt(w, x, y) { return w.map.posts.find(p => inRect(p, x, y) && w.hooks.postAlive(p.enemy)) || null; }
+  function chestAt(w, x, y) { return w.map.chests.find(c => c.x === x && c.y === y) || null; }
   function portAt(w, x, y) { return w.map.ports.find(p => inRect(p, x, y) && (!p.appears || w.hooks.portOpen(p))) || null; }
   function wall(w, x, y) {
     if (x < 0 || y < 0 || x >= w.map.w || y >= w.map.h || w.map.solid[y * w.map.w + x]) return true;
@@ -246,7 +250,8 @@
     return !inRect(b, p.x, p.y)
       && !w.mobs.some(o => o !== self && overlaps(b, body(o.x, o.y, sizeOf(o))))
       && !w.map.posts.some(q => overlaps(b, q) && w.hooks.postAlive(q.enemy))
-      && !w.map.ports.some(q => overlaps(b, q));
+      && !w.map.ports.some(q => overlaps(b, q))
+      && !w.map.chests.some(c => inRect(b, c.x, c.y));
   }
 
   // ---------- 스폰 ----------
@@ -316,6 +321,7 @@
   //   { type: 'port', port }    열린 문에 들어섰다
   //   { type: 'closed', port }  닫힌 문에 부딪혔다
   //   { type: 'area', area }    다른 구역에 들어섰다 (밀려나 들어선 것도)
+  //   { type: 'chest', chest }  닫힌 보물상자에 닿았다 — 그 자리에 선 채로 (연 뒤에는 그냥 막힌 칸)
   function tick(w, dt) {
     const ev = [];
     if (w.encounter) return ev;
@@ -357,6 +363,11 @@
     if (mob) return meet(w, ev, { mob, first: 'player' });
     const post = postAt(w, nx, ny);
     if (post) return meet(w, ev, { post, first: 'player' });
+    const chest = chestAt(w, nx, ny);
+    if (chest) {
+      if (!w.hooks.chestOpen(chest.chest)) { p.dir = null; p.needRelease = true; ev.push({ type: 'chest', chest }); }
+      return;
+    }
     p.fromX = p.x; p.fromY = p.y;
     p.x = nx; p.y = ny;
     if (port && port.to) ev.push({ type: 'port', port });
@@ -471,7 +482,7 @@
     let best = null, bestScore = -1;
     for (const [dx, dy] of STEPS) {
       const x = p.x + dx, y = p.y + dy;
-      if (wall(w, x, y) || mobAt(w, x, y) || postAt(w, x, y) || (portAt(w, x, y) || {}).to) continue;
+      if (wall(w, x, y) || mobAt(w, x, y) || postAt(w, x, y) || chestAt(w, x, y) || (portAt(w, x, y) || {}).to) continue;
       const score = manh(x, y, fx, fy) + (x === p.fromX && y === p.fromY ? 0.5 : 0);   // 걸어온 칸이면 그쪽으로
       if (score > bestScore) { best = { x, y }; bestScore = score; }
     }
@@ -480,7 +491,7 @@
     p.x = best.x; p.y = best.y;
   }
 
-  const api = { RULES, TEMPER_BY_ARCH, DIRS, temperOf, mulberry, parseTiled, createWorld, setInput, tick, resolve, areaAt, mobAt, postAt, portAt };
+  const api = { RULES, TEMPER_BY_ARCH, DIRS, temperOf, mulberry, parseTiled, createWorld, setInput, tick, resolve, areaAt, mobAt, postAt, portAt, chestAt };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.MapRules = api;
 })(typeof window !== 'undefined' ? window : globalThis);

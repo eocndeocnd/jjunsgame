@@ -25,7 +25,7 @@ function tiledProps(o) {
   }));
 }
 
-// spec: { w, h, tiles(칸마다 위의 타일 번호), areas, posts, ports, secrets, npcs } — 좌표는 칸 단위
+// spec: { w, h, tiles(칸마다 위의 타일 번호), areas, posts, ports, secrets, npcs, chests } — 좌표는 칸 단위 (chests 는 점, 속성 chest = 상자 id)
 // posts 는 w · h 가 있으면 사각형(큰 보스), 없으면 점(한 칸)으로 적습니다.
 // areas 는 polygon(x · y 에서 잰 꼭짓점들, 칸 단위)이 있으면 다각형, 없으면 사각형으로 적습니다.
 function buildTmj(spec) {
@@ -45,11 +45,12 @@ function buildTmj(spec) {
     group(3, 'posts', (spec.posts || []).map(postObj)),
     group(4, 'ports', (spec.ports || []).map(rectObj)),
     group(5, 'secrets', (spec.secrets || []).map(rectObj)),
-    group(6, 'npc', (spec.npcs || []).map(pointObj))
+    group(6, 'npc', (spec.npcs || []).map(pointObj)),
+    group(7, 'chests', (spec.chests || []).map(pointObj))
   ];
   return {
     compressionlevel: -1, type: 'map', version: '1.10', tiledversion: '1.10.2', orientation: 'orthogonal', renderorder: 'right-down', infinite: false,
-    width: spec.w, height: spec.h, tilewidth: TILE, tileheight: TILE, nextlayerid: 7, nextobjectid: nextId, layers,
+    width: spec.w, height: spec.h, tilewidth: TILE, tileheight: TILE, nextlayerid: 8, nextobjectid: nextId, layers,
     properties: tiledProps(spec.props || {}),
     tilesets: [{
       firstgid: 1, name: 'draft', image: 'tiles.png', imagewidth: TILE * TILE_KINDS, imageheight: TILE, tilewidth: TILE, tileheight: TILE,
@@ -148,7 +149,8 @@ function valueNoise(seed) {
 // data: js/data.js 에서 꺼낸 { ENEMIES, ZONES }
 // ranks: 그림의 N 번째 = 몇 격인가 · opts: { seed, plaza(어귀 이름), obstacle(rank) → 그 격 들판에 흩어질 장애물 타일, entry(어귀) → 문의 광장으로 가는 문,
 //   square(모든 방을 반듯하게) · open(트인 길의 폭 — 주면 맞닿은 변 가운데에) · order({ 격: ['칸,줄', …] } — 그 격 일반을 약한 것부터 세울 들판 차례),
-//   exit({ name, label, to } — 마지막 격 보스 방 위쪽 막다른 틈 안의 구멍. 보스가 그 앞을 꼭 맞게 막고 섬) }
+//   exit({ name, label, to } — 마지막 격 보스 방 위쪽 막다른 틈 안의 구멍. 보스가 그 앞을 꼭 맞게 막고 섬),
+//   chests([{ id, room: '칸,줄', corner: nw | ne | sw | se }] — 그 방 구석(가장자리에서 두 칸 안)의 보물상자) }
 function generate(plan, ranks, data, opts) {
   const { rooms, links, cols, rows } = layoutFromPlan(plan);
   const rng = mulberry(opts.seed);
@@ -330,6 +332,15 @@ function generate(plan, ranks, data, opts) {
     if (hidden) post(hidden, ...at(hidden, center(mine('H')[0])), false);
   }
 
+  // 보물상자 — 방 구석, 가장자리에서 두 칸 안 (길목은 방 변의 가운데라 막지 않음)
+  const chests = (opts.chests || []).map(c => {
+    const room = rooms.find(o => `${o.c},${o.r}` === c.room);
+    if (!room) throw new Error(`보물상자 ${c.id} — 방 ${c.room} 이(가) 그림에 없음`);
+    const o = origin(room), x = o.x + (c.corner[1] === 'w' ? 2 : FIELD_W - 3), y = o.y + (c.corner[0] === 'n' ? 2 : FIELD_H - 3);
+    fill(x - 1, y - 1, 3, 3, FLOOR, true);
+    return { name: '보물상자', x, y, chest: c.id };
+  });
+
   // 4) 장애물 — 지나가는 곳과 구역 들판에만, 작은 덤불처럼 몇 무더기
   for (const room of rooms) {
     if (room.kind !== 'n' && room.kind !== '..') continue;
@@ -359,7 +370,7 @@ function generate(plan, ranks, data, opts) {
   }
   for (let k = 0; k < w * h; k++) if (!seen[k] && (tiles[k] === FLOOR || tiles[k] === ROAD)) tiles[k] = WALL;
 
-  return buildTmj({ w, h, tiles, areas, posts, ports, secrets, npcs });
+  return buildTmj({ w, h, tiles, areas, posts, ports, secrets, npcs, chests });
 }
 
 // ---------- 처음 + 1격 — 지하수로 (sewer) ----------
@@ -381,7 +392,14 @@ const SEWER = {
     '   |',
     '   S.'
   ],
-  order: ['1,4', '1,3', '1,2', '2,3', '2,2', '0,2', '2,1', '0,1', '1,1']   // 1 ~ 9번 방
+  order: ['1,4', '1,3', '1,2', '2,3', '2,2', '0,2', '2,1', '0,1', '1,1'],  // 1 ~ 9번 방
+  // 보물상자 (내용은 data.js 의 CHESTS) — 첫 공간 · 갈림길 끝의 4 · 6번 방 · 길에서 가장 먼 8번 방(큰 상자)
+  chests: [
+    { id: 'sewer-1', room: '1,5', corner: 'sw' },
+    { id: 'sewer-2', room: '2,3', corner: 'se' },
+    { id: 'sewer-3', room: '0,2', corner: 'sw' },
+    { id: 'sewer-4', room: '0,1', corner: 'nw' }
+  ]
 };
 function sewer(data) {
   return generate(SEWER.plan, [1], data, {
@@ -391,6 +409,7 @@ function sewer(data) {
     square: true,
     open: 4,
     order: { 1: SEWER.order },
+    chests: SEWER.chests,
     exit: { name: 'out', label: '바깥', to: 'overworld.sewer' }
   });
 }

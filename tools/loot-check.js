@@ -31,7 +31,7 @@
     for (const it of d.ITEMS) {
       if (ids.has(it.id)) errors.push(`${it.id} — 같은 번호가 두 번 나옵니다`);
       ids.add(it.id);
-      if (it.ware) continue;
+      if (it.ware || it.chest) continue;                    // 상인 물건 · 상자 전용 장비는 몬스터 전리품이 아님
       (byFoe[it.from] = byFoe[it.from] || []).push(it);
     }
     if (d.ITEMS.length > BUDGET) errors.push(`전리품이 ${d.ITEMS.length}개 — 예산 ${BUDGET}개를 넘었습니다`);
@@ -49,7 +49,7 @@
       if (singles > SINGLE_NORMALS_MAX) errors.push(`${r.n}격 — 전리품이 하나뿐인 일반이 ${singles} (격마다 ${SINGLE_NORMALS_MAX}까지)`);
 
       const tally = Object.fromEntries(d.SLOT_IDS.map(s => [s, 0]));
-      for (const it of d.ITEMS) if (!it.ware && it.slot !== 'special' && it.rank.n === r.n) tally[it.slot]++;
+      for (const it of d.ITEMS) if (!it.ware && !it.chest && it.slot !== 'special' && it.rank.n === r.n) tally[it.slot]++;
       for (const s of d.SLOT_IDS) {
         if (tally[s] < SLOT_MIN) errors.push(`${r.n}격 — ${s} 이(가) 하나도 없습니다`);
         if (tally[s] > SLOT_MAX) errors.push(`${r.n}격 — ${s} 이(가) ${tally[s]}개 (많아야 ${SLOT_MAX})`);

@@ -2351,6 +2351,36 @@ for (const [id, name, slot, icon, r, arch, note, gold] of MERCHANT_WARES) {
   });
 }
 
+// ---------- 보물상자 (지도의 chests 층 — 자리는 tools/map-gen.js 가 놓음) ----------
+// 닿으면 열리고 한 번만 열립니다 (State.meta.chestsOpened — 회차가 끝나도 그대로, 사용자 결정). 함정(미믹)은 없음.
+//   gold   — 그 격 일반 한 마리 몫(goldFor)의 몇 배 (장비의 골드 획득도 붙음)
+//   stones — 강화석 몇 개 — 가장 덜 강화된 부위로
+//   item   — 그 상자에서만 나오는 장비 (CHEST_ITEMS). 있으면 큰 상자로 그림
+const CHESTS = {
+  'sewer-1': { rank: 1, gold: 10, stones: 30 },                              // 첫 공간 — 처음 만나는 상자
+  'sewer-2': { rank: 1, gold: 20, stones: 30 },                              // 4번 방 구석
+  'sewer-3': { rank: 1, gold: 20, stones: 30 },                              // 6번 방 구석
+  'sewer-4': { rank: 1, gold: 30, stones: 60, item: 'chest_sewer_lamp' }    // 8번 방 구석 — 길에서 가장 먼 큰 상자
+};
+const CHEST_ID = 'chest';
+// 상자에서만 나오는 장비 — 그 격 지역 최강 일반의 1.2배 (상인 물건과 같은 셈). 얻기 전엔 도감에 없고, 도감 완성에도 안 셈
+const CHEST_ITEMS = [
+  // [id, 이름, 부위, 그림, 격, 성격]
+  ['chest_sewer_lamp', '꺼지지 않는 수로 등', 'offhand', '🏮', 1, 'ward']
+];
+for (const [id, name, slot, icon, r, arch] of CHEST_ITEMS) {
+  const zone = ZONES.findIndex(z => z.rank === r);
+  const level = Math.max(...ENEMIES.filter(e => e.zoneIndex === zone && e.kind === 'normal').map(e => e.level));
+  ITEMS.push({
+    id, name, slot,
+    grade: 'normal', arch, special: null, unique: false, note: null,
+    level, rank: RANKS.find(x => x.n === r),
+    from: CHEST_ID, fromName: '보물상자', fromIcon: icon,
+    chest: true,
+    ...makeItemStats(slot, level, 1.2, arch, false)
+  });
+}
+
 // id 로 바로 찾습니다 — 스탯을 셀 때마다 수백 개를 훑지 않게
 const ENEMY_BY_ID = Object.fromEntries(ENEMIES.map(e => [e.id, e]));
 
