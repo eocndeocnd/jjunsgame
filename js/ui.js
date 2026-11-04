@@ -1502,7 +1502,11 @@ function currentMapId() {
   const run = State.run;
   if (!run || !maps) return null;
   const same = mapKey === `${currentSlot}|${State.meta.runCount}`;
-  if ((same && run.zoneIndex !== mapZone) || !maps[run.mapId]) run.mapId = zoneMap[ZONES[run.zoneIndex].id] || null;
+  // 불러온 회차의 지도에 지금 지역이 없으면 그 지역이 있는 지도로 (지역이 없는 문의 광장은 그대로) —
+  // 1격이 지하수로(sewer) 지도로 옮겨 가기 전, overworld 의 1격에서 저장한 회차
+  const zoneId = ZONES[run.zoneIndex].id, saved = maps[run.mapId];
+  const stale = !same && saved && saved.areas.some(a => a.zone) && !saved.areas.some(a => a.zone === zoneId);
+  if ((same && run.zoneIndex !== mapZone) || !saved || stale) run.mapId = zoneMap[zoneId] || null;
   return run.mapId;
 }
 function onMapZone() { return !!currentMapId(); }
@@ -1517,7 +1521,7 @@ function placeName(zone) {
 function mapPaused() {
   const run = State.run;
   const up = id => { const el = $(id); return !!el && !el.classList.contains('hidden'); };
-  return !run || run.over || !!run.encounter || !!run.lastResult || !!battle || !onMapZone()
+  return !run || run.over || !!run.encounter || !!run.lastResult || !!battle || fading || !onMapZone()
     || document.body.dataset.tab !== 'journey'   // 메뉴 서랍이 열려 있는 동안
     || isAnyModalOpen() || up('title') || up('tutorial') || up('talk');
 }
@@ -1595,10 +1599,29 @@ function goThroughPort(port) {
   rememberMapAt(at.x, at.y, true);
 }
 
-// 문 바로 앞의 걸을 수 있는 칸 (아래 · 위 · 오른쪽 · 왼쪽 순) — 들어서자마자 도로 나가지 않게 문 위가 아니라 그 앞
+// 지도를 옮길 때 — 화면을 까맣게 덮고(FADE_MS) 그동안 옮긴 뒤 다시 밝힘. 덮여 있는 동안 지도는 멈춥니다 (mapPaused)
+const FADE_MS = 260;
+let fading = false;
+function fadeThrough(fn) {
+  const el = $('fade');
+  if (!el || fading) { fn(); return; }
+  fading = true;
+  el.classList.add('on');
+  setTimeout(() => {
+    fn();
+    render();
+    requestAnimationFrame(() => { el.classList.remove('on'); fading = false; });
+  }, FADE_MS);
+}
+
+// 문 바로 앞의 걸을 수 있는 칸 (아래 · 위 · 오른쪽 · 왼쪽 순) — 들어서자마자 도로 나가지 않게 문 위가 아니라 그 앞.
+// 아직 서 있는 정예 · 보스의 몸 위는 빼고 (보스 뒤 구멍으로 거꾸로 들어오면 — 그런 칸이 없으면 그 지도의 시작점)
 function doorStep(data, port) {
-  const inPort = (x, y) => data.ports.some(p => x >= p.x && y >= p.y && x < p.x + p.w && y < p.y + p.h);
-  const free = (x, y) => x >= 0 && y >= 0 && x < data.w && y < data.h && !data.solid[y * data.w + x] && !inPort(x, y);
+  const inRect = (p, x, y) => x >= p.x && y >= p.y && x < p.x + (p.w || 1) && y < p.y + (p.h || 1);
+  const alive = MapView.gameHooks().postAlive;
+  const inPort = (x, y) => data.ports.some(p => inRect(p, x, y));
+  const free = (x, y) => x >= 0 && y >= 0 && x < data.w && y < data.h && !data.solid[y * data.w + x] && !inPort(x, y)
+    && !data.posts.some(p => inRect(p, x, y) && alive(p.enemy));
   for (let x = port.x; x < port.x + port.w; x++) {
     if (free(x, port.y + port.h)) return { x, y: port.y + port.h };
     if (free(x, port.y - 1)) return { x, y: port.y - 1 };
@@ -1626,7 +1649,7 @@ function onMapEvents(evs) {
       else mapView.resolve('retreat');   // 에너지가 모자라 여정이 끝났다
       changed = true;
     } else if (e.type === 'port' && e.port.to) {
-      goThroughPort(e.port);
+      fadeThrough(() => goThroughPort(e.port));   // 화면이 까매졌다가 다음 지도의 문(구멍) 앞에서 밝아짐
       changed = true;
       break;                             // 남은 일은 떠나온 지도의 것
     } else if (e.type === 'closed' && Date.now() - closedSaidAt > 2000) {

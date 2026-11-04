@@ -83,7 +83,8 @@ Resolute Hero RPG 와 Inflation RPG 를 모티브로 한 로그라이트 오토�
    보자마자 쫓아오는 것(선공) · 내가 닿아야 싸우는 것(후공) · 달아나는 것(중립)이 있다. 몬스터(와 기운)는 회차를 시작할 때 한 번 정해지고, 잡으면 그 구역에 하나가 새로 선다.
    몬스터에 **닿으면** 지도 위에 조우 창이 뜨고, 싸움과 결과도 그 창에서 본다. 정예 · 보스 자리도 지도 위에 있다.
    - **맞설 때만 에너지 1** — 물러서면 그대로다. 보스는 고갯길을 막고 서 있어서 꺾어야 그 너머로 간다.
-   - 1~6격은 한 장(마왕의 성까지). 마왕 뒤 문으로 **문의 광장**에 나서면, 7~20격을 비슷한 것끼리 묶은 일곱 장의 문이 있다 — 그 앞 격의 보스를 꺾어야 열린다.
+   - 처음과 1격은 땅 밑 **지하수로** — 같은 크기의 방이 레벨 순으로 위로 이어지고, 맨 위 보스 방의 보스 뒤 **구멍**으로 들어가면 화면이 까매졌다가 바깥 숲(2격)의 구멍 앞에 선다.
+   - 2~6격은 한 장(마왕의 성까지). 마왕 뒤 문으로 **문의 광장**에 나서면, 7~20격을 비슷한 것끼리 묶은 일곱 장의 문이 있다 — 그 앞 격의 보스를 꺾어야 열린다.
    - 한 장 안에 한참 센 격이 강 너머로 보이기도 한다 (예: 7격 옆의 13격 헤라클레스). 들어갈 수는 있지만 지금은 못 이긴다.
 3. **예감**(이길 만한지를 한 문장으로)을 보고 **맞선다 / 물러선다**.
 4. 맞서면 **결과 화면** — 승패 · 경험치 · 레벨 변화 · 빼앗은 전리품.
@@ -494,8 +495,8 @@ Resolute Hero RPG 와 Inflation RPG 를 모티브로 한 로그라이트 오토�
 - Node 가 없으면 같은 일을 브라우저 도구로 합니다: `tools/check-ids.html` (번호 검사 · 번호표 갱신) · `tools/export-images.html` (그림 목록 뽑기). `tools/` 폴더가 아닌 저장소 맨 위에서 `python -m http.server` 로 연 뒤 주소로 들어가면 됩니다.
 - Node 가 있으면 한 줄씩: `node tools/cli.js images` (그림 목록 다시 뽑기) · `node tools/cli.js check-ids` (번호 검사) · `node tools/cli.js snapshot` (의도한 변경을 확인한 뒤 번호표 갱신).
 - 번호 검사에서 걸렸을 때: 옛 전리품을 뺀 것이면 `data.js` 의 `RETIRED_ITEMS` 로 정리해 가진 사람이 강화석으로 돌려받게 하고, 순서를 바꾼 것이면 옛 번호의 자리를 `'retired'` 로 비워 두세요 (자세한 건 아래 「6격」 설명과 `id-check.js` 의 주석).
-- 그 밖: `tools/sim.html` (밸런스 시뮬레이터) · `tools/map-draft.html` (맵 초안 — 색칸 지도 `maps/overworld.tmj` 위를 걸어 봄).
-- 월드맵 규칙(`js/map.js`) 시험: `node --test tests/map.test.js`. 임시 지도 다시 뽑기: `node tools/cli.js maps` (이미 있는 지도는 `--force` 일 때만 덮어씀 — 지도는 Tiled 로 열어 고칠 수 있습니다). 1~6격 지도(`overworld`)의 땅 모양은 `tools/overworld-layout.js` 가 정하고, 맵 시안 그림(`design/map-concept/render.js`)도 같은 파일을 씁니다 (게임 지도는 시안의 2.5배 — `tools/map-gen.js` 의 `OVERWORLD_SCALE`).
+- 그 밖: `tools/sim.html` (밸런스 시뮬레이터) · `tools/map-draft.html` (맵 초안 — 색칸 지도 `maps/overworld.tmj` 위를 걸어 봄, 주소 뒤에 `?map=sewer` 면 지하수로).
+- 월드맵 규칙(`js/map.js`) 시험: `node --test tests/map.test.js`. 임시 지도 다시 뽑기: `node tools/cli.js maps` (이미 있는 지도는 `--force` 일 때만 덮어씀 — 지도는 Tiled 로 열어 고칠 수 있습니다). 처음 + 1격 지도(`sewer`)는 `tools/map-gen.js` 의 `SEWER`(방 배치 그림), 2~6격 지도(`overworld`)의 땅 모양은 `tools/overworld-layout.js` 가 정하고, 맵 시안 그림(`design/map-concept/render.js`)도 같은 파일을 씁니다 (게임 지도는 시안의 2.5배 — `tools/map-gen.js` 의 `OVERWORLD_SCALE`).
 
 ## 그림 목록 (AI 이미지 생성용)
 

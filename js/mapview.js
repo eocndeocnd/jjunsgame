@@ -152,12 +152,20 @@ const MapView = (function () {
         ctx.fillText(t.text, cx, topY);
       };
 
-      // 문 — 열리면 초록, 닫히면 갈색. 이름이 있으면 문 위에 씁니다
+      // 문 — 열리면 초록, 닫히면 갈색. 구멍(hole — 다른 지도로 내려가거나 나가는 곳)은 어두운 구멍. 이름이 있으면 문 위에 씁니다
       for (const port of m.ports) {
         if (!seen(port.x, port.y, port.w, port.h)) continue;
         const open = w.hooks.portOpen(port);
-        ctx.fillStyle = open ? '#3fae4a' : '#5c3a1a';
-        ctx.fillRect(ox + port.x * T + 2, oy + port.y * T + 2, port.w * T - 4, port.h * T - 4);
+        if (port.hole) {
+          const cx = ox + (port.x + port.w / 2) * T, cy = oy + (port.y + port.h / 2) * T, rx = port.w * T / 2 - 1, ry = port.h * T / 2 + T * 0.1;
+          ctx.fillStyle = '#5c3a1a';
+          ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = '#0b0603';
+          ctx.beginPath(); ctx.ellipse(cx, cy + T * 0.06, rx - T * 0.22, ry - T * 0.18, 0, 0, Math.PI * 2); ctx.fill();
+        } else {
+          ctx.fillStyle = open ? '#3fae4a' : '#5c3a1a';
+          ctx.fillRect(ox + port.x * T + 2, oy + port.y * T + 2, port.w * T - 4, port.h * T - 4);
+        }
         if (port.label) {
           // 글은 문 바깥쪽(벽 쪽)에 — 문 앞에 선 나와 겹치지 않게
           const below = m.solid[Math.min(m.h - 1, port.y + port.h) * m.w + port.x];

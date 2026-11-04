@@ -6,7 +6,7 @@
 <title>맵 초안 — jjunsgame</title>
 <!-- 맵 초안 — 지도 손질용 (docs/MAP-REFERENCE-PLAN.md).
      게임과 같은 규칙(js/map.js) · 그리기(js/mapview.js)로 지도를 걸어 봅니다. 몬스터 성격 점 · 작은 지도 · 시작 자리 고르기가 더 있습니다.
-     지도는 maps/overworld.tmj 를 바로 읽습니다 — Tiled 로 고친 뒤 빌드 없이 새로 고침만 하면 됩니다.
+     지도는 maps/overworld.tmj (주소 뒤에 ?map=sewer 면 maps/sewer.tmj) 를 바로 읽습니다 — Tiled 로 고친 뒤 빌드 없이 새로 고침만 하면 됩니다.
      싸움은 게임 규칙(data.js · game.js)을 그대로 씁니다. 아무것도 저장하지 않습니다. -->
 <style>
   body { font: 14px/1.45 system-ui, sans-serif; margin: 0 auto; padding: 8px 12px 24px; max-width: 600px; background: #1c1007; color: #f6e7c3; }
@@ -242,9 +242,13 @@ document.addEventListener('keydown', ev => {
 $('setup').onclick = setup;
 $('again').onclick = () => beginRun(false);
 $('from').onchange = defaults;
-fetch('../maps/overworld.tmj').then(r => r.json()).then(tmj => {
-  map = MapRules.parseTiled(tmj, 'overworld');
-  $('from').innerHTML = '<option value="0">첫 공간</option>' + [1, 2, 3, 4, 5, 6].map(n => `<option value="${n}">${n}격 입구 — ${ZONES.find(z => z.rank === n).name}</option>`).join('');
+// ?map=sewer 면 처음 + 1격 지하수로, 없으면 2~6격 overworld
+const MAP_ID = new URLSearchParams(location.search).get('map') || 'overworld';
+fetch(`../maps/${MAP_ID}.tmj`).then(r => r.json()).then(tmj => {
+  map = MapRules.parseTiled(tmj, MAP_ID);
+  const ranks = [...new Set(map.areas.filter(a => a.monster).map(a => a.rank))].sort((p, q) => p - q);
+  $('from').innerHTML = `<option value="0">${MAP_ID === 'sewer' ? '첫 공간' : '지도의 시작점 (지하수로 구멍 앞)'}</option>`
+    + ranks.map(n => `<option value="${n}">${n}격 입구 — ${ZONES.find(z => z.rank === n).name}</option>`).join('');
   defaults();
   setup();
 }).catch(err => { $('hud').textContent = `지도를 못 읽었습니다 (${err.message}) — 저장소 맨 위에서 python -m http.server 로 연 뒤 들어오세요.`; });

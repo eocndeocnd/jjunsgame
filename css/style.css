@@ -2811,3 +2811,8 @@ body.meeting .enc-portrait .portrait-ic { font-size: clamp(90px, 34vw, 190px); }
 .res-diff .down { color: var(--danger); }
 .res-diff .same { color: var(--text-faint); font-weight: 400; }
 .res-wear { margin-top: 4px; padding: 5px 14px; }
+
+/* 지도를 옮길 때(문 · 구멍) 잠깐 화면을 까맣게 — ui.js 의 fadeThrough. 지도 · 지도 위의 것 · 서랍 위, 창(모달) 아래 */
+.fade { position: fixed; inset: 0; z-index: 40; background: #000; opacity: 0; pointer-events: none; transition: opacity .26s ease; }
+.fade.on { opacity: 1; pointer-events: auto; transition-duration: .24s; }
+@media (prefers-reduced-motion: reduce) { .fade { transition-duration: .1s; } }
