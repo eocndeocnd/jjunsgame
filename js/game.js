@@ -937,6 +937,7 @@ function freshRun() {
     lastResult: null,    // 방금 끝난 전투의 결과 — 결과 화면이 이걸 보고 그립니다
     onBoss: false,       // 그 조우가 보스전인가
     metOnMap: false,     // 지도에서 닿은 일반인가 — 그러면 에너지는 맞설 때 씁니다 (물러서면 공짜)
+    noRetreat: false,    // 몬스터가 먼저 덤벼든 조우 — 물러설 수 없음 (선공 · 화난 후공이 쫓아와 닿음, 사용자 결정)
     zonesVisited: [0],   // 이 여정에 들어선 지역 — 지도에서 「…에 들어섰다」는 처음 한 번만
     mapId: null,         // 지금 걷는 지도 (null 이면 지금 지역이 있는 지도 — 지역이 없는 문의 광장에 있을 때만 따로 적힘)
     mapAt: null,         // 그 지도 위에 서 있던 칸 { x, y } — 불러오면 여기서 이어 걷습니다
@@ -1070,6 +1071,7 @@ function beginEncounter(foe, isBoss) {
   const run = State.run;
   run.encounter = foe.id;
   run.onBoss = isBoss;
+  run.noRetreat = false;   // 덤벼든 조우면 meetOnMap 이 다시 켭니다
   run.aura = rollAura();   // 보스도 기운을 두를 수 있습니다
   markSeen(foe.id);        // 직접 마주쳐야 이름이 드러납니다
   return run.aura;
@@ -1108,7 +1110,7 @@ function travel() {
 // 지도 위를 걷다 닿으면 여기를 거칩니다. 「길을 떠난다」와 달리 닿기만 해서는 에너지를 안 씁니다 —
 // 맞설 때 1 (engage), 물러서면 공짜. 정해진 자리(정예 · 히든 · 보스)도 똑같습니다 (사용자 결정 — 예전엔 닿는 순간 1이고 물러설 수 없었음).
 //   aura  — 서 있을 때부터 두르고 있던 기운 (지도에서 빛나 보이던 그것)
-//   first — 'foe' 면 몬스터가 먼저 덤볐다
+//   first — 'foe' 면 몬스터가 먼저 덤볐다 — 그 조우는 물러설 수 없습니다 (사용자 결정)
 function meetOnMap(foeId, aura, first) {
   const run = State.run;
   const foe = getEnemy(foeId);
@@ -1119,6 +1121,7 @@ function meetOnMap(foeId, aura, first) {
   beginEncounter(foe, false);
   run.aura = aura || null;
   run.metOnMap = true;
+  run.noRetreat = first === 'foe';
   const who = `${foe.icon} ${foe.name}${josa(foe.name, '이', '가')}`;
   if (run.aura) pushLog('aura', `✦ ${run.aura.name} ${foe.name}${josa(foe.name, '이', '가')} ${first === 'foe' ? '덤벼들었다' : '앞에 섰다'} — ${run.aura.desc} ✦`);
   else pushLog('travel', first === 'foe' ? `${who} 덤벼들었다` : `${who} 앞을 막아섰다`);
@@ -1306,7 +1309,7 @@ function approachPost(enemyId) {
 // 물러선다 — 지도에서 닿은 것은 아직 에너지를 안 썼으니 공짜 (정예 · 히든 · 보스도). 예전 저장본처럼 이미 썼으면 그냥 날아갑니다.
 function retreat() {
   const run = State.run;
-  if (run.over || !run.encounter) return;
+  if (run.over || !run.encounter || run.noRetreat) return false;   // 덤벼든 몬스터 앞에서는 못 물러섬
   const foe = getEnemy(run.encounter);
   pushLog('info', run.metOnMap ? `${foe.name} 앞에서 물러섰다.` : `${foe.name} 앞에서 물러섰다. 발걸음만 축냈다.`);
   run.encounter = null;
@@ -1314,6 +1317,7 @@ function retreat() {
   run.metOnMap = false;
   checkEnergy();
   save();
+  return true;
 }
 
 // 맞선다 — 실제 전투.
@@ -1339,6 +1343,7 @@ function engage() {
   run.encounter = null;
   run.onBoss = false;
   run.aura = null;
+  run.noRetreat = false;
 
   // ----- 패배 -----
   // 여정이 바로 끝나지는 않습니다. 대신 에너지를 크게 잃습니다.
