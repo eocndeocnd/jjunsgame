@@ -16,7 +16,7 @@
 //    (지도 자체의 속성 title — 지역이 없는 지도의 이름, 문의 광장 같은)
 //    secrets  사각형 — 숨은 입구. 벽으로 그려져 있어도 지나갈 수 있습니다
 //    npc      점 — start(시작점) · merchant(상인 자리 — 상인이 와 있으면 막힌 칸, 닿으면 상점) · avatarDoor(화신 문)
-//    chests   점 — 보물상자. 속성 chest(상자 id — data.js 의 CHESTS). 그 칸은 막히고, 닫힌 상자에 닿으면 연다
+//    chests   점 — 보물상자. 속성 chest(상자 id) · rank(격) · big(큰 상자) · item(큰 상자의 전용 장비 — data.js 의 chestLoot). 그 칸은 막히고, 닫힌 상자에 닿으면 연다
 // ============================================================
 (function (root) {
   'use strict';

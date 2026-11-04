@@ -748,8 +748,9 @@ function renderRoster() {
     const zone = ZONES[run.zoneIndex];
     const rank = RANKS.find(r => r.n === zone.rank);
     if (title) title.textContent = zone.name;
-    const col = rankCollection(rank.n);
-    if (sub) sub.textContent = `제${rank.n}격 · ${rank.name} · 전리품 ${col.have}/${col.total}${col.have >= col.total ? ' · 완성' : ''}`;
+    const col = rankCollection(rank.n), box = rankChests(rank.n);
+    if (sub) sub.textContent = `제${rank.n}격 · ${rank.name} · 전리품 ${col.have}/${col.total}${col.have >= col.total ? ' · 완성' : ''}`
+      + (box.total ? ` · 보물상자 ${box.opened}/${box.total}` : '');
     el.innerHTML = zoneRoster(run.zoneIndex).map(f => rosterRow(f, hero)).join('');
     return;
   }
@@ -777,6 +778,13 @@ function renderRoster() {
       </div>
       ${list.map(f => rosterRow(f, hero, 40)).join('')}`;
   }).join('');
+}
+
+// 그 격의 보물상자 — 모든 지도에서 (연 수 / 전체). 지역 도감 머리에 씁니다
+function rankChests(n) {
+  initMap();
+  const all = maps ? Object.values(maps).flatMap(m => m.chests.filter(c => Number(c.rank) === n)) : [];
+  return { opened: all.filter(c => chestOpened(c.chest)).length, total: all.length };
 }
 
 // 도감 줄에 끼워 넣는 전리품 칩.
@@ -1685,7 +1693,7 @@ function onMapEvents(evs) {
       openShop();
       changed = true;
     } else if (e.type === 'chest') {
-      const got = openChest(e.chest.chest);
+      const got = openChest(e.chest);
       if (got) { Sound.play('drop'); showChest(got); }
       changed = true;
     } else if (e.type === 'port' && e.port.to) {

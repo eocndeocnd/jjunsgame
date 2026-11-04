@@ -243,7 +243,7 @@ const State = {
     bossesBeaten: [],                 // 지금까지 꺾어본 보스 id — 영구 경험치 배수의 근거
     banked: [],                       // 격을 삼켜 에너지를 영구 적립한 적 id
     specialOpened: [],                // 특수장비 칸을 열어준 히든 id — 이 수만큼 칸이 열려 있습니다
-    chestsOpened: [],                 // 연 보물상자 id — 한 번만 열립니다 (data.js 의 CHESTS)
+    chestsOpened: [],                 // 연 보물상자 id — 한 번만 열립니다 (지도의 chests 층 · data.js 의 chestLoot)
     runCount: 0,
     bestLevel: 1,
     bestKill: 0,                      // 지금까지 꺾은 가장 높은 레벨
@@ -588,7 +588,7 @@ function load() {
     State.meta.bossesBeaten = Array.isArray(data.bossesBeaten) ? data.bossesBeaten : [];
     State.meta.banked = Array.isArray(data.banked) ? data.banked : [];
     State.meta.specialOpened = Array.isArray(data.specialOpened) ? data.specialOpened : [];
-    State.meta.chestsOpened = Array.isArray(data.chestsOpened) ? data.chestsOpened.filter(id => CHESTS[id]) : [];
+    State.meta.chestsOpened = Array.isArray(data.chestsOpened) ? data.chestsOpened.filter(id => typeof id === 'string') : [];
     State.meta.gold = Math.max(0, Math.floor(num(data.gold)));
     State.meta.avatars = Array.isArray(data.avatars) ? data.avatars.filter(id => canBecomeAvatar(getEnemy(id))) : [];
     State.meta.avatar = State.meta.avatars.includes(data.avatar) ? data.avatar : null;
@@ -1244,11 +1244,12 @@ function buyWare(id) {
 
 // ---------- 보물상자 ----------
 // 지도의 상자에 닿으면 엽니다 — 한 번만 (State.meta.chestsOpened, 회차가 끝나도 그대로). 에너지는 안 씁니다.
-// 골드 · 가장 덜 강화된 부위의 강화석 · 상자 전용 장비 (data.js 의 CHESTS). 연 것을 돌려줍니다 (ui.js 의 showChest)
+// 골드 · 가장 덜 강화된 부위의 강화석 · 큰 상자면 상자 전용 장비 (data.js 의 chestLoot — 지도의 점 속성으로). 연 것을 돌려줍니다 (ui.js 의 showChest)
 function chestOpened(id) { return State.meta.chestsOpened.includes(id); }
-function openChest(id) {
-  const c = CHESTS[id], run = State.run;
-  if (!c || chestOpened(id) || !run || run.over) return null;
+function openChest(box) {
+  const id = box && box.chest, run = State.run;
+  if (!id || chestOpened(id) || !run || run.over) return null;
+  const c = chestLoot(box);
   State.meta.chestsOpened.push(id);
   const gold = c.gold ? Math.max(1, Math.round(goldFor({ rank: { n: c.rank }, kind: 'normal' }) * c.gold * goldMult())) : 0;
   State.meta.gold = num(State.meta.gold) + gold;

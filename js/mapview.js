@@ -183,7 +183,7 @@ const MapView = (function () {
       // 보물상자 — 닫힌 것은 뚜껑 덮인 나무 상자(상자 전용 장비가 든 큰 상자는 금테 · 은은한 빛), 연 것은 뚜껑이 젖혀진 빈 상자
       for (const c of m.chests) {
         if (!seen(c.x, c.y)) continue;
-        const open = w.hooks.chestOpen(c.chest), big = !!(typeof CHESTS !== 'undefined' && CHESTS[c.chest] && CHESTS[c.chest].item);
+        const open = w.hooks.chestOpen(c.chest), big = !!c.big;
         const x = ox + c.x * T, y = oy + c.y * T, u = T / 16;
         if (big && !open) {
           ctx.save(); ctx.shadowColor = '#ffd76a'; ctx.shadowBlur = T * 0.5;

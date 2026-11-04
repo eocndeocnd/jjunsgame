@@ -18,7 +18,7 @@
 ## 개수
 
 - 몬스터 297개 (일반 157 · 정예 114 · 히든 6 · 보스 20) — 이 중 **화신 215명**은 몬스터 그림을 화신 그림으로도 씁니다
-- 전리품 518개 — 부위별: weapon 55 · offhand 39 · helm 43 · armor 45 · shoulder 35 · gloves 35 · belt 29 · greaves 34 · boots 33 · cloak 37 · ring 33 · necklace 39 · bracelet 36 · special 25
+- 전리품 537개 — 부위별: weapon 57 · offhand 39 · helm 45 · armor 46 · shoulder 36 · gloves 37 · belt 30 · greaves 35 · boots 34 · cloak 39 · ring 35 · necklace 41 · bracelet 38 · special 25
 
 ## 그 밖의 그림
 
@@ -2976,6 +2976,25 @@
 - `ware_greaves` **무릎보호대** (greaves, 제6격 성능) → `assets/items/ware_greaves.png` — 한쪽만 심하게 닳았다.
 - `ware_scarf` **색 바랜 목도리** (shoulder, 제6격 성능) → `assets/items/ware_scarf.png` — 누가 떠 준 것인지 모르는 채 두르게 된다.
 - `chest_sewer_lamp` **꺼지지 않는 수로 등** (offhand, 제1격 성능) → `assets/items/chest_sewer_lamp.png` — 
+- `chest_forest_cloak` **이슬 맺힌 이끼 망토** (cloak, 제2격 성능) → `assets/items/chest_forest_cloak.png` — 
+- `chest_ruins_crown` **물에 잠긴 왕관** (helm, 제3격 성능) → `assets/items/chest_ruins_crown.png` — 
+- `chest_giant_knuckle` **거인의 손마디 장갑** (gloves, 제4격 성능) → `assets/items/chest_giant_knuckle.png` — 
+- `chest_necro_bell` **장례 종 목걸이** (necklace, 제5격 성능) → `assets/items/chest_necro_bell.png` — 
+- `chest_abyss_ring` **왕좌 아래 떨어진 반지** (ring, 제6격 성능) → `assets/items/chest_abyss_ring.png` — 
+- `chest_library_cord` **두루마리 끈 팔찌** (bracelet, 제7격 성능) → `assets/items/chest_library_cord.png` — 
+- `chest_camelot_greaves` **원탁 기사의 정강이받이** (greaves, 제8격 성능) → `assets/items/chest_camelot_greaves.png` — 
+- `chest_avalon_belt` **안개로 짠 허리띠** (belt, 제9격 성능) → `assets/items/chest_avalon_belt.png` — 
+- `chest_murim_boots` **비무대 모래 묻은 신** (boots, 제10격 성능) → `assets/items/chest_murim_boots.png` — 
+- `chest_tianshan_shoulder` **만년설 여우털 어깨걸이** (shoulder, 제11격 성능) → `assets/items/chest_tianshan_shoulder.png` — 
+- `chest_sanct_armor` **열두 과업의 사자 가죽** (armor, 제12격 성능) → `assets/items/chest_sanct_armor.png` — 
+- `chest_elysion_spear` **엘리시온 들꽃 창** (weapon, 제13격 성능) → `assets/items/chest_elysion_spear.png` — 
+- `chest_heaven_cloak` **일곱째 하늘의 깃털 외투** (cloak, 제14격 성능) → `assets/items/chest_heaven_cloak.png` — 
+- `chest_cocytus_gloves` **코키토스 서리 장갑** (gloves, 제15격 성능) → `assets/items/chest_cocytus_gloves.png` — 
+- `chest_yggdrasil_bracelet` **세계수 가지 팔찌** (bracelet, 제16격 성능) → `assets/items/chest_yggdrasil_bracelet.png` — 
+- `chest_primordial_helm` **태초의 소라 투구** (helm, 제17격 성능) → `assets/items/chest_primordial_helm.png` — 
+- `chest_olympus_ring` **월계수 반지** (ring, 제18격 성능) → `assets/items/chest_olympus_ring.png` — 
+- `chest_rlyeh_necklace` **가라앉은 도시의 산호 목걸이** (necklace, 제19격 성능) → `assets/items/chest_rlyeh_necklace.png` — 
+- `chest_chaos_blade` **혼돈 속에서 건진 칼** (weapon, 제20격 성능) → `assets/items/chest_chaos_blade.png` — 
 
 ---
 

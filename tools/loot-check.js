@@ -13,7 +13,7 @@
 (function (root) {
   'use strict';
 
-  const BUDGET = 528;            // 격 재편 전의 전리품 수 — 이보다 늘지 않게
+  const BUDGET = 540;            // 격 재편 전의 전리품 수(528) + 보물상자 전용 장비 — 이보다 늘지 않게 (상자 전용은 격마다 하나, 사용자 결정)
   const SLOT_MIN = 1, SLOT_MAX = 3;
   const SINGLE_NORMALS_MAX = 2;  // 격마다 전리품 하나뿐인 일반의 수
 

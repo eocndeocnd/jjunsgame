@@ -2353,20 +2353,40 @@ for (const [id, name, slot, icon, r, arch, note, gold] of MERCHANT_WARES) {
 
 // ---------- 보물상자 (지도의 chests 층 — 자리는 tools/map-gen.js 가 놓음) ----------
 // 닿으면 열리고 한 번만 열립니다 (State.meta.chestsOpened — 회차가 끝나도 그대로, 사용자 결정). 함정(미믹)은 없음.
-//   gold   — 그 격 일반 한 마리 몫(goldFor)의 몇 배 (장비의 골드 획득도 붙음)
-//   stones — 강화석 몇 개 — 가장 덜 강화된 부위로
-//   item   — 그 상자에서만 나오는 장비 (CHEST_ITEMS). 있으면 큰 상자로 그림
-const CHESTS = {
-  'sewer-1': { rank: 1, gold: 10, stones: 30 },                              // 첫 공간 — 처음 만나는 상자
-  'sewer-2': { rank: 1, gold: 20, stones: 30 },                              // 4번 방 구석
-  'sewer-3': { rank: 1, gold: 20, stones: 30 },                              // 6번 방 구석
-  'sewer-4': { rank: 1, gold: 30, stones: 60, item: 'chest_sewer_lamp' }    // 8번 방 구석 — 길에서 가장 먼 큰 상자
-};
+// 격마다 작은 상자 둘 · 큰 상자 하나 (지하수로는 작은 것 셋). 든 것은 지도의 점 속성(chest = id · rank · big · item)으로 정합니다:
+//   골드   — 그 격 일반 한 마리 몫(goldFor)의 CHEST_GOLD 배 (장비의 골드 획득도 붙음)
+//   강화석 — 격마다 CHEST_STONES 개 (그 격 분해 세 번 몫쯤) — 가장 덜 강화된 부위로
+//   장비   — 큰 상자에만, 그 상자에서만 나오는 것 (CHEST_ITEMS — 격마다 하나)
+const CHEST_GOLD = { small: 20, big: 40 };
+const CHEST_STONES = { small: 30, big: 60 };
+function chestLoot(c) {
+  const k = c.big ? 'big' : 'small', rank = Math.max(1, Number(c.rank) || 1);
+  return { rank, gold: CHEST_GOLD[k], stones: CHEST_STONES[k] * rank, item: c.big ? c.item || null : null };
+}
 const CHEST_ID = 'chest';
 // 상자에서만 나오는 장비 — 그 격 지역 최강 일반의 1.2배 (상인 물건과 같은 셈). 얻기 전엔 도감에 없고, 도감 완성에도 안 셈
 const CHEST_ITEMS = [
   // [id, 이름, 부위, 그림, 격, 성격]
-  ['chest_sewer_lamp', '꺼지지 않는 수로 등', 'offhand', '🏮', 1, 'ward']
+  ['chest_sewer_lamp',        '꺼지지 않는 수로 등',          'offhand',  '🏮', 1,  'ward'],
+  ['chest_forest_cloak',      '이슬 맺힌 이끼 망토',          'cloak',    '🍃', 2,  'swift'],
+  ['chest_ruins_crown',       '물에 잠긴 왕관',               'helm',     '👑', 3,  'guard'],
+  ['chest_giant_knuckle',     '거인의 손마디 장갑',           'gloves',   '🪨', 4,  'brutal'],
+  ['chest_necro_bell',        '장례 종 목걸이',               'necklace', '🔔', 5,  'leech'],
+  ['chest_abyss_ring',        '왕좌 아래 떨어진 반지',        'ring',     '💍', 6,  'fierce'],
+  ['chest_library_cord',      '두루마리 끈 팔찌',             'bracelet', '📜', 7,  'growth'],
+  ['chest_camelot_greaves',   '원탁 기사의 정강이받이',       'greaves',  '🛡️', 8,  'guard'],
+  ['chest_avalon_belt',       '안개로 짠 허리띠',             'belt',     '🌫️', 9,  'ward'],
+  ['chest_murim_boots',       '비무대 모래 묻은 신',          'boots',    '👟', 10, 'swift'],
+  ['chest_tianshan_shoulder', '만년설 여우털 어깨걸이',       'shoulder', '🦊', 11, 'lucky'],
+  ['chest_sanct_armor',       '열두 과업의 사자 가죽',        'armor',    '🦁', 12, 'thorn'],
+  ['chest_elysion_spear',     '엘리시온 들꽃 창',             'weapon',   '🌾', 13, 'pierce'],
+  ['chest_heaven_cloak',      '일곱째 하늘의 깃털 외투',      'cloak',    '🪶', 14, 'ward'],
+  ['chest_cocytus_gloves',    '코키토스 서리 장갑',           'gloves',   '🧊', 15, 'leech'],
+  ['chest_yggdrasil_bracelet','세계수 가지 팔찌',             'bracelet', '🌳', 16, 'growth'],
+  ['chest_primordial_helm',   '태초의 소라 투구',             'helm',     '🐚', 17, 'guard'],
+  ['chest_olympus_ring',      '월계수 반지',                  'ring',     '🌿', 18, 'lucky'],
+  ['chest_rlyeh_necklace',    '가라앉은 도시의 산호 목걸이',  'necklace', '🪸', 19, 'pierce'],
+  ['chest_chaos_blade',       '혼돈 속에서 건진 칼',          'weapon',   '🌀', 20, 'fierce']
 ];
 for (const [id, name, slot, icon, r, arch] of CHEST_ITEMS) {
   const zone = ZONES.findIndex(z => z.rank === r);

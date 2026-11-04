@@ -423,7 +423,7 @@ test('큰 몬스터 — 몸이 안 들어가는 좁은 길로는 쫓아오지 �
 function loadData() {
   const text = fs.readFileSync(path.join(ROOT, 'js/data.js'), 'utf8');
   // JSON 으로 한 번 거쳐 이쪽 배열로 — vm 안에서 만든 배열은 deepEqual 이 다른 것으로 봅니다
-  return JSON.parse(vm.runInNewContext(`${text}\n;JSON.stringify({ ENEMIES, ZONES, CHESTS, ITEMS })`, {}));
+  return JSON.parse(vm.runInNewContext(`${text}\n;JSON.stringify({ ENEMIES, ZONES, ITEMS })`, {}));
 }
 function walk(m, sources, blocked) {
   const d = new Int32Array(m.w * m.h).fill(-1), q = [];
@@ -628,29 +628,47 @@ test('중립은 예전보다 못 달아난다 — 초당 2칸 · 가끔 멈칫, 
   assert.ok(caught >= 8, `10번 가운데 ${caught}번 잡음 (6초 안)`);
 });
 
-test('지하수로의 보물상자 — data.js 의 CHESTS 그대로 넷(큰 상자 하나), 걸을 수 있는 방 구석에 서고 길을 막지 않는다', () => {
+test('보물상자 — 격마다 작은 상자 둘 · 큰 상자 하나(1격은 작은 것 셋), 큰 상자마다 그 격의 상자 전용 장비 하나 · 번호는 겹치지 않음', () => {
   const data = loadData();
-  const m = loadMap('sewer');
-  const ids = Object.keys(data.CHESTS).filter(id => id.startsWith('sewer-'));
-  assert.deepEqual(m.chests.map(c => c.chest).sort(), ids.sort());
-  assert.equal(ids.filter(id => data.CHESTS[id].item).length, 1, '큰 상자 하나');
-  for (const id of ids) {
-    const c = data.CHESTS[id];
-    if (c.item) assert.ok(data.ITEMS.some(i => i.id === c.item && i.chest), `${id} — 상자 전용 장비 ${c.item}`);
+  const all = allMapNames().flatMap(name => loadMap(name).chests.map(c => ({ ...c, map: name })));
+  const ids = all.map(c => c.chest);
+  assert.equal(new Set(ids).size, ids.length, '상자 번호가 겹치지 않음');
+  const chestItems = data.ITEMS.filter(i => i.chest);
+  for (const z of data.ZONES) {
+    const mine = all.filter(c => Number(c.rank) === z.rank);
+    const big = mine.filter(c => c.big), small = mine.filter(c => !c.big);
+    assert.equal(big.length, 1, `${z.rank}격 큰 상자`);
+    assert.equal(small.length, z.rank === 1 ? 3 : 2, `${z.rank}격 작은 상자`);
+    const item = chestItems.find(i => i.id === big[0].item);
+    assert.ok(item && item.rank.n === z.rank, `${z.rank}격 큰 상자의 장비 ${big[0].item}`);
+    assert.ok(small.every(c => !c.item), `${z.rank}격 작은 상자엔 장비 없음`);
   }
-  const start = m.start.y * m.w + m.start.x;
-  const box = new Set(m.chests.map(c => c.y * m.w + c.x));
-  const posts = new Set(m.posts.flatMap(p => cellsOf(m, p)));
-  const d = walk(m, [start], new Set([...box, ...posts]));
-  for (const c of m.chests) {
-    const k = c.y * m.w + c.x;
-    assert.ok(!m.solid[k], `${c.chest} — 바닥 위`);
-    assert.ok(!posts.has(k) && !m.ports.some(p => c.x >= p.x && c.y >= p.y && c.x < p.x + p.w && c.y < p.y + p.h), `${c.chest} — 정해진 자리 · 문과 안 겹침`);
-    assert.ok([k - 1, k + 1, k - m.w, k + m.w].some(i => d[i] >= 0), `${c.chest} — 걸어서 닿음`);
+  assert.deepEqual(all.filter(c => c.big).map(c => c.item).sort(), chestItems.map(i => i.id).sort(), '상자 전용 장비는 저마다 한 상자에');
+});
+
+test('보물상자 — 지도마다 바닥 위 · 정해진 자리 · 문 · 상인과 안 겹치고, 길막을 꺾으면 걸어서 닿고, 길을 막지 않는다', () => {
+  for (const name of allMapNames()) {
+    const m = loadMap(name);
+    if (!m.chests.length) continue;
+    const box = new Set(m.chests.map(c => c.y * m.w + c.x));
+    const still = new Set(m.posts.filter(p => !p.blocks).flatMap(p => cellsOf(m, p)));   // 길막은 다 꺾었다고 침
+    const start = m.start.y * m.w + m.start.x;
+    const d = walk(m, [start], new Set([...box, ...still]));
+    for (const c of m.chests) {
+      const k = c.y * m.w + c.x;
+      assert.ok(!m.solid[k], `${name} ${c.chest} — 바닥 위`);
+      assert.ok(!m.posts.some(p => cellsOf(m, p).includes(k)), `${name} ${c.chest} — 정해진 자리와 안 겹침`);
+      assert.ok(!m.ports.some(p => c.x >= p.x && c.y >= p.y && c.x < p.x + p.w && c.y < p.y + p.h), `${name} ${c.chest} — 문과 안 겹침`);
+      assert.ok(!m.npcs.some(n => n.x === c.x && n.y === c.y), `${name} ${c.chest} — 상인 · 시작점과 안 겹침`);
+      assert.ok([k - 1, k + 1, k - m.w, k + m.w].some(i => d[i] >= 0), `${name} ${c.chest} — 걸어서 닿음`);
+    }
+    // 상자를 다 벽으로 쳐도, 상자 없이 닿던 구역 칸에는 다 닿음 (길을 막지 않음)
+    const without = walk(m, [start], still), withBox = d;
+    for (const a of m.areas) {
+      const lost = areaCells(m, a).filter(i => !box.has(i) && without[i] >= 0 && withBox[i] < 0);
+      assert.equal(lost.length, 0, `${name} ${a.name} — 상자 때문에 못 가는 칸 ${lost.length}`);
+    }
   }
-  // 상자를 다 벽으로 쳐도 모든 구역 · 보스 자리 앞에 닿음 (길을 막지 않음)
-  const all = walk(m, [start], box);
-  for (const a of m.areas) assert.ok(areaCells(m, a).filter(i => !m.solid[i] && !box.has(i)).every(i => all[i] >= 0), `${a.name} — 상자 때문에 갇힌 칸 없음`);
 });
 
 test('열리기 전엔 없는 문(appears) — 보이지도 막히지도 않는 땅이다가, 열리면 들어서는 문', () => {

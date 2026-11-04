@@ -150,7 +150,8 @@ function valueNoise(seed) {
 // ranks: 그림의 N 번째 = 몇 격인가 · opts: { seed, plaza(어귀 이름), obstacle(rank) → 그 격 들판에 흩어질 장애물 타일, entry(어귀) → 문의 광장으로 가는 문,
 //   square(모든 방을 반듯하게) · open(트인 길의 폭 — 주면 맞닿은 변 가운데에) · order({ 격: ['칸,줄', …] } — 그 격 일반을 약한 것부터 세울 들판 차례),
 //   exit({ name, label, to } — 마지막 격 보스 방 위쪽 막다른 틈 안의 구멍. 보스가 그 앞을 꼭 맞게 막고 섬),
-//   chests([{ id, room: '칸,줄', corner: nw | ne | sw | se }] — 그 방 구석(가장자리에서 두 칸 안)의 보물상자) }
+//   chests([{ id, room: '칸,줄', corner: nw | ne | sw | se, big }] — 그 방 구석(가장자리에서 두 칸 안)의 보물상자),
+//   autoChests(격마다 큰 상자 하나 · 작은 상자 둘을 알아서 — 큰 것은 숨은 방 → 보스 방 → 가장 먼 들판, 작은 것은 남은 가장 먼 들판과 가운데쯤 들판) }
 function generate(plan, ranks, data, opts) {
   const { rooms, links, cols, rows } = layoutFromPlan(plan);
   const rng = mulberry(opts.seed);
@@ -332,14 +333,43 @@ function generate(plan, ranks, data, opts) {
     if (hidden) post(hidden, ...at(hidden, center(mine('H')[0])), false);
   }
 
-  // 보물상자 — 방 구석, 가장자리에서 두 칸 안 (길목은 방 변의 가운데라 막지 않음)
-  const chests = (opts.chests || []).map(c => {
+  // 보물상자 — 방 구석, 가장자리에서 두 칸 안. 길(잇기)이 난 변의 구석은 피함 — 길목을 막지 않게
+  const chests = [];
+  const linkSides = room => {
+    const sides = new Set();
+    for (const l of links) {
+      if (l.a === room) sides.add(l.dir === 'h' ? 'e' : 's');
+      if (l.b === room) sides.add(l.dir === 'h' ? 'w' : 'n');
+    }
+    return sides;
+  };
+  const quietCorner = (room, avoid) => {
+    const sides = linkSides(room);
+    return ['se', 'sw', 'ne', 'nw'].map(c => ({ c, p: sides.has(c[0]) + sides.has(c[1]) + (avoid === c ? 2 : 0) })).sort((p, q) => p.p - q.p)[0].c;
+  };
+  const chestItem = rank => (data.ITEMS.find(i => i.chest && i.rank.n === rank) || {}).id;
+  const placeChest = (room, corner, id, rank, big) => {
+    const o = origin(room), x = o.x + (corner[1] === 'w' ? 2 : FIELD_W - 3), y = o.y + (corner[0] === 'n' ? 2 : FIELD_H - 3);
+    fill(x - 1, y - 1, 3, 3, FLOOR, true);
+    const item = big ? chestItem(rank) : undefined;
+    if (big && !item) throw new Error(`${rank}격 큰 상자 — 상자 전용 장비(CHEST_ITEMS)가 없음`);
+    chests.push({ name: '보물상자', x, y, chest: id, rank, big: big || undefined, item });
+  };
+  for (const c of opts.chests || []) {
     const room = rooms.find(o => `${o.c},${o.r}` === c.room);
     if (!room) throw new Error(`보물상자 ${c.id} — 방 ${c.room} 이(가) 그림에 없음`);
-    const o = origin(room), x = o.x + (c.corner[1] === 'w' ? 2 : FIELD_W - 3), y = o.y + (c.corner[0] === 'n' ? 2 : FIELD_H - 3);
-    fill(x - 1, y - 1, 3, 3, FLOOR, true);
-    return { name: '보물상자', x, y, chest: c.id };
-  });
+    placeChest(room, c.corner, c.id, room.rank || ranks[0], !!c.big);
+  }
+  if (opts.autoChests) for (const rank of ranks) {
+    const of = kind => byDist(rooms.filter(o => o.rank === rank && o.kind === kind));
+    const far = of('n').reverse();                           // 첫 공간에서 걸어서 먼 들판부터
+    const first = of('n')[0];                                // 그 격 첫 들판 — 북서쪽 구석은 상인 자리
+    const bigRoom = of('H')[0] || of('B')[0] || far[0];
+    placeChest(bigRoom, quietCorner(bigRoom, bigRoom === first ? 'nw' : null), `r${rank}-big`, rank, true);
+    // 작은 상자 — 가장 먼 들판 하나, 그 격 가운데쯤 들판 하나 (곳곳에 — 끝에 몰리지 않게)
+    const rest = far.filter(o => o !== bigRoom), smalls = [rest[0], rest[Math.floor(rest.length / 2)]].filter((o, i, all) => o && all.indexOf(o) === i);
+    smalls.forEach((room, i) => placeChest(room, quietCorner(room, room === first ? 'nw' : null), `r${rank}-${i + 1}`, rank, false));
+  }
 
   // 4) 장애물 — 지나가는 곳과 구역 들판에만, 작은 덤불처럼 몇 무더기
   for (const room of rooms) {
@@ -393,12 +423,12 @@ const SEWER = {
     '   S.'
   ],
   order: ['1,4', '1,3', '1,2', '2,3', '2,2', '0,2', '2,1', '0,1', '1,1'],  // 1 ~ 9번 방
-  // 보물상자 (내용은 data.js 의 CHESTS) — 첫 공간 · 갈림길 끝의 4 · 6번 방 · 길에서 가장 먼 8번 방(큰 상자)
+  // 보물상자 (든 것은 data.js 의 chestLoot — 격 · 크기로) — 첫 공간 · 갈림길 끝의 4 · 6번 방 · 길에서 가장 먼 8번 방(큰 상자)
   chests: [
     { id: 'sewer-1', room: '1,5', corner: 'sw' },
     { id: 'sewer-2', room: '2,3', corner: 'se' },
     { id: 'sewer-3', room: '0,2', corner: 'sw' },
-    { id: 'sewer-4', room: '0,1', corner: 'nw' }
+    { id: 'sewer-4', room: '0,1', corner: 'nw', big: true }
   ]
 };
 function sewer(data) {
@@ -465,7 +495,7 @@ const OVERWORLD_ENTRY = { 2: [38, 60], 3: [44, 28], 4: [66, 50], 5: [116, 48], 6
 // 숨은 굴 — 보스를 꺾으면 그 보스 바로 뒤(위로 한 칸 띄워)에 구멍이 나타나고(appears), 들어가면 히든 하나만 있는 작은 굴 (사용자 결정 — 3격만).
 // 구멍은 열리기 전엔 보이지도 막히지도 않는 그냥 땅. 굴의 구멍으로 나오면 다시 그 구멍 앞
 const SECRET_ROOMS = [
-  { id: 'grotto', title: '숨은 굴', boss: '몰락한 왕', hidden: '카벙클' }   // 3격 — 성 안 왕좌 뒤, 바위턱 폭포 밑 물웅덩이의 굴
+  { id: 'grotto', title: '숨은 굴', boss: '몰락한 왕', hidden: '카벙클', bigChest: true }   // 3격 — 성 안 왕좌 뒤, 바위턱 폭포 밑 물웅덩이의 굴 · 3격의 큰 상자도 여기
 ];
 const OVERWORLD_MERCHANTS = { forest: [34, 58], ruins: [40, 26], giantpass: [70, 46], necropolis: [120, 50], abyss: [128, 37] };
 
@@ -666,6 +696,7 @@ function overworld(data) {
   //    AREA_SHARE 이하 · AREA_REACH 칸 이하인 칸만 (가장자리는 잡음으로 들쭉날쭉). 그 가운데 자리에서 걸어서 이어지는 한 덩어리만 남기고,
   //    구역 속에 갇힌 나무 · 바위는 구역에 넣어 구멍 없이.
   //    약한 것부터 길을 따라: 들어오는 곳에서의 거리 − 보스까지의 거리가 작은 구역부터, 가장 약한 것은 들어오는 곳에서 걸어서 가장 먼저 닿는 구역
+  const mids = [];                                           // 구역 들머리 [x, y] — 보물상자를 그 곁에 두지 않게
   for (let rank = 2; rank <= 6; rank++) {
     const zi = data.ZONES.findIndex(z => z.rank === rank), zone = data.ZONES[zi];
     const normals = data.ENEMIES.filter(e => e.zoneIndex === zi && e.kind === 'normal');
@@ -771,7 +802,8 @@ function overworld(data) {
     regions.splice(regions.indexOf(first), 1);
     regions.unshift(first);
     regions.forEach((r, k) => {
-      clearMid(r);
+      const mid = clearMid(r);
+      mids.push([mid % w, (mid / w) | 0]);
       const { x, y, polygon } = outline(r.mine, r.box);
       areas.push({ name: normals[k].name, x, y, polygon, rank, monster: normals[k].id, zone: zone.id });
     });
@@ -797,12 +829,53 @@ function overworld(data) {
       const x = mid % w, y = (mid / w) | 0;
       for (let j = y - 1; j <= y + 1; j++) for (let i = x - 1; i <= x + 1; i++) { const k = idx(i, j); if (r.mine.has(k) && tiles[k] === TREE) tiles[k] = FLOOR; }
       const next = nearest();
-      if (next === mid) break;
+      if (next === mid) return mid;
       mid = next;
     }
+    return nearest();
   }
 
-  return buildTmj({ w, h, tiles, areas, posts, ports, npcs });
+  // 6) 보물상자 — 격마다 작은 상자 둘 · 큰 상자 하나 (숨은 굴에 큰 상자가 있는 격은 작은 것 둘만).
+  //    그 격에 들어오는 곳에서 보스까지의 지름길에서 가장 멀리 벗어나야 닿는 곳부터 (막다른 곳 · 구석) —
+  //    들어오는 곳까지 + 보스까지 − 지름길 걸음 수가 큰 칸. 가장 먼 곳이 큰 상자.
+  //    둘레 여덟 칸이 다 걸을 수 있는 바닥(길목을 막지 않게) · 정해진 자리 · 문 · 상인 · 들머리에서 4칸 넘게 · 상자끼리 40칸 넘게
+  const chests = [];
+  const bigElsewhere = new Set(SECRET_ROOMS.filter(s => s.bigChest).map(s => data.ENEMIES.find(e => e.name === s.hidden).rank.n));
+  const cellsOfRect = r => { const out = []; for (let j = 0; j < (r.h || 1); j++) for (let i = 0; i < (r.w || 1); i++) out.push([r.x + i, r.y + j]); return out; };
+  const busy = [...posts.flatMap(cellsOfRect), ...ports.flatMap(cellsOfRect), ...npcs.map(n => [n.x, n.y])];
+  busy.push(...mids);                                         // 구역 들머리
+  for (let rank = 2; rank <= 6; rank++) {
+    const zi = data.ZONES.findIndex(z => z.rank === rank);
+    const boss = posts.find(q => q.enemy === data.ENEMIES.find(e => e.zoneIndex === zi && e.kind === 'boss').id);
+    const fromEntry = walkFrom([idx(...L.spot1(...OVERWORLD_ENTRY[rank]))]);
+    const toBoss = walkFrom(cellsOfRect(boss).map(([x, y]) => idx(x, y)));
+    const D = Math.min(...cellsOfRect(boss).map(([x, y]) => fromEntry[idx(x, y)]).filter(v => v >= 0));
+    const cand = [];
+    for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) {
+      const k = idx(x, y);
+      if (tiles[k] !== FLOOR || L.zoneAt(x, y) !== rank || L.bio[k] === 8 || fromEntry[k] < 0 || toBoss[k] < 0) continue;
+      let ring = true;
+      for (let j = -1; j <= 1 && ring; j++) for (let i = -1; i <= 1; i++) if (!open(idx(x + i, y + j))) { ring = false; break; }
+      if (!ring || busy.some(([bx, by]) => Math.max(Math.abs(bx - x), Math.abs(by - y)) <= 4)) continue;
+      cand.push({ x, y, d: fromEntry[k] + toBoss[k] - D });
+    }
+    cand.sort((p, q) => q.d - p.d || p.y - q.y || p.x - q.x);
+    const want = bigElsewhere.has(rank) ? 2 : 3, picked = [];
+    for (const c of cand) {
+      if (picked.length >= want) break;
+      if (picked.some(q => Math.hypot(q.x - c.x, q.y - c.y) < 40)) continue;
+      picked.push(c);
+    }
+    if (picked.length < want) throw new Error(`${rank}격 보물상자 — 둘 자리가 ${picked.length}곳뿐`);
+    const item = (data.ITEMS.find(i => i.chest && i.rank.n === rank) || {}).id;
+    picked.forEach((c, i) => {
+      const big = !bigElsewhere.has(rank) && i === 0;
+      if (big && !item) throw new Error(`${rank}격 큰 상자 — 상자 전용 장비(CHEST_ITEMS)가 없음`);
+      chests.push({ name: '보물상자', x: c.x, y: c.y, chest: big ? `r${rank}-big` : `r${rank}-${bigElsewhere.has(rank) ? i + 1 : i}`, rank, big: big || undefined, item: big ? item : undefined });
+    });
+  }
+
+  return buildTmj({ w, h, tiles, areas, posts, ports, npcs, chests });
 }
 
 // ---------- 숨은 굴 (SECRET_ROOMS) — 히든 하나만 있는 작은 굴 ----------
@@ -825,7 +898,14 @@ function secretRoom(data, s) {
   while (tiles[oy * W + cx] !== FLOOR) oy--;                 // 한가운데 줄의 맨 아래 바닥 칸
   for (let x = cx - 1; x <= cx + 1; x++) { tiles[oy * W + x] = FLOOR; tiles[(oy - 1) * W + x] = FLOOR; }
   const out = { name: 'out', label: '나가기', x: cx - 1, y: oy, w: 3, h: 1, to: `overworld.${s.id}`, hole: true };
-  return buildTmj({ w: W, h: H, tiles, posts: [post], ports: [out], npcs: [{ name: 'start', x: cx, y: oy - 1 }], props: { title: s.title } });
+  // 그 격의 큰 상자 — 굴 안쪽 오른쪽 위 (사용자 결정: 격마다 큰 상자 하나, 3격은 이 굴에)
+  const chests = [];
+  if (s.bigChest) {
+    const x = cx + 5, y = cy - 4, item = (data.ITEMS.find(i => i.chest && i.rank.n === foe.rank.n) || {}).id;
+    for (let j = y - 1; j <= y + 1; j++) for (let i = x - 1; i <= x + 1; i++) if (tiles[j * W + i] !== FLOOR) throw new Error(`숨은 굴 — 상자 둘레가 바닥이 아님 (${i},${j})`);
+    chests.push({ name: '보물상자', x, y, chest: `r${foe.rank.n}-big`, rank: foe.rank.n, big: true, item });
+  }
+  return buildTmj({ w: W, h: H, tiles, posts: [post], ports: [out], npcs: [{ name: 'start', x: cx, y: oy - 1 }], chests, props: { title: s.title } });
 }
 
 // ---------- 7~20격 — 비슷한 것끼리 일곱 장 (docs/MAP-REFERENCE-PLAN.md 2-2) ----------
@@ -880,7 +960,8 @@ function realm(data, r, i) {
     seed: 11 + i * 7,
     plaza: `${r.title} 어귀`,
     obstacle: () => r.obstacle,
-    entry: o => ({ name: 'in', label: '문의 광장', x: o.x + 2, y: o.y + (FIELD_H >> 1) - 1, w: 1, h: 2, to: `hub.${r.name}` })
+    entry: o => ({ name: 'in', label: '문의 광장', x: o.x + 2, y: o.y + (FIELD_H >> 1) - 1, w: 1, h: 2, to: `hub.${r.name}` }),
+    autoChests: true
   });
 }
 
