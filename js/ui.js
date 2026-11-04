@@ -1840,6 +1840,7 @@ function wireKeys() {
         else if (isAdminOpen()) closeAdmin();
         else if (isAvatarModalOpen()) closeAvatarModal();
         else if (isSwapModalOpen()) closeSwapModal();    // 교환 창은 강화 창 위에도 뜹니다
+        else if (isBuyOpen()) closeBuy();                // 구매 창은 상점 창 위에 뜹니다
         else if (isShopOpen()) closeShop();
         else if (isSlotModalOpen()) closeSlotModal();
         else if (isRosterModalOpen()) closeRosterModal();
@@ -2411,6 +2412,7 @@ function openShop() {
   renderShop();
 }
 function closeShop() {
+  closeBuy();
   const m = $('shopModal');
   if (m) m.classList.add('hidden');
 }
@@ -2450,7 +2452,7 @@ function renderShop() {
   const nx = nextEnhance(shopSlot);
   const stones = `
     <div class="shop-stones">
-      <div class="swap-head">강화석 <em>덤으로 판다</em></div>
+      <div class="swap-head">강화석</div>
       <select class="swap-from" id="shopSlot">${SLOT_IDS.map(s =>
         `<option value="${s}" ${s === shopSlot ? 'selected' : ''}>${SLOT_NAMES[s]} +${enhanceLevel(s)} · 강화석 ${fmt(stonesOf(s))}${nextEnhance(s) ? ` / ${fmt(nextEnhance(s).cost)}` : ' · 최대'}</option>`).join('')}</select>
       <div class="shop-packs">${STONE_PACKS.map(n => {
@@ -2459,10 +2461,8 @@ function renderShop() {
       }).join('')}</div>
       ${nx ? '' : '<div class="adm-note">이 부위는 강화가 끝까지 올라 있다</div>'}
     </div>`;
-  // 소지품이 먼저, 강화석은 그 아래 덤 — 산 물건은 사라지고, 다 팔렸으면 한 줄만 남습니다
-  const wares = cards
-    ? `<div class="swap-head shop-head">먼저 온 이들의 소지품</div><div class="inventory shop-wares">${cards}</div>`
-    : (m.wares.length ? `<div class="shop-empty">더는 내놓을 것이 없다</div>` : '');
+  // 장비가 먼저, 강화석은 그 아래 — 산 물건은 사라집니다 (머리글 · 다 팔렸다는 글은 뺐습니다, 사용자 결정)
+  const wares = cards ? `<div class="inventory shop-wares">${cards}</div>` : '';
   $('shopBody').innerHTML = wares + stones;
   const sel = $('shopSlot');
   if (sel) sel.addEventListener('change', () => { shopSlot = sel.value; renderShop(); });
@@ -2471,14 +2471,60 @@ function renderShop() {
       if (buyStones(shopSlot, Number(b.dataset.stones))) { Sound.play('stone'); render(); }
     });
   }
-  for (const b of document.querySelectorAll('[data-buy]')) {
-    b.addEventListener('click', () => {
-      if (buyWare(b.dataset.buy)) { Sound.play('equip'); render(); }
-    });
-  }
+  for (const b of document.querySelectorAll('[data-buy]')) b.addEventListener('click', () => openBuy(b.dataset.buy));
 }
 
-function isAnyModalOpen() { return isAvatarModalOpen() || isSlotModalOpen() || isSwapModalOpen() || isShopOpen() || isRosterModalOpen() || isSaveModalOpen() || isAdminOpen(); }
+// ---------- 장비 사기 — 능력치를 다 보여 주고 묻습니다 ----------
+// 상점 목록의 값 단추를 누르면 뜹니다 (상점 창 위에 한 겹). 핵심 스탯은 이 부위 강화를 반영한 값, 그 아래 지금 낀 것과 견준 ▲▼ 전부
+let buyId = null;
+function openBuy(id) {
+  const item = getItem(id);
+  if (!item || !merchantHere()) return;
+  buyId = id;
+  const gold = num(State.meta.gold), m = slotMult(item.slot);
+  const worn = getItem(State.meta.equipped[item.slot]);
+  const stats = [
+    ...STAT_INFO.filter(s => item[s.id]).map(s => `<li><span>${s.name}</span><b>+${fmt(item[s.id] * m)}</b></li>`),
+    ...SPECIAL_KEYS.filter(k => item[k]).map(k => `<li class="sp"><span>${SPECIAL_INFO[k].name}</span><b>+${specialTxt(k, item[k])}</b></li>`)
+  ].join('');
+  $('buyBody').innerHTML = `
+    <div class="buy-item">
+      <span class="inv-art">${item.fromIcon}</span>
+      <div>
+        <div class="inv-head">${itemTag(item)}<span class="inv-name">${item.name}</span></div>
+        <div class="buy-slot">${SLOT_NAMES[item.slot]}</div>
+      </div>
+    </div>
+    <ul class="buy-stats">${stats || '<li><span>능력치 없음</span></li>'}</ul>
+    <div class="buy-cmp">
+      <div class="buy-k">${worn ? `지금 낀 『${worn.name}』${josa(worn.name, '과', '와')} 견주면` : '지금 이 부위는 비어 있음'}</div>
+      <div class="inv-diff">${itemDiffText(item, worn, m)}</div>
+    </div>
+    <div class="buy-price"><span>${fmt(item.price)} 골드</span><span class="buy-left">가진 골드 ${fmt(gold)} → ${fmt(gold - item.price)}</span></div>
+    <div class="buy-ask">구매하시겠습니까?</div>
+    <div class="buy-actions">
+      <button class="btn" data-closebuy>그만둔다</button>
+      <button class="btn primary" id="buyOkBtn" ${gold >= item.price ? '' : 'disabled'}>구매한다</button>
+    </div>`;
+  for (const b of $('buyBody').querySelectorAll('[data-closebuy]')) b.addEventListener('click', closeBuy);
+  $('buyOkBtn').addEventListener('click', () => {
+    const ok = buyWare(buyId);
+    closeBuy();
+    if (ok) { Sound.play('equip'); render(); }
+  });
+  $('buyModal').classList.remove('hidden');
+}
+function closeBuy() {
+  buyId = null;
+  const m = $('buyModal');
+  if (m) m.classList.add('hidden');
+}
+function isBuyOpen() {
+  const m = $('buyModal');
+  return !!m && !m.classList.contains('hidden');
+}
+
+function isAnyModalOpen() { return isAvatarModalOpen() || isSlotModalOpen() || isSwapModalOpen() || isShopOpen() || isBuyOpen() || isRosterModalOpen() || isSaveModalOpen() || isAdminOpen(); }
 
 // 그 부위의 강화를 반영한 실제 수치를 보여줍니다 — 장부상 수치가 아니라 몸에 붙는 값.
 // 강화는 부위에 붙으므로, 목록에 있는 것 무엇을 끼든 이 값이 됩니다.
@@ -3081,6 +3127,7 @@ function init() {
   for (const b of document.querySelectorAll('[data-closeswap]')) b.addEventListener('click', closeSwapModal);
   for (const b of document.querySelectorAll('[data-closeavatar]')) b.addEventListener('click', closeAvatarModal);
   for (const b of document.querySelectorAll('[data-closeshop]')) b.addEventListener('click', closeShop);
+  for (const b of document.querySelectorAll('#buyModal > [data-closebuy], #buyModal .modal-head [data-closebuy]')) b.addEventListener('click', closeBuy);
 
   const ago = $('agOk');
   if (ago) ago.addEventListener('click', () => $('avatarGain').classList.add('hidden'));

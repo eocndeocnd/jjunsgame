@@ -2414,11 +2414,24 @@ body.fight-locked #dollModeBtn,
 body.fight-locked #dollSwapBtn { display: none; }
 
 
-/* 떠돌이 상인 — 소지품이 위, 강화석은 덤으로 아래 */
-.shop-head { margin: 2px 0 8px; font-size: 12px; }
+/* 떠돌이 상인 — 장비가 위, 강화석은 아래 */
 .shop-wares { margin-top: 0; }
-.shop-empty { padding: 12px 0; font-size: 12px; text-align: center; color: var(--text-faint); }
 .shop-stones { margin-top: 14px; padding: 8px 10px; opacity: 0.92; }
+/* 장비 사기 — 상점 창 위에 한 겹 (능력치 전부 · 지금 낀 것과 견줌 · 값 · 구매하시겠습니까?) */
+.buy-modal .modal-card { max-width: 400px; }
+.buy-body { overflow-y: auto; flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 10px; padding: 2px; }
+.buy-item { display: flex; align-items: center; gap: 10px; }
+.buy-slot { font-size: 11px; color: var(--text-faint); margin-top: 2px; }
+.buy-stats { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 2px 14px; }
+.buy-stats li { display: flex; justify-content: space-between; gap: 6px; font-size: 12px; padding: 3px 0; background: var(--dots) left bottom / 4px 2px repeat-x; }
+.buy-stats li b { color: var(--accent); }
+.buy-stats li.sp b { color: var(--drop); }
+.buy-k { font-size: 11px; color: var(--text-dim); margin-bottom: 3px; }
+.buy-price { display: flex; justify-content: space-between; align-items: baseline; font-weight: 700; color: var(--accent); }
+.buy-left { font-size: 11px; font-weight: 400; color: var(--text-faint); }
+.buy-ask { text-align: center; font-weight: 700; font-size: 14px; margin-top: 2px; }
+.buy-actions { display: flex; gap: 8px; }
+.buy-actions .btn { flex: 1; }
 
 /* 「슬롯 강화」 — 올릴 수 있는 칸이 있으면 앞에 그 수가 초록 알약으로 */
 .doll-mode.ready { background: #f0f5dc; box-shadow: 2px 2px 0 var(--frame-out), 0 0 0 2px rgba(63, 122, 58, 0.35); }
