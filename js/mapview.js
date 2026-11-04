@@ -177,7 +177,7 @@ const MapView = (function () {
           ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); ctx.fill();
           ctx.fillStyle = '#0b0603';
           ctx.beginPath(); ctx.ellipse(cx, cy + T * 0.06, rx - T * 0.22, ry - T * 0.18, 0, 0, Math.PI * 2); ctx.fill();
-        } else {
+        } else if (!(port.door && art)) {                 // 건물 문(door)은 지도 그림이 성문 · 문간으로 그림
           ctx.fillStyle = open ? '#3fae4a' : '#5c3a1a';
           ctx.fillRect(ox + port.x * T + 2, oy + port.y * T + 2, port.w * T - 4, port.h * T - 4);
         }

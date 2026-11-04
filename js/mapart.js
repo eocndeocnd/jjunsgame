@@ -18,6 +18,8 @@
 
   // 땅의 종류 · 격 — tools/overworld-layout.js 와 같은 번호
   const VOID = 0, GRASS = 1, DIRT = 2, COBBLE = 3, TILES = 4, WATER = 5, LAVA = 6, OBSID = 7, SNOW = 8, ROCKY = 9, PAVE = 10, CANAL = 11;
+  // 그림만 쓰는 겉모습 (tools/map-gen.js) — 건물(바깥 지도의 닫힌 건물 한 채를 통째로) · 문간(안 지도의 나가는 문)
+  const BUILD = 12, DOORWAY = 13, CARPET = 14;   // CARPET — 건물 안 붉은 깔개
   // 바닥 층의 칸 (tools/map-gen.js)
   const FLOOR = 0, WALL = 1, POOL = 2, TREE = 3, ROCK = 4, ROAD = 5;
 
@@ -261,6 +263,317 @@
     return hash(X, Y, 27) < 0.01 ? c3('#2a0a08') : c;
   }
 
+  // ---------- 건물 — 몰락한 왕의 성 (바깥 지도의 닫힌 건물 한 채, 남쪽 정면 가운데 성문) ----------
+  // 위에서 비스듬히 내려다본 성: 둘레 성벽(윗면엔 톱니 담 · 몇 개는 무너짐, 남쪽은 벽면이 보임) · 네 모서리 둥근 탑(고깔 지붕) ·
+  // 성문 양옆 작은 탑 · 아치 성문(활짝 연 문짝 · 끌어올린 쇠창살) · 안뜰 한가운데 성채(기와 지붕 · 굴뚝 · 높은 창 · 버팀벽 · 앞 모서리 작은 탑) ·
+  // 돌 깔린 안뜰과 성문에서 성채까지 판석 길 · 남쪽 벽면의 담쟁이 · 해진 붉은 깃발. 덩어리를 그릴 때 그 자리만 (buildingPixel)
+  const CK = {
+    face: ['#8e887c', '#837d72', '#99938a', '#676257'], mortar: '#4e4a43', line: '#241f1b',
+    top: ['#a39d91', '#979185', '#aea89c', '#7d776c'],
+    roof: ['#404a5b', '#38414f', '#4b5568', '#2a303c'], roofLine: '#191d26', ridge: '#5b6679',
+    cone: ['#54496a', '#41395a', '#6c6088', '#2a2436'], spire: '#b8984a',
+    wood: ['#4a2e18', '#5e3c20', '#74502c'], iron: '#2b2a2e',
+    banner: ['#5e1a1e', '#7a2428', '#3e1013'], gold: '#c8a24a',
+    win: '#141018', ivy: ['#2e4a24', '#3e5e2e', '#4f7438'], inner: '#26222c'
+  };
+  const pick4 = (pal, v) => c3(pal[v < 0.25 ? 3 : v < 0.55 ? 1 : v < 0.85 ? 0 : 2]);
+  // 다듬은 돌을 쌓은 벽면 — 줄 rh 점 · 돌 bw 점 (줄마다 반 개 엇갈림), 잔결은 지도 좌표 X · Y
+  function ashlar(sx, sy, rh, bw, seed, X, Y) {
+    const row = Math.floor(sy / rh), off = row % 2 ? bw >> 1 : 0, col = Math.floor((sx + off) / bw);
+    const lx = ((sx + off) % bw + bw) % bw, ly = ((sy % rh) + rh) % rh;
+    if (lx === 0 || ly === 0) return c3(CK.mortar);
+    let c = pick4(CK.face, hash(col, row, seed));
+    if (ly === 1) c = mix(c, WHITE, 0.12); else if (ly === rh - 1 || lx === bw - 1) c = mul(c, 0.85);
+    else if (hash(X, Y, seed + 1) < 0.06) c = mul(c, 0.92);
+    if (Math.abs(vnoise(X * 0.06, Y * 0.06, seed + 2) - 0.5) < 0.008) c = mul(c, 0.6);   // 금
+    return c;
+  }
+  // 성벽 윗면 — along 은 벽을 따라, across 는 바깥 가장자리에서 안으로 (0 ~ wt). 바깥엔 톱니 담, 안쪽 가장자리는 아래로 떨어지는 그늘
+  function wallTop(along, across, wt, X, Y) {
+    if (across >= wt - 2) return mul(c3(CK.top[3]), across === wt - 1 ? 0.5 : 0.7);
+    const mi = Math.floor(along / 14), ma = ((along % 14) + 14) % 14;
+    if (across < 8) {
+      if (hash(mi, 0, 91) >= 0.14 && ma < 9) {                                  // 높은 돌 (몇 개는 무너져 빈자리)
+        if (across === 0 || ma === 0 || ma === 8) return c3(CK.line);
+        return across <= 2 ? mix(c3(CK.top[2]), WHITE, 0.12) : across >= 6 ? mul(c3(CK.top[0]), 0.8) : c3(CK.top[0]);
+      }
+      if (across === 0) return c3(CK.line);
+    }
+    const s = Math.floor(along / 12), ls = ((along % 12) + 12) % 12;            // 걷는 길 — 판석
+    let c = c3(CK.top[hash(s, 1, 92) < 0.3 ? 1 : 0]);
+    if (ls === 0) c = mul(c, 0.8);
+    if (across === 8 || across === 9) c = mul(c, 0.82);
+    if (hash(X, Y, 93) < 0.05) c = mul(c, 0.93);
+    return c;
+  }
+  // 둥근 탑 — t = { cx, cy, r, body }. 고깔 지붕(둥근 기와 줄 · 꼭대기 쇠 장식) 아래 둥근 몸통(휘어 보이는 벽돌 · 왼쪽 빛 · 가운데 활 쏘는 틈)
+  function towerPix(t, px, py) {
+    const dx = px + 0.5 - t.cx, dy = py + 0.5 - t.cy, rr = t.r, ry = rr * 0.8;
+    const q = (dx / rr) ** 2 + (dy / ry) ** 2;
+    if (q <= 1) {
+      if (q > 1 - 2.6 / rr) return c3(CK.roofLine);
+      const d = Math.sqrt(q), nx = dx / rr, ny = dy / ry;
+      if (d < 0.08) return c3(d < 0.04 ? '#e8d088' : CK.spire);
+      const row = Math.floor(d * rr / 5), lr = (d * rr) % 5, ang = Math.atan2(ny, nx);
+      const seg = Math.floor((ang / (2 * Math.PI) + 0.5) * (6 + row * 3) + (row % 2) * 0.5);
+      const l = -(nx * 0.55 + ny * 0.75) / Math.max(0.35, d) * Math.min(1, d * 1.8) + (hash(seg, row, 94) - 0.5) * 0.3;
+      const c = pick4(CK.cone, 0.55 + l * 0.42);
+      return lr < 1 ? mul(c, 0.72) : c;
+    }
+    const bw = rr - 4;
+    if (Math.abs(dx) > bw || dy < 0) return null;
+    const bottom = t.body + Math.sqrt(Math.max(0, 1 - (dx / bw) ** 2)) * bw * 0.3;
+    if (dy > bottom) return null;
+    if (Math.abs(dx) > bw - 1.2 || dy > bottom - 1.2) return c3(CK.line);
+    const u = Math.asin(Math.max(-1, Math.min(1, dx / bw))) / (Math.PI / 2), row = Math.floor(dy / 7), off = row % 2 ? 0.5 : 0;
+    const fu = ((u * 6 + off) % 1 + 1) % 1;
+    let c = (dy % 7 < 1 || fu < 0.07) ? c3(CK.mortar) : pick4(CK.face, hash(Math.floor(u * 6 + off), row, 95));
+    c = mul(c, 1.08 - (u + 1) * 0.22 - (dy / bottom) * 0.1);
+    if (Math.abs(dx) < 2 && dy > ry + 6 && dy < ry + 16) c = c3(CK.win);
+    return c;
+  }
+  // 해진 깃발 — 왼쪽 위 (bx, by), 폭 bw · 길이 bh. 장대 · 금줄 · 작은 왕관 무늬 · 들쭉날쭉한 끝
+  function bannerPix(bx, by, bw, bh, px, py) {
+    const lx = px - bx, ly = py - by;
+    if (lx < 0 || lx >= bw || ly < 0 || ly >= bh - 4 + ((lx * 7) % 5)) return null;
+    if (ly < 2) return c3(CK.wood[0]);
+    if (lx === 0 || lx === bw - 1) return c3(CK.banner[2]);
+    let c = c3(CK.banner[lx < bw / 2 ? 1 : 0]);
+    if (ly === 4 || ly === 5) c = c3(CK.gold);
+    const cx = bw >> 1, dx = lx - cx;
+    if (ly >= 10 && ly <= 14 && Math.abs(dx) <= 3 && (ly >= 12 || dx % 3 === 0)) c = c3(CK.gold);
+    return hash(lx, ly, 98) < 0.05 ? mul(c, 0.8) : c;
+  }
+  // 담쟁이 — 벽면 윗변(top)에서 늘어진 덩굴 (자리마다 길이가 다름)
+  function ivy(px, py, top) {
+    const len = (vnoise(px * 0.07, top * 0.01, 103) - 0.56) * 110;
+    if (len <= 0 || py - top > len || hash(px >> 1, py >> 1, 104) > 0.7) return null;
+    return c3(CK.ivy[(hash(px, py, 105) * 3) | 0]);
+  }
+
+  function castleGeom(B) {
+    const pw = B.w * P, ph = B.h * P, M = 14, WT = 26, FACE = 40;
+    const d0 = B.door ? (B.door.x - B.x0) * P : (pw >> 1) - 32, d1 = B.door ? d0 + B.door.w * P : d0 + 64;
+    const r = 32, rg = 22, kx0 = 92, kx1 = pw - 92;
+    const G = { pw, ph, M, WT, FACE, d0, d1, kx0, kx1, ry0: 104, ryr: 122, ry1: 300, kyf: 368, rp0: kx0 + 64, rp1: kx1 - 64 };
+    G.front = [{ cx: d0 - 16, cy: ph - 69, r: rg, body: 62 }, { cx: d1 + 16, cy: ph - 69, r: rg, body: 62 },
+               { cx: r + 1, cy: ph - 71, r, body: 61 }, { cx: pw - r - 1, cy: ph - 71, r, body: 61 }];
+    G.back = [{ cx: r + 1, cy: 28, r, body: 47 }, { cx: pw - r - 1, cy: 28, r, body: 47 }];
+    G.turrets = [{ cx: kx0 + 2, cy: G.ry1 - 8, r: 18, body: G.kyf - (G.ry1 - 8) - 4 }, { cx: kx1 - 2, cy: G.ry1 - 8, r: 18, body: G.kyf - (G.ry1 - 8) - 4 }];
+    return G;
+  }
+  function castlePix(G, px, py, X, Y) {
+    const { pw, ph, M, WT, FACE, d0, d1 } = G;
+    let c;
+    for (const t of G.front) if ((c = towerPix(t, px, py))) return c;
+    // 성문 위 성루 — 문 폭보다 조금 넓게, 성벽보다 높이 솟음 (윗면 톱니 담)
+    const gx0 = d0 - 8, gx1 = d1 + 8, gTop = ph - FACE - 30;
+    if (px >= gx0 && px < gx1 && py >= gTop) {
+      const hw = (d1 - d0) / 2, cx = d0 + hw, cyA = ph - FACE - 14 + hw, dx = px + 0.5 - cx;
+      const r2 = Math.hypot(dx, py + 0.5 - cyA), inArch = py >= cyA ? Math.abs(dx) < hw : r2 < hw;
+      if (inArch) {
+        const ix = px - d0;
+        if (ix < 7 || ix >= d1 - d0 - 7) {                                     // 활짝 연 나무 문짝
+          if (ix === 6 || ix === d1 - d0 - 7) return c3(CK.line);
+          let w = c3(CK.wood[ix % 3 === 0 ? 0 : hash(ix, 0, 96) < 0.5 ? 1 : 2]);
+          if ((py - cyA) % 12 === 4) w = c3(CK.iron);
+          return w;
+        }
+        if (py < cyA - hw * 0.35 && (ix % 6) === 3) return c3(CK.iron);            // 끌어올린 쇠창살 끝
+        const t = Math.min(1, (ph - py) / (ph - (cyA - hw)) * 1.3);
+        return py >= ph - 6 ? mix(texture(COBBLE, 3, X, Y), c3('#0e0a0c'), 0.4) : mix(c3('#3a3230'), c3('#0e0a0c'), t);
+      }
+      const inRing = py >= cyA ? Math.abs(dx) < hw + 5 : r2 < hw + 5;
+      if (inRing) {                                                             // 아치 돌 — 쐐기 모양
+        if ((py >= cyA ? Math.abs(dx) >= hw + 4 : r2 >= hw + 4) || (py >= cyA ? Math.abs(dx) < hw + 1 : r2 < hw + 1)) return c3(CK.line);
+        const seg = py >= cyA ? 100 + Math.floor((py - cyA) / 8) * 2 + (dx < 0 ? 0 : 1) : Math.floor((Math.atan2(py + 0.5 - cyA, dx) + Math.PI) / (Math.PI / 9));
+        const s2 = py >= cyA ? ((py - cyA) % 8) === 0 : Math.abs(((Math.atan2(py + 0.5 - cyA, dx) + Math.PI) / (Math.PI / 9)) % 1) < 0.08;
+        return s2 ? c3(CK.mortar) : pick4(CK.top, hash(seg, 0, 97) * 0.6 + 0.4);
+      }
+      if (py < gTop + 8) return wallTop(px, py - gTop, 9, X, Y) || c3(CK.top[0]);
+      if (px === gx0 || px === gx1 - 1) return c3(CK.line);
+      return mul(ashlar(px, py - gTop, 10, 20, 107, X, Y), 0.96);
+    }
+    // 깃발 — 성문 탑과 모서리 탑 사이 벽면
+    for (const bx of [Math.round(pw * 0.25) - 7, Math.round(pw * 0.75) - 7]) if ((c = bannerPix(bx, ph - FACE + 4, 14, 32, px, py))) return c;
+    // 남쪽 성벽 — 벽면 (담쟁이 · 활 쏘는 틈) · 윗면
+    if (px >= M && px < pw - M && py >= ph - FACE) {
+      const sy = py - (ph - FACE);
+      if (px === M || px === pw - M - 1 || py === ph - 1 || sy === 0) return c3(CK.line);
+      if (sy < 3) return mix(c3(CK.top[0]), WHITE, 0.1);
+      const v = ivy(px, sy, 3);
+      if (v) return v;
+      const slit = ((px - 52) % 72 + 72) % 72;
+      if (slit < 2 && sy > 12 && sy < 26) return c3(CK.win);
+      return mul(ashlar(px, sy, 10, 20, 105, X, Y), 1 - sy / FACE * 0.25);
+    }
+    if (px >= M && px < pw - M && py >= ph - FACE - WT) return wallTop(px, ph - FACE - 1 - py, WT, X, Y);
+    for (const t of G.back) if ((c = towerPix(t, px, py))) return c;
+    // 서 · 동 · 북 성벽 윗면 · 북쪽 성벽 안쪽 벽면 (안뜰에서 보임)
+    if (py >= M && px >= M && px < M + WT) return wallTop(py, px - M, WT, X, Y);
+    if (py >= M && px < pw - M && px >= pw - M - WT) return wallTop(py, pw - M - 1 - px, WT, X, Y);
+    if (px >= M && px < pw - M && py >= M && py < M + WT) return wallTop(px, py - M, WT, X, Y);
+    const NF = 28, nTop = M + WT;
+    if (px >= M + WT && px < pw - M - WT && py >= nTop && py < nTop + NF) {
+      const sy = py - nTop;
+      if (sy === NF - 1) return c3(CK.line);
+      return mul(ashlar(px, sy, 10, 20, 108, X, Y), 0.82 - sy / NF * 0.12);
+    }
+    // 성채 — 앞 모서리 작은 탑 · 굴뚝 · 기와 지붕 · 앞 벽면
+    for (const t of G.turrets) if ((c = towerPix(t, px, py))) return c;
+    if ((c = keepPix(G, px, py, X, Y))) return c;
+    // 안뜰 — 돌바닥 · 성문에서 성채 문까지 판석 길 · 벽 · 성채 그늘
+    if (px >= M + WT && px < pw - M - WT && py >= nTop + NF && py < ph - FACE - WT) {
+      const path = Math.abs(px + 0.5 - (d0 + d1) / 2) < 20 && py >= G.kyf;
+      c = path ? texture(TILES, 3, X, Y) : texture(COBBLE, 3, X, Y);
+      if (py < G.kyf + 8 && px >= G.kx0 - 6 && px < G.kx1 + 6) c = mul(c, 0.72);
+      if (px < M + WT + 6 || py < nTop + NF + 6) c = mul(c, 0.8);
+      return c;
+    }
+    return texture(GRASS, 3, X, Y);                                             // 성 둘레 — 풀
+  }
+  function keepPix(G, px, py, X, Y) {
+    const { kx0, kx1, ry0, ryr, ry1, kyf, rp0, rp1 } = G, x0 = kx0 - 6, x1 = kx1 + 6;
+    // 굴뚝 둘 — 뒤 지붕에 솟음
+    for (const cx of [rp0 + 16, rp1 - 16]) if (px >= cx - 6 && px < cx + 6 && py >= ry0 - 12 && py < ryr + 2) {
+      if (px === cx - 6 || px === cx + 5 || py === ry0 - 12 || py === ryr + 1) return c3(CK.line);
+      if (py < ry0 - 8) return c3('#1a1618');
+      return mul(ashlar(px, py, 6, 6, 109, X, Y), px < cx ? 1 : 0.8);
+    }
+    if (px >= x0 && px < x1 && py >= ry0 && py < ry1) {                            // 지붕 — 뒤 · 앞 · 왼쪽 · 오른쪽 면 (용마루는 rp0~rp1)
+      if (px === x0 || px === x1 - 1 || py === ry0 || py === ry1 - 1) return c3(CK.roofLine);
+      const xp = px + 0.5, yp = py + 0.5;
+      const lx = yp <= ryr ? x0 + (rp0 - x0) * (yp - ry0) / (ryr - ry0) : x0 + (rp0 - x0) * (ry1 - yp) / (ry1 - ryr);
+      const rx = yp <= ryr ? x1 - (x1 - rp1) * (yp - ry0) / (ryr - ry0) : x1 - (x1 - rp1) * (ry1 - yp) / (ry1 - ryr);
+      const hipL = Math.abs(xp - lx) < 1.6, hipR = Math.abs(xp - rx) < 1.6, ridge = Math.abs(yp - ryr) < 1.6 && xp > rp0 - 1 && xp < rp1 + 1;
+      if (hipL || hipR || ridge) return c3(CK.ridge);
+      const base = xp < lx ? 0.88 : xp > rx ? 0.3 : yp < ryr ? 0.14 : 0.6;
+      const rowH = 6, row = Math.floor((py - ry0) / rowH), off = row % 2 ? 4 : 0, col = Math.floor((px + off) / 8);
+      const ly = (py - ry0) % rowH, sx = (px + off) % 8;
+      let c = pick4(CK.roof, base + (hash(col, row, 99) - 0.5) * 0.3);
+      if (ly === rowH - 1) c = mul(c, 0.72); else if (sx === 0) c = mul(c, 0.82); else if (ly === 0) c = mix(c, WHITE, 0.06);
+      if (hash(col, row, 100) < 0.008) c = mul(c, 0.45);                           // 빠진 기와 (드물게)
+      if (fbm(X * 0.02, Y * 0.02, 101) > 0.7) c = mix(c, c3('#4e5a3a'), 0.35);       // 이끼
+      return c;
+    }
+    if (px < kx0 || px >= kx1 || py < ry1 || py >= kyf) return null;              // 앞 벽면
+    if (px === kx0 || px === kx1 - 1 || py === kyf - 1) return c3(CK.line);
+    const sx = px - kx0, sy = py - ry1, H = kyf - ry1, cx = (kx1 - kx0) / 2, ddx = sx + 0.5 - cx;
+    // 문 — 가운데 큰 아치 문 (닫힘, 쇠띠)
+    const dw = 15, dTop = H - 36;
+    if (Math.abs(ddx) < dw + 3 && sy >= dTop - 3) {
+      const r2 = Math.hypot(ddx, sy + 0.5 - (dTop + dw)), inD = sy >= dTop + dw ? Math.abs(ddx) < dw : r2 < dw;
+      const inF = sy >= dTop + dw ? Math.abs(ddx) < dw + 3 : r2 < dw + 3;
+      if (inD) { if (Math.abs(ddx) < 1) return c3(CK.line); let w = c3(CK.wood[(Math.floor(sx / 4) % 2) ? 1 : 2]); if ((sy - dTop) % 10 === 8) w = c3(CK.iron); return w; }
+      if (inF) return pick4(CK.top, 0.7);
+    }
+    // 높고 끝이 둥근 창 · 사이마다 버팀벽
+    const per = 40, wx = ((sx - 20) % per + per) % per - per / 2, bx = ((sx % per) + per) % per;
+    if (bx < 6) return bx === 0 || bx === 5 ? c3(CK.line) : mul(c3(CK.top[bx < 3 ? 2 : 0]), sy < 4 ? 0.7 : 1);
+    if (Math.abs(ddx) > dw + 8 && Math.abs(wx) < 5 && sy > 12 && sy < 42) {
+      const top = 17;
+      if (sy < top && Math.hypot(wx, sy - top) >= 5) return mul(ashlar(sx, sy, 9, 18, 110, X, Y), 0.9);
+      if (Math.abs(wx) >= 4 || sy === 13 || sy === 41) return pick4(CK.top, 0.6);
+      return wx === 0 ? c3('#2a2430') : c3(hash(sx >> 2, 0, 111) < 0.2 ? '#3a2e44' : CK.win);
+    }
+    let c = ashlar(sx, sy, 9, 18, 110, X, Y);
+    if (sy < 5) c = mul(c, 0.55 + sy * 0.08);                                     // 처마 그늘
+    const v = ivy(px, sy, 5);
+    return v && Math.abs(ddx) > dw + 4 ? v : c;
+  }
+  // 건물 칸의 점 — 덩어리를 그릴 때 그 자리만 (한 채를 한꺼번에 그리면 120ms 쯤 멈칫해서, 땅처럼 덩어리마다 나눠 그림)
+  function buildingPixel(A, e, X, Y) {
+    const B = A.buildings[e.b];
+    if (!B.G) B.G = castleGeom(B);
+    return castlePix(B.G, X - B.x0 * P, Y - B.y0 * P, X, Y);
+  }
+
+  // ---------- 건물 안 (지도 속성 interior) — 벽 · 기둥 · 나가는 문간 ----------
+  // 위 벽(바닥 바로 위 세 칸)은 벽돌 벽면 — 깃발과 횃불이 번갈아 걸림. 옆 · 아래 벽은 어두운 벽 윗면(바닥 쪽 가장자리만 살짝 밝게)
+  function hallWall(e, X, Y, lx, ly) {
+    if (e.up) {
+      const fy = (3 - e.up) * P + ly, FH = 3 * P;
+      if (fy < 5) return fy === 4 ? c3(CK.line) : c3(CK.inner);
+      const ph = ((X % 96) + 96) % 96, tx = ((X + 48) % 96 + 96) % 96 - 48;
+      const b = bannerPix(41, 8, 14, 32, ph, fy);
+      if (b) return b;
+      // 횃불 — 쇠 받침 · 불꽃, 둘레 벽은 따뜻하게
+      if (Math.abs(tx) <= 1 && fy >= 22 && fy < 30) return c3(CK.iron);
+      if (Math.abs(tx) <= 2 && fy >= 13 && fy < 22 && Math.abs(tx) <= (fy - 12) * 0.5) return c3(Math.abs(tx) < 1 && fy > 16 ? '#fff0b0' : fy > 18 ? '#ffb040' : '#ff7a22');
+      let c = mul(ashlar(X, fy, 10, 20, 106, X, Y), 0.8 - (fy / FH) * 0.15);
+      if (fy >= FH - 3) c = mul(c, 0.7);
+      const g = Math.hypot(tx, fy - 18);
+      if (g < 18) c = mix(c, c3('#ffb060'), 0.28 * (1 - g / 18));
+      return c;
+    }
+    if (!e.rim) return C.void;
+    let c = mul(c3(CK.inner), 0.9 + hash(X >> 2, Y >> 2, 112) * 0.2);
+    const R = P - 1, d = Math.min(e.rim.l ? lx : 99, e.rim.r ? R - lx : 99, e.rim.u ? ly : 99, e.rim.d ? R - ly : 99);
+    if (d === 0) return c3(CK.line);
+    if (d < 3) c = mix(c, c3(CK.top[3]), 0.5);
+    return c;
+  }
+  // 돌기둥 — 덩어리(e.pb, 칸) 자리의 바닥은 기둥 그늘만 (오른쪽 · 아래로 짙게). 기둥 그림은 drawTrees 가 나무처럼 따로 — 칸 위로 솟게
+  function pillarFloor(e, X, Y) {
+    const b = e.pb, fx = (X - b.x0 * P) / ((b.x1 - b.x0) * P), fy = (Y - b.y0 * P) / ((b.y1 - b.y0) * P);
+    return mul(texture(TILES, 8, X, Y), 0.9 - Math.max(0, fx - 0.4) * 0.35 - fy * 0.1);
+  }
+  // 기둥 그림 — 폭 BW · 높이 BH 점: 위는 네모난 기둥머리(윗면 · 판돌 · 둥근 받침), 아래는 받침돌, 사이는 세로 홈이 난 둥근 몸 (왼쪽 빛)
+  function paintPillar(put, BW, BH) {
+    const CAP = 14, BASE = 10, IN = 6, line = c3(CK.line);
+    for (let y = 0; y < BH; y++) for (let x = 0; x < BW; x++) {
+      const f = x / (BW - 1);
+      if (y < CAP) {
+        const ins = y >= CAP - 4 ? 3 : 0;
+        if (x < ins || x >= BW - ins) continue;
+        if (x === ins || x === BW - 1 - ins || y === 0 || y === CAP - 1 || y === CAP - 5) { put(x, y, line); continue; }
+        put(x, y, y <= 4 ? mix(c3(CK.top[2]), WHITE, 0.1 - f * 0.1) : pick4(CK.top, 0.95 - f * 0.75));
+      } else if (y >= BH - BASE) {
+        const ins = y < BH - BASE + 3 ? 2 : 0;
+        if (x < ins || x >= BW - ins) continue;
+        if (x === ins || x === BW - 1 - ins || y === BH - 1 || y === BH - BASE || y === BH - BASE + 3) { put(x, y, line); continue; }
+        put(x, y, mul(pick4(CK.top, 0.9 - f * 0.7), 0.92));
+      } else {
+        if (x < IN || x >= BW - IN) continue;
+        if (x === IN || x === BW - 1 - IN) { put(x, y, line); continue; }
+        const g = (x - IN) / (BW - 2 * IN - 1);
+        let c = pick4(CK.face, 0.95 - g * 0.85);
+        if ((x - IN) % 5 === 0) c = mul(c, 0.85);
+        if (y < CAP + 3) c = mul(c, 0.68);
+        if (y > BH - BASE - 7 && hash(x, y, 113) < 0.22) c = c3(CK.ivy[(hash(x, y, 114) * 3) | 0]);   // 밑동의 이끼
+        put(x, y, c);
+      }
+    }
+  }
+  const pillarSprites = {};
+  function pillarSprite(bw) {
+    if (pillarSprites[bw]) return pillarSprites[bw];
+    const W = bw * P, Hh = PILLAR_H, cv = document.createElement('canvas');
+    cv.width = W; cv.height = Hh;
+    const g = cv.getContext('2d'), img = g.createImageData(W, Hh), d = img.data;
+    paintPillar((x, y, c) => { const i = (y * W + x) * 4; d[i] = c[0]; d[i + 1] = c[1]; d[i + 2] = c[2]; d[i + 3] = 255; }, W, Hh);
+    g.putImageData(img, 0, 0);
+    return (pillarSprites[bw] = cv);
+  }
+  const PILLAR_H = 72;                                              // 기둥 높이 4.5칸 — 자리(2~3칸)보다 위로 솟음
+  // 붉은 깔개 — 가장자리에 금줄, 가운데는 마름모 무늬, 군데군데 해짐
+  function carpetPix(e, X, Y, lx) {
+    const R = P - 1, edge = Math.min(e.cL ? 99 : lx, e.cR ? 99 : R - lx);
+    if (edge === 0) return c3('#3e1013');
+    if (edge === 1 || edge === 3) return c3('#c8a24a');
+    if (edge === 2) return c3('#5e1a1e');
+    const dx = Math.abs(((X % 16) + 16) % 16 - 8), dy = Math.abs(((Y % 16) + 16) % 16 - 8);
+    let c = c3(dx + dy === 5 ? '#8a3a2a' : '#6e1e24');
+    if (fbm(X * 0.04, Y * 0.04, 115) > 0.7) c = mix(c, c3('#9a6a58'), 0.3);           // 닳아 바랜 자리
+    return hash(X, Y, 116) < 0.05 ? mul(c, 0.88) : c;
+  }
+  // 나가는 문간 — 바닥이 이어지고 밖에서 드는 빛(아래로 갈수록 밝게), 양끝은 문설주
+  function doorwayPix(e, X, Y, lx, ly) {
+    const R = P - 1;
+    if ((!e.dL && lx < 4) || (!e.dR && lx > R - 4)) { const k = !e.dL && lx < 4 ? lx : R - lx; return k === 0 ? c3(CK.line) : c3(CK.top[k === 1 ? 2 : 0]); }
+    return mix(texture(TILES, 8, X, Y), c3('#f0dca8'), 0.15 + ly / P * 0.45);
+  }
+
   // ---------- 지도마다 한 번 — 물 깊이 (물가에서 몇 칸) · 그려 둔 덩어리 ----------
   // 지도에 들어설 때마다 세계가 지도를 새로 감싸므로(시작점만 바꿔), 겉모습 층(같은 배열)에 붙여 둡니다 — 오갈 때 다시 안 그리게
   const prepared = new WeakMap();
@@ -277,20 +590,64 @@
         if (dist[j] > dist[k] + 1) { dist[j] = dist[k] + 1; q.push(j); }
       }
     }
-    const A = { dist, chunks: new Map() };
+    // 건물 — 겉모습이 BUILD 인 칸 덩어리마다 한 채 (감싸는 네모 · 그 안의 문). 그림은 그 칸을 칠할 때 (buildingPixel)
+    const bAt = new Int16Array(m.w * m.h).fill(-1), buildings = [];
+    for (let k = 0; k < m.w * m.h; k++) {
+      if ((m.look[k] & 15) !== BUILD || bAt[k] >= 0) continue;
+      const n = buildings.length, st = [k];
+      let x0 = m.w, y0 = m.h, x1 = 0, y1 = 0;
+      bAt[k] = n;
+      while (st.length) {
+        const j = st.pop(), x = j % m.w, y = (j / m.w) | 0;
+        x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y);
+        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+          const nx = x + dx, ny = y + dy, i = ny * m.w + nx;
+          if (nx >= 0 && ny >= 0 && nx < m.w && ny < m.h && bAt[i] < 0 && (m.look[i] & 15) === BUILD) { bAt[i] = n; st.push(i); }
+        }
+      }
+      const door = (m.ports || []).find(p => p.door && p.x >= x0 && p.x <= x1 && p.y >= y0 && p.y <= y1);
+      buildings.push({ x0, y0, w: x1 - x0 + 1, h: y1 - y0 + 1, door, G: null });
+    }
+    const A = { dist, chunks: new Map(), bAt, buildings };
     prepared.set(m.look, A);
     return A;
   }
 
   const land = t => t === FLOOR || t === ROAD || t === TREE || t === ROCK;
   // 겉모습 「땅이 아님」(어둠 · 물 · 용암)인데 바닥이 땅이면 풀로
-  const terOf = raw => (raw === VOID || raw === WATER || raw === LAVA ? GRASS : raw);
+  const terOf = raw => (raw === VOID || raw === WATER || raw === LAVA || raw === BUILD ? GRASS : raw === DOORWAY || raw === CARPET ? TILES : raw);
 
   // 칸 하나를 칠하기 전에 한 번 — 그 칸의 종류와 이웃 (점마다 다시 안 살피게)
-  function cellOf(m, tx, ty) {
+  function cellOf(m, A, tx, ty) {
     const k = ty * m.w + tx, t = m.tile[k], raw = m.look[k] & 15;
     const e = { t, raw, ter: terOf(raw), bio: m.look[k] >> 4 };
+    if (raw === BUILD) { e.b = A.bAt[k]; return e; }
     const at = (x, y) => (x < 0 || y < 0 || x >= m.w || y >= m.h ? WALL : m.tile[y * m.w + x]);
+    const lookAt = (x, y) => (x < 0 || y < 0 || x >= m.w || y >= m.h ? 0 : m.look[y * m.w + x]);
+    const pillar = (x, y) => at(x, y) === ROCK && (lookAt(x, y) >> 4) === 8;   // 성 안 돌기둥
+    if (raw === DOORWAY) { e.dL = (lookAt(tx - 1, ty) & 15) === DOORWAY; e.dR = (lookAt(tx + 1, ty) & 15) === DOORWAY; return e; }
+    if (raw === CARPET) { e.cL = (lookAt(tx - 1, ty) & 15) === CARPET; e.cR = (lookAt(tx + 1, ty) & 15) === CARPET; }
+    if (m.props && m.props.interior && t === FLOOR && raw === TILES && e.bio === 6) {   // 성 안 보스 발밑의 단 — 가장자리 금테
+      const not = (x, y) => lookAt(x, y) !== m.look[k] || at(x, y) !== FLOOR;
+      e.dais = { l: not(tx - 1, ty), r: not(tx + 1, ty), u: not(tx, ty - 1), d: not(tx, ty + 1) };
+    }
+    if ((t === WALL || t < 0) && m.props && m.props.interior) {
+      // 건물 안 — 바로 아래 세 칸 안에 바닥이 있으면 위 벽의 벽면(e.up = 바닥에서 몇 칸 위), 곁에 바닥이 있으면 벽 윗면의 가장자리
+      const open = (x, y) => { const u = at(x, y); return u !== WALL && u >= 0; };
+      for (let d = 1; d <= 3; d++) { if (!open(tx, ty + d)) continue; let wall = true; for (let j = 1; j < d; j++) if (open(tx, ty + j)) wall = false; if (wall) { e.up = d; break; } }
+      if (!e.up && [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [1, -1], [-1, 1], [1, 1]].some(([dx, dy]) => open(tx + dx, ty + dy)))
+        e.rim = { l: open(tx - 1, ty), r: open(tx + 1, ty), u: open(tx, ty - 1), d: open(tx, ty + 1) };
+      return e;
+    }
+    if (pillar(tx, ty)) {                                                // 기둥 덩어리의 칸 범위
+      let x0 = tx, x1 = tx, y0 = ty, y1 = ty;
+      while (pillar(x0 - 1, ty)) x0--; while (pillar(x1 + 1, ty)) x1++;
+      while (pillar(tx, y0 - 1)) y0--; while (pillar(tx, y1 + 1)) y1++;
+      e.pb = { x0, x1: x1 + 1, y0, y1: y1 + 1 };
+      return e;
+    }
+    // 건물 · 기둥 바로 아래 칸은 위쪽이 그늘
+    if (t !== WALL && t !== POOL && ((lookAt(tx, ty - 1) & 15) === BUILD || pillar(tx, ty - 1))) e.shadeTop = (lookAt(tx, ty - 1) & 15) === BUILD ? 9 : 6;
     if (t === WALL || t < 0) {
       // 바로 위 두 칸 안에 땅이 있으면 그 땅의 옆면, 아니면 어둠
       e.face = null;
@@ -358,8 +715,21 @@
 
   // 점 하나의 색 — 칸 e 안의 (lx, ly) 번째 점, 지도 전체로는 (X, Y)
   function paint(m, A, e, X, Y, lx, ly) {
+    if (e.b !== undefined) return buildingPixel(A, e, X, Y);
+    if (e.raw === DOORWAY) return doorwayPix(e, X, Y, lx, ly);
+    if (e.pb) return pillarFloor(e, X, Y);
+    if (e.raw === CARPET && e.t === FLOOR) { const c = carpetPix(e, X, Y, lx); return e.shadeTop && ly < e.shadeTop ? mul(c, 0.62 + 0.38 * ly / e.shadeTop) : c; }
+    let c = paintGround(m, A, e, X, Y, lx, ly);
+    if (e.dais) {
+      const R = P - 1, d = Math.min(e.dais.l ? lx : 99, e.dais.r ? R - lx : 99, e.dais.u ? ly : 99, e.dais.d ? R - ly : 99);
+      if (d === 0) c = c3(CK.line); else if (d <= 2) c = mix(c, c3(CK.gold), d === 1 ? 0.5 : 0.25);
+    }
+    return e.shadeTop && ly < e.shadeTop ? mul(c, 0.62 + 0.38 * ly / e.shadeTop) : c;
+  }
+  function paintGround(m, A, e, X, Y, lx, ly) {
     const t = e.t;
     if (t === POOL) return e.raw === LAVA ? lava(X, Y) : water(m, A, X, Y);
+    if ((t === WALL || t < 0) && m.props && m.props.interior) return hallWall(e, X, Y, lx, ly);
     if (t === WALL || t < 0) {
       if (e.face) return faceColor(e.face.bio, e.face.ter, X, Y, Y - e.face.top);
       return vnoise(X * 0.03, Y * 0.03, 50) > 0.72 ? c3('#16121f') : C.void;
@@ -387,7 +757,7 @@
     for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
       const tx = x0 + i, ty = y0 + j;
       if (tx < 0 || ty < 0 || tx >= m.w || ty >= m.h) continue;
-      const e = cellOf(m, tx, ty);
+      const e = cellOf(m, A, tx, ty);
       for (let ly = 0; ly < P; ly++) for (let lx = 0; lx < P; lx++) put(i * P + lx, j * P + ly, paint(m, A, e, tx * P + lx, ty * P + ly, lx, ly));
     }
   }
@@ -591,8 +961,16 @@
   function drawTrees(ctx, m, ox, oy, T, x0, y0, x1, y1) {
     ctx.imageSmoothingEnabled = false;
     const sw = TW / P * T, sh = TH / P * T;
-    for (let y = Math.max(0, y0 - 1); y < Math.min(m.h, y1 + 3); y++) for (let x = Math.max(0, x0 - 1); x < Math.min(m.w, x1 + 1); x++) {
+    for (let y = Math.max(0, y0 - 1); y < Math.min(m.h, y1 + 3); y++) for (let x = Math.max(0, x0 - 3); x < Math.min(m.w, x1 + 1); x++) {   // 왼쪽은 세 칸 더 (폭 세 칸 기둥)
       const k = y * m.w + x;
+      if (m.tile[k] === ROCK && (m.look[k] >> 4) === 8) {                 // 성 안 돌기둥 — 덩어리의 왼쪽 아래 칸에서 한 번
+        const isP = (i, j) => i >= 0 && j >= 0 && i < m.w && j < m.h && m.tile[j * m.w + i] === ROCK && (m.look[j * m.w + i] >> 4) === 8;
+        if (isP(x - 1, y) || isP(x, y + 1)) continue;
+        let bw = 1; while (isP(x + bw, y)) bw++;
+        const spr = pillarSprite(bw), h = PILLAR_H / P * T;
+        ctx.drawImage(spr, Math.round(ox + x * T), Math.round(oy + (y + 1) * T - h), bw * T, h);
+        continue;
+      }
       if (m.tile[k] !== TREE) continue;
       const [style, pal] = treeOf(m, k, x, y), v = (hash(x, y, 63) * VARIANTS) | 0;
       const j = (hash(x, y, 61) - 0.5) * 0.3 * T;                       // 줄 맞춰 선 것처럼 안 보이게 살짝 비킴

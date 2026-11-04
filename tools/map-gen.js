@@ -22,6 +22,8 @@ const SOLID = [WALL, WATER, TREE, ROCK];
 const OL = require('./overworld-layout.js');
 const LOOK_GID = 1 + TILE_KINDS;
 const look = (ter, bio) => ((bio & 15) << 4) | (ter & 15);
+// 땅의 종류 말고 그림만 쓰는 겉모습 — 건물(바깥 지도에서 막힌 건물 한 채, 그림이 통째로 그림) · 문간(안 지도의 나가는 문)
+const BUILD = 12, DOORWAY = 13, CARPET = 14;   // CARPET — 건물 안 붉은 깔개
 
 // ---------- Tiled JSON ----------
 function tiledProps(o) {
@@ -72,7 +74,7 @@ function buildTmj(spec) {
 // 겉모습 타일셋 그림 — 칸마다 그 땅의 종류 · 격의 대표 색 (Tiled 에서 겉모습 층을 칠할 때 보기용)
 function looksPng() {
   const W = TILE * 16, H = TILE * 16, px = Buffer.alloc(W * H * 4);
-  const base = { [OL.GRASS]: [111, 160, 74], [OL.DIRT]: [180, 138, 90], [OL.COBBLE]: [141, 138, 130], [OL.TILES]: [185, 173, 148], [OL.WATER]: [31, 90, 150],
+  const base = { [BUILD]: [120, 114, 104], [DOORWAY]: [230, 210, 160], [CARPET]: [120, 30, 36], [OL.GRASS]: [111, 160, 74], [OL.DIRT]: [180, 138, 90], [OL.COBBLE]: [141, 138, 130], [OL.TILES]: [185, 173, 148], [OL.WATER]: [31, 90, 150],
     [OL.LAVA]: [194, 48, 26], [OL.OBSID]: [44, 34, 50], [OL.SNOW]: [232, 238, 244], [OL.ROCKY]: [142, 138, 112], [OL.PAVE]: [110, 108, 120], [OL.CANAL]: [95, 176, 192] };
   for (let code = 0; code < 256; code++) {
     const ter = code & 15, bio = code >> 4, c = base[ter] || [12, 10, 18], k = 0.7 + (bio % 8) * 0.06;
@@ -516,7 +518,6 @@ const OVERWORLD_AREAS = {
 const OVERWORLD_POSTS = [
   ['트롤 킹', 12, 38],                                               // 숲 북서쪽 시내 상류의 굴 앞 (길은 막지 않음)
   ['오크 장군', 13, 46], ['숲의 마녀', 54, 41],                         // 야영지 · 오두막
-  ['몰락한 왕', 14, 13],                                             // 성 안 왕좌
   ['그리핀 로드', 56, 15], ['히드라', 28, 25],                         // 탑 자리 · 물에 잠긴 안뜰 (카벙클은 몰락한 왕 곁의 숨은 굴 — SECRET_ROOMS)
   ['돌 거인', 98, 39], ['서리 거인', 101, 41], ['불의 거인', 98, 43], ['구름 거인', 95, 41],   // 돌 고리
   ['거인왕', 'gate'],                                                   // 쐐기돌 아치
@@ -532,7 +533,13 @@ const OVERWORLD_ENTRY = { 2: [38, 60], 3: [44, 28], 4: [66, 50], 5: [116, 48], 6
 // 숨은 굴 — 보스를 꺾으면 그 보스 바로 뒤(위로 한 칸 띄워)에 구멍이 나타나고(appears), 들어가면 히든 하나만 있는 작은 굴 (사용자 결정 — 3격만).
 // 구멍은 열리기 전엔 보이지도 막히지도 않는 그냥 땅. 굴의 구멍으로 나오면 다시 그 구멍 앞
 const SECRET_ROOMS = [
-  { id: 'grotto', title: '숨은 굴', boss: '몰락한 왕', hidden: '카벙클', bigChest: true }   // 3격 — 성 안 왕좌 뒤, 바위턱 폭포 밑 물웅덩이의 굴 · 3격의 큰 상자도 여기
+  { id: 'grotto', title: '숨은 굴', boss: '몰락한 왕', hidden: '카벙클', bigChest: true, from: 'castle' }   // 3격 — 성 안 왕좌 뒤, 바위턱 폭포 밑 물웅덩이의 굴 · 3격의 큰 상자도 여기
+];
+// 건물 — 바깥 지도(overworld)에는 문이 하나 난 닫힌 건물, 문으로 들어가면 따로 뽑은 안 지도 (사용자 결정 — 3격 몰락한 왕의 성부터).
+// 앞으로 건물이 있는 지도는 모두 이렇게. layout — overworld-layout.js 의 그 건물 (box 건물 자리 · hall 안의 큰 방 · gate 정면 가운데 문의 시안 x),
+// boss · bossAt — 안에 서는 보스와 그 시안 칸 (예전 바깥 지도의 자리 그대로), door — 문 폭
+const BUILDINGS = [
+  { id: 'castle', title: '몰락한 왕의 성', layout: 'CASTLE', boss: '몰락한 왕', bossAt: [14, 13], door: 4 }   // 3격 — 남쪽 정면 가운데 성문, 안은 예전 큰 방 그대로 (사용자 결정)
 ];
 const OVERWORLD_MERCHANTS = { forest: [34, 58], ruins: [40, 26], giantpass: [70, 46], necropolis: [120, 50], abyss: [128, 37] };
 
@@ -605,7 +612,6 @@ function overworld(data) {
   }
   const fillRect = (r, t) => { for (let j = 0; j < r.h; j++) for (let i = 0; i < r.w; i++) tiles[idx(r.x + i, r.y + j)] = t; };
   for (const b of L.BRIDGES) fillRect(b.vertical ? rectOf(b.x, b.y, b.x + b.wide - 1, b.y + b.len - 1) : rectOf(b.x, b.y, b.x + b.len - 1, b.y + b.wide - 1), ROAD);
-  for (const [x, y] of L.CASTLE.columns) fillRect(rectOf(x, y, x, y), ROCK);
   // 처음 · 1격 자리는 어둠으로 — 따로 뽑은 지하수로(sewer) 지도
   for (let i = 0; i < w * h; i++) if ([1, 7].includes(L.zoneAt(i % w, (i / w) | 0))) tiles[i] = WALL;
 
@@ -621,6 +627,17 @@ function overworld(data) {
   npcs.push({ name: 'start', x: sx, y: sy });
   guard(hx, hy - 2, 3, 3, 2);
   const foes = data.ENEMIES.filter(e => e.rank.n >= 2 && e.rank.n <= 6 && e.kind !== 'normal');
+  // 건물 — 자리 전체를 막고(그림은 겉모습 BUILD 로 한 채), 남쪽 정면 가운데에 문. 문 칸은 걸을 수 있고 닿으면 안 지도로
+  const buildingCells = new Uint8Array(w * h);
+  for (const b of BUILDINGS) {
+    const C = L[b.layout], r = rectOf(...C.box);
+    fillRect(r, WALL);
+    for (let j = 0; j < r.h; j++) for (let i = 0; i < r.w; i++) buildingCells[idx(r.x + i, r.y + j)] = 1;
+    const door = { name: b.id, label: b.title, x: L.spot1(C.gate, 0)[0] - (b.door >> 1), y: r.y + r.h - 1, w: b.door, h: 1, to: `${b.id}.out`, door: true };
+    ports.push(door);
+    fillRect(door, FLOOR);
+    guard(door.x, door.y + 1, door.w, 2, 2);                   // 문 앞은 트여 있게
+  }
   for (const [name, x, y] of OVERWORLD_POSTS) {
     const e = foes.find(f => f.name === name);
     if (!e) throw new Error(`정해진 자리 — ${name} 이(가) 2~6격에 없음`);
@@ -632,6 +649,7 @@ function overworld(data) {
   }
   // 숨은 굴로 가는 구멍 — 그 보스 바로 뒤 (보스 몸 위로 한 칸 띄워, 보스 폭만큼)
   for (const s of SECRET_ROOMS) {
+    if (s.from && s.from !== 'overworld') continue;            // 건물 안 보스 — 그 안 지도에 (buildingInterior)
     const boss = foes.find(e => e.name === s.boss), bp = posts.find(p => p.enemy === boss.id);
     const hole = { name: s.id, label: s.title, x: bp.x, y: bp.y - 2, w: bp.w, h: 1, to: `${s.id}.out`, opensAfter: boss.id, appears: true, hole: true };
     ports.push(hole);
@@ -639,8 +657,15 @@ function overworld(data) {
     fillRect({ x: hole.x, y: hole.y + 1, w: hole.w, h: 1 }, FLOOR);
     guard(hole.x, hole.y, hole.w, 2, 1);
   }
-  const hiddenElsewhere = new Set(SECRET_ROOMS.map(s => s.hidden));
+  const hiddenElsewhere = new Set([...SECRET_ROOMS.map(s => s.hidden), ...BUILDINGS.map(b => b.boss)]);
   const missing = foes.filter(e => !hiddenElsewhere.has(e.name) && !posts.some(p => p.enemy === e.id));
+  // 그 격 보스가 서 있는 곳 — 건물 안이면 그 건물의 문 (구역 차례 · 보물상자 자리를 잴 때)
+  const bossSpot = zi => {
+    const boss = data.ENEMIES.find(e => e.zoneIndex === zi && e.kind === 'boss'), p = posts.find(q => q.enemy === boss.id);
+    if (p) return p;
+    const b = BUILDINGS.find(q => q.boss === boss.name);
+    return ports.find(q => q.name === b.id);
+  };
   if (missing.length) throw new Error(`정해진 자리가 없는 정예 · 보스 — ${missing.map(e => e.name).join(', ')}`);
   const walkFrom = cells => {
     const d = new Int32Array(w * h).fill(-1), q = [];
@@ -716,7 +741,7 @@ function overworld(data) {
     }
   };
   const cellsOf = p => { const out = []; for (let j = 0; j < (p.h || 1); j++) for (let i = 0; i < (p.w || 1); i++) out.push([p.name, p.x + i, p.y + j]); return out; };
-  const stand = [...posts.flatMap(cellsOf), ...ports.filter(p => p.appears).flatMap(cellsOf), ...npcs.map(n => [n.name, n.x, n.y])];
+  const stand = [...posts.flatMap(cellsOf), ...ports.filter(p => p.appears || p.door).flatMap(cellsOf), ...npcs.map(n => [n.name, n.x, n.y])];
   for (const [, x, y] of stand) {
     const k = idx(x, y);
     if (seen[k] || !open(k)) continue;
@@ -809,8 +834,8 @@ function overworld(data) {
       }
     });
     const fromEntry = walkFrom([idx(...L.spot1(...OVERWORLD_ENTRY[rank]))]);
-    const boss = posts.find(q => q.enemy === data.ENEMIES.find(e => e.zoneIndex === zi && e.kind === 'boss').id);
-    const toBoss = walkFrom([...Array(boss.w * boss.h).keys()].map(k => idx(boss.x + k % boss.w, boss.y + ((k / boss.w) | 0))));
+    const boss = bossSpot(zi);
+    const toBoss = walkFrom([...Array((boss.w || 1) * (boss.h || 1)).keys()].map(k => idx(boss.x + k % (boss.w || 1), boss.y + ((k / (boss.w || 1)) | 0))));
     const regions = starts.map((s0, i) => {
       const cells = [];
       for (let k = 0; k < w * h; k++) if (owner[k] === i) cells.push(k);
@@ -889,7 +914,7 @@ function overworld(data) {
   busy.push(...mids);                                         // 구역 들머리
   for (let rank = 2; rank <= 6; rank++) {
     const zi = data.ZONES.findIndex(z => z.rank === rank);
-    const boss = posts.find(q => q.enemy === data.ENEMIES.find(e => e.zoneIndex === zi && e.kind === 'boss').id);
+    const boss = bossSpot(zi);
     const fromEntry = walkFrom([idx(...L.spot1(...OVERWORLD_ENTRY[rank]))]);
     const toBoss = walkFrom(cellsOfRect(boss).map(([x, y]) => idx(x, y)));
     const D = Math.min(...cellsOfRect(boss).map(([x, y]) => fromEntry[idx(x, y)]).filter(v => v >= 0));
@@ -922,7 +947,7 @@ function overworld(data) {
   const lookLayer = new Uint8Array(w * h);
   for (let i = 0; i < w * h; i++) {
     const wet = L.ter[i] === OL.WATER || L.ter[i] === OL.CANAL;
-    lookLayer[i] = look(tiles[i] === ROAD && !wet ? OL.DIRT : L.ter[i], L.bio[i]);
+    lookLayer[i] = buildingCells[i] ? look(BUILD, 8) : look(tiles[i] === ROAD && !wet ? OL.DIRT : L.ter[i], L.bio[i]);
   }
   return buildTmj({ w, h, tiles, areas, posts, ports, npcs, chests, look: lookLayer });
 }
@@ -946,7 +971,7 @@ function secretRoom(data, s) {
   let oy = H - 1;
   while (tiles[oy * W + cx] !== FLOOR) oy--;                 // 한가운데 줄의 맨 아래 바닥 칸
   for (let x = cx - 1; x <= cx + 1; x++) { tiles[oy * W + x] = FLOOR; tiles[(oy - 1) * W + x] = FLOOR; }
-  const out = { name: 'out', label: '나가기', x: cx - 1, y: oy, w: 3, h: 1, to: `overworld.${s.id}`, hole: true };
+  const out = { name: 'out', label: '나가기', x: cx - 1, y: oy, w: 3, h: 1, to: `${s.from || 'overworld'}.${s.id}`, hole: true };
   // 그 격의 큰 상자 — 굴 안쪽 오른쪽 위 (사용자 결정: 격마다 큰 상자 하나, 3격은 이 굴에)
   const chests = [];
   if (s.bigChest) {
@@ -956,6 +981,38 @@ function secretRoom(data, s) {
   }
   const lookLayer = Uint8Array.from(tiles, t => (t === WATER ? look(OL.WATER, 7) : look(OL.ROCKY, 7)));
   return buildTmj({ w: W, h: H, tiles, posts: [post], ports: [out], npcs: [{ name: 'start', x: cx, y: oy - 1 }], chests, look: lookLayer, props: { title: s.title } });
+}
+
+// ---------- 건물 안 (BUILDINGS) — 예전 바깥 지도의 큰 방을 그대로 옮긴 안 지도 ----------
+// 위는 세 칸 높이의 벽면(그림이 벽돌 벽 · 깃발 · 횃불로), 옆 · 아래는 벽 윗면. 아래 벽 가운데에 바깥 문으로 나가는 문간.
+// 보스 · 기둥은 예전 자리 그대로, 그 보스의 숨은 굴(SECRET_ROOMS 의 from)은 보스 바로 뒤에 구멍. 지역은 없음 — 들어와도 지역은 그대로
+function buildingInterior(data, b) {
+  const L = OL.build(OVERWORLD_SCALE), C = L[b.layout];
+  const rectOf = (x0, y0, x1, y1) => { const [a, c] = L.span(x0, x1), [d, e] = L.span(y0, y1); return { x: a, y: d, w: c - a + 1, h: e - d + 1 }; };
+  const hall = rectOf(...C.hall), TOP = 3, SIDE = 2, BOTTOM = 2;
+  const W = hall.w + SIDE * 2, H = TOP + hall.h + BOTTOM, ox = SIDE - hall.x, oy = TOP - hall.y;   // 바깥 지도 칸 + (ox, oy) = 안 지도 칸
+  const tiles = new Uint8Array(W * H).fill(WALL), lk = new Uint8Array(W * H).fill(look(OL.TILES, 8));
+  const fill = (r, t) => { for (let j = 0; j < r.h; j++) for (let i = 0; i < r.w; i++) tiles[(r.y + j) * W + r.x + i] = t; };
+  fill({ x: SIDE, y: TOP, w: hall.w, h: hall.h }, FLOOR);
+  for (const [x, y] of C.columns) { const r = rectOf(x, y, x, y); fill({ x: r.x + ox, y: r.y + oy, w: r.w, h: r.h }, ROCK); }
+  const foe = data.ENEMIES.find(e => e.name === b.boss);
+  if (!foe || foe.kind !== 'boss') throw new Error(`건물 ${b.id} — ${b.boss} 이(가) 보스가 아님`);
+  const [px, py] = L.spotN(...b.bossAt, foe.size), post = { name: foe.name, x: px + ox, y: py + oy, w: foe.size, h: foe.size, enemy: foe.id, blocks: false };
+  const ports = [];
+  for (const s of SECRET_ROOMS.filter(q => q.from === b.id && q.boss === b.boss)) {
+    const hole = { name: s.id, label: s.title, x: post.x, y: post.y - 2, w: post.w, h: 1, to: `${s.id}.out`, opensAfter: foe.id, appears: true, hole: true };
+    for (let j = 0; j < 2; j++) for (let i = 0; i < hole.w; i++) if (tiles[(hole.y + j) * W + hole.x + i] !== FLOOR) throw new Error(`건물 ${b.id} — 숨은 굴 구멍 자리가 바닥이 아님`);
+    ports.push(hole);
+  }
+  // 나가는 문 — 아래 벽 첫 줄, 바깥 문과 같은 폭으로 가운데
+  const out = { name: 'out', label: '나가기', x: (W >> 1) - (b.door >> 1), y: TOP + hall.h, w: b.door, h: 1, to: `overworld.${b.id}`, door: true };
+  fill(out, FLOOR);
+  for (let i = 0; i < out.w; i++) lk[out.y * W + out.x + i] = look(DOORWAY, 8);
+  // 꾸밈 — 문에서 위 벽까지 가운데 붉은 깔개(기둥 사이로 두 칸), 보스 발밑엔 한 칸 넓은 어두운 단
+  for (let y = TOP; y < out.y; y++) for (let x = (W >> 1) - 1; x <= W >> 1; x++) if (tiles[y * W + x] === FLOOR) lk[y * W + x] = look(CARPET, 8);
+  for (let y = post.y - 1; y <= post.y + post.h; y++) for (let x = post.x - 1; x <= post.x + post.w; x++) if (tiles[y * W + x] === FLOOR) lk[y * W + x] = look(OL.TILES, 6);
+  ports.push(out);
+  return buildTmj({ w: W, h: H, tiles, posts: [post], ports, npcs: [{ name: 'start', x: out.x + (out.w >> 1), y: out.y - 1 }], look: lk, props: { title: b.title, interior: true } });
 }
 
 // ---------- 7~20격 — 비슷한 것끼리 일곱 장 (docs/MAP-REFERENCE-PLAN.md 2-2) ----------
@@ -1067,8 +1124,9 @@ function hub(data) {
 function allMaps(data) {
   const out = { sewer: sewer(data), overworld: overworld(data), hub: hub(data) };
   for (const s of SECRET_ROOMS) out[s.id] = secretRoom(data, s);
+  for (const b of BUILDINGS) out[b.id] = buildingInterior(data, b);
   REALMS.forEach((r, i) => { out[r.name] = realm(data, r, i); });
   return out;
 }
 
-module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, looksPng, encodePng, generate, sewer, overworld, hub, secretRoom, allMaps, layoutFromPlan, HUB_DOORS, REALMS, SEWER, SECRET_ROOMS };
+module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, looksPng, encodePng, generate, sewer, overworld, hub, secretRoom, buildingInterior, allMaps, layoutFromPlan, HUB_DOORS, REALMS, SEWER, SECRET_ROOMS, BUILDINGS, BUILD, DOORWAY, CARPET };

@@ -448,11 +448,12 @@ test('overworld — 2~6격 몬스터가 모두 한 번씩, 구역 39개 · 숲 �
   const foes = data.ENEMIES.filter(e => e.rank.n >= 2 && e.rank.n <= 6);
   const areaMonsters = m.areas.filter(a => a.monster).map(a => a.monster).sort();
   assert.deepEqual(areaMonsters, foes.filter(e => e.kind === 'normal').map(e => e.id).sort());
-  const inGrotto = gen.SECRET_ROOMS.map(r => data.ENEMIES.find(e => e.name === r.hidden).id);   // 숨은 굴에 따로 선 히든
-  assert.deepEqual(m.posts.map(p => p.enemy).sort(), foes.filter(e => e.kind !== 'normal' && !inGrotto.includes(e.id)).map(e => e.id).sort());
+  const elsewhere = [...gen.SECRET_ROOMS.map(r => r.hidden), ...gen.BUILDINGS.map(b => b.boss)]   // 숨은 굴에 따로 선 히든 · 건물 안 보스
+    .map(name => data.ENEMIES.find(e => e.name === name).id);
+  assert.deepEqual(m.posts.map(p => p.enemy).sort(), foes.filter(e => e.kind !== 'normal' && !elsewhere.includes(e.id)).map(e => e.id).sort());
   assert.equal(areaMonsters.length, 39);
   assert.deepEqual(m.ports.map(p => [p.to, p.opensAfter, !!p.hole]),
-    [['sewer.out', undefined, true], ['grotto.out', 'fallenking', true], ['hub.overworld', 'demonking', false]]);
+    [['sewer.out', undefined, true], ['castle.out', undefined, false], ['hub.overworld', 'demonking', false]]);
   const hole = m.ports.find(p => p.name === 'sewer');
   assert.ok(!m.solid[(hole.y - 1) * m.w + hole.x + 1] && m.solid[(hole.y + 1) * m.w + hole.x + 1], '구멍 위는 걸을 수 있는 숲, 아래는 어둠');
   assert.ok(Math.abs(m.start.x - (hole.x + 1)) <= 1 && m.start.y === hole.y - 1, '지도의 시작점은 구멍 바로 위');
@@ -693,9 +694,42 @@ test('열리기 전엔 없는 문(appears) — 보이지도 막히지도 않는 
   assert.ok(ev2.some(e => e.type === 'port' && e.port.name === 'secret'), '들어섬');
 });
 
-test('숨은 굴 — 3격 보스(몰락한 왕)를 꺾으면 바로 뒤에 구멍이 나타나고, 그 굴에는 카벙클만 · 굴의 구멍은 다시 그 앞으로', () => {
+test('건물 — 3격 몰락한 왕의 성은 바깥 지도에선 남쪽 정면 가운데에 문 하나 난 닫힌 건물, 들어가면 따로 뽑은 성 안 (예전 큰 방 그대로)', () => {
+  const over = loadMap('overworld'), c = loadMap('castle');
+  const door = over.ports.find(p => p.name === 'castle');
+  assert.ok(door.door && door.to === 'castle.out' && door.w === 4 && door.h === 1);
+  // 건물 자리 — 겉모습이 건물인 칸 덩어리. 문 칸만 걸을 수 있고 나머지는 모두 막힘, 문은 그 아래 가장자리 한가운데
+  const cells = [];
+  for (let k = 0; k < over.w * over.h; k++) if ((over.look[k] & 15) === gen.BUILD) cells.push(k);
+  const xs = cells.map(k => k % over.w), ys = cells.map(k => (k / over.w) | 0);
+  const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+  assert.equal(cells.length, (x1 - x0 + 1) * (y1 - y0 + 1), '건물 자리는 네모 한 덩어리');
+  const doorCells = cellsOf(over, door);
+  assert.ok(cells.every(k => doorCells.includes(k) ? !over.solid[k] : over.solid[k]), '문 칸만 걸을 수 있음');
+  assert.equal(door.y, y1, '문은 정면(아래 가장자리)');
+  assert.ok(Math.abs((door.x + door.w / 2) - (x0 + x1 + 1) / 2) <= 1, '정면 가운데');
+  const d = walk(over, [over.start.y * over.w + over.start.x]);
+  assert.ok(doorCells.every(i => d[i] >= 0) && doorCells.every(i => d[i + over.w] >= 0), '문과 그 앞까지 걸어서 닿음');
+  // 성 안 — 몰락한 왕 · 기둥 · 나가는 문(바깥 그 문 앞으로), 지역 없음 · 이름은 성
+  assert.deepEqual(c.posts.map(p => p.enemy), ['fallenking']);
+  assert.equal(c.areas.length, 0);
+  assert.equal(c.props.title, '몰락한 왕의 성');
+  assert.ok(c.props.interior);
+  const out = c.ports.find(p => p.name === 'out');
+  assert.ok(out.door && out.to === 'overworld.castle' && out.w === door.w);
+  assert.ok(Math.abs(c.start.x - (out.x + out.w / 2)) <= 1 && c.start.y === out.y - 1, '성 안 시작점은 나가는 문 바로 위');
+  let pillars = 0;
+  for (let k = 0; k < c.w * c.h; k++) if (c.tile[k] === 4) pillars++;
+  assert.equal(pillars, 4 * 3 * 2 + 4 * 3 * 3, '기둥 여덟 — 위 줄 넷은 3×2칸 · 아래 줄 넷은 3×3칸 (예전 큰 방 그대로)');
+  const dc = walk(c, [c.start.y * c.w + c.start.x]);
+  const king = c.posts[0], near = [];
+  for (let x = king.x; x < king.x + king.w; x++) near.push((king.y + king.h) * c.w + x);
+  assert.ok(near.some(i => dc[i] >= 0), '들어서서 몰락한 왕에게 닿음');
+});
+
+test('숨은 굴 — 3격 보스(몰락한 왕)를 꺾으면 성 안 바로 뒤에 구멍이 나타나고, 그 굴에는 카벙클만 · 굴의 구멍은 다시 그 앞으로', () => {
   const data = loadData();
-  const over = loadMap('overworld'), g = loadMap('grotto');
+  const over = loadMap('castle'), g = loadMap('grotto');
   const king = over.posts.find(p => p.enemy === 'fallenking'), hole = over.ports.find(p => p.name === 'grotto');
   assert.ok(hole.appears && hole.hole && hole.opensAfter === 'fallenking' && hole.to === 'grotto.out');
   assert.ok(hole.x === king.x && hole.w === king.w && hole.y === king.y - 2, '보스 바로 뒤 (위로 한 칸 띄워, 보스 폭만큼)');
@@ -711,7 +745,7 @@ test('숨은 굴 — 3격 보스(몰락한 왕)를 꺾으면 바로 뒤에 구�
   assert.equal(g.areas.length, 0);
   assert.equal(g.props.title, '숨은 굴');
   const out = g.ports.find(p => p.name === 'out');
-  assert.ok(out.hole && out.to === 'overworld.grotto');
+  assert.ok(out.hole && out.to === 'castle.grotto');
   const dg = walk(g, [g.start.y * g.w + g.start.x]);
   const post = g.posts[0], near = [];
   for (let x = post.x; x < post.x + post.w; x++) near.push((post.y + post.h) * g.w + x, (post.y - 1) * g.w + x);
