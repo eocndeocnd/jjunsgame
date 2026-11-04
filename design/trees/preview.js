@@ -6,7 +6,7 @@ const fs = require('fs'), path = require('path');
 const A = require('../../js/mapart.js');
 const { encodePng } = require('../../tools/map-gen.js');
 
-const P = A.P, SCALE = 3, PW = 9 * P, PH = 7 * P;            // 판 하나 = 9×7칸
+const P = A.P, SCALE = 2, PW = 9 * P, PH = 7 * P, K = P / 8;   // 판 하나 = 9×7칸 (K — 칸 하나가 8점이던 때의 몇 배)
 const PANELS = [
   ['A', 'kingdom', A.GRASS, 3, '뭉게 나무'], ['B', 'kingdom', A.GRASS, 3, '동그란 나무'], ['C', 'kingdom', A.GRASS, 3, '키 큰 나무'],
   ['D', 'forest', A.GRASS, 2, '3단 전나무'], ['E', 'forest', A.GRASS, 2, '가는 측백'], ['D', 'snow', A.SNOW, 4, '3단 전나무 · 눈'],
@@ -28,10 +28,10 @@ PANELS.forEach(([style, pal, ter, bio], n) => {
   spots.push([7, 3]);
   spots.sort((p, q) => p[1] - q[1]);
   spots.forEach(([cx, cy], k) => {
-    const ox = px0 + cx * P - P / 2 + Math.round((((k * 37) % 10) / 10 - 0.5) * 3), oy = py0 + cy * P - (A.TH - P);
-    for (let y = -1; y <= 1; y++) for (let x = -5; x <= 5; x++) {               // 땅 그림자
-      const gx = ox + 8 + x, gy = oy + A.TH - 1 + y;
-      if (x * x / 25 + y * y <= 1 && gx >= px0 && gy >= py0 && gx < px0 + PW && gy < py0 + PH) put(gx, gy, get(gx, gy).map(v => v * 0.6));
+    const ox = px0 + cx * P - P / 2 + Math.round((((k * 37) % 10) / 10 - 0.5) * 3 * K), oy = py0 + cy * P - (A.TH - P);
+    for (let y = -K; y <= K; y++) for (let x = -5 * K; x <= 5 * K; x++) {       // 땅 그림자
+      const gx = ox + A.TW / 2 + x, gy = oy + A.TH - K + y;
+      if (x * x / (25 * K * K) + y * y / (K * K) <= 1 && gx >= px0 && gy >= py0 && gx < px0 + PW && gy < py0 + PH) put(gx, gy, get(gx, gy).map(v => v * 0.6));
     }
     A.paintTree((x, y, c) => { const gx = ox + x, gy = oy + y; if (gx >= px0 && gy >= py0 && gx < px0 + PW && gy < py0 + PH) put(gx, gy, c); }, style, pal, ((k * 0.618) % 1));
   });

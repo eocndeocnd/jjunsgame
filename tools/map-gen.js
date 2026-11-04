@@ -679,8 +679,11 @@ function overworld(data) {
     const i = idx(x, y);
     if (tiles[i] !== FLOOR || keep[i]) continue;
     const b = L.bio[i], grove = L.fbm(L.toC(x) * 0.16, L.toC(y) * 0.16, 83), r = L.hash(x, y, 80);
-    if ((b === 2 && grove > 0.6 && r < 0.8) || ((b === 3 || b === 9) && grove > 0.64 && r < 0.6) || (b === 4 && grove > 0.6 && r < 0.55) || (b === 5 && grove > 0.62 && r < 0.3)
-      || (b === 6 && L.ter[i] === L.OBSID && grove > 0.66 && r < 0.18)) tiles[i] = TREE;   // 마계는 흑요석 땅에 듬성듬성 뒤틀린 마목 (사용자 결정)
+    // 5격 시체의 도시 · 6격 마계는 듬성듬성 — 둘레 여덟 칸(이미 정한 위 · 왼쪽)에 나무가 없을 때만, 드물게 (사용자 결정 — 빽빽했음)
+    const alone = () => ![i - 1, i - w - 1, i - w, i - w + 1, i - 2, i - 2 * w].some(j => tiles[j] === TREE);
+    if ((b === 2 && grove > 0.6 && r < 0.8) || ((b === 3 || b === 9) && grove > 0.64 && r < 0.6) || (b === 4 && grove > 0.6 && r < 0.55)
+      || (b === 5 && grove > 0.56 && r < 0.16 && alone())
+      || (b === 6 && L.ter[i] === L.OBSID && grove > 0.6 && r < 0.14 && alone())) tiles[i] = TREE;
     else if ((b === 4 && r < 0.012) || (b === 6 && r < 0.035)) tiles[i] = ROCK;
   }
 
@@ -722,6 +725,8 @@ function overworld(data) {
   }
   for (let k = 0; k < w * h; k++) {                         // 그래도 갇힌 빈칸은 둘레의 나무 · 바위로 메움 — 몬스터가 서지 않게
     if (seen[k] || !open(k)) continue;
+    // 5 · 6격은 그대로 빈 땅 (용암 · 벼랑 너머로 보이는 땅 — 나무로 메우면 통째로 빽빽한 숲이 됨, 구역 · 상자는 닿는 칸에만 서므로 몬스터도 안 섬)
+    if (L.bio[k] === 5 || L.bio[k] === 6) continue;
     const nb = [k - 1, k + 1, k - w, k + w].map(j => tiles[j]);
     tiles[k] = nb.includes(TREE) ? TREE : nb.includes(ROCK) ? ROCK : WALL;
   }
