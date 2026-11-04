@@ -514,14 +514,15 @@ h3::before { content: '◆ '; color: var(--wax); }
   letter-spacing: 0.3em;
   text-indent: 0.3em;        /* 자간 때문에 오른쪽으로 쏠리는 것을 되돌립니다 */
   text-align: center;
-  padding-bottom: 10px;
-  margin-bottom: 12px;
+  padding-bottom: 4px;
+  margin-bottom: 8px;
   border-bottom: 2px solid var(--line-soft);
   text-shadow: 2px 2px 0 rgba(58, 35, 18, 0.2);
 }
+.result .res-head { font-size: 20px; }   /* 결과 창 — 위쪽을 줄여 폰에서 「낀다」까지 스크롤 없이 보이게 (사용자 결정) */
 .result.win  .res-head { color: var(--energy); }
 .result.lose .res-head { color: var(--danger); }
-.res-foe { font-size: 13px; font-weight: 700; margin-bottom: 10px; }
+.res-foe { font-size: 13px; font-weight: 700; margin-bottom: 6px; }
 .res-icon { font-size: 18px; margin-right: 6px; }
 .res-foe .lv { color: var(--text-faint); font-weight: 400; font-size: 11px; margin-left: 6px; }
 .res-turns { color: var(--text-faint); font-weight: 400; font-size: 11px; margin-left: 8px; }
@@ -533,26 +534,20 @@ h3::before { content: '◆ '; color: var(--wax); }
   margin-bottom: 10px;
 }
 
-.res-lines { margin-bottom: 12px; }
+.res-lines { margin-bottom: 8px; }
 .res-row {
   display: grid;
   grid-template-columns: 62px auto 1fr;
   gap: 8px;
   align-items: baseline;
-  padding: 5px 0;
+  padding: 3px 0;
   background: var(--dots) left bottom / 4px 2px repeat-x;
 }
 .res-k { font-size: 11px; color: var(--text-dim); }
 .res-v { font-weight: 700; font-size: 13px; color: var(--accent); }
 .res-note { font-size: 10px; color: var(--text-faint); text-align: right; }
 
-.res-sub {
-  font-size: 10px;
-  color: var(--text-dim);
-  letter-spacing: 0.1em;
-  margin-bottom: 5px;
-}
-/* 얻은 것 — 조우 화면의 남은 전리품 칸처럼 가로로, 한 줄에 셋까지 (칸 수는 ui.js 가 정합니다).
+/* 얻은 것 — 조우 화면의 남은 전리품 칸처럼 가로로, 한 번에 많아야 둘 (칸 수는 ui.js 가 정합니다).
    칸마다 위에 물건의 모습(작은 액자), 아래에 이름과 부위 · 얻은 방식 */
 .res-drop-list { display: grid; gap: 6px; }
 .res-drop {
@@ -561,9 +556,9 @@ h3::before { content: '◆ '; color: var(--wax); }
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
   min-width: 0;
-  padding: 8px 4px 7px;
+  padding: 6px 4px;
   text-align: center;
   background: var(--paper-hi);
   border: 2px solid var(--line-soft);
@@ -2582,13 +2577,13 @@ body.fight-locked #dollSwapBtn { display: none; }
 
 
 /* 결과의 경험치 바 — 레벨 줄 바로 아래. 굵게 */
-.res-lines .res-xp { height: 12px; margin: 4px 0 12px; background: var(--paper-lo); box-shadow: 0 0 0 1px var(--line-soft); }
+.res-lines .res-xp { height: 10px; margin: 3px 0 6px; background: var(--paper-lo); box-shadow: 0 0 0 1px var(--line-soft); }
 .res-lines .res-xp .je-xp-fill { height: 100%; background: repeating-linear-gradient(135deg, #2b74ad 0 3px, #1d5f8f 3px 6px); transition: width 0.25s ease; }
 body.lv-rolling .res-xp .je-xp-fill { transition: none; transform-origin: left center; will-change: transform; }
 
 /* 결과의 「스탯 분배」 — 오른쪽, 상대 이름 줄과 경험치 줄 사이 (이름이 겹치지 않게 그 줄 오른쪽은 비웁니다) */
 .result { position: relative; }
-.result > .res-alloc { position: absolute; right: 0; top: 62px; width: auto; margin: 0; padding: 7px 11px; white-space: nowrap; z-index: 2; }
+.result > .res-alloc { position: absolute; right: 0; top: 39px; width: auto; margin: 0; padding: 7px 11px; white-space: nowrap; z-index: 2; }
 .result.has-alloc .res-foe { padding-right: 96px; }
 
 /* ---------- 폰 — 붙박이 버튼 띠는 화면 맨 아래 ----------
@@ -2826,6 +2821,7 @@ body.meeting .enc-portrait .portrait-ic { font-size: clamp(90px, 34vw, 190px); }
 .res-diff .up   { color: var(--energy); }
 .res-diff .down { color: var(--danger); }
 .res-diff .same { color: var(--text-faint); font-weight: 400; }
+.res-diff .more { color: var(--text-faint); }
 .res-wear { margin-top: 4px; padding: 5px 14px; }
 
 /* 지도를 옮길 때(문 · 구멍) 잠깐 화면을 까맣게 — ui.js 의 fadeThrough. 지도 · 지도 위의 것 · 서랍 위, 창(모달) 아래 */
@@ -8823,12 +8819,14 @@ function avatarWarp() {
   return true;
 }
 
-// 처치하면 1~3개(기운이 붙으면 그 배수만큼)를 빼앗습니다.
+// 처치하면 전리품마다 확률을 굴려(기운이 붙으면 그 배수만큼) 빼앗습니다 — 한 번에 많아야 DROP_MAX(2)개 (사용자 결정).
+// 셋이 걸리면 처음 얻는 것부터 남기고, 같은 처지끼리는 무작위로 버립니다.
 // 이미 가진 것이 또 나오면 **자동으로 분해되어** 그 부위의 강화석이 됩니다 —
 // 그래서 드롭이 죽지 않습니다. 다 모은 상대도 잡을 이유가 남습니다.
 // **전리품 하나하나에 따로 확률을 굴립니다.**
 // 그래서 한 번 잡아 같은 종류가 두 개 나오는 일은 없고, 빈손으로 끝나기도 합니다.
 // 빈손이 있어야 행운에 투자할 이유가 생깁니다.
+const DROP_MAX = 2;
 function rollDrops(enemyId, auraMult = 1) {
   const foe = getEnemy(enemyId);
 
@@ -8840,10 +8838,12 @@ function rollDrops(enemyId, auraMult = 1) {
   const stoneMult = 1 + num(heroStats().stoneRate);   // 『세공사의 돋보기』 같은 유물
   const result = [];
 
-  for (const it of dropTable(enemyId)) {
-    // 특수장비는 3지역의 숨은 것(카벙클)을 처음 꺾기 전엔 떨어지지 않습니다
-    if (it.slot === 'special' && !merchantUnlocked()) continue;
-    if (Math.random() >= chance) continue;               // 이번엔 안 나왔다
+  // 특수장비는 3지역의 숨은 것(카벙클)을 처음 꺾기 전엔 떨어지지 않습니다
+  const hits = dropTable(enemyId).filter(it => !(it.slot === 'special' && !merchantUnlocked()) && Math.random() < chance);
+  const keep = hits.map(it => ({ it, k: (owns(it.id) ? 1 : 0) + Math.random() * 0.5 })).sort((p, q) => p.k - q.k)
+    .slice(0, DROP_MAX).map(h => h.it);
+  for (const it of hits) {
+    if (!keep.includes(it)) continue;                    // 둘을 넘는 것은 버림 (남는 것은 표에 적힌 차례대로)
 
     if (owns(it.id)) {
       // 이미 가진 것 — 분해해서 그 부위의 강화석으로.
@@ -11251,7 +11251,7 @@ function resultCard(r, run) {
     lines.push(`<div class="je-xp res-xp"><div class="je-xp-fill" id="resXpFill" style="width:${Math.min(100, run.xp / xpToNext(run.level) * 100)}%"></div></div>`);
     // 설명 글은 뺐습니다 — 값만 보고 알 수 있게 적습니다 (삼킨 격은 다음 회차부터 붙으니 「시작 에너지」)
     if (r.devoured > 0) lines.push(row('삼킨 격', `시작 에너지 +${r.devoured}`));
-    if (r.refund > 0) lines.push(row('되찾은 에너지', `+${r.refund}`));
+    if (r.refund > 0) lines.push(row('에너지', `+${r.refund}`));
     if (r.openedSpecial) lines.push(row('특수장비 칸', `열렸다 ${r.openedSpecial}/${SPECIAL_SLOT_MAX}`));
   } else {
     lines.push(row('에너지', `−${r.penalty}`, `남은 ${run.energy}`));
@@ -11264,13 +11264,12 @@ function resultCard(r, run) {
   //
   // 글자만으로는 뭘 얻었는지 한눈에 안 들어와서 물건의 모습을 함께 둡니다 —
   // 전리품 탭과 같은 아이콘입니다 (지금은 이모지, 나중에 그림이 들어올 자리).
-  // 조우 화면의 남은 전리품 칸처럼 가로로 늘어놓습니다 (한 줄에 셋까지) —
-  // 한 줄에 하나씩 쌓으면 폰에서 셋째 것이 아래의 「계속한다」에 가려집니다.
+  // 조우 화면의 남은 전리품 칸처럼 가로로 늘어놓습니다 (한 번에 많아야 둘 — game.js 의 DROP_MAX).
+  // 「빼앗은 것 N」 제목 줄은 뺐습니다 — 칸이 보이니 없어도 알고, 폰에서 「낀다」까지 스크롤 없이 보이게 (사용자 결정).
   const fx = State.meta.settings.dropFx;
   const shown = dropsShown.get(r) || 0;
   const drops = r.win && r.drops.length
     ? `<div class="res-drops">
-         <div class="res-sub">빼앗은 것 ${r.drops.length}</div>
          <div class="res-drop-list" style="grid-template-columns:repeat(${Math.min(3, r.drops.length)}, minmax(0, 1fr))">
          ${r.drops.map((d, i) => `
            <div class="res-drop ${fx && i >= shown ? 'veiled' : ''} ${d.isNew ? 'is-new' : 'is-stone'}" data-drop="${i}">
@@ -11301,7 +11300,6 @@ function resultCard(r, run) {
         <span class="res-turns">${r.turns}턴</span>
       </div>
       ${r.avatarGained ? `<div class="res-avatar"><span class="avatar-tag">${avatarTitle(foe)}</span>${josa(avatarTitle(foe), '이', '가')} 되었다</div>` : ''}
-      ${r.openedPath ? `<div class="res-path">길이 열렸다</div>` : ''}
       ${r.openedPath && foe.id === WALL_BOSS
         ? `<div class="res-path exit ${wallMoments.has(r) ? '' : 'late'}">나가는 길도 열렸다.</div>` : ''}
       <div class="res-lines">${lines.join('')}</div>
@@ -11322,12 +11320,14 @@ function resultCard(r, run) {
 // 결과의 새 전리품 — 지금 그 부위에 낀 것과 견준 ▲▼ 와 「낀다」 한 번 (부위 창까지 가지 않고 그 자리에서, 사용자 결정).
 // 알아서 갈아끼우지는 않습니다 — 고르는 건 내 몫. 이미 끼고 있으면 「끼는 중」.
 // 특수장비는 열린 빈 칸이 있을 때만 (어느 칸에 낄지 고를 일이 없을 때) — 아니면 아래 「보러 간다」로.
+// 결과 창에서는 달라지는 능력치를 앞의 둘까지만 — 나머지는 「…」 (다 보려면 부위 창). 「낀다」가 스크롤 없이 보이게
+const RES_DIFF_MAX = 2;
 function dropWear(item) {
   if (equippedSlotOf(item.id)) return '<span class="res-tag worn-now">끼는 중</span>';
   const to = item.slot === 'special' ? SPECIAL_SLOT_IDS.find(s => isSlotOpen(s) && !State.meta.equipped[s]) : item.slot;
   if (!to || !isSlotOpen(to)) return '';
   const worn = getItem(State.meta.equipped[to]);
-  return `<span class="res-diff">${itemDiffText(item, worn, slotMult(to))}</span>
+  return `<span class="res-diff">${itemDiffText(item, worn, slotMult(to), RES_DIFF_MAX)}</span>
     <button class="btn tiny res-wear" data-wear="${item.id}" data-wslot="${to}">낀다</button>`;
 }
 
@@ -12485,7 +12485,8 @@ function itemSpecialText(item) {
 // 목록의 물건을 지금 이 칸에 낀 것과 견줘서, 무엇이 얼마나 오르고 내리는지 ▲▼ 로 보여줍니다.
 // 핵심 스탯은 이 부위의 강화가 반영된 값끼리 견줍니다 (어느 쪽을 끼든 같은 강화를 받으니까요).
 // 승률이 어떻게 바뀌는지는 일부러 보여주지 않습니다 — 그건 직접 판단할 몫입니다.
-function itemDiffText(item, worn, m) {
+// max — 그만큼만 적고 남으면 「…」 (없으면 다)
+function itemDiffText(item, worn, m, max = Infinity) {
   const parts = [];
   for (const s of STAT_INFO) {
     const d = (num(item[s.id]) - num(worn && worn[s.id])) * m;
@@ -12497,7 +12498,8 @@ function itemDiffText(item, worn, m) {
     if (Math.abs(d) < 0.0005) continue;
     parts.push(`<span class="${d > 0 ? 'up' : 'down'}">${SPECIAL_INFO[k].name} ${d > 0 ? '▲' : '▼'}${specialTxt(k, Math.abs(d))}</span>`);
   }
-  return parts.length ? parts.join('') : '<span class="same">차이 없음</span>';
+  if (!parts.length) return '<span class="same">차이 없음</span>';
+  return parts.slice(0, max).join('') + (parts.length > max ? '<span class="more">…</span>' : '');
 }
 
 // 일반 장비는 성격 꼬리표, 특수장비는 보석/유물 꼬리표

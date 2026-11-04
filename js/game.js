@@ -1510,12 +1510,14 @@ function avatarWarp() {
   return true;
 }
 
-// 처치하면 1~3개(기운이 붙으면 그 배수만큼)를 빼앗습니다.
+// 처치하면 전리품마다 확률을 굴려(기운이 붙으면 그 배수만큼) 빼앗습니다 — 한 번에 많아야 DROP_MAX(2)개 (사용자 결정).
+// 셋이 걸리면 처음 얻는 것부터 남기고, 같은 처지끼리는 무작위로 버립니다.
 // 이미 가진 것이 또 나오면 **자동으로 분해되어** 그 부위의 강화석이 됩니다 —
 // 그래서 드롭이 죽지 않습니다. 다 모은 상대도 잡을 이유가 남습니다.
 // **전리품 하나하나에 따로 확률을 굴립니다.**
 // 그래서 한 번 잡아 같은 종류가 두 개 나오는 일은 없고, 빈손으로 끝나기도 합니다.
 // 빈손이 있어야 행운에 투자할 이유가 생깁니다.
+const DROP_MAX = 2;
 function rollDrops(enemyId, auraMult = 1) {
   const foe = getEnemy(enemyId);
 
@@ -1527,10 +1529,12 @@ function rollDrops(enemyId, auraMult = 1) {
   const stoneMult = 1 + num(heroStats().stoneRate);   // 『세공사의 돋보기』 같은 유물
   const result = [];
 
-  for (const it of dropTable(enemyId)) {
-    // 특수장비는 3지역의 숨은 것(카벙클)을 처음 꺾기 전엔 떨어지지 않습니다
-    if (it.slot === 'special' && !merchantUnlocked()) continue;
-    if (Math.random() >= chance) continue;               // 이번엔 안 나왔다
+  // 특수장비는 3지역의 숨은 것(카벙클)을 처음 꺾기 전엔 떨어지지 않습니다
+  const hits = dropTable(enemyId).filter(it => !(it.slot === 'special' && !merchantUnlocked()) && Math.random() < chance);
+  const keep = hits.map(it => ({ it, k: (owns(it.id) ? 1 : 0) + Math.random() * 0.5 })).sort((p, q) => p.k - q.k)
+    .slice(0, DROP_MAX).map(h => h.it);
+  for (const it of hits) {
+    if (!keep.includes(it)) continue;                    // 둘을 넘는 것은 버림 (남는 것은 표에 적힌 차례대로)
 
     if (owns(it.id)) {
       // 이미 가진 것 — 분해해서 그 부위의 강화석으로.

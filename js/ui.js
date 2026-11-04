@@ -1271,7 +1271,7 @@ function resultCard(r, run) {
     lines.push(`<div class="je-xp res-xp"><div class="je-xp-fill" id="resXpFill" style="width:${Math.min(100, run.xp / xpToNext(run.level) * 100)}%"></div></div>`);
     // 설명 글은 뺐습니다 — 값만 보고 알 수 있게 적습니다 (삼킨 격은 다음 회차부터 붙으니 「시작 에너지」)
     if (r.devoured > 0) lines.push(row('삼킨 격', `시작 에너지 +${r.devoured}`));
-    if (r.refund > 0) lines.push(row('되찾은 에너지', `+${r.refund}`));
+    if (r.refund > 0) lines.push(row('에너지', `+${r.refund}`));
     if (r.openedSpecial) lines.push(row('특수장비 칸', `열렸다 ${r.openedSpecial}/${SPECIAL_SLOT_MAX}`));
   } else {
     lines.push(row('에너지', `−${r.penalty}`, `남은 ${run.energy}`));
@@ -1284,13 +1284,12 @@ function resultCard(r, run) {
   //
   // 글자만으로는 뭘 얻었는지 한눈에 안 들어와서 물건의 모습을 함께 둡니다 —
   // 전리품 탭과 같은 아이콘입니다 (지금은 이모지, 나중에 그림이 들어올 자리).
-  // 조우 화면의 남은 전리품 칸처럼 가로로 늘어놓습니다 (한 줄에 셋까지) —
-  // 한 줄에 하나씩 쌓으면 폰에서 셋째 것이 아래의 「계속한다」에 가려집니다.
+  // 조우 화면의 남은 전리품 칸처럼 가로로 늘어놓습니다 (한 번에 많아야 둘 — game.js 의 DROP_MAX).
+  // 「빼앗은 것 N」 제목 줄은 뺐습니다 — 칸이 보이니 없어도 알고, 폰에서 「낀다」까지 스크롤 없이 보이게 (사용자 결정).
   const fx = State.meta.settings.dropFx;
   const shown = dropsShown.get(r) || 0;
   const drops = r.win && r.drops.length
     ? `<div class="res-drops">
-         <div class="res-sub">빼앗은 것 ${r.drops.length}</div>
          <div class="res-drop-list" style="grid-template-columns:repeat(${Math.min(3, r.drops.length)}, minmax(0, 1fr))">
          ${r.drops.map((d, i) => `
            <div class="res-drop ${fx && i >= shown ? 'veiled' : ''} ${d.isNew ? 'is-new' : 'is-stone'}" data-drop="${i}">
@@ -1321,7 +1320,6 @@ function resultCard(r, run) {
         <span class="res-turns">${r.turns}턴</span>
       </div>
       ${r.avatarGained ? `<div class="res-avatar"><span class="avatar-tag">${avatarTitle(foe)}</span>${josa(avatarTitle(foe), '이', '가')} 되었다</div>` : ''}
-      ${r.openedPath ? `<div class="res-path">길이 열렸다</div>` : ''}
       ${r.openedPath && foe.id === WALL_BOSS
         ? `<div class="res-path exit ${wallMoments.has(r) ? '' : 'late'}">나가는 길도 열렸다.</div>` : ''}
       <div class="res-lines">${lines.join('')}</div>
@@ -1342,12 +1340,14 @@ function resultCard(r, run) {
 // 결과의 새 전리품 — 지금 그 부위에 낀 것과 견준 ▲▼ 와 「낀다」 한 번 (부위 창까지 가지 않고 그 자리에서, 사용자 결정).
 // 알아서 갈아끼우지는 않습니다 — 고르는 건 내 몫. 이미 끼고 있으면 「끼는 중」.
 // 특수장비는 열린 빈 칸이 있을 때만 (어느 칸에 낄지 고를 일이 없을 때) — 아니면 아래 「보러 간다」로.
+// 결과 창에서는 달라지는 능력치를 앞의 둘까지만 — 나머지는 「…」 (다 보려면 부위 창). 「낀다」가 스크롤 없이 보이게
+const RES_DIFF_MAX = 2;
 function dropWear(item) {
   if (equippedSlotOf(item.id)) return '<span class="res-tag worn-now">끼는 중</span>';
   const to = item.slot === 'special' ? SPECIAL_SLOT_IDS.find(s => isSlotOpen(s) && !State.meta.equipped[s]) : item.slot;
   if (!to || !isSlotOpen(to)) return '';
   const worn = getItem(State.meta.equipped[to]);
-  return `<span class="res-diff">${itemDiffText(item, worn, slotMult(to))}</span>
+  return `<span class="res-diff">${itemDiffText(item, worn, slotMult(to), RES_DIFF_MAX)}</span>
     <button class="btn tiny res-wear" data-wear="${item.id}" data-wslot="${to}">낀다</button>`;
 }
 
@@ -2505,7 +2505,8 @@ function itemSpecialText(item) {
 // 목록의 물건을 지금 이 칸에 낀 것과 견줘서, 무엇이 얼마나 오르고 내리는지 ▲▼ 로 보여줍니다.
 // 핵심 스탯은 이 부위의 강화가 반영된 값끼리 견줍니다 (어느 쪽을 끼든 같은 강화를 받으니까요).
 // 승률이 어떻게 바뀌는지는 일부러 보여주지 않습니다 — 그건 직접 판단할 몫입니다.
-function itemDiffText(item, worn, m) {
+// max — 그만큼만 적고 남으면 「…」 (없으면 다)
+function itemDiffText(item, worn, m, max = Infinity) {
   const parts = [];
   for (const s of STAT_INFO) {
     const d = (num(item[s.id]) - num(worn && worn[s.id])) * m;
@@ -2517,7 +2518,8 @@ function itemDiffText(item, worn, m) {
     if (Math.abs(d) < 0.0005) continue;
     parts.push(`<span class="${d > 0 ? 'up' : 'down'}">${SPECIAL_INFO[k].name} ${d > 0 ? '▲' : '▼'}${specialTxt(k, Math.abs(d))}</span>`);
   }
-  return parts.length ? parts.join('') : '<span class="same">차이 없음</span>';
+  if (!parts.length) return '<span class="same">차이 없음</span>';
+  return parts.slice(0, max).join('') + (parts.length > max ? '<span class="more">…</span>' : '');
 }
 
 // 일반 장비는 성격 꼬리표, 특수장비는 보석/유물 꼬리표
