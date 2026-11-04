@@ -344,27 +344,29 @@
   // 그림 상자에 나무 하나 (미리보기 도구도 씀 — design/trees)
   function paintTree(put, style, palName, rnd) { TREE_STYLES[style](put, TREE_PAL[palName], rnd); }
 
-  // 나무 — 칸보다 크게, 이웃 칸에 걸쳐 (숲 · 마계는 뾰족한 침엽수, 나머지는 둥근 활엽수). 한 번 그려 두고 씀
-  const sprites = {};
-  function treeSprite(kind) {
-    if (sprites[kind]) return sprites[kind];
-    const S = P * 2, cv = document.createElement('canvas');
-    cv.width = S; cv.height = S;
-    const g = cv.getContext('2d'), img = g.createImageData(S, S), d = img.data;
-    const put = (x, y, c) => { if (x < 0 || y < 0 || x >= S || y >= S) return; const i = (y * S + x) * 4; d[i] = c[0]; d[i + 1] = c[1]; d[i + 2] = c[2]; d[i + 3] = 255; };
-    const pal = kind === 'pine' ? ['#2f5e2a', '#3f7534', '#4f8a3e', '#1f3e1c'] : kind === 'dead' ? ['#4a3a44', '#5a4652', '#6e5866', '#2a2028'] : ['#4b7a34', '#5d8e3e', '#86b65a', '#2f4e22'];
-    for (let y = S - 5; y < S - 1; y++) for (let x = S / 2 - 1; x <= S / 2; x++) put(x, y, c3('#5a3a20'));   // 줄기
-    for (let y = 0; y < S - 3; y++) for (let x = 0; x < S; x++) {
-      const dx = x - S / 2 + 0.5, dy = y - (kind === 'pine' ? S / 2 + 1 : S / 2 - 2);
-      const inside = kind === 'pine' ? Math.abs(dx) <= (y + 2) * 0.42 && y < S - 4 : dx * dx + dy * dy * 1.15 < (S / 2 - 1) ** 2;
-      if (!inside) continue;
-      const lit = dx + dy < -2 ? 2 : dx + dy > 3 ? 0 : 1;
-      put(x, y, c3(hash(x, y, 60) < 0.12 ? pal[3] : pal[lit === 2 ? 2 : lit === 1 ? 1 : 0]));
-    }
-    g.putImageData(img, 0, 0);
-    return (sprites[kind] = cv);
+  // ---------- 땅마다 나무 (사용자 결정) ----------
+  // 활엽수는 A · B · C 를 섞고 · 침엽수는 D · E 를 섞고 · 5격 시체의 도시는 F · 6격 마계는 G.
+  // 2격 숲 · 4격 고원은 침엽수(눈밭이면 눈 덮인 빛), 나머지 들 · 왕국 · 성 그늘은 활엽수(성 그늘은 짙은 잎)
+  const VARIANTS = 4;                                              // 같은 모양도 흔들림을 넷으로 — 숲이 한 그림의 되풀이로 안 보이게
+  function treeOf(m, k, x, y) {
+    const lk = m.look[k], bio = lk >> 4, ter = lk & 15, h = hash(x, y, 62);
+    if (bio === 5) return ['F', 'necro'];
+    if (bio === 6) return ['G', 'abyss'];
+    if (bio === 2 || bio === 4) return [h < 0.5 ? 'D' : 'E', ter === SNOW ? 'snow' : 'forest'];
+    return [h < 0.34 ? 'A' : h < 0.67 ? 'B' : 'C', bio === 9 ? 'forest' : 'kingdom'];
   }
-  const treeKind = bio => (bio === 2 || bio === 4 ? 'pine' : bio === 5 || bio === 6 ? 'dead' : 'round');
+  // 나무 그림 하나 — 그 모양 · 빛깔 · 흔들림마다 한 번 그려 둠
+  const sprites = {};
+  function treeSprite(style, pal, v) {
+    const key = `${style}|${pal}|${v}`;
+    if (sprites[key]) return sprites[key];
+    const cv = document.createElement('canvas');
+    cv.width = TW; cv.height = TH;
+    const g = cv.getContext('2d'), img = g.createImageData(TW, TH), d = img.data;
+    paintTree((x, y, c) => { if (x < 0 || y < 0 || x >= TW || y >= TH) return; const i = (y * TW + x) * 4; d[i] = c[0]; d[i + 1] = c[1]; d[i + 2] = c[2]; d[i + 3] = 255; }, style, pal, (v + 0.5) / VARIANTS);
+    g.putImageData(img, 0, 0);
+    return (sprites[key] = cv);
+  }
 
   // 땅 그리기 — 보이는 칸 [x0, x1) × [y0, y1) 의 덩어리를 붙임. 아직 안 그린 덩어리는 이번엔 false (부른 쪽이 옛 색칸으로 메움)
   function drawGround(ctx, m, ox, oy, T, x0, y0, x1, y1) {
@@ -384,15 +386,19 @@
     return missing;
   }
 
-  // 나무 — 보이는 칸의 나무를 위에서 아래로 (아래 것이 위 것을 가리게)
+  // 나무 — 보이는 칸의 나무를 위에서 아래로 (아래 것이 위 것을 가리게). 밑동이 그 칸 아래 가장자리에 닿고, 발밑에 옅은 그림자
   function drawTrees(ctx, m, ox, oy, T, x0, y0, x1, y1) {
     ctx.imageSmoothingEnabled = false;
-    for (let y = Math.max(0, y0 - 1); y < Math.min(m.h, y1 + 1); y++) for (let x = Math.max(0, x0 - 1); x < Math.min(m.w, x1 + 1); x++) {
+    const sw = TW / P * T, sh = TH / P * T;
+    for (let y = Math.max(0, y0 - 1); y < Math.min(m.h, y1 + 3); y++) for (let x = Math.max(0, x0 - 1); x < Math.min(m.w, x1 + 1); x++) {
       const k = y * m.w + x;
       if (m.tile[k] !== TREE) continue;
-      const sp = treeSprite(treeKind(m.look[k] >> 4));
+      const [style, pal] = treeOf(m, k, x, y), v = (hash(x, y, 63) * VARIANTS) | 0;
       const j = (hash(x, y, 61) - 0.5) * 0.3 * T;                       // 줄 맞춰 선 것처럼 안 보이게 살짝 비킴
-      ctx.drawImage(sp, ox + (x - 0.5) * T + j, oy + (y - 0.85) * T, 2 * T, 2 * T);
+      const cx = ox + (x + 0.5) * T + j, by = oy + (y + 1) * T;
+      ctx.fillStyle = 'rgba(16, 10, 6, 0.28)';
+      ctx.beginPath(); ctx.ellipse(cx, by - T * 0.08, T * 0.62, T * 0.2, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.drawImage(treeSprite(style, pal, v), Math.round(cx - sw / 2), Math.round(by - sh), sw, sh);
     }
   }
 

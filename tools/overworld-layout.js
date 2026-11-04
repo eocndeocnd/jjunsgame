@@ -286,7 +286,7 @@ function build(S = 1, sizes = {}) {
 
   return {
     S, W, H, T, ter, bio, hgt, idx, inMap, T_, toC, fc, span, spot1, spotN, ROADS, pathMask, wallMask, zoneAt, GATES, BRIDGES, CASTLE, RUINS,
-    VOID, WATER, CANAL, LAVA, ROCKY, hash, fbm
+    VOID, WATER, CANAL, LAVA, ROCKY, OBSID, hash, fbm
   };
 }
 

@@ -679,7 +679,8 @@ function overworld(data) {
     const i = idx(x, y);
     if (tiles[i] !== FLOOR || keep[i]) continue;
     const b = L.bio[i], grove = L.fbm(L.toC(x) * 0.16, L.toC(y) * 0.16, 83), r = L.hash(x, y, 80);
-    if ((b === 2 && grove > 0.6 && r < 0.8) || ((b === 3 || b === 9) && grove > 0.64 && r < 0.6) || (b === 4 && grove > 0.6 && r < 0.55) || (b === 5 && grove > 0.62 && r < 0.3)) tiles[i] = TREE;
+    if ((b === 2 && grove > 0.6 && r < 0.8) || ((b === 3 || b === 9) && grove > 0.64 && r < 0.6) || (b === 4 && grove > 0.6 && r < 0.55) || (b === 5 && grove > 0.62 && r < 0.3)
+      || (b === 6 && L.ter[i] === L.OBSID && grove > 0.66 && r < 0.18)) tiles[i] = TREE;   // 마계는 흑요석 땅에 듬성듬성 뒤틀린 마목 (사용자 결정)
     else if ((b === 4 && r < 0.012) || (b === 6 && r < 0.035)) tiles[i] = ROCK;
   }
 
