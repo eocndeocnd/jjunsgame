@@ -679,7 +679,7 @@ function overworld(data) {
     const i = idx(x, y);
     if (tiles[i] !== FLOOR || keep[i]) continue;
     const b = L.bio[i], grove = L.fbm(L.toC(x) * 0.16, L.toC(y) * 0.16, 83), r = L.hash(x, y, 80);
-    if ((b === 2 && grove > 0.6 && r < 0.8) || (b === 3 && grove > 0.64 && r < 0.6) || (b === 4 && grove > 0.6 && r < 0.55) || (b === 5 && grove > 0.62 && r < 0.3)) tiles[i] = TREE;
+    if ((b === 2 && grove > 0.6 && r < 0.8) || ((b === 3 || b === 9) && grove > 0.64 && r < 0.6) || (b === 4 && grove > 0.6 && r < 0.55) || (b === 5 && grove > 0.62 && r < 0.3)) tiles[i] = TREE;
     else if ((b === 4 && r < 0.012) || (b === 6 && r < 0.035)) tiles[i] = ROCK;
   }
 
@@ -912,9 +912,12 @@ function overworld(data) {
     });
   }
 
-  // 겉모습 — 시안의 땅 종류 · 격 그대로 (흙길 칸은 흙, 다리도 흙길)
+  // 겉모습 — 시안의 땅 종류 · 격 그대로 (흙길 칸은 흙, 물을 건너는 흙길 칸은 물 그대로 — 그림이 널판 다리로 그림)
   const lookLayer = new Uint8Array(w * h);
-  for (let i = 0; i < w * h; i++) lookLayer[i] = look(tiles[i] === ROAD ? OL.DIRT : L.ter[i], L.bio[i]);
+  for (let i = 0; i < w * h; i++) {
+    const wet = L.ter[i] === OL.WATER || L.ter[i] === OL.CANAL;
+    lookLayer[i] = look(tiles[i] === ROAD && !wet ? OL.DIRT : L.ter[i], L.bio[i]);
+  }
   return buildTmj({ w, h, tiles, areas, posts, ports, npcs, chests, look: lookLayer });
 }
 

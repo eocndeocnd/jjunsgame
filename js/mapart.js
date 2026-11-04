@@ -40,12 +40,13 @@
   const mul = (a, k) => [a[0] * k, a[1] * k, a[2] * k];
   const H = {};                                             // 색 글자 → [r, g, b] (한 번만 풂)
   const c3 = h => H[h] || (H[h] = hex(h));
-  // 시안과 같은 색 (격마다 풀빛이 다름 — 0 들 · 1 지하수로 · 2 숲 · 3 왕국 · 4 고원 · 5 시체의 도시 · 6 마계 · 7 처음 · 8 성 안)
+  // 시안과 같은 색 (격마다 풀빛이 다름 — 0 들 · 1 지하수로 · 2 숲 · 3 왕국 · 4 고원 · 5 시체의 도시 · 6 마계 · 7 처음 · 8 성 안 · 9 성 그늘)
   const C = {
     grass: [['#6fa04a', '#5d8e3e', '#86b65a', '#4b7a34'], ['#6c9a4c', '#5a8840', '#7fae5c', '#4a7436'],
             ['#4f8a3e', '#3f7534', '#629f4a', '#2f5e2a'], ['#7a9a4e', '#687f42', '#8fae5e', '#566c36'],
             ['#8a9a5c', '#76854e', '#a0ae70', '#5f6c40'], ['#5f6b5a', '#525c4e', '#6e7a68', '#434c40'],
-            ['#4a3a44', '#3e303a', '#58464f', '#30252d']],
+            ['#4a3a44', '#3e303a', '#58464f', '#30252d'], ['#6c9a4c', '#5a8840', '#7fae5c', '#4a7436'],
+            ['#7a9a4e', '#687f42', '#8fae5e', '#566c36'], ['#45563a', '#3a4a31', '#536645', '#2a3624']],
     dirt: ['#b48a5a', '#a07a4c', '#c49c6a', '#8a6a42'],
     rocky: ['#8e8a70', '#7c785f', '#a09c82', '#66634d'],
     snow: ['#e8eef4', '#d4dee8', '#f6fafc', '#b8c6d6'],
@@ -83,7 +84,7 @@
     const v = fbm(X * 0.07, Y * 0.07, 3) * 0.6 + hash(X, Y, 1) * 0.4;
     switch (t) {
       case GRASS: {
-        const pal = C.grass[Math.min(b, 6)];
+        const pal = C.grass[b] || C.grass[0];
         let c = shadeOf(pal, v);
         const h = hash(X, Y, 2);
         if (h < 0.035) c = c3(pal[3]);
@@ -221,6 +222,20 @@
       return n > 0.72 ? c3('#16121f') : C.void;
     }
     const L = lookOf(m, k);
+    if (t === ROAD && ((lk & 15) === WATER || (lk & 15) === CANAL)) {
+      // 다리 — 물을 건너는 길은 널판: 건너는 쪽과 엇갈린 판자, 판 사이 틈 · 양옆 난간은 어둡게
+      const across = (tx > 0 && m.tile[k - 1] === ROAD) || (tx + 1 < m.w && m.tile[k + 1] === ROAD);   // 가로로 건넘 → 판자는 세로
+      const lx = X - tx * P, ly = Y - ty * P, along = across ? X : Y, side = across ? ly : lx;
+      const sideOff = (dx, dy) => { const x = tx + dx, y = ty + dy; return x < 0 || y < 0 || x >= m.w || y >= m.h || m.tile[y * m.w + x] !== ROAD; };
+      const rail = across ? (ly === 0 && sideOff(0, -1)) || (ly === P - 1 && sideOff(0, 1)) : (lx === 0 && sideOff(-1, 0)) || (lx === P - 1 && sideOff(1, 0));
+      if (rail) return c3('#3e2814');
+      if (along % 4 === 0) return c3('#4e3420');
+      const plank = hash(along >> 2, 0, 72);
+      let c = c3(plank < 0.3 ? '#7a5232' : plank < 0.8 ? '#8a6038' : '#9a6e42');
+      if (hash(X, Y, 73) < 0.08) c = mul(c, 0.82);
+      if (side === 1) c = mix(c, [255, 255, 255], 0.1);
+      return c;
+    }
     if (t === ROAD) {
       // 흙길 — 바닥과 확실히 다르게: 흙빛에 가장자리 한 점은 어둡게 (사용자 요청 — 길이 잘 안 보였음)
       let c = texture(DIRT, L.bio, X, Y);
@@ -254,6 +269,80 @@
     g.putImageData(img, 0, 0);
     return cv;
   }
+
+  // ---------- 나무 모양 — 후보 A~G (사용자가 고르기 전) ----------
+  // 그림 상자 TW×TH 점 (맨 아래 줄이 땅에 닿는 곳). put(x, y, [r, g, b]) 로 칠하고, rnd 는 그 나무만의 흔들림(0~1)
+  // 모두 한 줄 테두리 · 왼쪽 위에서 오는 빛 · 잎 덩이마다 따로 빛을 받아 뭉게뭉게
+  const TW = 16, TH = 22;
+  const TREE_PAL = {
+    kingdom:  { leaf: ['#2f4e22', '#4b7a34', '#62963f', '#8cbc5c'], line: '#1b2e14', trunk: ['#3a2414', '#5a3a20', '#7a5530'] },
+    forest:   { leaf: ['#1d3a1c', '#2c5a2a', '#3d7535', '#5c9a48'], line: '#11240f', trunk: ['#33200f', '#523519', '#6e4b28'] },
+    snow:     { leaf: ['#1f3c30', '#2c5642', '#3c7056', '#eef4f8'], line: '#12241c', trunk: ['#33200f', '#523519', '#6e4b28'] },
+    necro:    { leaf: ['#2a2028', '#43363f', '#56464f', '#6e5c66'], line: '#161116', trunk: ['#241c20', '#3e3236', '#56484c'] },
+    abyss:    { leaf: ['#1c1024', '#3a1e4a', '#5c2e74', '#c07cff'], line: '#0c0610', trunk: ['#1a1216', '#33262c', '#4a3a40'] }
+  };
+  function canopy(put, lobes, pal) {
+    const inside = (x, y) => lobes.some(([cx, cy, r]) => (x + 0.5 - cx) ** 2 + (y + 0.5 - cy) ** 2 <= r * r);
+    for (let y = 0; y < TH; y++) for (let x = 0; x < TW; x++) {
+      if (!inside(x, y)) continue;
+      if (!inside(x - 1, y) || !inside(x + 1, y) || !inside(x, y - 1) || !inside(x, y + 1)) { put(x, y, c3(pal.line)); continue; }
+      let L = lobes[0], bd = 1e9;                                      // 이 점이 속한 덩이 — 가운데에서 가장 깊이 들어간 것
+      for (const q of lobes) { const d = Math.hypot(x + 0.5 - q[0], y + 0.5 - q[1]) / q[2]; if (d < bd) { bd = d; L = q; } }
+      const nx = (x + 0.5 - L[0]) / L[2], ny = (y + 0.5 - L[1]) / L[2];
+      const l = -(nx * 0.6 + ny * 0.8) + (hash(x, y, 70) - 0.5) * 0.45;
+      put(x, y, c3(pal.leaf[l > 0.62 ? 3 : l > 0.08 ? 2 : l > -0.42 ? 1 : 0]));
+    }
+  }
+  function trunk(put, x0, w, y0, y1, pal) {
+    for (let y = y0; y <= y1; y++) for (let x = x0 - 1; x <= x0 + w; x++) {
+      const edge = x === x0 - 1 || x === x0 + w;
+      put(x, y, c3(edge ? pal.line : pal.trunk[x === x0 ? 2 : x === x0 + w - 1 ? 0 : 1]));
+    }
+  }
+  function tier(put, apex, base, half, cx, pal, jag) {           // 전나무 한 단 — 끝이 처진 삼각형
+    for (let y = apex; y <= base; y++) {
+      const t = (y - apex) / Math.max(1, base - apex), hw = 0.6 + t * half + (y === base ? jag : 0);
+      for (let x = Math.floor(cx - hw); x <= Math.ceil(cx + hw); x++) {
+        const dx = x + 0.5 - cx;
+        if (Math.abs(dx) > hw) continue;
+        const edge = Math.abs(dx) > hw - 1 || y === base;
+        const l = -dx / Math.max(1, hw) * 0.9 - t * 0.5 + 0.35 + (hash(x, y, 71) - 0.5) * 0.35;
+        put(x, y, c3(edge ? pal.line : pal.leaf[l > 0.7 ? 3 : l > 0.15 ? 2 : l > -0.35 ? 1 : 0]));
+      }
+    }
+  }
+  function branch(put, x, y, ang, len, w, pal, depth, rnd) {     // 시든 나무 가지 — 갈라지며 가늘어짐
+    for (let s = 0; s < len; s++) {
+      x += Math.cos(ang); y += Math.sin(ang);
+      for (let k = 0; k < w; k++) put(Math.round(x) + k, Math.round(y), c3(k === 0 ? pal.trunk[2] : pal.trunk[1]));
+      put(Math.round(x) + w, Math.round(y), c3(pal.line));
+    }
+    if (depth <= 0) return;
+    const spread = 0.5 + rnd * 0.3;
+    branch(put, x, y, ang - spread, len * 0.62, Math.max(1, w - 1), pal, depth - 1, (rnd * 7.3) % 1);
+    branch(put, x, y, ang + spread * 0.9, len * 0.58, Math.max(1, w - 1), pal, depth - 1, (rnd * 3.7) % 1);
+  }
+  const TREE_STYLES = {
+    // A 뭉게 나무 — 잎 덩이 넷이 뭉친 활엽수
+    A: (put, pal, r) => { trunk(put, 7, 2, 14, TH - 1, pal); canopy(put, [[8, 9.5, 5], [4.8 + r, 11, 3.8], [11.4 - r, 11, 3.8], [8 + (r - 0.5) * 2, 5.8, 4]], pal); },
+    // B 동그란 나무 — 큰 덩이 하나, 빛이 또렷
+    B: (put, pal, r) => { trunk(put, 7, 2, 15, TH - 1, pal); canopy(put, [[8, 9 + r, 6.6]], pal); },
+    // C 키 큰 나무 — 길쭉한 잎 덩이 둘 · 줄기가 보임
+    C: (put, pal, r) => { trunk(put, 7, 2, 12, TH - 1, pal); canopy(put, [[8 + (r - 0.5), 6, 4.3], [8, 10, 4.6]], pal); },
+    // D 3단 전나무 — 처진 세 단
+    D: (put, pal, r) => { trunk(put, 7, 2, 18, TH - 1, pal); tier(put, 0, 7, 3.6, 8, pal, 1); tier(put, 4, 12, 5, 8, pal, 1); tier(put, 9, 18, 6.6 + r, 8, pal, 1); },
+    // E 가는 측백 — 좁고 길쭉한 원뿔
+    E: (put, pal, r) => { trunk(put, 7, 2, 18, TH - 1, pal); canopy(put, [[8, 4.5, 2.6], [8, 8.5 + r, 3.4], [8, 13, 3.8], [8, 16.2, 3]], pal); },
+    // F 앙상한 나무 — 잎 없이 갈라진 가지
+    F: (put, pal, r) => { trunk(put, 7, 2, 13, TH - 1, pal); branch(put, 7.5, 13, -Math.PI / 2 - 0.2 + r * 0.4, 6, 2, pal, 3, r); },
+    // G 뒤틀린 마목 — 휜 줄기에 듬성듬성 빛나는 잎
+    G: (put, pal, r) => {
+      for (let y = 8; y < TH; y++) { const x = Math.round(8 + Math.sin(y * 0.55 + r * 3) * 1.6); put(x - 1, y, c3(pal.line)); put(x, y, c3(pal.trunk[2])); put(x + 1, y, c3(pal.trunk[1])); put(x + 2, y, c3(pal.line)); }
+      canopy(put, [[5 + r, 7, 2.6], [11, 6 + r, 2.8], [8.5, 3.2, 2.4]], pal);
+    }
+  };
+  // 그림 상자에 나무 하나 (미리보기 도구도 씀 — design/trees)
+  function paintTree(put, style, palName, rnd) { TREE_STYLES[style](put, TREE_PAL[palName], rnd); }
 
   // 나무 — 칸보다 크게, 이웃 칸에 걸쳐 (숲 · 마계는 뾰족한 침엽수, 나머지는 둥근 활엽수). 한 번 그려 두고 씀
   const sprites = {};
@@ -307,7 +396,7 @@
     }
   }
 
-  const api = { has: m => !!(m && m.look), drawGround, drawTrees, cached: m => (prepared.get(m.look) || { chunks: new Map() }).chunks.size, P, CH, VOID, GRASS, DIRT, COBBLE, TILES, WATER, LAVA, OBSID, SNOW, ROCKY, PAVE, CANAL };
+  const api = { has: m => !!(m && m.look), drawGround, drawTrees, paintTree, texture, TW, TH, TREE_STYLES, TREE_PAL, cached: m => (prepared.get(m.look) || { chunks: new Map() }).chunks.size, P, CH, VOID, GRASS, DIRT, COBBLE, TILES, WATER, LAVA, OBSID, SNOW, ROCKY, PAVE, CANAL };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.MapArt = api;
 })(typeof window !== 'undefined' ? window : globalThis);
