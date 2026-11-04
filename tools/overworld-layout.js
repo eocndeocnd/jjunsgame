@@ -247,11 +247,11 @@ function build(S = 1, sizes = {}) {
   each(144, 23, 149, 27, (fx, fy, x, y) => {        // 벌레가 막은 굴 (벌레의 크기만큼 — 벌레가 막고 섬)
     if (R(x) >= 144 && R(x) <= 149 && inGap(fy, 25, G.worldworm)) paint(fx, fy, OBSID, 6, 1);
   });
-  box(150, 15, 159, 32, TILES, 6, 1);               // 왕좌의 방
+  box(150, 18, 158, 31, TILES, 6, 1);               // 왕좌의 방 (9×14 — 예전 10×18 에서 줄임, 사용자 결정)
   // 왕좌의 방은 어둠으로 내민 끝 — 세계수를 먹는 벌레의 굴로만 들어감
   each(147, 0, CW - 1, 37, (fx, fy, x, y) => {
     if (R(x) < 147 || R(y) > 37) return;
-    const room = R(x) >= 150 && R(x) <= 159 && R(y) >= 15 && R(y) <= 32, tunnel = R(x) <= 149 && inGap(fy, 25, G.worldworm);
+    const room = R(x) >= 150 && R(x) <= 158 && R(y) >= 18 && R(y) <= 31, tunnel = R(x) <= 149 && inGap(fy, 25, G.worldworm);
     if (!room && !tunnel) paint(fx, fy, VOID);
   });
 

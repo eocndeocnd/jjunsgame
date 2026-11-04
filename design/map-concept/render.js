@@ -1146,7 +1146,7 @@ worm(146 * T, 25 * T + 6);
 throne(...P(155, 23, 8, 12));
 eye(...P(165, 23, 4, 8));
 portal(...P(156, 31, 0, 12));
-for (const [x, y] of [[152, 17], [158, 17], [152, 28]]) pedestal(...P(x, y, 8, 12), '#ff3a2a');
+for (const [x, y] of [[152, 19], [157, 19], [152, 28]]) pedestal(...P(x, y, 8, 12), '#ff3a2a');
 for (let k = 0; k < 40; k++) { const x = 114 + hash(k, 1, 76) * 34, y = 5 + hash(k, 2, 76) * 36; if (ter[idx(x | 0, y | 0)] === OBSID && hgt[idx(x | 0, y | 0)] === 1 && openDist[idx(x | 0, y | 0)] > 1) crystal(...P(x | 0, y | 0, 8, 12), '#c050ff', 10); }
 for (let k = 0; k < 80; k++) { const x = 114 + hash(k, 3, 76) * 34 | 0, y = 5 + hash(k, 4, 76) * 36 | 0; if (ter[idx(x, y)] === OBSID && hgt[idx(x, y)] === 1 && openDist[idx(x, y)] > 0.5 && !isReserved(x, y)) spike(...P(x, y, 2 + hash(k, 5, 76) * 12 | 0, 12), 8 + hash(k, 6, 76) * 10 | 0); }
 for (const [x, y] of [[118, 38], [128, 37], [146, 38], [130, 14]]) vent(...P(x, y, 8, 10));
