@@ -448,9 +448,11 @@ test('overworld — 2~6격 몬스터가 모두 한 번씩, 구역 39개 · 숲 �
   const foes = data.ENEMIES.filter(e => e.rank.n >= 2 && e.rank.n <= 6);
   const areaMonsters = m.areas.filter(a => a.monster).map(a => a.monster).sort();
   assert.deepEqual(areaMonsters, foes.filter(e => e.kind === 'normal').map(e => e.id).sort());
-  assert.deepEqual(m.posts.map(p => p.enemy).sort(), foes.filter(e => e.kind !== 'normal').map(e => e.id).sort());
+  const inGrotto = gen.SECRET_ROOMS.map(r => data.ENEMIES.find(e => e.name === r.hidden).id);   // 숨은 굴에 따로 선 히든
+  assert.deepEqual(m.posts.map(p => p.enemy).sort(), foes.filter(e => e.kind !== 'normal' && !inGrotto.includes(e.id)).map(e => e.id).sort());
   assert.equal(areaMonsters.length, 39);
-  assert.deepEqual(m.ports.map(p => [p.to, p.opensAfter, !!p.hole]), [['sewer.out', undefined, true], ['hub.overworld', 'demonking', false]]);
+  assert.deepEqual(m.ports.map(p => [p.to, p.opensAfter, !!p.hole]),
+    [['sewer.out', undefined, true], ['grotto.out', 'fallenking', true], ['hub.overworld', 'demonking', false]]);
   const hole = m.ports.find(p => p.name === 'sewer');
   assert.ok(!m.solid[(hole.y - 1) * m.w + hole.x + 1] && m.solid[(hole.y + 1) * m.w + hole.x + 1], '구멍 위는 걸을 수 있는 숲, 아래는 어둠');
   assert.ok(Math.abs(m.start.x - (hole.x + 1)) <= 1 && m.start.y === hole.y - 1, '지도의 시작점은 구멍 바로 위');
@@ -548,6 +550,54 @@ test('지하수로(sewer) — 첫 공간에서 위로 1 → 9번 방이 레벨 �
   assert.ok(!reach(posts), '던전 가디언이 막음');
   assert.ok(reach(new Set([...posts].filter(i => !cellsOf(m, boss).includes(i)))), '꺾으면 구멍까지');
   assert.ok(fields.every(a => a.y > boss.y), '보스 방이 맨 위');
+});
+
+test('열리기 전엔 없는 문(appears) — 보이지도 막히지도 않는 땅이다가, 열리면 들어서는 문', () => {
+  const m = mapOf([
+    '#######',
+    '#@....#',
+    '#######'
+  ]);
+  m.ports.push({ name: 'secret', x: 3, y: 1, w: 1, h: 1, to: 'grotto.out', opensAfter: 'boss', appears: true });
+  let open = false;
+  const w = M.createWorld(m, { portOpen: p => !p.opensAfter || open }, 1);
+  w.mobs = [];
+  assert.equal(M.portAt(w, 3, 1), null, '열리기 전엔 문이 없음');
+  M.setInput(w, 'right');
+  const ev = run(w, 0.35);
+  assert.ok(!ev.some(e => e.type === 'closed' || e.type === 'port'), '부딪히지도 들어서지도 않고');
+  assert.ok(w.player.x > 3, '그냥 지나감');
+  open = true;
+  w.player.x = 1; w.player.y = 1; w.player.wait = 0;
+  assert.ok(M.portAt(w, 3, 1), '열리면 문');
+  const ev2 = run(w, 0.35);
+  assert.ok(ev2.some(e => e.type === 'port' && e.port.name === 'secret'), '들어섬');
+});
+
+test('숨은 굴 — 3격 보스(몰락한 왕)를 꺾으면 바로 뒤에 구멍이 나타나고, 그 굴에는 카벙클만 · 굴의 구멍은 다시 그 앞으로', () => {
+  const data = loadData();
+  const over = loadMap('overworld'), g = loadMap('grotto');
+  const king = over.posts.find(p => p.enemy === 'fallenking'), hole = over.ports.find(p => p.name === 'grotto');
+  assert.ok(hole.appears && hole.hole && hole.opensAfter === 'fallenking' && hole.to === 'grotto.out');
+  assert.ok(hole.x === king.x && hole.w === king.w && hole.y === king.y - 2, '보스 바로 뒤 (위로 한 칸 띄워, 보스 폭만큼)');
+  assert.ok(Math.max(Math.abs(hole.x - king.x), Math.abs(hole.y - king.y)) <= R.SIGHT, '보스를 꺾은 자리에서 보임');
+  const cells = cellsOf(over, hole);
+  assert.ok(cells.every(i => !over.solid[i]), '구멍 자리는 걸을 수 있는 땅');
+  const d = walk(over, [over.start.y * over.w + over.start.x]);
+  assert.ok(cells.some(i => d[i] >= 0), '걸어서 닿음');
+  // 굴 — 카벙클 하나, 지역 없음(들어가도 3격 그대로), 나가는 구멍은 overworld 의 그 구멍으로
+  const carb = data.ENEMIES.find(e => e.name === '카벙클');
+  assert.deepEqual(g.posts.map(p => p.enemy), [carb.id]);
+  assert.equal(g.posts[0].w, carb.size);
+  assert.equal(g.areas.length, 0);
+  assert.equal(g.props.title, '숨은 굴');
+  const out = g.ports.find(p => p.name === 'out');
+  assert.ok(out.hole && out.to === 'overworld.grotto');
+  const dg = walk(g, [g.start.y * g.w + g.start.x]);
+  const post = g.posts[0], near = [];
+  for (let x = post.x; x < post.x + post.w; x++) near.push((post.y + post.h) * g.w + x, (post.y - 1) * g.w + x);
+  assert.ok(near.some(i => dg[i] >= 0), '굴 들머리에서 카벙클에게 닿음');
+  assert.ok(Math.abs(g.start.x - (out.x + 1)) <= 1 && g.start.y === out.y - 1, '굴의 시작점은 나가는 구멍 바로 위');
 });
 
 test('문의 광장 — 일곱 장의 문은 그 앞 격 보스를 꺾어야 열리고, 마왕의 성으로 가는 문은 늘 열림 · 모두 걸어서 닿음', () => {

@@ -11,7 +11,8 @@
 //             다각형이면 땅 모양을 따라 그린 구역 — 칸 가운데가 다각형 안에 드는 칸이 그 구역입니다
 //    posts    점 또는 사각형 — 정예 · 보스 · 히든 자리. 속성 enemy · blocks(길을 막는가)
 //    ports    사각형 — 드나드는 문. 이름 = 그 지도 안의 문 이름. 속성 to(「지도.문」 행선지) · opensAfter(꺾어야 열리는 보스 id)
-//             · label(문 위에 쓰는 글) · zone(행선지 지도가 아직 없을 때 나설 지역)
+//             · label(문 위에 쓰는 글) · zone(행선지 지도가 아직 없을 때 나설 지역) · hole(구멍으로 그림)
+//             · appears(열리기 전엔 문이 없음 — 보이지도 막히지도 않는 그냥 땅. 보스를 꺾으면 그 곁에 나타나는 숨은 굴의 구멍)
 //    (지도 자체의 속성 title — 지역이 없는 지도의 이름, 문의 광장 같은)
 //    secrets  사각형 — 숨은 입구. 벽으로 그려져 있어도 지나갈 수 있습니다
 //    npc      점 — start(시작점) · merchant(상인 자리) · avatarDoor(화신 문)
@@ -189,7 +190,7 @@
   }
   function mobAt(w, x, y) { return w.mobs.find(m => x >= m.x && y >= m.y && x < m.x + sizeOf(m) && y < m.y + sizeOf(m)) || null; }
   function postAt(w, x, y) { return w.map.posts.find(p => inRect(p, x, y) && w.hooks.postAlive(p.enemy)) || null; }
-  function portAt(w, x, y) { return w.map.ports.find(p => inRect(p, x, y)) || null; }
+  function portAt(w, x, y) { return w.map.ports.find(p => inRect(p, x, y) && (!p.appears || w.hooks.portOpen(p))) || null; }
   function wall(w, x, y) {
     if (x < 0 || y < 0 || x >= w.map.w || y >= w.map.h || w.map.solid[y * w.map.w + x]) return true;
     const port = portAt(w, x, y);

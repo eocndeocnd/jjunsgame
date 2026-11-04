@@ -431,7 +431,7 @@ const OVERWORLD_POSTS = [
   ['트롤 킹', 12, 38],                                               // 숲 북서쪽 시내 상류의 굴 앞 (길은 막지 않음)
   ['오크 장군', 13, 46], ['숲의 마녀', 54, 41],                         // 야영지 · 오두막
   ['몰락한 왕', 14, 13],                                             // 성 안 왕좌
-  ['그리핀 로드', 56, 15], ['히드라', 28, 25], ['카벙클', 60, 11],      // 탑 자리 · 물에 잠긴 안뜰 · 바위턱 폭포 밑
+  ['그리핀 로드', 56, 15], ['히드라', 28, 25],                         // 탑 자리 · 물에 잠긴 안뜰 (카벙클은 몰락한 왕 곁의 숨은 굴 — SECRET_ROOMS)
   ['돌 거인', 98, 39], ['서리 거인', 101, 41], ['불의 거인', 98, 43], ['구름 거인', 95, 41],   // 돌 고리
   ['거인왕', 'gate'],                                                   // 쐐기돌 아치
   ['흰 말의 기사', 128, 60], ['붉은 말의 기사', 132, 60], ['검은 말의 기사', 128, 63], ['창백한 말의 기사', 132, 63],   // 네 말의 기사 광장
@@ -443,6 +443,11 @@ const OVERWORLD_POSTS = [
   ['마왕', 155, 23], ['관측자', 158, 30]                             // 왕좌 · 문 곁
 ];
 const OVERWORLD_ENTRY = { 2: [38, 60], 3: [44, 28], 4: [66, 50], 5: [116, 48], 6: [136, 39] };   // 구멍 앞 · 옛 성문 자리 · 숲 가장자리 · 아치 너머 · 묘실 입구
+// 숨은 굴 — 보스를 꺾으면 그 보스 바로 뒤(위로 한 칸 띄워)에 구멍이 나타나고(appears), 들어가면 히든 하나만 있는 작은 굴 (사용자 결정 — 3격만).
+// 구멍은 열리기 전엔 보이지도 막히지도 않는 그냥 땅. 굴의 구멍으로 나오면 다시 그 구멍 앞
+const SECRET_ROOMS = [
+  { id: 'grotto', title: '숨은 굴', boss: '몰락한 왕', hidden: '카벙클' }   // 3격 — 성 안 왕좌 뒤, 바위턱 폭포 밑 물웅덩이의 굴
+];
 const OVERWORLD_MERCHANTS = { forest: [34, 58], ruins: [40, 26], giantpass: [70, 46], necropolis: [120, 50], abyss: [128, 37] };
 
 // 칸 모음(구멍 없는 한 덩어리) → 둘레를 시계 방향으로 도는 다각형. 꼭짓점은 칸 모서리 (칸 단위, x · y 에서 잰 값).
@@ -539,7 +544,17 @@ function overworld(data) {
     posts.push(n > 1 ? { name, x: px, y: py, w: n, h: n, enemy: e.id, blocks } : { name, x: px, y: py, enemy: e.id, blocks });
     guard(px, py, n, n, 2);
   }
-  const missing = foes.filter(e => !posts.some(p => p.enemy === e.id));
+  // 숨은 굴로 가는 구멍 — 그 보스 바로 뒤 (보스 몸 위로 한 칸 띄워, 보스 폭만큼)
+  for (const s of SECRET_ROOMS) {
+    const boss = foes.find(e => e.name === s.boss), bp = posts.find(p => p.enemy === boss.id);
+    const hole = { name: s.id, label: s.title, x: bp.x, y: bp.y - 2, w: bp.w, h: 1, to: `${s.id}.out`, opensAfter: boss.id, appears: true, hole: true };
+    ports.push(hole);
+    fillRect(hole, FLOOR);
+    fillRect({ x: hole.x, y: hole.y + 1, w: hole.w, h: 1 }, FLOOR);
+    guard(hole.x, hole.y, hole.w, 2, 1);
+  }
+  const hiddenElsewhere = new Set(SECRET_ROOMS.map(s => s.hidden));
+  const missing = foes.filter(e => !hiddenElsewhere.has(e.name) && !posts.some(p => p.enemy === e.id));
   if (missing.length) throw new Error(`정해진 자리가 없는 정예 · 보스 — ${missing.map(e => e.name).join(', ')}`);
   const walkFrom = cells => {
     const d = new Int32Array(w * h).fill(-1), q = [];
@@ -610,8 +625,8 @@ function overworld(data) {
       }
     }
   };
-  const stand = [...posts.flatMap(p => { const out = []; for (let j = 0; j < (p.h || 1); j++) for (let i = 0; i < (p.w || 1); i++) out.push([p.name, p.x + i, p.y + j]); return out; }),
-    ...npcs.map(n => [n.name, n.x, n.y])];
+  const cellsOf = p => { const out = []; for (let j = 0; j < (p.h || 1); j++) for (let i = 0; i < (p.w || 1); i++) out.push([p.name, p.x + i, p.y + j]); return out; };
+  const stand = [...posts.flatMap(cellsOf), ...ports.filter(p => p.appears).flatMap(cellsOf), ...npcs.map(n => [n.name, n.x, n.y])];
   for (const [, x, y] of stand) {
     const k = idx(x, y);
     if (seen[k] || !open(k)) continue;
@@ -771,6 +786,29 @@ function overworld(data) {
   return buildTmj({ w, h, tiles, areas, posts, ports, npcs });
 }
 
+// ---------- 숨은 굴 (SECRET_ROOMS) — 히든 하나만 있는 작은 굴 ----------
+// 둥근 굴 한가운데에 히든, 양옆에 고인 물, 맨 아래 가장자리에 바깥(overworld 의 그 구멍)으로 나가는 구멍. 지역은 없음 — 들어와도 지역은 그대로
+function secretRoom(data, s) {
+  const W = 26, H = 20, cx = W >> 1, cy = (H >> 1) - 1;
+  const noise = valueNoise(17);
+  const tiles = new Uint8Array(W * H).fill(WALL);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const d = ((x + 0.5 - cx) / 10.5) ** 2 + ((y + 0.5 - cy) / 7.5) ** 2;
+    if (d < 1 - noise(x * 0.3, y * 0.3) * 0.18) tiles[y * W + x] = FLOOR;
+  }
+  for (const px of [cx - 7, cx + 6]) for (let y = cy - 2; y <= cy + 1; y++) for (let x = px; x < px + 2; x++) {   // 고인 물 — 굴 양옆
+    if (Math.hypot(x + 0.5 - (px + 1), (y + 0.5 - cy) * 0.8) < 2) tiles[y * W + x] = WATER;
+  }
+  const foe = data.ENEMIES.find(e => e.name === s.hidden);
+  if (!foe || foe.kind !== 'hidden') throw new Error(`숨은 굴 — ${s.hidden} 이(가) 히든이 아님`);
+  const n = foe.size, post = { name: foe.name, x: cx - (n >> 1), y: cy - (n >> 1), w: n, h: n, enemy: foe.id, blocks: false };
+  let oy = H - 1;
+  while (tiles[oy * W + cx] !== FLOOR) oy--;                 // 한가운데 줄의 맨 아래 바닥 칸
+  for (let x = cx - 1; x <= cx + 1; x++) { tiles[oy * W + x] = FLOOR; tiles[(oy - 1) * W + x] = FLOOR; }
+  const out = { name: 'out', label: '나가기', x: cx - 1, y: oy, w: 3, h: 1, to: `overworld.${s.id}`, hole: true };
+  return buildTmj({ w: W, h: H, tiles, posts: [post], ports: [out], npcs: [{ name: 'start', x: cx, y: oy - 1 }], props: { title: s.title } });
+}
+
 // ---------- 7~20격 — 비슷한 것끼리 일곱 장 (docs/MAP-REFERENCE-PLAN.md 2-2) ----------
 // 어귀(S.)에 문의 광장으로 돌아가는 문이 있고, 광장의 그 장 문으로 들어오면 그 앞에 섭니다.
 // 바로 앞 격이 같은 장에 있으면 그 보스가 고갯길(b)을 막고, 앞 격이 다른 장에 있는 먼 격(①의 13격 · ②의 12격)은
@@ -878,8 +916,9 @@ function hub(data) {
 // 뽑을 지도 전부 — { 파일 이름: 만드는 함수 }
 function allMaps(data) {
   const out = { sewer: sewer(data), overworld: overworld(data), hub: hub(data) };
+  for (const s of SECRET_ROOMS) out[s.id] = secretRoom(data, s);
   REALMS.forEach((r, i) => { out[r.name] = realm(data, r, i); });
   return out;
 }
 
-module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, encodePng, generate, sewer, overworld, hub, allMaps, layoutFromPlan, HUB_DOORS, REALMS, SEWER };
+module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, encodePng, generate, sewer, overworld, hub, secretRoom, allMaps, layoutFromPlan, HUB_DOORS, REALMS, SEWER, SECRET_ROOMS };

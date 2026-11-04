@@ -156,6 +156,7 @@ const MapView = (function () {
       for (const port of m.ports) {
         if (!seen(port.x, port.y, port.w, port.h)) continue;
         const open = w.hooks.portOpen(port);
+        if (port.appears && !open) continue;              // 열리기 전엔 없는 문 (보스를 꺾으면 나타나는 숨은 굴의 구멍)
         if (port.hole) {
           const cx = ox + (port.x + port.w / 2) * T, cy = oy + (port.y + port.h / 2) * T, rx = port.w * T / 2 - 1, ry = port.h * T / 2 + T * 0.1;
           ctx.fillStyle = '#5c3a1a';
