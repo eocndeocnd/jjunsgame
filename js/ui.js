@@ -1483,18 +1483,6 @@ function winChanceMemo(hero, foe, samples) {
   return c;
 }
 
-// 떠돌이 상인 — 이 지역에 있으면. 싸우지 않고, 들르는 데 에너지도 들지 않습니다. (갈림길 · 지도 위 둘 다)
-function merchantRow() {
-  return merchantHere() ? `
-      <div class="post hidden merchant">
-        <span class="post-icon">🎒</span>
-        <div class="post-body">
-          <div class="post-name"><span class="grade-tag hidden">${KINDS.hidden.name}</span>떠돌이 상인</div>
-        </div>
-        <button class="btn post-btn hidden" id="shopBtn">들른다</button>
-      </div>` : '';
-}
-
 // 화신이 데려다 준다 — 맨 처음 1격에서만, 무명의 화신이 아닌 진짜 화신을 삼았을 때 (갈림길 · 지도 위 둘 다)
 function warpButton() {
   const av = canAvatarWarp() ? getEnemy(State.meta.avatar) : null;
@@ -1690,6 +1678,12 @@ function onMapEvents(evs) {
       if (meetOnMap(id, e.mob ? e.mob.aura : null, e.first)) soundEncounter();
       else mapView.resolve('retreat');   // 에너지가 모자라 여정이 끝났다
       changed = true;
+    } else if (e.type === 'merchant') {
+      // 와 있는 떠돌이 상인에게 닿으면 상점 — 상인 자리가 구역 밖 길 위라 지역이 아직 안 바뀌었으면 그 지역으로
+      if (run.merchant && run.zoneIndex !== run.merchant.zone) walkIntoZone(run.merchant.zone);
+      Sound.play('encounter');
+      openShop();
+      changed = true;
     } else if (e.type === 'chest') {
       const got = openChest(e.chest.chest);
       if (got) { Sound.play('drop'); showChest(got); }
@@ -1709,12 +1703,12 @@ function onMapEvents(evs) {
   if (changed) render();
 }
 
-// 떠돌이 상인이 서 있는 칸 (지금 지도에 그 지역이 있으면)
+// 떠돌이 상인이 서 있는 칸 (지금 지도에 그 지역이 있으면) — 닿으면 상점 (map.js 의 merchant 사건)
 function merchantMark() {
   const m = State.run && State.run.merchant;
   const z = m && ZONES[m.zone];
   const spot = z && mapView.world.map.npcs.find(n => n.name === 'merchant' && n.zone === z.id);
-  return spot ? [{ x: spot.x, y: spot.y, icon: '🎒' }] : [];
+  return spot ? [{ x: spot.x, y: spot.y, icon: '🎒', label: '상인' }] : [];
 }
 
 // 지도는 늘 화면 가득 — 창(조우 · 싸움 · 결과)이 뜨면 body.facing 으로 지도가 뒤로 물러나고 지도 위의 것들이 숨습니다.
@@ -1722,8 +1716,8 @@ function merchantMark() {
 function renderMapLayer(onMap, frame) {
   document.body.classList.toggle('facing', !!frame);
   if (onMap) syncMap();
-  // 아무도 마주하지 않으면 창 없이 지도만 — 상인 · 화신 문이 있으면 위에 작게
-  const hud = onMap && !frame ? warpButton() + merchantRow() : '';
+  // 아무도 마주하지 않으면 창 없이 지도만 — 화신 문이 있으면 위에 작게 (떠돌이 상인은 지도 위 🎒 에 닿으면 상점 — 예전 「들른다」 단추는 뺌)
+  const hud = onMap && !frame ? warpButton() : '';
   $('mapOverlay').innerHTML = frame || (hud ? `<div class="map-hud">${hud}</div>` : '');
 }
 
@@ -1771,7 +1765,6 @@ function wireJourney() {
   }
   on('rosterBtn',    openRosterModal);
   on('jAllocBtn',    openAlloc);       // 「스탯」 칸의 분배판으로
-  on('shopBtn',      () => { Sound.play('encounter'); openShop(); });
   const rab = $('rosterAllBtn');
   if (rab && !rab.dataset.wired) {
     rab.dataset.wired = '1';

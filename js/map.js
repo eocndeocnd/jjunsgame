@@ -15,7 +15,7 @@
 //             · appears(열리기 전엔 문이 없음 — 보이지도 막히지도 않는 그냥 땅. 보스를 꺾으면 그 곁에 나타나는 숨은 굴의 구멍)
 //    (지도 자체의 속성 title — 지역이 없는 지도의 이름, 문의 광장 같은)
 //    secrets  사각형 — 숨은 입구. 벽으로 그려져 있어도 지나갈 수 있습니다
-//    npc      점 — start(시작점) · merchant(상인 자리) · avatarDoor(화신 문)
+//    npc      점 — start(시작점) · merchant(상인 자리 — 상인이 와 있으면 막힌 칸, 닿으면 상점) · avatarDoor(화신 문)
 //    chests   점 — 보물상자. 속성 chest(상자 id — data.js 의 CHESTS). 그 칸은 막히고, 닫힌 상자에 닿으면 연다
 // ============================================================
 (function (root) {
@@ -27,13 +27,14 @@
     SPAWN_MAX: 4,
     SPAWN_GAP: 2,        // 같이 선 몬스터끼리는 이만큼 떨어지게 (바로 옆 칸 금지)
     SPAWN_CLEAR: 3,      // 내 코앞에는 세우지 않습니다
-    PLAYER_SPEED: 10,    // 초당 칸
+    PLAYER_SPEED: 12,    // 초당 칸 (5 → 10 → 12, 사용자 결정)
     CHASE_SPEED: 3,
-    FLEE_SPEED: 3,
+    FLEE_SPEED: 2,       // 달아나는 중립 — 너무 잘 달아나서 줄임 (3 → 2, 사용자 결정)
+    FLEE_STUMBLE: 0.3,   // 달아나다 멈칫하는 몫 — 그 걸음은 제자리
     WANDER_EVERY: 1,     // 어슬렁 — 대략 이 초마다 한 칸
     AGGRO_SIGHT: 4,      // 선공이 나를 알아보는 거리 (걸어서 칸 수)
     LEASH: 3,            // 쫓던 것이 제 구역 밖으로 이만큼 넘게 나가면 포기하고 돌아갑니다
-    SHY_SIGHT: 3,        // 중립이 달아나기 시작하는 거리
+    SHY_SIGHT: 2,        // 중립이 달아나기 시작하는 거리 — 늦게 눈치채게 (3 → 2, 사용자 결정)
     ENRAGE_SECS: 10,     // 후공 앞에서 물러서면 이만큼 화가 나서 쫓아옵니다
     FREEZE_SECS: 2       // 물러서거나 진 뒤 그 몬스터가 멈춰 있는 시간 — 곧바로 다시 닿지 않게
   };
@@ -139,6 +140,7 @@
   //   portOpen(port)     → 그 문이 열렸는가
   //   size(monsterId)    → 지도에서 차지하는 n × n 칸 (없으면 1). 몬스터의 x · y 는 왼쪽 위 칸이고 w · h 가 그 크기
   //   chestOpen(chestId) → 그 보물상자를 이미 열었는가 (열린 상자는 그냥 막힌 칸)
+  //   merchantHere(npc)  → 그 상인 자리에 지금 떠돌이 상인이 와 있는가 (와 있으면 막힌 칸, 닿으면 상점)
   function mulberry(seed) {
     return () => {
       seed = seed + 0x6D2B79F5 | 0;
@@ -153,7 +155,8 @@
     const w = {
       map,
       rng: seed == null ? Math.random : mulberry(seed),
-      hooks: { temper: () => 'passive', rollAura: () => null, postAlive: () => true, portOpen: () => true, size: () => 1, chestOpen: () => false, ...hooks },
+      hooks: { temper: () => 'passive', rollAura: () => null, postAlive: () => true, portOpen: () => true, size: () => 1, chestOpen: () => false,
+               merchantHere: () => false, ...hooks },
       time: 0,
       player: { x: map.start.x, y: map.start.y, fromX: map.start.x, fromY: map.start.y, dir: null, wait: 0, needRelease: false },
       mobs: [],
@@ -194,6 +197,8 @@
   function mobAt(w, x, y) { return w.mobs.find(m => x >= m.x && y >= m.y && x < m.x + sizeOf(m) && y < m.y + sizeOf(m)) || null; }
   function postAt(w, x, y) { return w.map.posts.find(p => inRect(p, x, y) && w.hooks.postAlive(p.enemy)) || null; }
   function chestAt(w, x, y) { return w.map.chests.find(c => c.x === x && c.y === y) || null; }
+  // 지금 상인이 와 있는 상인 자리 (그 칸이면)
+  function merchantAt(w, x, y) { return w.map.npcs.find(n => n.name === 'merchant' && n.x === x && n.y === y && w.hooks.merchantHere(n)) || null; }
   function portAt(w, x, y) { return w.map.ports.find(p => inRect(p, x, y) && (!p.appears || w.hooks.portOpen(p))) || null; }
   function wall(w, x, y) {
     if (x < 0 || y < 0 || x >= w.map.w || y >= w.map.h || w.map.solid[y * w.map.w + x]) return true;
@@ -251,7 +256,8 @@
       && !w.mobs.some(o => o !== self && overlaps(b, body(o.x, o.y, sizeOf(o))))
       && !w.map.posts.some(q => overlaps(b, q) && w.hooks.postAlive(q.enemy))
       && !w.map.ports.some(q => overlaps(b, q))
-      && !w.map.chests.some(c => inRect(b, c.x, c.y));
+      && !w.map.chests.some(c => inRect(b, c.x, c.y))
+      && !w.map.npcs.some(n => n.name === 'merchant' && inRect(b, n.x, n.y));   // 상인 자리 — 와 있든 없든 몬스터는 안 섬
   }
 
   // ---------- 스폰 ----------
@@ -322,6 +328,7 @@
   //   { type: 'closed', port }  닫힌 문에 부딪혔다
   //   { type: 'area', area }    다른 구역에 들어섰다 (밀려나 들어선 것도)
   //   { type: 'chest', chest }  닫힌 보물상자에 닿았다 — 그 자리에 선 채로 (연 뒤에는 그냥 막힌 칸)
+  //   { type: 'merchant', npc } 와 있는 떠돌이 상인에게 닿았다 — 그 자리에 선 채로 (상점)
   function tick(w, dt) {
     const ev = [];
     if (w.encounter) return ev;
@@ -368,6 +375,8 @@
       if (!w.hooks.chestOpen(chest.chest)) { p.dir = null; p.needRelease = true; ev.push({ type: 'chest', chest }); }
       return;
     }
+    const shop = merchantAt(w, nx, ny);
+    if (shop) { p.dir = null; p.needRelease = true; ev.push({ type: 'merchant', npc: shop }); return; }
     p.fromX = p.x; p.fromY = p.y;
     p.x = nx; p.y = ny;
     if (port && port.to) ev.push({ type: 'port', port });
@@ -397,7 +406,7 @@
       if (s) { m.x = s.x; m.y = s.y; }
       m.wait = 1 / RULES.CHASE_SPEED;
     } else if (m.mode === 'flee') {
-      const s = away(w, m);
+      const s = w.rng() < RULES.FLEE_STUMBLE ? null : away(w, m);   // 가끔 멈칫
       if (s) { m.x = s.x; m.y = s.y; }
       m.wait = 1 / RULES.FLEE_SPEED;
     } else if (m.mode === 'return') {
@@ -482,7 +491,7 @@
     let best = null, bestScore = -1;
     for (const [dx, dy] of STEPS) {
       const x = p.x + dx, y = p.y + dy;
-      if (wall(w, x, y) || mobAt(w, x, y) || postAt(w, x, y) || chestAt(w, x, y) || (portAt(w, x, y) || {}).to) continue;
+      if (wall(w, x, y) || mobAt(w, x, y) || postAt(w, x, y) || chestAt(w, x, y) || merchantAt(w, x, y) || (portAt(w, x, y) || {}).to) continue;
       const score = manh(x, y, fx, fy) + (x === p.fromX && y === p.fromY ? 0.5 : 0);   // 걸어온 칸이면 그쪽으로
       if (score > bestScore) { best = { x, y }; bestScore = score; }
     }
@@ -491,7 +500,7 @@
     p.x = best.x; p.y = best.y;
   }
 
-  const api = { RULES, TEMPER_BY_ARCH, DIRS, temperOf, mulberry, parseTiled, createWorld, setInput, tick, resolve, areaAt, mobAt, postAt, portAt, chestAt };
+  const api = { RULES, TEMPER_BY_ARCH, DIRS, temperOf, mulberry, parseTiled, createWorld, setInput, tick, resolve, areaAt, mobAt, postAt, portAt, chestAt, merchantAt };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.MapRules = api;
 })(typeof window !== 'undefined' ? window : globalThis);

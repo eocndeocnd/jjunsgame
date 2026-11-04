@@ -183,7 +183,7 @@ test('선공은 제 구역 밖으로 3칸 넘게는 쫓지 않고 돌아간다',
   const a = mob(w, 4, 2, 'aggro');
   const area = m.areas[0];
   let farthest = 0;
-  M.setInput(w, 'right');                        // 달아난다 (나는 초당 10칸, 쫓는 것은 3칸)
+  M.setInput(w, 'right');                        // 달아난다 (나는 초당 12칸, 쫓는 것은 3칸)
   const ev = run(w, 1.6, () => { farthest = Math.max(farthest, a.x - (area.x + area.w - 1)); });
   M.setInput(w, null);
   run(w, 8, () => { farthest = Math.max(farthest, a.x - (area.x + area.w - 1)); });
@@ -575,6 +575,57 @@ test('보물상자 — 그 칸은 막히고, 닫힌 상자에 닿으면 선 채�
   assert.equal(M.chestAt(w, 3, 1).chest, 'box');
   const foe = mob(w, 5, 1, 'passive');
   run(w, 10, () => assert.ok(!(foe.x === 3 && foe.y === 1), '몬스터는 상자 칸에 안 섬'));
+});
+
+test('떠돌이 상인 — 와 있으면 그 자리는 막히고 닿으면 상점(선 채로), 안 와 있으면 그냥 땅 · 몬스터는 상인 자리에 안 선다', () => {
+  const m = mapOf([
+    '#######',
+    '#@.aaa#',
+    '#######'
+  ]);
+  m.npcs.push({ name: 'merchant', x: 3, y: 1, zone: 'z' });
+  let here = false;
+  const w = M.createWorld(m, { merchantHere: n => here && n.zone === 'z' }, 1);
+  w.mobs = [];
+  M.setInput(w, 'right');
+  assert.ok(!run(w, 0.4).some(e => e.type === 'merchant'), '안 와 있으면 지나감');
+  assert.ok(w.player.x > 3);
+  here = true;
+  w.player.x = 1; w.player.wait = 0;
+  const ev = run(w, 0.4).filter(e => e.type === 'merchant');
+  assert.equal(ev.length, 1, '와 있으면 닿을 때 한 번');
+  assert.equal(w.player.x, 2, '상인 앞에 선 채로');
+  const foe = mob(w, 5, 1, 'passive');
+  run(w, 10, () => assert.ok(!(foe.x === 3 && foe.y === 1), '몬스터는 상인 자리에 안 섬'));
+});
+
+test('중립은 예전보다 못 달아난다 — 초당 2칸 · 가끔 멈칫, 트인 곳에서도 쫓으면 금방 잡힌다', () => {
+  assert.ok(R.FLEE_SPEED < R.CHASE_SPEED && R.FLEE_STUMBLE > 0);
+  const m = mapOf([
+    '##################',
+    '#aaaaaaaaaaaaaaaa#',
+    '#aaaaaaaaaaaaaaaa#',
+    '#aaaaaaaaaaaaaaaa#',
+    '#@aaaaaaaaaaaaaaa#',
+    '#aaaaaaaaaaaaaaaa#',
+    '#aaaaaaaaaaaaaaaa#',
+    '##################'
+  ]);
+  let caught = 0;
+  for (let seed = 1; seed <= 10; seed++) {
+    const w = M.createWorld(m, {}, seed);
+    w.mobs = [];
+    const foe = mob(w, 5, 4, 'shy');
+    // 몬스터 쪽으로 한 칸씩 — 가로가 더 벌어졌으면 가로로, 아니면 세로로
+    for (let t = 0; t < 6 && !w.encounter; t += 0.05) {
+      const dx = foe.x - w.player.x, dy = foe.y - w.player.y;
+      M.setInput(w, null);
+      M.setInput(w, Math.abs(dx) >= Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up'));
+      M.tick(w, 0.05);
+    }
+    if (w.encounter) caught++;
+  }
+  assert.ok(caught >= 8, `10번 가운데 ${caught}번 잡음 (6초 안)`);
 });
 
 test('지하수로의 보물상자 — data.js 의 CHESTS 그대로 넷(큰 상자 하나), 걸을 수 있는 방 구석에 서고 길을 막지 않는다', () => {

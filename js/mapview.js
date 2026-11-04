@@ -55,7 +55,7 @@ const MapView = (function () {
 
     // ---------- 부드럽게 ----------
     // 규칙은 칸 그대로(map.js) — 보이는 자리만 칸 사이를 미끄러져 따라갑니다. 걷는 동안은 살짝 들썩입니다.
-    // 미끄러지는 빠르기는 그 걸음의 빠르기와 같게: 나는 초당 10칸, 몬스터는 초당 3칸 (어슬렁은 미끄러진 뒤 잠깐 섬).
+    // 미끄러지는 빠르기는 그 걸음의 빠르기와 같게: 나는 초당 12칸, 몬스터는 초당 3칸 (어슬렁 · 달아나기는 미끄러진 뒤 잠깐 섬).
     const glide = new WeakMap();   // 나 · 몬스터 → 보이는 자리 { x, y, phase }
     function seenAt(e, speed, dt) {
       let g = glide.get(e);
@@ -207,7 +207,18 @@ const MapView = (function () {
       }
       // 싸움 창이 떠 있는 동안은 땅까지만 — 비치는 창 뒤에 지도 위의 나 · 몬스터 · 정예 자리 · 상인이 겹쳐 보이지 않게
       if (o.hideActors && o.hideActors()) return;
-      for (const mk of (o.marks ? o.marks() : [])) if (seen(mk.x, mk.y)) glyph(mk.x + 0.5, mk.y + 0.5, mk.icon);
+      for (const mk of (o.marks ? o.marks() : [])) {   // 상인 같은 표시 — 그림, 이름이 있으면 그 위에 작게
+        if (!seen(mk.x, mk.y)) continue;
+        glyph(mk.x + 0.5, mk.y + 0.5, mk.icon);
+        if (mk.label) {
+          ctx.font = `bold ${Math.max(9, Math.round(T * 0.36))}px system-ui, sans-serif`;
+          ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+          ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(28,16,7,0.85)';
+          ctx.strokeText(mk.label, ox + (mk.x + 0.5) * T, oy + mk.y * T + 1);
+          ctx.fillStyle = '#f6e7c3';
+          ctx.fillText(mk.label, ox + (mk.x + 0.5) * T, oy + mk.y * T + 1);
+        }
+      }
       for (const post of m.posts) {
         if (!seen(post.x, post.y, post.w, post.h) || !w.hooks.postAlive(post.enemy)) continue;
         const f = getEnemy(post.enemy), pw = post.w * T, ph = post.h * T;
@@ -335,7 +346,8 @@ const MapView = (function () {
       postAlive: id => { const f = getEnemy(id); return !!f && !isDowned(id) && isRevealed(f); },   // 이 여정에 꺾었거나 아직 안 나타난 히든은 없음
       portOpen: p => !p.opensAfter || isDowned(p.opensAfter),
       size: id => (getEnemy(id) || {}).size || 1,  // 지도에서 차지하는 n × n 칸 (data.js ENEMY_SIZE)
-      chestOpen: id => !!State.meta && State.meta.chestsOpened.includes(id)   // 연 보물상자 (game.js 의 openChest)
+      chestOpen: id => !!State.meta && State.meta.chestsOpened.includes(id),  // 연 보물상자 (game.js 의 openChest)
+      merchantHere: n => { const m = State.run && State.run.merchant; return !!m && !State.run.over && !!ZONES[m.zone] && ZONES[m.zone].id === n.zone; }
     };
   }
 
