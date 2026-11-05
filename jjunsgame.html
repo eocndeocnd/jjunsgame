@@ -9957,8 +9957,8 @@ const MAP_FILES = {"arthurian":{"compressionlevel":-1,"type":"map","version":"1.
       case GRASS: {
         const pal = C.grass[b] || C.grass[0];
         let c = shadeOf(pal, v);
-        // 풀잎 — 짙은 두 점 위에 밝은 끝 한 점 (끝은 한쪽으로 살짝 휨)
-        const G = 0.02;
+        // 풀잎 — 짙은 두 점 위에 밝은 끝 한 점 (끝은 한쪽으로 살짝 휨). 군데군데 풀잎이 촘촘한 풀 무리 (지도를 풍성하게)
+        const G = 0.02 + Math.max(0, vnoise(X * 0.02, Y * 0.02, 130) - 0.5) * 0.3;
         if (hash(X, Y, 2) < G || hash(X, Y + 1, 2) < G) c = c3(pal[3]);
         else if ((hash(X + 1, Y + 2, 2) < G && hash(X + 1, Y + 2, 8) < 0.5) || (hash(X - 1, Y + 2, 2) < G && hash(X - 1, Y + 2, 8) >= 0.5)) c = c3(pal[2]);
         // 들꽃 (들에만) — 꽃잎 넷 · 가운데 꽃술 · 아래 줄기
@@ -10432,6 +10432,94 @@ const MAP_FILES = {"arthurian":{"compressionlevel":-1,"type":"map","version":"1.
     return mix(texture(TILES, 8, X, Y), c3('#f0dca8'), 0.15 + ly / P * 0.45);
   }
 
+  // ---------- 땅 위 소품 — 걷는 데 안 막히는 작은 도트 그림 (사용자 요청 — 지도를 풍성하게, 1단계) ----------
+  // 칸 하나 안에 들어가는 그림 (글자 하나 = 점 하나, '.' 은 비움). 땅 그림에 같이 칠해 두므로(덩어리) 그리는 부담은 그대로.
+  // 소문자 a~d 는 그 격의 풀빛(짙음 → 밝음), z 는 밑의 땅을 어둡게(그림자), p · q · y 는 꽃잎 · 꽃잎 그늘 · 꽃술(꽃마다 다른 빛)
+  const PROP_INK = {
+    k: '#241c16', s: '#b4aea0', t: '#8e897e', u: '#615d55',
+    w: '#7a5530', x: '#5a3a20', v: '#a07a48',
+    r: '#c8402e', R: '#8a2a20', o: '#f4ecd8', m: '#e8dcc0', n: '#b8a888', h: '#8a5a34', H: '#5e3a1e',
+    l: '#c8782a', L: '#9a4e1e', e: '#d8a040',
+    B: '#e8e0cc', C: '#b8ae98', D: '#7a7262',
+    i: '#c07cff', j: '#7a3ab0', J: '#f0d8ff',
+    f: '#ffb040', F: '#e0501e', g: '#ffe8a0',
+    S: '#f6fafc', T: '#d4dee8', U: '#a8b8c8',
+    W: '#4a6a78', X: '#6a8a98', Y: '#a8c8d0',
+    M: '#56703e', N: '#3e5a2c',
+    E: '#9a8e68', Q: '#6e6448', O: '#b4a880'
+  };
+  const PROP_ART = {
+    tuft: ['..d.d..', '.dc.c.d', '.cb.bc.', 'cbaabac', '.aaaaa.'],
+    flowers: ['.p.....q.', 'pyp...qyq', '.p..p..q.', '.a.pyp.a.', '.a..p..a.', 'aa..a..aa', '..aaaa...'],
+    pebbles: ['.st.....', 'sttu.st.', '.uuzsttu', '.zz..uuz'],
+    redcap: ['..kkkk..', '.krorrk.', 'krrrrork', 'kRRrrRRk', '.kkmmkk.', '...mn...', '...mn...', '..zzzz..'],
+    browncap: ['.kkk.....', 'khhHk.kk.', 'kHHHkkhhk', '.kmk.kHHk', '..m...km.', '..mn...mn', '.zzz..zzz'],
+    fern: ['....c....', '.c..b..c.', '..cbabc..', '.cb.a.bc.', 'cb..a..bc', '....a....', '...aaa...'],
+    stump: ['..kkkkkk..', '.kvvvvvvk.', 'kvwwwwwwvk', 'kvwvvvvwvk', 'kvwwwwwwvk', 'kxkvvvvkxk', 'kxxxxxxxxk', 'kxwxxxwxxk', '.kkkkkkkk.', '.zzzzzzzz.'],
+    leaves: ['.l...e..', 'lLl.eLe.', '.l.l.e.l', '..lLl.lL', '...l...l'],
+    bush: ['...kkkkk....', '..kcddcck...', '.kcdbccbckk.', 'kcbbcbbcbdck', 'kbbabbcbbcbk', 'kabaabbabbak', '.kaaabaaaak.', '..kkkkkkkk..', '..zzzzzzzz..'],
+    rubble: ['..kkkk.....', '.ksssk.....', 'kssttuk.kk.', 'ktttuuk.kstk', 'kuuuuk.ktuuk', '.kkkk..kkkk.', '.zzz...zzzz.'],
+    grave: ['..kkkk..', '.kssstk.', 'kssusstk', 'ksuuustk', 'kssusttk', 'kstuttuk', 'ksttttuk', 'kMttMtuk', 'kkkkkkkk', 'zzzzzzzz'],
+    skull: ['.kkkkk.', 'kBBBBCk', 'kBkBkCk', 'kBBBBCk', '.kBkBk.', '..kkk..', '.zzzzz.'],
+    bones: ['kk.....kk', 'kBkkkkkBk', 'kBBBBBBCk', '.kk...kk.', '.zz...zz.'],
+    dry: ['..O.O..', '.OE.E.O', '.EQ.QE.', 'EQ..QQE', '.QQQQQ.'],
+    crystal: ['..k.....', '.kJk..k.', '.kik.kJk', '.kijkkik', 'kJijkkij', 'kiijkiij', 'kijjkijk', '.kkkkkk.', '.zzzzzz.'],
+    ember: ['.F......', '.fF..F..', '..gfFfF.', '.....Fgf'],
+    snowlump: ['..kkkk...', '.kSSSTk..', 'kSSSTTUkk', 'kSTTTUUUk', '.zzzzzzz.'],
+    mossy: ['..kkkk...', '.kMMNsk..', 'ksMstttk.', 'kstttuukk', 'kttuuuuuk', '.zzzzzzz.'],
+    puddle: ['..WWWWW...', '.WXXYXXWW.', 'WXXXXXYXXW', '.WWXXXXWW.', '...WWWW...'],
+    debris: ['.kkkk.....', 'kstttk.kk.', 'kttuuk.ksk', '.kkkk..kuk', '..zz....z.'],
+    tallgrass: ['..d....d..d.', '.dc.d..cd.c.', '.cb.cd.bc.bd', 'cbb.bcdbb.bc', 'bab.babab.ab', 'bab.abbab.ab', 'aaabaaaaabaa', '.aaaaaaaaaa.', '..zzzzzzzz..'],
+    flowerbed: ['..p....q.....', '.pyp..qyq..p.', '..pa...qa.pyp', '.cac.p.ac..pa', 'cbab.pyp.bcab', 'babcbapacbaba', 'aabaaaaabaaab', '.aaaaaaaaaaa.', '..zzzzzzzzz..'],
+    rockpile: ['....kkk......', '...kssuk.kk..', '..ksstuukstk.', '.kkttuukkttuk', 'kstkuukssuukk', 'ktuuk.ktuuuuk', '.kkk...kkkkk.', '.zzz...zzzzz.'],
+    bigbush: ['.....kkkkk.....', '...kkcddcckk...', '..kcddbdccdck..', '.kcdbccbcdbbck.', '.kcbbcbbccbcbk.', 'kcbbabbcbbcbbck', 'kbbabbabbabbabk', 'kbaabbaabaabbak', 'kaaabaaaabaaaak', '.kaaaaaaaaaaak.', '..kkkkkkkkkkk..', '..zzzzzzzzzzz..']
+  };
+  // 땅마다 소품 — [격, 땅의 종류(없으면 아무 땅)] → { 얼마나 자주(칸마다), 무엇을 얼마큼 }. 위에서부터 맞는 첫 줄
+  const PROP_TABLE = [
+    [[0, 7], GRASS, 0.42, { tuft: 2, tallgrass: 4, flowers: 2, flowerbed: 3, pebbles: 1, bush: 1.5, bigbush: 1.5 }],
+    [[1, 7], null, 0.16, { puddle: 2, debris: 2, tuft: 2, pebbles: 1.5, rockpile: 1.2, bones: 0.5 }],
+    [[2], GRASS, 0.45, { tuft: 2, tallgrass: 4, fern: 3.5, redcap: 1.2, browncap: 1.5, stump: 1, leaves: 1.5, bush: 1.5, bigbush: 1.8 }],
+    [[3], GRASS, 0.38, { tuft: 2, tallgrass: 3.5, flowers: 2, flowerbed: 3, rubble: 1.2, rockpile: 0.8, bush: 1.5, bigbush: 1.5, pebbles: 0.8 }],
+    [[3], COBBLE, 0.14, { debris: 2, tuft: 1.5, rubble: 1.2, rockpile: 0.8 }],
+    [[3, 8], TILES, 0.06, { rubble: 1, debris: 1, tuft: 0.6 }],
+    [[9], null, 0.38, { tuft: 2, tallgrass: 3, browncap: 2, fern: 2.5, leaves: 1.5, bigbush: 1.5 }],
+    [[4], SNOW, 0.15, { snowlump: 3, pebbles: 1, rockpile: 1 }],
+    [[4], ROCKY, 0.2, { pebbles: 2, mossy: 1.5, rockpile: 2, dry: 1 }],
+    [[4], null, 0.32, { tuft: 2, tallgrass: 3, mossy: 2, pebbles: 1.5, flowers: 1, rockpile: 1.2, bush: 0.8 }],
+    [[5], PAVE, 0.1, { leaves: 2, skull: 0.5, bones: 1 }],
+    [[5], null, 0.3, { dry: 4, grave: 2.5, bones: 1, skull: 0.8, pebbles: 1, rockpile: 1 }],
+    [[6], null, 0.2, { ember: 2, crystal: 2, pebbles: 1.5, rockpile: 1.2, skull: 0.6, bones: 0.8 }]
+  ];
+  const PETALS = { 0: ['#f4d35e', '#ee8fb0', '#ffffff', '#9fc5ff'], 3: ['#f4d35e', '#ee8fb0', '#ffffff', '#c8a0ff'], 4: ['#cfe0ff', '#ffffff', '#ffe8f0'], 7: ['#f4d35e', '#ffffff'] };
+  const PROP_W = {}, PROP_H = {};
+  for (const [k, rows] of Object.entries(PROP_ART)) { PROP_H[k] = rows.length; PROP_W[k] = Math.max(...rows.map(r => r.length)); }
+  // 이 칸의 소품 (없으면 null) — 자리 · 뒤집기 · 꽃빛은 칸 자리로 정해져 늘 같음. 무리 지어 (낮은 잡음으로 짙고 옅게)
+  function propOf(e, tx, ty) {
+    const row = PROP_TABLE.find(([bios, ter]) => bios.includes(e.bio) && (ter === null || ter === e.ter));
+    if (!row) return null;
+    const [, , dens, mixw] = row, cl = 0.35 + 1.3 * vnoise(tx * 0.18, ty * 0.18, 125);
+    if (hash(tx, ty, 121) > dens * cl) return null;
+    const names = Object.keys(mixw), total = names.reduce((s, k) => s + mixw[k], 0);
+    let pick = hash(tx, ty, 122) * total, name = names[0];
+    for (const k of names) { pick -= mixw[k]; if (pick < 0) { name = k; break; } }
+    const pw = PROP_W[name], ph = PROP_H[name], petals = PETALS[e.bio] || PETALS[0];
+    const petal = c3(petals[(hash(tx, ty, 126) * petals.length) | 0]);
+    return { name, ox: (hash(tx, ty, 123) * (P - pw + 1)) | 0, oy: (hash(tx, ty, 124) * (P - ph + 1)) | 0, flip: hash(tx, ty, 127) < 0.5,
+             petal, petalShade: mul(petal, 0.75), grass: C.grass[e.bio] || C.grass[0] };
+  }
+  function propPixel(pr, lx, ly, under) {
+    const sx = lx - pr.ox, sy = ly - pr.oy, rows = PROP_ART[pr.name];
+    if (sy < 0 || sy >= rows.length || sx < 0 || sx >= PROP_W[pr.name]) return under;
+    const ch = rows[sy][pr.flip ? PROP_W[pr.name] - 1 - sx : sx];
+    if (!ch || ch === '.') return under;
+    if (ch === 'z') return mul(under, 0.72);
+    if (ch === 'p') return pr.petal;
+    if (ch === 'q') return pr.petalShade;
+    if (ch === 'y') return c3('#f8e070');
+    if (ch >= 'a' && ch <= 'd') return c3(pr.grass[{ a: 3, b: 1, c: 0, d: 2 }[ch]]);
+    return c3(PROP_INK[ch] || '#ff00ff');
+  }
+
   // ---------- 지도마다 한 번 — 물 깊이 (물가에서 몇 칸) · 그려 둔 덩어리 ----------
   // 지도에 들어설 때마다 세계가 지도를 새로 감싸므로(시작점만 바꿔), 겉모습 층(같은 배열)에 붙여 둡니다 — 오갈 때 다시 안 그리게
   const prepared = new WeakMap();
@@ -10466,7 +10554,13 @@ const MAP_FILES = {"arthurian":{"compressionlevel":-1,"type":"map","version":"1.
       const door = (m.ports || []).find(p => p.door && p.x >= x0 && p.x <= x1 && p.y >= y0 && p.y <= y1);
       buildings.push({ x0, y0, w: x1 - x0 + 1, h: y1 - y0 + 1, door, G: null });
     }
-    const A = { dist, chunks: new Map(), bAt, buildings };
+    // 소품을 안 놓는 칸 — 문 · 정예 자리 · 보물상자 · 시작점 · 상인 자리 (그 둘레 한 칸까지)
+    const noProp = new Uint8Array(m.w * m.h), mark = (x0, y0, w, h) => {
+      for (let y = y0 - 1; y <= y0 + h; y++) for (let x = x0 - 1; x <= x0 + w; x++) if (x >= 0 && y >= 0 && x < m.w && y < m.h) noProp[y * m.w + x] = 1;
+    };
+    for (const q of [...(m.ports || []), ...(m.posts || [])]) mark(q.x, q.y, q.w || 1, q.h || 1);
+    for (const q of [...(m.chests || []), ...(m.npcs || [])]) mark(q.x, q.y, 1, 1);
+    const A = { dist, chunks: new Map(), bAt, buildings, noProp };
     prepared.set(m.look, A);
     return A;
   }
@@ -10532,6 +10626,7 @@ const MAP_FILES = {"arthurian":{"compressionlevel":-1,"type":"map","version":"1.
       e.nearRoad = false;
       for (let dy = -1; dy <= 1 && !e.nearRoad; dy++) for (let dx = -1; dx <= 1; dx++) if (at(tx + dx, ty + dy) === ROAD) { e.nearRoad = true; break; }
     }
+    if (t === FLOOR && !e.dais && raw !== CARPET && !A.noProp[k]) e.prop = propOf(e, tx, ty);   // 길 곁 칸이면 길 위 점은 뺌 (paint)
     return e;
   }
 
@@ -10578,6 +10673,7 @@ const MAP_FILES = {"arthurian":{"compressionlevel":-1,"type":"map","version":"1.
     if (e.pb) return pillarFloor(e, X, Y);
     if (e.raw === CARPET && e.t === FLOOR) { const c = carpetPix(e, X, Y, lx); return e.shadeTop && ly < e.shadeTop ? mul(c, 0.62 + 0.38 * ly / e.shadeTop) : c; }
     let c = paintGround(m, A, e, X, Y, lx, ly);
+    if (e.prop && !(e.nearRoad && roadField(m, X, Y, 0) >= -0.08)) c = propPixel(e.prop, lx, ly, c);
     if (e.dais) {
       const R = P - 1, d = Math.min(e.dais.l ? lx : 99, e.dais.r ? R - lx : 99, e.dais.u ? ly : 99, e.dais.d ? R - ly : 99);
       if (d === 0) c = c3(CK.line); else if (d <= 2) c = mix(c, c3(CK.gold), d === 1 ? 0.5 : 0.25);
@@ -10839,7 +10935,7 @@ const MAP_FILES = {"arthurian":{"compressionlevel":-1,"type":"map","version":"1.
     }
   }
 
-  const api = { has: m => !!(m && m.look), drawGround, drawTrees, paintTree, texture, bake, TW, TH, TREE_STYLES, TREE_PAL, cached: m => (prepared.get(m.look) || { chunks: new Map() }).chunks.size, P, CH, VOID, GRASS, DIRT, COBBLE, TILES, WATER, LAVA, OBSID, SNOW, ROCKY, PAVE, CANAL };
+  const api = { has: m => !!(m && m.look), drawGround, drawTrees, paintTree, texture, bake, propOf, TW, TH, TREE_STYLES, TREE_PAL, cached: m => (prepared.get(m.look) || { chunks: new Map() }).chunks.size, P, CH, VOID, GRASS, DIRT, COBBLE, TILES, WATER, LAVA, OBSID, SNOW, ROCKY, PAVE, CANAL };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.MapArt = api;
 })(typeof window !== 'undefined' ? window : globalThis);
