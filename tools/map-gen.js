@@ -712,7 +712,11 @@ function overworld(data) {
     if ((b === 2 && grove > 0.6 && r < 0.8) || ((b === 3 || b === 9) && grove > 0.64 && r < 0.6) || (b === 4 && grove > 0.6 && r < 0.55)
       || (b === 5 && grove > 0.56 && r < 0.16 && alone())
       || (b === 6 && L.ter[i] === L.OBSID && grove > 0.6 && r < 0.14 && alone())) tiles[i] = TREE;
-    else if ((b === 4 && r < 0.012) || (b === 6 && r < 0.035)) tiles[i] = ROCK;
+    else if ((b === 4 && r < 0.012) || (b === 6 && r < 0.006 && !nearHall(x, y))) tiles[i] = ROCK;   // 6격 낱바위는 드물게 · 홀 둘레엔 없게 (0.035 — 칠죄종 홀 둘레가 바위투성이라 걷기 불편했음, 사용자 지적)
+  }
+  function nearHall(x, y) {                                   // 6격 돌바닥(칠죄종 홀 · 왕좌의 방)에서 6칸 안
+    for (let j = y - 6; j <= y + 6; j++) for (let i = x - 6; i <= x + 6; i++) if (inside(i, j) && L.ter[idx(i, j)] === OL.TILES && L.bio[idx(i, j)] === 6) return true;
+    return false;
   }
 
   // 4) 시작점에서 닿는 칸 — 나무 · 바위 무더기에 갇힌 정해진 자리 · 들머리 · 상인은 가까운 길까지 나무를 베어 이음
