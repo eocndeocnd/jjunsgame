@@ -20,6 +20,7 @@
   const VOID = 0, GRASS = 1, DIRT = 2, COBBLE = 3, TILES = 4, WATER = 5, LAVA = 6, OBSID = 7, SNOW = 8, ROCKY = 9, PAVE = 10, CANAL = 11;
   // 그림만 쓰는 겉모습 (tools/map-gen.js) — 건물(바깥 지도의 닫힌 건물 한 채를 통째로) · 문간(안 지도의 나가는 문)
   const BUILD = 12, DOORWAY = 13, CARPET = 14;   // CARPET — 건물 안 붉은 깔개
+  const RUIN = 15;                                 // 무너진 옛 성벽 · 옛 성문 탑 (막힌 칸)
   // 바닥 층의 칸 (tools/map-gen.js)
   const FLOOR = 0, WALL = 1, POOL = 2, TREE = 3, ROCK = 4, ROAD = 5;
 
@@ -574,6 +575,199 @@
     return mix(texture(TILES, 8, X, Y), c3('#f0dca8'), 0.15 + ly / P * 0.45);
   }
 
+  // ---------- 바위 (막힌 칸) — 이웃 바위 칸과 이어진 둥근 바위 덩어리 (예전엔 칸마다 납작한 줄처럼 보였음) ----------
+  // 칸 가운데마다 바위면 1 · 아니면 0 을 부드럽게 이은 값의 0.5 언저리(잡음으로 흔듦)가 테두리 — 혼자 선 바위는 둥근 돌 하나, 이어지면 바위 무더기.
+  // 안은 큰 돌덩이 무늬, 왼쪽 위 테두리는 빛 · 아래 테두리는 그늘진 앞면 · 한 점 검은 테. 테두리 밖은 그 칸의 땅
+  const ROCK_PAL = { obsid: [['#4a3a56', '#3a2d46', '#5c4a6a', '#221a2a'], '#140e18'], cave: [['#4e5156', '#43464b', '#5c6066', '#2e3034'], '#1c1d20'],
+                     rocky: [['#8a8571', '#787461', '#a29d86', '#5c5948'], '#3e3c30'] };
+  function rockField(m, X, Y) {
+    const fx = X / P - 0.5, fy = Y / P - 0.5, x0 = Math.floor(fx), y0 = Math.floor(fy), ax = sm(fx - x0), ay = sm(fy - y0);
+    const v = (x, y) => (x < 0 || y < 0 || x >= m.w || y >= m.h ? 1 : m.tile[y * m.w + x] === ROCK ? 1 : m.tile[y * m.w + x] === WALL ? 0.6 : 0);
+    return (v(x0, y0) * (1 - ax) + v(x0 + 1, y0) * ax) * (1 - ay) + (v(x0, y0 + 1) * (1 - ax) + v(x0 + 1, y0 + 1) * ax) * ay;
+  }
+  // 혼자 선 바위(이웃 네 칸에 바위가 없음) — 칸에는 땅과 발밑 그림자만, 바위는 나무처럼 따로 솟게 그림 (boulderSprite)
+  const loneRock = (m, x, y) => m.tile[y * m.w + x] === ROCK && ![[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => {
+    const i = x + dx, j = y + dy; return i >= 0 && j >= 0 && i < m.w && j < m.h && m.tile[j * m.w + i] === ROCK;
+  });
+  const rockKind = (bio, ter) => (bio === 6 || ter === OBSID ? 'obsid' : bio === 7 ? 'cave' : ter === SNOW ? 'snow' : 'rocky');
+  const BW = 22, BH = 20;
+  function paintBoulder(put, kind, v) {
+    const [pal, mortar] = ROCK_PAL[kind === 'snow' ? 'rocky' : kind], cx = 11, cy = 11.5, rx = 10 - v * 0.5, ry = 8 + (v % 2) * 0.6;
+    const R = (x, y) => { const dx = (x + 0.5 - cx) / rx, dy = (y + 0.5 - cy) / ry; return Math.hypot(dx, dy) * (1 + (vnoise(Math.atan2(dy, dx) * 1.6 + v * 3, 0.5, 174) - 0.5) * 0.22); };
+    for (let y = 0; y < BH; y++) for (let x = 0; x < BW; x++) {
+      const r = R(x, y);
+      if (r > 1) continue;
+      if (R(x - 1, y) > 1 || R(x + 1, y) > 1 || R(x, y - 1) > 1 || R(x, y + 1) > 1) { put(x, y, c3(kind === 'obsid' ? '#0c0810' : '#2a2620')); continue; }
+      const dx = (x + 0.5 - cx) / rx, dy = (y + 0.5 - cy) / ry, lit = -(dx * 0.6 + dy * 0.8) + (hash(x, y, 175 + v) - 0.5) * 0.25;
+      let c = c3(pal[lit > 0.45 ? 2 : lit > -0.1 ? 0 : lit > -0.5 ? 1 : 3]);
+      if (dy > 0.45) c = mul(c, 0.72);                                   // 아래는 그늘진 앞면
+      if (Math.abs(vnoise(x * 0.22 + v * 5, y * 0.22, 176) - 0.5) < 0.035 && r < 0.85) c = c3(mortar);   // 금
+      if (kind === 'snow' && dy < -0.15 + vnoise(x * 0.3, v, 177) * 0.3) c = c3(dy < -0.5 ? '#f6fafc' : '#dfe8f0');
+      else if (kind === 'rocky' && dy < -0.2 && vnoise(x * 0.3 + v, y * 0.3, 178) > 0.62) c = c3(hash(x, y, 179) < 0.5 ? '#7f9a52' : '#5f7a44');
+      else if (kind === 'obsid' && hash(x, y, 180 + v) < 0.03) c = c3('#8a6aa8');
+      put(x, y, c);
+    }
+  }
+  const boulders = {};
+  function boulderSprite(kind, v) {
+    const key = `${kind}|${v}`;
+    if (boulders[key]) return boulders[key];
+    const cv = document.createElement('canvas');
+    cv.width = BW; cv.height = BH;
+    const g = cv.getContext('2d'), img = g.createImageData(BW, BH), d = img.data;
+    paintBoulder((x, y, c) => { const i = (y * BW + x) * 4; d[i] = c[0]; d[i + 1] = c[1]; d[i + 2] = c[2]; d[i + 3] = 255; }, kind, v);
+    g.putImageData(img, 0, 0);
+    return (boulders[key] = cv);
+  }
+  function rockPix(m, e, X, Y) {
+    if (e.lone) {                                                        // 혼자 선 바위 — 땅 + 발밑 그림자
+      const g = texture(e.ter === OBSID || e.bio === 6 ? OBSID : e.ter, e.bio, X, Y), lx = X % P, ly = Y % P;
+      return ((lx + 0.5 - 8) / 8.5) ** 2 + ((ly + 0.5 - 12.5) / 3.6) ** 2 <= 1 ? mul(g, 0.62) : g;
+    }
+    const th = 0.47 + (vnoise(X * 0.1, Y * 0.1, 170) - 0.5) * 0.22, f = rockField(m, X, Y) - th;
+    if (f < 0) {                                                         // 테두리 밖 — 그 칸의 땅, 바위 바로 아래는 그림자
+      const g = texture(e.ter === OBSID || e.bio === 6 ? OBSID : e.ter, e.bio, X, Y);
+      return f > -0.16 && rockField(m, X, Y - 3) - th > f + 0.04 ? mul(g, 0.68) : g;
+    }
+    if (f < 0.035) return c3(e.bio === 6 ? '#0c0810' : '#2a2620');
+    const [pal, mortar] = ROCK_PAL[e.bio === 6 || e.ter === OBSID ? 'obsid' : e.bio === 7 ? 'cave' : 'rocky'];
+    let c = stones(X, Y, 18, 171, pal, mortar);
+    if (f < 0.2) {                                                       // 테두리 — 빛 받는 쪽 · 그늘진 앞면
+      const gx = rockField(m, X + 2, Y) - rockField(m, X - 2, Y), gy = rockField(m, X, Y + 2) - rockField(m, X, Y - 2), gl = Math.hypot(gx, gy) || 1;
+      const nx = -gx / gl, ny = -gy / gl, lit = -(nx * 0.6 + ny * 0.8);
+      if (ny > 0.45) c = mul(c, 0.55 + f * 1.2);
+      else if (lit > 0.3) c = mix(c, WHITE, 0.2 * (1 - f / 0.2));
+    }
+    if (e.bio === 4 && fbm(X * 0.04, Y * 0.04, 172) > 0.62) c = mix(c, c3('#7f9a52'), 0.4);   // 고원 바위의 이끼
+    if (e.ter === SNOW && f > 0.12 && vnoise(X * 0.08, Y * 0.08, 173) > 0.55) c = mix(c, c3('#eef4f8'), 0.75);   // 눈 덮인 윗면
+    return c;
+  }
+
+  // ---------- 무너진 옛 성벽 · 옛 성문 (겉모습 RUIN — 사용자 그림대로) ----------
+  // 성벽 조각은 그 칸 안에: 위 두 칸은 무너진 톱니 담이 남은 윗면, 그 아래는 다듬은 돌을 쌓은 앞면(이끼 · 금 · 빠진 돌), 위 가장자리와 양끝은 들쭉날쭉 허물어짐.
+  // 옛 성문은 두 탑 사이 길 위에 아치를 걸고 위에 톱니 담 두 단 — 길로 지나가므로 나보다 위에 그림 (drawOver), 탑 밑동 양옆엔 흘러내린 돌무더기.
+  function ruinPix(e, X, Y) {
+    const b = e.ruin, sx = X - b.c0 * P, sy = Y - b.r0 * P, SW = (b.c1 - b.c0 + 1) * P, SH = (b.r1 - b.r0 + 1) * P, TOP = Math.min(2 * P, SH * 0.45) | 0;
+    const ground = () => texture(GRASS, e.bio, X, Y);
+    if (b.gate) return mul(stones(X, Y, 10, 152, CK.top, CK.mortar), 0.62);
+    const cut = 2 + ((vnoise(X * 0.07, b.r0, 142) * 13) | 0);                                   // 위 가장자리 — 허물어진 만큼
+    const endL = sx < 12 ? (vnoise(Y * 0.12, b.c0, 143) * 11) | 0 : 0, endR = SW - 1 - sx < 12 ? (vnoise(Y * 0.12, b.c1, 144) * 11) | 0 : 0;
+    if (sy < cut || sx < endL || SW - 1 - sx < endR) return ground();
+    if (sy === cut || sx === endL || SW - 1 - sx === endR || sy === SH - 1) return c3(CK.line);
+    if (sy < TOP) {
+      if (sy < cut + 7) {                                                                       // 남은 톱니 담
+        const mi = Math.floor(sx / 14), ma = ((sx % 14) + 14) % 14;
+        if (hash(mi, b.r0, 145) > 0.25 && ma < 9) return ma === 0 || ma === 8 ? c3(CK.line) : sy < cut + 3 ? mix(c3(CK.top[2]), WHITE, 0.1) : c3(CK.top[0]);
+      }
+      let c = c3(CK.top[hash(sx >> 3, sy >> 3, 146) < 0.3 ? 1 : 0]);                          // 윗면 — 판석 · 이끼 · 부스러기
+      if (fbm(X * 0.04, Y * 0.04, 147) > 0.6) c = mix(c, c3('#5f7a44'), 0.45);
+      if (sy >= TOP - 2) c = mul(c, 0.7);
+      return hash(X, Y, 148) < 0.06 ? mul(c, 0.85) : c;
+    }
+    const fy = sy - TOP, FH = SH - TOP;
+    if (fy < 2) return mix(c3(CK.top[0]), WHITE, 0.08);
+    const v = ivy(X, fy, 2);
+    if (v) return v;
+    let c = mul(ashlar(sx, fy, 9, 18, 149, X, Y), 0.95 - fy / FH * 0.3);
+    if (hash(Math.floor((sx + (Math.floor(fy / 9) % 2 ? 9 : 0)) / 18), Math.floor(fy / 9), 150) < 0.06) c = mul(c, 0.62);   // 깨져 움푹한 돌
+    return c;
+  }
+  // 옛 성문 그림 — 폭 W · 높이 H 점, 두 탑은 가장자리에서 한 칸 안쪽 (M) 에 두 칸 폭. 투명한 곳은 null, 반투명은 [r, g, b, a]
+  function gatePix(G, px, py, X, Y) {
+    const { W, H, M } = G, tl0 = M - 4, tl1 = M + 2 * P + 4, tr0 = W - M - 2 * P - 4, tr1 = W - M + 4;
+    const g0 = M + 2 * P, g1 = W - M - 2 * P, hw = (g1 - g0) / 2, acx = (g0 + g1) / 2, acy = H - 74;
+    // 흘러내린 돌무더기 — 탑 밑동 바깥쪽
+    const skirt = px < tl0 + 6 ? px / (tl0 + 6) : px >= tr1 - 6 ? (W - px) / (W - tr1 + 6) : -1;
+    if (skirt >= 0 && (px < tl0 + 2 || px >= tr1 - 2 || py > H - 6)) {
+      const hgt = 8 + skirt * 30 + (vnoise(px * 0.3, 1, 151) - 0.5) * 8;
+      if (H - py < hgt) { const c = stones(X, Y, 6, 152, CK.top, CK.mortar); return H - py > hgt - 2 ? c3(CK.line) : mul(c, 0.8 + (H - py) / 60); }
+      if (px < tl0 || px >= tr1) return null;
+    }
+    // 탑 — 허물어진 바깥 가장자리 · 톱니 꼭대기 · 가운데 활 쏘는 틈 · 밑동에 이끼
+    for (const [a0, a1, outerLeft] of [[tl0, tl1, true], [tr0, tr1, false]]) {
+      if (px < a0 || px >= a1 || py < 36) continue;
+      const crum = (vnoise(py * 0.12, outerLeft ? 3 : 4, 141) * 7) | 0, lx = px - a0, ow = a1 - a0;
+      if (outerLeft ? lx < crum : ow - 1 - lx < crum) return null;
+      if (outerLeft ? lx === crum : ow - 1 - lx === crum) return c3(CK.line);
+      if (py < 44) { const ma = lx % 10; return ma < 6 && hash((lx / 10) | 0, outerLeft ? 1 : 2, 153) > 0.2 ? (py === 36 || ma === 0 || ma === 5 ? c3(CK.line) : c3(CK.top[2])) : null; }
+      if (py < 52) return py === 51 ? c3(CK.line) : c3(CK.top[0]);
+      if (lx === 0 || lx === ow - 1) return c3(CK.line);
+      const f = lx / ow;
+      let c = mul(ashlar(lx, py - 52, 8, 14, 154, X, Y), 1.1 - f * 0.35 - (py - 52) / (H - 52) * 0.2);
+      if (Math.abs(lx - ow / 2) < 1.5 && py > 92 && py < 112) c = c3(CK.win);
+      if (py > H - 18 && hash(X, Y, 155) < 0.3) c = c3(CK.ivy[(hash(X, Y, 156) * 3) | 0]);
+      return c;
+    }
+    const pa0 = tl0 + 2, pa1 = tr1 - 2;
+    if (px < pa0 || px >= pa1) return null;
+    // 위 두 단 — 가장자리는 허물어짐
+    const edgeCut = (vnoise(py * 0.15, 5, 157) * 9) | 0;
+    if (py < 68 && (px < pa0 + edgeCut || px >= pa1 - edgeCut)) return null;
+    const merlon = (y0) => { const mi = Math.floor((px - pa0) / 14), ma = (px - pa0) % 14; return hash(mi, y0, 158) > 0.18 && ma < 9 ? ma : -1; };
+    if (py < 20) {                                                                              // 뒤 담 (멀리 · 그늘)
+      if (py < 7) { const ma = merlon(0); if (ma < 0) return null; return py === 0 || ma === 0 || ma === 8 ? c3(CK.line) : mul(c3(CK.top[0]), 0.85); }
+      return py === 19 ? c3(CK.line) : mul(ashlar(px, py, 6, 12, 159, X, Y), 0.72);
+    }
+    if (py < 46) {                                                                              // 위 걷는 길 — 판석 · 이끼 · 부스러기
+      let c = c3(CK.top[hash(px >> 3, py >> 3, 160) < 0.3 ? 1 : 0]);
+      if (py < 24) c = mul(c, 0.7);
+      if (fbm(X * 0.05, Y * 0.05, 161) > 0.6) c = mix(c, c3('#5f7a44'), 0.4);
+      return hash(X, Y, 162) < 0.05 ? mul(c, 0.82) : c;
+    }
+    if (py < 68) {                                                                              // 앞 담
+      if (py < 53) { const ma = merlon(1); if (ma < 0) return py < 50 ? null : c3(CK.top[1]); return py === 46 || ma === 0 || ma === 8 ? c3(CK.line) : py < 49 ? mix(c3(CK.top[2]), WHITE, 0.1) : c3(CK.top[0]); }
+      if (py === 67) return c3(CK.line);
+      const v = ivy(px, py - 53, 0);
+      return v || mul(ashlar(px, py - 53, 7, 12, 163, X, Y), py < 55 ? 1.05 : 0.95);
+    }
+    // 앞면 — 아치 (열린 곳은 투명, 꼭대기 안쪽은 어두운 그늘) · 쐐기돌 테 · 다듬은 돌
+    const dx = px + 0.5 - acx, r2 = Math.hypot(dx, py + 0.5 - acy);
+    const inside = py >= acy ? Math.abs(dx) < hw : r2 < hw;
+    if (inside) {
+      const depth = py >= acy ? 0 : (hw - r2);
+      return py < acy && depth < 12 ? [20, 14, 16, 0.55 * (1 - depth / 12)] : null;
+    }
+    const ring = py >= acy ? Math.abs(dx) < hw + 7 : r2 < hw + 7;
+    if (ring) {
+      const a = Math.atan2(py + 0.5 - acy, dx), k = (a + Math.PI) / (Math.PI / 11);
+      if ((py >= acy ? Math.abs(dx) >= hw + 6 : r2 >= hw + 6) || (py < acy && Math.abs(k % 1) < 0.1) || (py >= acy && (py - acy) % 9 === 0)) return c3(CK.line);
+      return pick4(CK.top, 0.45 + hash(Math.floor(k), py >= acy ? (py - acy) >> 3 : 0, 164) * 0.5);
+    }
+    if (py === H - 1) return c3(CK.line);
+    let c = mul(ashlar(px, py - 68, 10, 20, 165, X, Y), 1 - (py - 68) / (H - 68) * 0.28);
+    if (Math.abs(vnoise(px * 0.05, py * 0.05, 166) - 0.5) < 0.012) c = mul(c, 0.6);           // 금
+    return c;
+  }
+  // 옛 성문 그림 한 장 (지도마다 한 번)
+  function gateSprite(A, m) {
+    if (A.gateSpr !== undefined) return A.gateSpr;
+    const g = m.props && m.props.gate ? String(m.props.gate).split(',').map(Number) : null;
+    if (!g || typeof document === 'undefined') return (A.gateSpr = null);
+    const [gx, gy, gw, gh] = g, rows = gh + 9, G = { W: (gw + 2) * P, H: rows * P, M: P };
+    const cv = document.createElement('canvas');
+    cv.width = G.W; cv.height = G.H;
+    const ctx = cv.getContext('2d'), img = ctx.createImageData(G.W, G.H), d = img.data, X0 = (gx - 1) * P, Y0 = (gy + gh - rows) * P;
+    for (let py = 0; py < G.H; py++) for (let px = 0; px < G.W; px++) {
+      const c = gatePix(G, px, py, X0 + px, Y0 + py);
+      if (!c) continue;
+      const i = (py * G.W + px) * 4;
+      d[i] = c[0]; d[i + 1] = c[1]; d[i + 2] = c[2]; d[i + 3] = c.length > 3 ? c[3] * 255 : 255;
+    }
+    ctx.putImageData(img, 0, 0);
+    return (A.gateSpr = { cv, x: gx - 1, y: gy + gh - rows, w: gw + 2, h: rows, base: gy });
+  }
+  // 나보다 위에 그리는 것 — 옛 성문 (아치 밑으로 지나감). 내가 성문 뒤(북쪽)에 서면 반쯤 비쳐 보이게
+  function drawOver(ctx, m, ox, oy, T, x0, y0, x1, y1, me) {
+    if (!m.look) return;
+    const s = gateSprite(prep(m), m);
+    if (!s || s.x > x1 || s.y > y1 || s.x + s.w < x0 || s.y + s.h < y0) return;
+    const behind = me && me.x + 0.5 > s.x && me.x + 0.5 < s.x + s.w && me.y + 0.5 > s.y && me.y + 0.5 < s.base;
+    ctx.imageSmoothingEnabled = false;
+    if (behind) ctx.globalAlpha = 0.45;
+    ctx.drawImage(s.cv, Math.round(ox + s.x * T), Math.round(oy + s.y * T), s.w * T, s.h * T);
+    ctx.globalAlpha = 1;
+  }
+
   // ---------- 땅 위 소품 — 걷는 데 안 막히는 작은 도트 그림 (사용자 요청 — 지도를 풍성하게, 1단계) ----------
   // 칸 하나 안에 들어가는 그림 (글자 하나 = 점 하나, '.' 은 비움). 땅 그림에 같이 칠해 두므로(덩어리) 그리는 부담은 그대로.
   // 소문자 a~d 는 그 격의 풀빛(짙음 → 밝음), z 는 밑의 땅을 어둡게(그림자), p · q · y 는 꽃잎 · 꽃잎 그늘 · 꽃술(꽃마다 다른 빛)
@@ -649,6 +843,18 @@
     return { name, ox: (hash(tx, ty, 123) * (P - pw + 1)) | 0, oy: (hash(tx, ty, 124) * (P - ph + 1)) | 0, flip: hash(tx, ty, 127) < 0.5,
              petal, petalShade: mul(petal, 0.75), grass: C.grass[e.bio] || C.grass[0] };
   }
+  // 무너진 성벽 · 옛 성문 둘레 — 가까울수록 자주 깨진 돌 · 돌무더기 (가로로 다섯 칸, 아래로 두 칸까지)
+  function rubbleOf(m, e, tx, ty) {
+    let d = 99;
+    for (let dy = -4; dy <= 2; dy++) for (let dx = -5; dx <= 5; dx++) {
+      const x = tx + dx, y = ty + dy;
+      if (x >= 0 && y >= 0 && x < m.w && y < m.h && (m.look[y * m.w + x] & 15) === RUIN) d = Math.min(d, Math.max(Math.abs(dx), Math.abs(dy)));
+    }
+    if (d > 5 || hash(tx, ty, 128) > 0.8 - d * 0.14) return null;
+    const name = ['rockpile', 'rubble', 'debris', 'pebbles'][(hash(tx, ty, 129) * 4) | 0];
+    return { name, ox: (hash(tx, ty, 123) * (P - PROP_W[name] + 1)) | 0, oy: (hash(tx, ty, 124) * (P - PROP_H[name] + 1)) | 0, flip: hash(tx, ty, 127) < 0.5,
+             petal: WHITE, petalShade: WHITE, grass: C.grass[e.bio] || C.grass[0] };
+  }
   function propPixel(pr, lx, ly, under) {
     const sx = lx - pr.ox, sy = ly - pr.oy, rows = PROP_ART[pr.name];
     if (sy < 0 || sy >= rows.length || sx < 0 || sx >= PROP_W[pr.name]) return under;
@@ -709,13 +915,23 @@
 
   const land = t => t === FLOOR || t === ROAD || t === TREE || t === ROCK;
   // 겉모습 「땅이 아님」(어둠 · 물 · 용암)인데 바닥이 땅이면 풀로
-  const terOf = raw => (raw === VOID || raw === WATER || raw === LAVA || raw === BUILD ? GRASS : raw === DOORWAY || raw === CARPET ? TILES : raw);
+  const terOf = raw => (raw === VOID || raw === WATER || raw === LAVA || raw === BUILD || raw === RUIN ? GRASS : raw === DOORWAY || raw === CARPET ? TILES : raw);
 
   // 칸 하나를 칠하기 전에 한 번 — 그 칸의 종류와 이웃 (점마다 다시 안 살피게)
   function cellOf(m, A, tx, ty) {
     const k = ty * m.w + tx, t = m.tile[k], raw = m.look[k] & 15;
     const e = { t, raw, ter: terOf(raw), bio: m.look[k] >> 4 };
     if (raw === BUILD) { e.b = A.bAt[k]; return e; }
+    if (raw === RUIN) {                                                  // 무너진 성벽 조각 — 그 조각(이어진 RUIN 칸)의 칸 범위
+      const isR = (x, y) => x >= 0 && y >= 0 && x < m.w && y < m.h && (m.look[y * m.w + x] & 15) === RUIN;
+      let c0 = tx, c1 = tx, r0 = ty, r1 = ty;
+      while (isR(c0 - 1, ty)) c0--; while (isR(c1 + 1, ty)) c1++;
+      while (isR(tx, r0 - 1)) r0--; while (isR(tx, r1 + 1)) r1++;
+      e.ruin = { c0, c1, r0, r1 };
+      const g = m.props && m.props.gate ? String(m.props.gate).split(',').map(Number) : null;   // 옛 성문의 탑 — 위에 성문 그림이 덮이니 바닥은 돌 밑동만
+      e.ruin.gate = !!g && tx >= g[0] && tx < g[0] + g[2] && ty >= g[1] && ty < g[1] + g[3];
+      return e;
+    }
     const at = (x, y) => (x < 0 || y < 0 || x >= m.w || y >= m.h ? WALL : m.tile[y * m.w + x]);
     const lookAt = (x, y) => (x < 0 || y < 0 || x >= m.w || y >= m.h ? 0 : m.look[y * m.w + x]);
     const pillar = (x, y) => at(x, y) === ROCK && (lookAt(x, y) >> 4) === 8;   // 성 안 돌기둥
@@ -763,12 +979,12 @@
         const u = at(tx + dx, ty + dy);
         if (u === FLOOR || u === TREE || u === ROCK) { const lk = m.look[(ty + dy) * m.w + tx + dx]; e.gTer = terOf(lk & 15); e.gBio = lk >> 4; break; }
       }
-    } else if (t === ROCK) e.belowRock = at(tx, ty + 1) === ROCK;
+    } else if (t === ROCK) { e.belowRock = at(tx, ty + 1) === ROCK; e.lone = loneRock(m, tx, ty); }
     if (t === FLOOR || t === TREE) {                                     // 곁에 길이 있으면 길이 이 칸으로 둥글게 번져 들어옴
       e.nearRoad = false;
       for (let dy = -1; dy <= 1 && !e.nearRoad; dy++) for (let dx = -1; dx <= 1; dx++) if (at(tx + dx, ty + dy) === ROAD) { e.nearRoad = true; break; }
     }
-    if (t === FLOOR && !e.dais && raw !== CARPET && !A.noProp[k]) e.prop = propOf(e, tx, ty);   // 길 곁 칸이면 길 위 점은 뺌 (paint)
+    if (t === FLOOR && !e.dais && raw !== CARPET && !A.noProp[k]) e.prop = rubbleOf(m, e, tx, ty) || propOf(e, tx, ty);   // 길 곁 칸이면 길 위 점은 뺌 (paint)
     return e;
   }
 
@@ -811,6 +1027,7 @@
   // 점 하나의 색 — 칸 e 안의 (lx, ly) 번째 점, 지도 전체로는 (X, Y)
   function paint(m, A, e, X, Y, lx, ly) {
     if (e.b !== undefined) return buildingPixel(A, e, X, Y);
+    if (e.ruin) return ruinPix(e, X, Y);
     if (e.raw === DOORWAY) return doorwayPix(e, X, Y, lx, ly);
     if (e.pb) return pillarFloor(e, X, Y);
     if (e.raw === CARPET && e.t === FLOOR) { const c = carpetPix(e, X, Y, lx); return e.shadeTop && ly < e.shadeTop ? mul(c, 0.62 + 0.38 * ly / e.shadeTop) : c; }
@@ -836,14 +1053,7 @@
       return g >= 0 ? roadPixel(e.bio, X, Y, g) : texture(e.gTer, e.gBio, X, Y);
     }
     if (e.nearRoad) { const g = roadField(m, X, Y, 0); if (g >= 0) return roadPixel(e.bio, X, Y, g); }
-    if (t === ROCK) {
-      // 바위 — 그 땅의 바위빛, 위 가장자리는 빛 · 아래쪽은 그늘 (솟은 바위처럼)
-      const rt = e.ter === OBSID || e.bio === 6 ? OBSID : ROCKY;
-      let c = texture(rt, e.bio === 7 ? 7 : 0, X, Y);
-      if (!e.belowRock && ly >= P - 3) c = mul(c, ly === P - 3 ? 0.72 : 0.52);
-      else if (ly <= 1) c = mix(c, WHITE, ly === 0 ? 0.16 : 0.08);
-      return c;
-    }
+    if (t === ROCK) return rockPix(m, e, X, Y);
     return texture(e.ter, e.bio, X, Y);                                   // 바닥 · 나무 밑
   }
 
@@ -1059,6 +1269,12 @@
     const sw = TW / P * T, sh = TH / P * T;
     for (let y = Math.max(0, y0 - 1); y < Math.min(m.h, y1 + 3); y++) for (let x = Math.max(0, x0 - 3); x < Math.min(m.w, x1 + 1); x++) {   // 왼쪽은 세 칸 더 (폭 세 칸 기둥)
       const k = y * m.w + x;
+      if (m.tile[k] === ROCK && (m.look[k] >> 4) !== 8 && loneRock(m, x, y)) {   // 혼자 선 바위 — 칸 아래 가장자리에 밑동이 닿게
+        const kind = rockKind(m.look[k] >> 4, terOf(m.look[k] & 15)), spr = boulderSprite(kind, (hash(x, y, 181) * 3) | 0);
+        const bw = BW / P * T, bh = BH / P * T;
+        ctx.drawImage(spr, Math.round(ox + (x + 0.5) * T - bw / 2), Math.round(oy + (y + 1) * T - bh + T * 0.05), bw, bh);
+        continue;
+      }
       if (m.tile[k] === ROCK && (m.look[k] >> 4) === 8) {                 // 성 안 돌기둥 — 덩어리의 왼쪽 아래 칸에서 한 번
         const isP = (i, j) => i >= 0 && j >= 0 && i < m.w && j < m.h && m.tile[j * m.w + i] === ROCK && (m.look[j * m.w + i] >> 4) === 8;
         if (isP(x - 1, y) || isP(x, y + 1)) continue;
@@ -1077,7 +1293,7 @@
     }
   }
 
-  const api = { has: m => !!(m && m.look), drawGround, drawTrees, paintTree, texture, bake, propOf, TW, TH, TREE_STYLES, TREE_PAL, cached: m => (prepared.get(m.look) || { chunks: new Map() }).chunks.size, P, CH, VOID, GRASS, DIRT, COBBLE, TILES, WATER, LAVA, OBSID, SNOW, ROCKY, PAVE, CANAL };
+  const api = { has: m => !!(m && m.look), drawGround, drawTrees, drawOver, paintTree, texture, bake, propOf, TW, TH, TREE_STYLES, TREE_PAL, cached: m => (prepared.get(m.look) || { chunks: new Map() }).chunks.size, P, CH, VOID, GRASS, DIRT, COBBLE, TILES, WATER, LAVA, OBSID, SNOW, ROCKY, PAVE, CANAL };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.MapArt = api;
 })(typeof window !== 'undefined' ? window : globalThis);

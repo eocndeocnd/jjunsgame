@@ -313,6 +313,7 @@ const MapView = (function () {
         ctx.fillStyle = '#1c1007'; ctx.strokeStyle = '#f6e7c3'; ctx.lineWidth = line + 1;
         ctx.beginPath(); ctx.arc(ox + (gp.x + 0.5) * T, oy + (py + 0.5) * T, T * 0.34, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
       }
+      if (art) MapArt.drawOver(ctx, m, ox, oy, T, x0, y0, x1, y1, gp);   // 나보다 위 — 옛 성문의 아치 (그 밑으로 지나감)
     }
 
     // ---------- 방향키 · WASD ----------

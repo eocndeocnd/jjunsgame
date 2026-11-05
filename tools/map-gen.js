@@ -24,6 +24,7 @@ const LOOK_GID = 1 + TILE_KINDS;
 const look = (ter, bio) => ((bio & 15) << 4) | (ter & 15);
 // 땅의 종류 말고 그림만 쓰는 겉모습 — 건물(바깥 지도에서 막힌 건물 한 채, 그림이 통째로 그림) · 문간(안 지도의 나가는 문)
 const BUILD = 12, DOORWAY = 13, CARPET = 14;   // CARPET — 건물 안 붉은 깔개
+const RUIN = 15;                                 // 무너진 옛 성벽 · 옛 성문 탑 (막힌 칸 — 그림이 무너진 성벽으로, 옛 성문은 아치까지)
 
 // ---------- Tiled JSON ----------
 function tiledProps(o) {
@@ -74,7 +75,7 @@ function buildTmj(spec) {
 // 겉모습 타일셋 그림 — 칸마다 그 땅의 종류 · 격의 대표 색 (Tiled 에서 겉모습 층을 칠할 때 보기용)
 function looksPng() {
   const W = TILE * 16, H = TILE * 16, px = Buffer.alloc(W * H * 4);
-  const base = { [BUILD]: [120, 114, 104], [DOORWAY]: [230, 210, 160], [CARPET]: [120, 30, 36], [OL.GRASS]: [111, 160, 74], [OL.DIRT]: [180, 138, 90], [OL.COBBLE]: [141, 138, 130], [OL.TILES]: [185, 173, 148], [OL.WATER]: [31, 90, 150],
+  const base = { [BUILD]: [120, 114, 104], [DOORWAY]: [230, 210, 160], [CARPET]: [120, 30, 36], [RUIN]: [150, 140, 120], [OL.GRASS]: [111, 160, 74], [OL.DIRT]: [180, 138, 90], [OL.COBBLE]: [141, 138, 130], [OL.TILES]: [185, 173, 148], [OL.WATER]: [31, 90, 150],
     [OL.LAVA]: [194, 48, 26], [OL.OBSID]: [44, 34, 50], [OL.SNOW]: [232, 238, 244], [OL.ROCKY]: [142, 138, 112], [OL.PAVE]: [110, 108, 120], [OL.CANAL]: [95, 176, 192] };
   for (let code = 0; code < 256; code++) {
     const ter = code & 15, bio = code >> 4, c = base[ter] || [12, 10, 18], k = 0.7 + (bio % 8) * 0.06;
@@ -951,12 +952,16 @@ function overworld(data) {
   }
 
   // 겉모습 — 시안의 땅 종류 · 격 그대로 (흙길 칸은 흙, 물을 건너는 흙길 칸은 물 그대로 — 그림이 널판 다리로 그림)
+  // 옛 바깥 성벽(2격 | 3격)의 무너진 조각 · 옛 성문의 탑 — 겉모습 RUIN (그림이 무너진 성벽으로, 옛 성문은 탑 사이 길 위에 아치 — 사용자 그림)
+  const [ry0, ry1] = L.span(L.RUINS.y0, L.RUINS.y1), ruin = i => !!L.wallMask[i] && !buildingCells[i] && ((i / w) | 0) >= ry0 && ((i / w) | 0) <= ry1;
   const lookLayer = new Uint8Array(w * h);
   for (let i = 0; i < w * h; i++) {
     const wet = L.ter[i] === OL.WATER || L.ter[i] === OL.CANAL;
-    lookLayer[i] = buildingCells[i] ? look(BUILD, 8) : look(tiles[i] === ROAD && !wet ? OL.DIRT : L.ter[i], L.bio[i]);
+    lookLayer[i] = buildingCells[i] ? look(BUILD, 8) : ruin(i) ? look(RUIN, L.bio[i]) : look(tiles[i] === ROAD && !wet ? OL.DIRT : L.ter[i], L.bio[i]);
   }
-  return buildTmj({ w, h, tiles, areas, posts, ports, npcs, chests, look: lookLayer });
+  // 옛 성문 — 두 탑을 감싸는 네모 (그림 js/mapart.js 의 drawOver 가 그 위에 아치를 덮어 그림)
+  const gx0 = L.span(L.RUINS.towers[0], L.RUINS.towers[0])[0], gx1 = L.span(L.RUINS.towers[1], L.RUINS.towers[1])[1];
+  return buildTmj({ w, h, tiles, areas, posts, ports, npcs, chests, look: lookLayer, props: { gate: `${gx0},${ry0},${gx1 - gx0 + 1},${ry1 - ry0 + 1}` } });
 }
 
 // ---------- 숨은 굴 (SECRET_ROOMS) — 히든 하나만 있는 작은 굴 ----------
@@ -1138,4 +1143,4 @@ function allMaps(data) {
   return out;
 }
 
-module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, looksPng, encodePng, generate, sewer, overworld, hub, secretRoom, buildingInterior, allMaps, layoutFromPlan, HUB_DOORS, REALMS, SEWER, SECRET_ROOMS, BUILDINGS, BUILD, DOORWAY, CARPET };
+module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, looksPng, encodePng, generate, sewer, overworld, hub, secretRoom, buildingInterior, allMaps, layoutFromPlan, HUB_DOORS, REALMS, SEWER, SECRET_ROOMS, BUILDINGS, BUILD, DOORWAY, CARPET, RUIN };
