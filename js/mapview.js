@@ -91,6 +91,52 @@ const MapView = (function () {
     requestAnimationFrame(frame);
 
     // ---------- 그리기 ----------
+    // 미리 그려 둔 조각 — 몬스터 그림(이모지) · 머리 위 레벨 · 기운 빛. 큰 글자 · 흐린 빛은 장면마다 새로 그리면 무거워서
+    // (큰 정예 · 보스가 한 화면에 여럿이면 끊김 — 사용자 지적) 그 모양 · 크기마다 한 번만 그려 두고 붙입니다. 크기는 기기 픽셀
+    const stamps = new Map();
+    function cached(key, make) {
+      let c = stamps.get(key);
+      if (!c) { if (stamps.size > 600) stamps.clear(); c = make(); stamps.set(key, c); }
+      return c;
+    }
+    function sheet(w, h) {
+      const c = document.createElement('canvas');
+      c.width = Math.max(2, Math.ceil(w)); c.height = Math.max(2, Math.ceil(h));
+      return c;
+    }
+    const stamp = (icon, px) => cached(`e|${px}|${icon}`, () => {
+      const c = sheet(px * 1.4, px * 1.4), g = c.getContext('2d');
+      g.font = `${px}px system-ui, "Segoe UI Emoji", "Noto Color Emoji", sans-serif`;
+      g.textAlign = 'center';
+      g.textBaseline = 'middle';
+      g.fillStyle = '#000';
+      g.fillText(icon, c.width / 2, c.height / 2);
+      return c;
+    });
+    // 테두리 두른 글 한 줄 — 아래 끝(base)이 글의 바닥
+    const tagStamp = (text, fs, color) => cached(`t|${fs}|${dpr}|${color}|${text}`, () => {
+      const font = `bold ${fs * dpr}px system-ui, sans-serif`, pad = 3 * dpr;
+      const meas = sheet(2, 2).getContext('2d');
+      meas.font = font;
+      const c = sheet(meas.measureText(text).width + pad * 2 + 2, fs * dpr * 1.5 + pad * 2), g = c.getContext('2d');
+      g.font = font; g.textAlign = 'center'; g.textBaseline = 'bottom';
+      g.lineWidth = 3 * dpr; g.strokeStyle = 'rgba(28,16,7,0.85)';
+      g.strokeText(text, c.width / 2, c.height - pad);
+      g.fillStyle = color;
+      g.fillText(text, c.width / 2, c.height - pad);
+      c.base = c.height - pad;
+      return c;
+    });
+    // 기운 — 그 색으로 빛나는 둥근 테 (반지름 r · 굵기 lw · 번짐 blur, 칸 단위가 아닌 화면 픽셀). 한가운데가 조각 한가운데
+    const auraStamp = (color, r, lw, blur) => cached(`a|${dpr}|${color}|${r}|${lw}|${blur}`, () => {
+      const M = r + lw + blur * 1.5, c = sheet(M * 2 * dpr, M * 2 * dpr), g = c.getContext('2d');
+      g.scale(dpr, dpr);
+      g.shadowColor = color; g.shadowBlur = blur;
+      g.strokeStyle = color; g.lineWidth = lw;
+      g.beginPath(); g.arc(M, M, r, 0, Math.PI * 2); g.stroke();
+      c.half = M;
+      return c;
+    });
     function fit() {
       const r = o.canvas.getBoundingClientRect();
       if (r.width === cw && r.height === ch) return;
@@ -141,28 +187,25 @@ const MapView = (function () {
         if (a && a.rank) { ctx.globalAlpha = art ? 0.1 : 0.2; ctx.fillStyle = rankColor(a.rank); ctx.fillRect(px, py, T, T); ctx.globalAlpha = 1; }   // 구역 — 그림 위엔 더 옅게
         if (m.secret[k]) { ctx.fillStyle = 'rgba(234,214,166,0.1)'; ctx.fillRect(px, py, T, T); }   // 아주 옅게 — 눈썰미 있는 사람만
       }
+      // 움직이는 것 — 물결 반짝임 · 용암 빛 · 횃불은 땅 위(나무 밑), 불씨 · 반딧불은 나무 위 (js/mapart.js)
+      const clock = performance.now() / 1000;
+      if (art) MapArt.liveGround(ctx, m, ox, oy, T, x0, y0, x1, y1, clock);
       if (art) MapArt.drawTrees(ctx, m, ox, oy, T, x0, y0, x1, y1);
+      if (art) MapArt.liveAir(ctx, m, ox, oy, T, x0, y0, x1, y1, clock);
       const seen = (x, y, sw = 1, sh = 1) => x + sw >= x0 && y + sh >= y0 && x <= x1 && y <= y1;
-      // cx · cy 는 칸 단위의 한가운데 (한 칸짜리면 x + 0.5)
+      // cx · cy 는 칸 단위의 한가운데 (한 칸짜리면 x + 0.5). 그림(이모지)은 크기마다 한 번만 그려 두고 붙임 — 큰 정예 · 보스가
+      // 한 화면에 여럿이면 큰 글자를 장면마다 새로 그리느라 무거웠음 (사용자 지적)
       const glyph = (cx, cy, icon, size = 0.72) => {
-        ctx.font = `${Math.round(T * size)}px system-ui, "Segoe UI Emoji", "Noto Color Emoji", sans-serif`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillStyle = '#000';
-        ctx.fillText(icon, ox + cx * T, oy + (cy + 0.06) * T);
+        const g = stamp(icon, Math.round(T * size * dpr));
+        ctx.drawImage(g, ox + cx * T - g.width / dpr / 2, oy + (cy + 0.06) * T - g.height / dpr / 2, g.width / dpr, g.height / dpr);
       };
       const line = Math.max(2, Math.round(T / 10));
       // 머리 위 레벨 — 나보다 센 상대는 붉게. cx · topY 는 픽셀
       const label = (id, cx, topY) => {
         const t = o.tag && o.tag(id);
         if (!t) return;
-        ctx.font = `bold ${Math.max(9, Math.round(T * 0.36))}px system-ui, sans-serif`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'bottom';
-        ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(28,16,7,0.85)';
-        ctx.strokeText(t.text, cx, topY);
-        ctx.fillStyle = t.hot ? '#ff9a8a' : '#f6e7c3';
-        ctx.fillText(t.text, cx, topY);
+        const s = tagStamp(t.text, Math.max(9, Math.round(T * 0.36)), t.hot ? '#ff9a8a' : '#f6e7c3');
+        ctx.drawImage(s, cx - s.width / dpr / 2, topY - s.base / dpr, s.width / dpr, s.height / dpr);
       };
 
       // 문 — 열리면 초록, 닫히면 갈색. 구멍(hole — 다른 지도로 내려가거나 나가는 곳)은 어두운 구멍. 이름이 있으면 문 위에 씁니다
@@ -276,11 +319,8 @@ const MapView = (function () {
           ctx.fillRect(ox + g.x * T + 1, oy + g.y * T + 1, n * T - 2, n * T - 2);
         }
         if (mob.aura) {   // 기운 — 그 색으로 빛남
-          ctx.save();
-          ctx.shadowColor = mob.aura.color; ctx.shadowBlur = T * 0.6;
-          ctx.strokeStyle = mob.aura.color; ctx.lineWidth = line + 1;
-          ctx.beginPath(); ctx.arc(cx, cy, T * 0.45 * n, 0, Math.PI * 2); ctx.stroke();
-          ctx.restore();
+          const s = auraStamp(mob.aura.color, T * 0.45 * n, line + 1, T * 0.6);
+          ctx.drawImage(s, cx - s.half, cy - s.half, s.half * 2, s.half * 2);
         }
         ctx.globalAlpha = mob.frozen > 0 ? 0.45 : 1;
         glyph(g.x + n / 2, gy + n / 2, getEnemy(mob.monster).icon, 0.72 * n);

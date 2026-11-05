@@ -255,8 +255,10 @@
     return c;
   }
 
-  // 용암 — 굳어 가는 검붉은 껍질 위 불줄기
+  // 용암 — 굳어 가는 검붉은 껍질 위 불줄기. 이 점이 용암이라고 적어 둠 (glowHit — 덩어리의 일렁이는 빛 판, chunk)
+  let glowHit = false;
   function lava(X, Y) {
+    glowHit = true;
     const u = X / 2, w = Y / 2, r = Math.abs(fbm(u * 0.035, w * 0.05, 25) - 0.5);
     if (r < 0.018) return mix(C.lavaHot, [255, 244, 190], 0.55);
     if (r < 0.045) return C.lavaHot;
@@ -1169,25 +1171,41 @@
     return texture(e.ter, e.bio, X, Y);                                   // 바닥 · 나무 밑
   }
 
-  // 칸 [x0, x0+w) × [y0, y0+h) 를 점으로 — put(점 x, 점 y, [r, g, b]) (덩어리 · 미리보기 도구가 씀)
+  // 칸 [x0, x0+w) × [y0, y0+h) 를 점으로 — put(점 x, 점 y, [r, g, b], 용암인가) (덩어리 · 미리보기 도구가 씀)
   function bake(m, x0, y0, w, h, put) {
     const A = prep(m);
     for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
       const tx = x0 + i, ty = y0 + j;
       if (tx < 0 || ty < 0 || tx >= m.w || ty >= m.h) continue;
       const e = cellOf(m, A, tx, ty);
-      for (let ly = 0; ly < P; ly++) for (let lx = 0; lx < P; lx++) put(i * P + lx, j * P + ly, paint(m, A, e, tx * P + lx, ty * P + ly, lx, ly));
+      for (let ly = 0; ly < P; ly++) for (let lx = 0; lx < P; lx++) {
+        glowHit = false;
+        const c = paint(m, A, e, tx * P + lx, ty * P + ly, lx, ly);
+        put(i * P + lx, j * P + ly, c, glowHit);
+      }
     }
   }
 
-  // 덩어리 하나 (CH×CH 칸) — 캔버스에 한 번 그려 둠
+  // 덩어리 하나 (CH×CH 칸) — 캔버스에 한 번 그려 둠. 용암이 있으면 용암 점만 칠한 빛 판(.glow)도 — 움직이는 것(liveGround)이 일렁이게 얹음
   function chunk(m, cx, cy) {
     const w = Math.min(CH, m.w - cx * CH), h = Math.min(CH, m.h - cy * CH), pw = w * P;
     const cv = document.createElement('canvas');
     cv.width = pw; cv.height = h * P;
     const g = cv.getContext('2d'), img = g.createImageData(pw, h * P), d = img.data;
-    bake(m, cx * CH, cy * CH, w, h, (x, y, c) => { const i = (y * pw + x) * 4; d[i] = c[0]; d[i + 1] = c[1]; d[i + 2] = c[2]; d[i + 3] = 255; });
+    let hot = null;
+    bake(m, cx * CH, cy * CH, w, h, (x, y, c, lit) => {
+      const i = (y * pw + x) * 4; d[i] = c[0]; d[i + 1] = c[1]; d[i + 2] = c[2]; d[i + 3] = 255;
+      if (lit) (hot || (hot = new Uint8Array(pw * h * P)))[y * pw + x] = 1;
+    });
     g.putImageData(img, 0, 0);
+    if (hot) {
+      const gc = document.createElement('canvas');
+      gc.width = pw; gc.height = h * P;
+      const gg = gc.getContext('2d'), gi = gg.createImageData(pw, h * P), gd = gi.data;
+      for (let n = 0; n < hot.length; n++) if (hot[n]) { gd[n * 4] = 255; gd[n * 4 + 1] = 150; gd[n * 4 + 2] = 60; gd[n * 4 + 3] = 255; }
+      gg.putImageData(gi, 0, 0);
+      cv.glow = gc;
+    }
     return cv;
   }
 
@@ -1405,7 +1423,103 @@
     }
   }
 
-  const api = { has: m => !!(m && m.look), drawGround, drawTrees, drawOver, paintTree, texture, bake, propOf, TW, TH, TREE_STYLES, TREE_PAL, cached: m => (prepared.get(m.look) || { chunks: new Map() }).chunks.size, P, CH, VOID, GRASS, DIRT, COBBLE, TILES, WATER, LAVA, OBSID, SNOW, ROCKY, PAVE, CANAL };
+  // ---------- 움직이는 것 (사용자가 본 예시 그대로) ----------
+  // 물결 반짝임 · 물결 줄 · 일렁이는 용암 빛 · 깜빡이는 횃불은 땅 바로 위(liveGround — 나무 · 기둥 밑), 날리는 불씨 · 반딧불은 나무 위(liveAir).
+  // 하나하나 따로 들고 있지 않고 칸마다 정해진 박자(hash)로 — 걸어서 화면이 바뀌어도 같은 자리에서 같은 때에. t 는 초
+  const FOREST = 2;
+  // 물 · 용암의 겉 — 둥근 물가 안쪽 깊이 lo 이상이고, 바로 위 14 점 안에 땅 가장자리(옆면)가 없는 점
+  const surf = (m, A, X, Y, lo) => poolField(A, m, X, Y) >= lo && poolField(A, m, X, Y - 14) >= 0;
+  // 칸마다의 박자 — 주기 per 초 중 life 초만 살아 있음. 살아 있으면 { a: 0~1 지난 몫, n: 몇 번째 (자리를 바꿀 씨앗), tau: 지난 초 }
+  function beat(x, y, s, t, per, life) {
+    const ph = t / per + hash(x, y, s), n = Math.floor(ph), tau = (ph - n) * per;
+    return tau < life ? { a: tau / life, n, tau } : null;
+  }
+  function torchesOf(m, A) {
+    if (A.torches) return A.torches;
+    // 위 벽 벽면의 횃불 자리 (hallWall 과 같은 셈 — 가운데 깃발에서 좌우로 48 점, 96 점마다) · 불꽃 가운데는 벽면 위에서 17 점
+    const out = [], mid = (m.w * P) >> 1, open = (x, y) => { const u = m.tile[y * m.w + x]; return u !== WALL && u >= 0; };
+    for (let X = (((mid - 48) % 96) + 96) % 96; X < m.w * P; X += 96) {
+      const tx = X >> 4;
+      for (let ty = 3; ty < m.h; ty++) if (open(tx, ty)) { if (!open(tx, ty - 1) && !open(tx, ty - 2) && !open(tx, ty - 3)) out.push([X, (ty - 3) * P + 17]); break; }
+    }
+    return (A.torches = out);
+  }
+  const FLAMES = [
+    [[0, -5], [-1, -4], [0, -4], [1, -3], [-1, -3], [0, -3], [-2, -2], [-1, -2], [0, -2], [1, -2], [-1, -1], [0, -1], [1, -1]],
+    [[1, -5], [0, -4], [1, -4], [-1, -3], [0, -3], [1, -3], [-1, -2], [0, -2], [1, -2], [2, -2], [-1, -1], [0, -1], [1, -1]],
+    [[-1, -5], [-1, -4], [0, -4], [-1, -3], [0, -3], [1, -3], [-2, -2], [-1, -2], [0, -2], [1, -2], [-1, -1], [0, -1], [1, -1]]
+  ];
+  function liveGround(ctx, m, ox, oy, T, x0, y0, x1, y1, t) {
+    const A = prep(m), u = T / P, dot = (X, Y) => ctx.fillRect(ox + X * u, oy + Y * u, u, u);
+    // 용암 빛 — 숨 쉬듯 (덩어리마다 용암 점만 칠해 둔 빛 판)
+    ctx.globalAlpha = 0.08 + 0.06 * Math.sin(t * 2.1);
+    for (let cy = Math.floor(y0 / CH); cy < Math.ceil(y1 / CH); cy++) for (let cx = Math.floor(x0 / CH); cx < Math.ceil(x1 / CH); cx++) {
+      const cv = A.chunks.get(cy * 4096 + cx);
+      if (cv && cv.glow) ctx.drawImage(cv.glow, ox + cx * CH * T, oy + cy * CH * T, cv.width / P * T, cv.height / P * T);
+    }
+    ctx.globalAlpha = 1;
+    // 물 — 한 점이 커졌다(십자) 사라지는 반짝임, 천천히 흐르는 짧은 물결 줄
+    for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
+      const k = y * m.w + x;
+      if (m.tile[k] !== POOL || (m.look[k] & 15) === LAVA) continue;
+      const g = beat(x, y, 202, t, 14 + hash(x, y, 201) * 12, 0.5 + hash(x, y, 203) * 0.4);
+      if (g) {
+        const X = x * P + 1 + ((hash(x, y, g.n * 3 + 204) * 14) | 0), Y = y * P + 1 + ((hash(x, y, g.n * 3 + 205) * 14) | 0);
+        if (surf(m, A, X, Y, 0.12)) {
+          const kk = Math.sin(g.a * Math.PI);
+          ctx.fillStyle = `rgba(255,255,255,${(0.9 * kk).toFixed(2)})`; dot(X, Y);
+          if (kk > 0.6) { ctx.fillStyle = `rgba(220,245,255,${(0.6 * kk).toFixed(2)})`; dot(X - 1, Y); dot(X + 1, Y); dot(X, Y - 1); dot(X, Y + 1); }
+        }
+      }
+      const w = beat(x, y, 207, t, 40 + hash(x, y, 206) * 20, 1.5 + hash(x, y, 208));
+      if (w) {
+        const len = 3 + ((hash(x, y, w.n * 3 + 209) * 4) | 0), X = x * P + ((hash(x, y, w.n * 3 + 210) * 10) | 0), Y = y * P + 2 + ((hash(x, y, w.n * 3 + 211) * 12) | 0);
+        if (surf(m, A, X, Y, 0.12) && surf(m, A, X + len + 4, Y, 0.12)) {
+          ctx.fillStyle = `rgba(210,240,250,${(0.35 * Math.sin(w.a * Math.PI)).toFixed(2)})`;
+          ctx.fillRect(ox + ((X + w.a * 4) | 0) * u, oy + Y * u, len * u, u);
+        }
+      }
+    }
+    // 횃불 (건물 안 위 벽) — 불꽃 모양이 바뀌며 흔들리고 둘레 빛이 커졌다 작아짐, 가끔 불똥
+    if (m.props && m.props.interior) torchesOf(m, A).forEach(([X, Y], i) => {
+      if (X < (x0 - 2) * P || X > (x1 + 2) * P || Y < (y0 - 2) * P || Y > (y1 + 2) * P) return;
+      const fl = 0.75 + 0.25 * Math.sin(t * 13 + i * 2) * Math.sin(t * 7.3 + i), sx = ox + X * u, sy = oy + Y * u;
+      const gr = ctx.createRadialGradient(sx, sy, u, sx, sy, 20 * fl * u);
+      gr.addColorStop(0, `rgba(255,190,90,${(0.3 * fl).toFixed(2)})`); gr.addColorStop(1, 'rgba(255,190,90,0)');
+      ctx.fillStyle = gr; ctx.fillRect(sx - 22 * u, sy - 22 * u, 44 * u, 44 * u);
+      for (const [dx, dy] of FLAMES[((t * 9 + i) | 0) % 3]) { ctx.fillStyle = dy <= -4 ? '#ff7a22' : dy <= -2 && Math.abs(dx) < 1 ? '#fff0b0' : '#ffb040'; dot(X + dx, Y + 4 + dy); }
+      for (let s = 0; s < 2; s++) {
+        const b = beat(i, s, 240, t, 1, 0.4 + hash(i, s, 241) * 0.4);
+        if (b) { ctx.fillStyle = `rgba(255,200,100,${(1 - b.a).toFixed(2)})`; dot(X + (((hash(i, b.n, 242 + s) * 3) | 0) - 1), (Y - 2 - b.a * 8) | 0); }
+      }
+    });
+  }
+  function liveAir(ctx, m, ox, oy, T, x0, y0, x1, y1, t) {
+    const A = prep(m), u = T / P, dot = (X, Y, n = 1) => ctx.fillRect(ox + X * u, oy + Y * u, n * u, n * u);
+    for (let y = Math.max(0, y0 - 1); y < Math.min(m.h, y1 + 2); y++) for (let x = Math.max(0, x0 - 1); x < Math.min(m.w, x1 + 1); x++) {
+      const k = y * m.w + x, tl = m.tile[k];
+      if (tl === POOL && (m.look[k] & 15) === LAVA) {
+        // 불씨 — 용암에서 솟아 흔들리며 오르다 식어 사라짐
+        const life = 1 + hash(x, y, 220), b = beat(x, y, 222, t, life + 0.4 + hash(x, y, 221) * 1.2, life);
+        if (!b) continue;
+        const s = b.n * 5, X0 = x * P + ((hash(x, y, s + 223) * 16) | 0), Y0 = y * P + ((hash(x, y, s + 224) * 16) | 0);
+        if (!surf(m, A, X0, Y0, 0.2)) continue;
+        const X = X0 + (hash(x, y, s + 225) - 0.5) * 8 * b.tau + Math.sin(t * 4 + hash(x, y, s + 227) * 6) * 1.2, Y = Y0 - (8 + hash(x, y, s + 226) * 8) * b.tau;
+        ctx.fillStyle = b.a < 0.35 ? '#ffe8a0' : b.a < 0.7 ? '#ffb040' : `rgba(224,80,30,${(1 - b.a).toFixed(2)})`;
+        dot(X | 0, Y | 0);
+      } else if ((tl === FLOOR || tl === TREE) && (m.look[k] >> 4) === FOREST && hash(x, y, 230) < 1 / 14) {
+        // 반딧불 — 숲 위를 천천히 떠돌며 깜빡임 (가운데 한 점 · 둘레 은은한 빛)
+        const ph = hash(x, y, 231) * 6.3, sp = 0.4 + hash(x, y, 232) * 0.5, r = 6 + hash(x, y, 233) * 8;
+        const kk = Math.max(0, Math.sin(t * 2.2 + ph * 3)) ** 2;
+        if (kk < 0.05) continue;
+        const X = (x * P + 8 + Math.sin(t * sp + ph) * r) | 0, Y = (y * P + 4 + Math.sin(t * sp * 1.3 + ph * 2) * r * 0.6 - 6) | 0;
+        ctx.fillStyle = `rgba(200,255,120,${(0.22 * kk).toFixed(2)})`; dot(X - 1, Y - 1, 3);
+        ctx.fillStyle = `rgba(240,255,170,${(0.95 * kk).toFixed(2)})`; dot(X, Y);
+      }
+    }
+  }
+
+  const api = { has: m => !!(m && m.look), drawGround, drawTrees, drawOver, liveGround, liveAir, paintTree, texture, bake, propOf, TW, TH, TREE_STYLES, TREE_PAL, cached: m => (prepared.get(m.look) || { chunks: new Map() }).chunks.size, P, CH, VOID, GRASS, DIRT, COBBLE, TILES, WATER, LAVA, OBSID, SNOW, ROCKY, PAVE, CANAL };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.MapArt = api;
 })(typeof window !== 'undefined' ? window : globalThis);

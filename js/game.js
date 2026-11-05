@@ -1868,12 +1868,14 @@ function josa(word, withJong, withoutJong) {
 const UNITS = [[1e36, 'Ud'], [1e33, 'Dc'], [1e30, 'No'], [1e27, 'Oc'], [1e24, 'Sp'], [1e21, 'Sx'], [1e18, 'Qi'],
                [1e15, 'Qa'], [1e12, 'T'], [1e9, 'B'], [1e6, 'M'], [1e3, 'K']];
 
+// 숫자 꼴 — 한 번 만들어 두고 씀 (toLocaleString 은 부를 때마다 새로 만들어 무거움 — 지도는 장면마다 머리 위 레벨을 씀)
+const NUM_KO = new Intl.NumberFormat('ko-KR'), NUM_KO3 = new Intl.NumberFormat('ko-KR', { maximumSignificantDigits: 3 });
 function fmt(n) {
   if (n === null || n === undefined || !isFinite(n)) return '-';
   const abs = Math.abs(n);
-  if (abs < 10000) return Math.round(n).toLocaleString('ko-KR');
+  if (abs < 10000) return NUM_KO.format(Math.round(n));
   for (const [v, s] of UNITS) if (abs >= v) return (n / v).toFixed(2) + s;
-  return Math.round(n).toLocaleString('ko-KR');
+  return NUM_KO.format(Math.round(n));
 }
 
 // 레벨은 자릿수를 그대로 보여줍니다 — 1,000만은 눈으로 봐야 맛이 나니까.
@@ -1882,7 +1884,7 @@ const LEVEL_UNITS = [[1e16, '경'], [1e12, '조'], [1e8, '억']];
 function fmtLevel(n) {
   if (!isFinite(n)) return '-';
   for (const [v, s] of LEVEL_UNITS) {
-    if (n >= v) return `${(n / v).toLocaleString('ko-KR', { maximumSignificantDigits: 3 })}${s}`;
+    if (n >= v) return `${NUM_KO3.format(n / v)}${s}`;
   }
-  return Math.round(n).toLocaleString('ko-KR');
+  return NUM_KO.format(Math.round(n));
 }

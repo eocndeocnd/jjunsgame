@@ -321,7 +321,16 @@ function generate(plan, ranks, data, opts) {
       post(e, ...at(e, center(fields[k])), false);
     });
     const halls = mine('E');
-    if (sets.length) {
+    if (sets.length && opts.spreadSets) {
+      // 임시 — 홀에 몰려 있으면 한 화면에 큰 정예가 열 마리쯤 겹쳐 무거워서(사용자 지적), 그 격의 들판 곳곳에 흩어 둡니다.
+      // 자리는 들판마다 가운데 줄의 왼쪽 · 오른쪽 둘(한가운데는 들머리 · 묶음 밖 정예 자리), 홀은 왼쪽 · 가운데 · 오른쪽 셋.
+      // 가까운 들판부터 그 자리들을 고르게 골라 원래 차례대로 세웁니다 (나중에 지도를 자세히 만들 때 다시 놓을 것)
+      const spots = [];
+      for (const room of fields) { const o = origin(room), y = o.y + (FIELD_H >> 1); spots.push({ x: o.x + 5, y }, { x: o.x + 14, y }); }
+      for (const room of halls) { const o = origin(room), y = o.y + (FIELD_H >> 1); spots.push({ x: o.x + 4, y }, { x: o.x + (FIELD_W >> 1), y }, { x: o.x + 15, y }); }
+      if (spots.length < sets.length) throw new Error(`${rank}격 — 묶음 정예 ${sets.length}마리를 흩어 둘 자리가 ${spots.length}곳뿐`);
+      sets.forEach((e, i) => post(e, ...at(e, spots[Math.floor((i + 0.5) * spots.length / sets.length)]), false));
+    } else if (sets.length) {
       // 홀 위 · 아래 벽을 따라 한 줄씩 — 두 줄 중 긴 쪽이 가장 짧아지게 나누고, 줄 안에서는 원래 차례대로 고르게 띄움.
       // 가운데 두 줄(6 · 7번째 줄)은 비워 지나가는 길, 둘레 한 칸과 서로의 사이 한 칸도 비움 (들판 둘을 튼 큰 홀이면 그 너비 전부)
       const o = origin(halls.reduce((a, b) => (b.c < a.c ? b : a))), W = halls.length > 1 ? FIELD_W * 2 + GAP : FIELD_W;
@@ -1082,7 +1091,8 @@ function realm(data, r, i) {
     plaza: `${r.title} 어귀`,
     obstacle: () => r.obstacle,
     entry: o => ({ name: 'in', label: '문의 광장', x: o.x + 2, y: o.y + (FIELD_H >> 1) - 1, w: 1, h: 2, to: `hub.${r.name}` }),
-    autoChests: true
+    autoChests: true,
+    spreadSets: true                                         // 묶음 정예는 홀 대신 들판 곳곳에 (임시 — 위 generate 의 3))
   });
 }
 
