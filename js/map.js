@@ -51,6 +51,9 @@
 
   const DIRS = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
   const STEPS = Object.values(DIRS);
+  // 나는 여덟 방향으로 걷습니다 (오른쪽부터 시계 방향 — 화면은 아래가 +y). 몬스터는 그대로 상하좌우
+  const DIR8 = [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1]];
+  const TURN = 0.12;   // 누른 쪽을 이만큼(라디안) 넘게 돌리면 지금 칸에서 새 줄을 긋습니다 — 손가락 떨림에는 줄을 그대로
 
   // ---------- 지도 읽기 ----------
   function props(o) {
@@ -165,7 +168,7 @@
       hooks: { temper: () => 'passive', rollAura: () => null, postAlive: () => true, portOpen: () => true, size: () => 1, chestOpen: () => false,
                merchantHere: () => false, ...hooks },
       time: 0,
-      player: { x: map.start.x, y: map.start.y, fromX: map.start.x, fromY: map.start.y, dir: null, wait: 0, needRelease: false },
+      player: { x: map.start.x, y: map.start.y, fromX: map.start.x, fromY: map.start.y, dir: null, vec: null, line: null, wait: 0, needRelease: false },
       mobs: [],
       nextMob: 1,
       encounter: null,                    // 닿아서 싸움 화면이 떠 있는 동안 { mob | post, first }
@@ -178,12 +181,20 @@
     return w;
   }
 
-  // 누르고 있는 방향 (null = 뗐다). 닿은 뒤에는 한 번 떼야 다시 걷습니다 — 누른 채로 또 부딪히지 않게.
+  // 누르고 있는 쪽 (null = 뗐다) — 'up' · 'down' · 'left' · 'right', 또는 아무 쪽 { x, y } (조이스틱이 향하는 쪽 · 길이는 상관없음).
+  // 그 쪽으로 곧게 걷습니다 — 누른 칸에서 그 쪽으로 그은 줄(line)을 따라 대각선 · 곧은 걸음을 섞어 (stepPlayer, 사용자 결정 — 예전엔 상하좌우뿐).
+  // dir 는 그림이 보는 쪽 (가로 · 세로 중 큰 쪽). 닿은 뒤에는 한 번 떼야 다시 걷습니다 — 누른 채로 또 부딪히지 않게.
   function setInput(w, dir) {
     const p = w.player;
     if (p.needRelease) { if (!dir) p.needRelease = false; return; }
-    p.dir = DIRS[dir] ? dir : null;
+    const v = typeof dir === 'string' ? (DIRS[dir] ? { x: DIRS[dir][0], y: DIRS[dir][1] } : null) : dir && (dir.x || dir.y) ? dir : null;
+    if (!v) { halt(p); return; }
+    const len = Math.hypot(v.x, v.y), u = { x: v.x / len, y: v.y / len };
+    if (!p.line || Math.acos(Math.max(-1, Math.min(1, p.line.v.x * u.x + p.line.v.y * u.y))) > TURN) p.line = { x: p.x, y: p.y, v: u };
+    p.vec = u;
+    p.dir = Math.abs(u.x) >= Math.abs(u.y) ? (u.x > 0 ? 'right' : 'left') : (u.y > 0 ? 'down' : 'up');
   }
+  function halt(p) { p.dir = null; p.vec = null; p.line = null; }
 
   const manh = (ax, ay, bx, by) => Math.abs(ax - bx) + Math.abs(ay - by);
   function gap(r, x, y) {   // 사각형 바깥으로 얼마나 떨어졌나 (안이면 0, 0)
@@ -342,9 +353,9 @@
     w.time += dt;
     const p = w.player;
     p.wait -= dt;
-    if (p.dir && p.wait <= 0) {
-      stepPlayer(w, p.dir, ev);
-      p.wait = Math.max(0, p.wait + 1 / RULES.PLAYER_SPEED);
+    if (p.dir && p.vec && p.wait <= 0) {
+      const len = stepPlayer(w, ev);                       // 대각선 한 걸음은 √2 칸 — 어느 쪽으로든 같은 빠르기
+      p.wait = Math.max(0, p.wait + len / RULES.PLAYER_SPEED);
     } else if (!p.dir && p.wait < 0) p.wait = 0;
 
     for (const m of w.mobs) {
@@ -362,31 +373,52 @@
 
   function meet(w, ev, enc) {
     w.encounter = enc;
-    w.player.dir = null;
+    halt(w.player);
     w.player.needRelease = true;
     ev.push({ type: 'contact', ...enc });
   }
 
-  function stepPlayer(w, dir, ev) {
-    const p = w.player, [dx, dy] = DIRS[dir];
-    const nx = p.x + dx, ny = p.y + dy;
+  // 한 걸음 — 누른 쪽을 끼고 있는 두 방향(여덟 방향 중) 가운데, 걸은 뒤 줄(p.line)에서 덜 벗어나는 쪽으로. 그래서 비스듬히 밀면 비스듬히 곧게 갑니다.
+  // 대각선은 두 옆 칸이 다 트였을 때만 (벽 · 나무 모서리를 깎아 지나가지 않게). 막히면 다른 하나, 그다음 그 대각선의 가로 · 세로 걸음으로
+  // 벽을 따라 미끄러지되, 누른 쪽으로 조금이라도 나아가는 걸음만 (곧게 민 채로 벽에 닿으면 옆으로 새지 않음). 걸은 길이(1 · √2)를 돌려줍니다
+  function stepPlayer(w, ev) {
+    const p = w.player, L = p.line || { x: p.x, y: p.y, v: p.vec }, v = L.v;
+    const k = ((Math.floor(Math.atan2(v.y, v.x) / (Math.PI / 4)) % 8) + 8) % 8, m0 = DIR8[k], m1 = DIR8[(k + 1) % 8];
+    const off = m => Math.abs((p.x + m[0] - L.x) * v.y - (p.y + m[1] - L.y) * v.x);
+    const tries = off(m0) <= off(m1) ? [m0, m1] : [m1, m0];
+    const diag = tries.find(m => m[0] && m[1]);
+    if (diag) for (const m of Math.abs(v.x) >= Math.abs(v.y) ? [[diag[0], 0], [0, diag[1]]] : [[0, diag[1]], [diag[0], 0]])
+      if (!tries.some(t => t[0] === m[0] && t[1] === m[1]) && m[0] * v.x + m[1] * v.y > 0.2) tries.push(m);
+    for (let i = 0; i < tries.length; i++) {
+      const [dx, dy] = tries[i], r = stepTo(w, dx, dy, ev);
+      if (r === 'wall') continue;
+      if (r === 'moved' && i > 0 && p.vec) p.line = { x: p.x, y: p.y, v };   // 비켜 걸었으면 여기서 줄을 새로
+      return r === 'moved' && dx && dy ? Math.SQRT2 : 1;
+    }
+    return 1;
+  }
+  // 한 칸 옮기기 — 'moved' 옮김 · 'wall' 막혀 못 감(다른 쪽을 해 봄) · 'event' 닿은 것이 있음(닫힌 문 · 몬스터 · 보물상자 · 상인)
+  function stepTo(w, dx, dy, ev) {
+    const p = w.player, nx = p.x + dx, ny = p.y + dy;
+    if (dx && dy && (wall(w, p.x + dx, p.y) || wall(w, p.x, p.y + dy))) return 'wall';
     const port = portAt(w, nx, ny);
-    if (port && !w.hooks.portOpen(port)) { ev.push({ type: 'closed', port }); return; }
-    if (wall(w, nx, ny)) return;
+    if (port && !w.hooks.portOpen(port)) { ev.push({ type: 'closed', port }); return 'event'; }
+    if (wall(w, nx, ny)) return 'wall';
     const mob = mobAt(w, nx, ny);
-    if (mob) return meet(w, ev, { mob, first: 'player' });
+    if (mob) { meet(w, ev, { mob, first: 'player' }); return 'event'; }
     const post = postAt(w, nx, ny);
-    if (post) return meet(w, ev, { post, first: 'player' });
+    if (post) { meet(w, ev, { post, first: 'player' }); return 'event'; }
     const chest = chestAt(w, nx, ny);
     if (chest) {
-      if (!w.hooks.chestOpen(chest.chest)) { p.dir = null; p.needRelease = true; ev.push({ type: 'chest', chest }); }
-      return;
+      if (!w.hooks.chestOpen(chest.chest)) { halt(p); p.needRelease = true; ev.push({ type: 'chest', chest }); return 'event'; }
+      return 'wall';                                       // 연 상자는 그냥 막힌 칸
     }
     const shop = merchantAt(w, nx, ny);
-    if (shop) { p.dir = null; p.needRelease = true; ev.push({ type: 'merchant', npc: shop }); return; }
+    if (shop) { halt(p); p.needRelease = true; ev.push({ type: 'merchant', npc: shop }); return 'event'; }
     p.fromX = p.x; p.fromY = p.y;
     p.x = nx; p.y = ny;
     if (port && port.to) ev.push({ type: 'port', port });
+    return 'moved';
   }
 
   // 지금 무엇을 할지 — 어슬렁(wander) · 쫓기(chase) · 달아나기(flee) · 제 구역으로 돌아가기(return)

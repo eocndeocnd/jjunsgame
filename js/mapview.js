@@ -59,16 +59,15 @@ const MapView = (function () {
     const glide = new WeakMap();   // 나 · 몬스터 → 보이는 자리 { x, y, phase }
     function seenAt(e, speed, dt) {
       let g = glide.get(e);
-      if (!g || Math.abs(g.x - e.x) + Math.abs(g.y - e.y) > 2) {   // 처음 보거나 멀리 옮겨졌으면(문 · 불러오기) 그 자리에
+      if (!g || Math.hypot(g.x - e.x, g.y - e.y) > 2.5) {   // 처음 보거나 멀리 옮겨졌으면(문 · 불러오기) 그 자리에 (대각선 한 걸음 뒤처진 것은 그대로 따라감)
         g = { x: e.x, y: e.y, phase: 0, moving: false, walked: 0, idle: 1 };
         glide.set(e, g);
         return g;
       }
       const step = speed * dt;
-      const toward = (from, to) => (Math.abs(to - from) <= step ? to : from + Math.sign(to - from) * step);
       const moving = g.x !== e.x || g.y !== e.y;
-      g.x = toward(g.x, e.x);
-      g.y = toward(g.y, e.y);
+      const ddx = e.x - g.x, ddy = e.y - g.y, dd = Math.hypot(ddx, ddy);   // 곧은 줄로 따라감 — 대각선 걸음도 같은 빠르기로
+      if (dd <= step) { g.x = e.x; g.y = e.y; } else { g.x += ddx / dd * step; g.y += ddy / dd * step; }
       g.phase = moving ? g.phase + dt * speed * Math.PI : 0;   // 한 칸에 한 번 들썩
       // 걸은 칸 수 — 칸과 칸 사이에 잠깐 멈춰도 이어서 세고(걸음 A · B 가 번갈아), 조금 서 있으면 처음부터
       g.moving = moving;
@@ -326,7 +325,7 @@ const MapView = (function () {
       if (ev.repeat) return;
       if (!held.includes(d)) held.push(d);
       MapRules.setInput(v.world, null);
-      MapRules.setInput(v.world, held[held.length - 1]);   // 나중에 누른 쪽으로
+      MapRules.setInput(v.world, heldVec());
     });
     document.addEventListener('keyup', ev => {
       const d = KEYS[ev.key];
@@ -334,24 +333,33 @@ const MapView = (function () {
       held.splice(held.indexOf(d), 1);
       if (!v.world) return;
       MapRules.setInput(v.world, null);
-      if (held.length) MapRules.setInput(v.world, held[held.length - 1]);
+      if (held.length) MapRules.setInput(v.world, heldVec());
     });
+    // 같이 누른 쪽을 합침 — 위 + 오른쪽이면 대각선. 맞선 쪽(왼쪽 + 오른쪽)은 나중에 누른 쪽으로
+    function heldVec() {
+      let x = 0, y = 0;
+      for (const d of held) { const [dx, dy] = MapRules.DIRS[d]; x += dx; y += dy; }
+      if (!x && !y) { const [dx, dy] = MapRules.DIRS[held[held.length - 1]]; return { x: dx, y: dy }; }
+      return { x, y };
+    }
 
     // ---------- 떠 있는 조이스틱 ----------
     // 지도 어디든 누르면 그 자리에 조이스틱(o.stick — position: fixed, 켜면 .on)이 생기고, 끄는 쪽으로 걷고, 떼면 사라집니다.
     // (예전엔 화면 아래 가운데에 붙박인 조이스틱이었습니다 — 화면 틀을 지도 가득으로 바꾸며 바꿈, 사용자 결정)
-    // 칸 단위라 상하좌우 넷으로 끊습니다. 같은 쪽으로 누른 채로는 닿은 뒤 다시 걷지 않습니다 — 손을 떼거나 다른 쪽으로 밀어야.
-    const STICK_REACH = 40, STICK_DEAD = 10;   // 손잡이가 움직이는 거리 · 이만큼은 밀어야 걷기 시작 (px)
-    let sx = 0, sy = 0;
+    // 조이스틱이 향하는 쪽 그대로 걷습니다 (대각선 · 비스듬히도 — map.js 의 setInput, 사용자 결정. 예전엔 상하좌우 넷으로 끊었음).
+    // 같은 쪽으로 누른 채로는 닿은 뒤 다시 걷지 않습니다 — 손을 떼거나 RETURN 넘게 다른 쪽으로 밀어야.
+    const STICK_REACH = 40, STICK_DEAD = 10, RETURN = 0.6;   // 손잡이가 움직이는 거리 · 이만큼은 밀어야 걷기 시작 (px) · 다시 민 것으로 칠 만큼 돌린 각 (라디안)
+    let sx = 0, sy = 0, pushed = null;
     function stickMove(ev) {
       if (ev.pointerId !== stickId) return;
       const dx = ev.clientX - sx, dy = ev.clientY - sy;
       const len = Math.hypot(dx, dy), k = len > STICK_REACH ? STICK_REACH / len : 1;
       if (knob) knob.style.transform = `translate(${dx * k}px, ${dy * k}px)`;
-      const dir = len < STICK_DEAD ? null : Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up');
-      if (v.world && dir !== stickDir) {
-        MapRules.setInput(v.world, null);
-        MapRules.setInput(v.world, dir);
+      const dir = len < STICK_DEAD ? null : { x: dx / len, y: dy / len };
+      if (v.world) {
+        const turned = dir && pushed && Math.acos(Math.max(-1, Math.min(1, dir.x * pushed.x + dir.y * pushed.y))) > RETURN;
+        if (!dir || !pushed || turned) { MapRules.setInput(v.world, null); pushed = dir; }   // 새로 밀었음 (닿은 뒤에도 다시 걸음)
+        if (dir) MapRules.setInput(v.world, dir);
       }
       stickDir = dir;
     }
@@ -359,6 +367,7 @@ const MapView = (function () {
       if (ev.pointerId !== stickId) return;
       stickId = null;
       stickDir = null;
+      pushed = null;
       if (o.stick) o.stick.classList.remove('on');
       if (v.world) MapRules.setInput(v.world, null);
     }
