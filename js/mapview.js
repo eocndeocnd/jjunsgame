@@ -54,25 +54,25 @@ const MapView = (function () {
     const live = () => v.world && shown() && !o.paused();
 
     // ---------- 부드럽게 ----------
-    // 규칙은 칸 그대로(map.js) — 보이는 자리만 칸 사이를 미끄러져 따라갑니다. 걷는 동안은 살짝 들썩입니다.
-    // 미끄러지는 빠르기는 그 걸음의 빠르기와 같게: 나는 초당 12칸, 몬스터는 초당 3칸 (어슬렁 · 달아나기는 미끄러진 뒤 잠깐 섬).
+    // 몬스터는 규칙이 칸 그대로(map.js) — 보이는 자리만 칸 사이를 미끄러져 따라갑니다 (초당 3칸 · 어슬렁 · 달아나기는 미끄러진 뒤 잠깐 섬).
+    // 나는 규칙부터 칸 사이를 걸으므로(map.js 의 ox · oy) 그 자리 그대로 그립니다. 걷는 동안은 살짝 들썩입니다.
     const glide = new WeakMap();   // 나 · 몬스터 → 보이는 자리 { x, y, phase }
     function seenAt(e, speed, dt) {
+      const exact = e.ox !== undefined, tx = e.x + (e.ox || 0), ty = e.y + (e.oy || 0);
       let g = glide.get(e);
-      if (!g || Math.hypot(g.x - e.x, g.y - e.y) > 2.5) {   // 처음 보거나 멀리 옮겨졌으면(문 · 불러오기) 그 자리에 (대각선 한 걸음 뒤처진 것은 그대로 따라감)
-        g = { x: e.x, y: e.y, phase: 0, moving: false, walked: 0, idle: 1 };
+      if (!g || Math.hypot(g.x - tx, g.y - ty) > 2.5) {   // 처음 보거나 멀리 옮겨졌으면(문 · 불러오기) 그 자리에
+        g = { x: tx, y: ty, phase: 0, moving: false, walked: 0, idle: 1 };
         glide.set(e, g);
         return g;
       }
-      const step = speed * dt;
-      const moving = g.x !== e.x || g.y !== e.y;
-      const ddx = e.x - g.x, ddy = e.y - g.y, dd = Math.hypot(ddx, ddy);   // 곧은 줄로 따라감 — 대각선 걸음도 같은 빠르기로
-      if (dd <= step) { g.x = e.x; g.y = e.y; } else { g.x += ddx / dd * step; g.y += ddy / dd * step; }
-      g.phase = moving ? g.phase + dt * speed * Math.PI : 0;   // 한 칸에 한 번 들썩
-      // 걸은 칸 수 — 칸과 칸 사이에 잠깐 멈춰도 이어서 세고(걸음 A · B 가 번갈아), 조금 서 있으면 처음부터
+      const ddx = tx - g.x, ddy = ty - g.y, dd = Math.hypot(ddx, ddy), moving = dd > 1e-6;
+      const go = exact ? dd : Math.min(dd, speed * dt);   // 이번 장면에 옮긴 만큼
+      if (exact || dd <= go) { g.x = tx; g.y = ty; } else { g.x += ddx / dd * go; g.y += ddy / dd * go; }
+      g.phase = moving ? g.phase + go * Math.PI : 0;     // 한 칸에 한 번 들썩
+      // 걸은 칸 수 — 잠깐 멈춰도 이어서 세고(걸음 A · B 가 번갈아), 조금 서 있으면 처음부터
       g.moving = moving;
       g.idle = moving ? 0 : g.idle + dt;
-      g.walked = moving ? g.walked + step : g.idle > 0.15 ? 0 : g.walked;
+      g.walked = moving ? g.walked + go : g.idle > 0.15 ? 0 : g.walked;
       return g;
     }
     v.seenAt = e => glide.get(e);   // 시험 · 살펴보기용

@@ -963,30 +963,73 @@ test('조이스틱이 향하는 쪽으로 — 비스듬히 밀면 대각선 · �
   assert.ok(Math.abs(Math.hypot(d.dx, d.dy) - s.dx) <= 1.5, `대각선 ${Math.hypot(d.dx, d.dy).toFixed(1)}칸 · 곧게 ${s.dx}칸`);
 });
 
-test('조이스틱 — 대각선은 벽 모서리를 깎아 지나가지 않고, 비스듬히 민 채 벽에 닿으면 벽을 따라 미끄러짐 (곧게 밀면 그대로 섬)', () => {
+test('미끄러지듯 걷기 — 칸에 매이지 않고 고르게 나아가고, 떼면 그 자리(칸 사이)에 섬. 몸은 벽에 겹치지 않고, 비스듬히 밀면 벽을 따라 미끄러짐', () => {
+  const m = mapOf([
+    '##########',
+    '#@.#.....#',
+    '#........#',
+    '#........#',
+    '##########'
+  ]);
+  const w = M.createWorld(m, {}, 1);
+  w.mobs = [];
+  const p = w.player, at = () => ({ x: p.x + 0.5 + p.ox, y: p.y + 0.5 + p.oy });
+  const clear = () => {                              // 몸 네모가 어떤 벽 칸과도 겹치지 않음
+    const c = at(), r = R.PLAYER_R;
+    for (let j = Math.floor(c.y - r); j <= Math.floor(c.y + r - 1e-9); j++) for (let i = Math.floor(c.x - r); i <= Math.floor(c.x + r - 1e-9); i++)
+      assert.ok(!m.solid[j * m.w + i], `벽 (${i}, ${j}) 에 겹침`);
+  };
+  // 고르게 — 장면마다 초당 12칸 × 걸린 시간만큼
+  w.player.x = 1; w.player.y = 2;
+  M.setInput(w, 'right');
+  let last = at();
+  for (let k = 0; k < 6; k++) {
+    M.tick(w, 0.02);
+    const c = at();
+    assert.ok(Math.abs(c.x - last.x - R.PLAYER_SPEED * 0.02) < 1e-6 && c.y === last.y, `고르게 (${(c.x - last.x).toFixed(3)})`);
+    last = c;
+  }
+  // 떼면 그 자리 — 칸 가운데로 끌려가지 않음
+  M.setInput(w, null);
+  const stop = at();
+  run(w, 0.3);
+  assert.deepEqual(at(), stop, '뗀 자리 그대로');
+  assert.ok(Math.abs(p.ox) > 0.05, '칸 사이에 섬');
+  // 오른쪽 아래로 — 오른쪽(3, 1)이 벽이라 그 모서리를 깎지 않고 미끄러져 내려가 지나감
+  p.x = 2; p.y = 1; p.ox = 0; p.oy = 0;
+  M.setInput(w, { x: 1, y: 1 });
+  run(w, 0.4, clear);
+  assert.ok(p.x >= 3 && p.y >= 2, `벽 모서리를 돌아 오른쪽 아래로 (${p.x}, ${p.y})`);
+  M.setInput(w, null);
+  // 벽에 대고 비스듬히 위 오른쪽 — 위는 막혀 오른쪽으로만 미끄러지다 (3, 1) 벽 앞에서 섬
+  p.x = 1; p.y = 1; p.ox = 0; p.oy = 0;
+  M.setInput(w, { x: 0.5, y: -1 });
+  run(w, 0.5, clear);
+  assert.equal(p.y, 1);
+  assert.ok(Math.abs(at().x - (3 - R.PLAYER_R)) < 1e-6, `벽 바로 앞까지 (${at().x.toFixed(3)})`);
+  M.setInput(w, null);
+  // 곧게 위로 — 벽이라 그대로
+  p.x = 1; p.y = 1; p.ox = 0; p.oy = 0;
+  M.setInput(w, 'up');
+  run(w, 0.3);
+  assert.deepEqual([p.x, p.y, +p.ox.toFixed(6), +p.oy.toFixed(6)], [1, 1, 0, 0]);
+});
+
+test('미끄러지듯 걷기 — 한 칸짜리 길 · 문 앞에서 조금 비껴 있어도 그 줄 가운데로 비켜 들어감', () => {
   const m = mapOf([
     '#######',
-    '#@.#..#',
     '#.....#',
+    '#@.....',
     '#.....#',
     '#######'
   ]);
   const w = M.createWorld(m, {}, 1);
   w.mobs = [];
-  w.player.x = 2; w.player.y = 1;
-  M.setInput(w, { x: 1, y: 1 });                   // 오른쪽 아래 — 오른쪽(3, 1)이 벽이라 대각선으로 못 가고 아래로
-  M.tick(w, 0.01);
-  assert.deepEqual([w.player.x, w.player.y], [2, 2], '모서리를 깎지 않고 아래로 비켜 걸음');
-  M.setInput(w, null);
-  // 벽에 대고 비스듬히 — 위 오른쪽으로 밀면 위(벽)는 못 가고 오른쪽으로 미끄러짐
-  w.player.x = 1; w.player.y = 1; w.player.wait = 0;
-  M.setInput(w, { x: 0.5, y: -1 });
-  M.tick(w, 0.01);
-  assert.deepEqual([w.player.x, w.player.y], [2, 1], '벽을 따라 오른쪽으로');
-  M.setInput(w, null);
-  // 곧게 위로 밀면 — 벽이라 그대로 (옆으로 새지 않음)
-  w.player.x = 1; w.player.y = 1; w.player.wait = 0;
-  M.setInput(w, 'up');
-  run(w, 0.3);
-  assert.deepEqual([w.player.x, w.player.y], [1, 1]);
+  const p = w.player;
+  p.x = 4; p.y = 2; p.oy = 0.3;                    // 한 칸 길(6, 2) 줄에서 0.3칸 아래로 비껴
+  M.setInput(w, 'right');
+  run(w, 0.5);
+  assert.equal(p.y, 2);
+  assert.equal(p.x, 6, '한 칸 길로 들어섬');
+  assert.ok(Math.abs(p.oy) < 0.13, `줄 가운데로 비켜 (${p.oy.toFixed(3)})`);
 });

@@ -9328,6 +9328,7 @@ const MAP_FILES = {"arthurian":{"compressionlevel":-1,"type":"map","version":"1.
     SPAWN_GAP: 2,        // 같이 선 몬스터끼리는 이만큼 떨어지게 (바로 옆 칸 금지)
     SPAWN_CLEAR: 3,      // 내 코앞에는 세우지 않습니다
     PLAYER_SPEED: 12,    // 초당 칸 (5 → 10 → 12, 사용자 결정)
+    PLAYER_R: 0.38,      // 내 몸 — 한가운데에서 이만큼씩, 한 변 0.76칸 네모 (칸 사이를 미끄러지며 걷는 몸 — 벽에 막히고 몬스터에 닿음)
     CHASE_SPEED: 3,
     FLEE_SPEED: 2,       // 달아나는 중립 — 너무 잘 달아나서 줄임 (3 → 2, 사용자 결정)
     FLEE_STUMBLE: 0.3,   // 달아나다 멈칫하는 몫 — 그 걸음은 제자리
@@ -9348,10 +9349,7 @@ const MAP_FILES = {"arthurian":{"compressionlevel":-1,"type":"map","version":"1.
   function temperOf(arch) { return TEMPER_BY_ARCH[arch] || 'passive'; }
 
   const DIRS = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
-  const STEPS = Object.values(DIRS);
-  // 나는 여덟 방향으로 걷습니다 (오른쪽부터 시계 방향 — 화면은 아래가 +y). 몬스터는 그대로 상하좌우
-  const DIR8 = [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1]];
-  const TURN = 0.12;   // 누른 쪽을 이만큼(라디안) 넘게 돌리면 지금 칸에서 새 줄을 긋습니다 — 손가락 떨림에는 줄을 그대로
+  const STEPS = Object.values(DIRS);   // 몬스터는 칸마다 상하좌우로
 
   // ---------- 지도 읽기 ----------
   function props(o) {
@@ -9466,7 +9464,8 @@ const MAP_FILES = {"arthurian":{"compressionlevel":-1,"type":"map","version":"1.
       hooks: { temper: () => 'passive', rollAura: () => null, postAlive: () => true, portOpen: () => true, size: () => 1, chestOpen: () => false,
                merchantHere: () => false, ...hooks },
       time: 0,
-      player: { x: map.start.x, y: map.start.y, fromX: map.start.x, fromY: map.start.y, dir: null, vec: null, line: null, wait: 0, needRelease: false },
+      // 나 — x · y 는 몸 한가운데가 든 칸 (규칙은 모두 이 칸으로), ox · oy 는 그 칸 가운데에서 비킨 만큼 (-0.5 ~ 0.5, 칸 사이를 미끄러지며 걸음)
+      player: { x: map.start.x, y: map.start.y, ox: 0, oy: 0, fromX: map.start.x, fromY: map.start.y, dir: null, vec: null, wait: 0, needRelease: false },
       mobs: [],
       nextMob: 1,
       encounter: null,                    // 닿아서 싸움 화면이 떠 있는 동안 { mob | post, first }
@@ -9480,19 +9479,24 @@ const MAP_FILES = {"arthurian":{"compressionlevel":-1,"type":"map","version":"1.
   }
 
   // 누르고 있는 쪽 (null = 뗐다) — 'up' · 'down' · 'left' · 'right', 또는 아무 쪽 { x, y } (조이스틱이 향하는 쪽 · 길이는 상관없음).
-  // 그 쪽으로 곧게 걷습니다 — 누른 칸에서 그 쪽으로 그은 줄(line)을 따라 대각선 · 곧은 걸음을 섞어 (stepPlayer, 사용자 결정 — 예전엔 상하좌우뿐).
+  // 그 쪽으로 칸에 매이지 않고 미끄러지듯 걷고, 떼면 그 자리에 섭니다 (walk · slide — 사용자 결정, 예전엔 칸마다 뚝뚝 끊겼음).
   // dir 는 그림이 보는 쪽 (가로 · 세로 중 큰 쪽). 닿은 뒤에는 한 번 떼야 다시 걷습니다 — 누른 채로 또 부딪히지 않게.
   function setInput(w, dir) {
     const p = w.player;
     if (p.needRelease) { if (!dir) p.needRelease = false; return; }
     const v = typeof dir === 'string' ? (DIRS[dir] ? { x: DIRS[dir][0], y: DIRS[dir][1] } : null) : dir && (dir.x || dir.y) ? dir : null;
     if (!v) { halt(p); return; }
-    const len = Math.hypot(v.x, v.y), u = { x: v.x / len, y: v.y / len };
-    if (!p.line || Math.acos(Math.max(-1, Math.min(1, p.line.v.x * u.x + p.line.v.y * u.y))) > TURN) p.line = { x: p.x, y: p.y, v: u };
-    p.vec = u;
-    p.dir = Math.abs(u.x) >= Math.abs(u.y) ? (u.x > 0 ? 'right' : 'left') : (u.y > 0 ? 'down' : 'up');
+    const len = Math.hypot(v.x, v.y);
+    p.vec = { x: v.x / len, y: v.y / len };
+    p.dir = Math.abs(p.vec.x) >= Math.abs(p.vec.y) ? (p.vec.x > 0 ? 'right' : 'left') : (p.vec.y > 0 ? 'down' : 'up');
   }
-  function halt(p) { p.dir = null; p.vec = null; p.line = null; }
+  function halt(p) { p.dir = null; p.vec = null; }
+  // 내 몸 네모 (한가운데 cx · cy) — 몬스터 몸(칸 사각형)과 겹치는가
+  function playerBox(p, cx = p.x + 0.5 + (p.ox || 0), cy = p.y + 0.5 + (p.oy || 0)) {
+    const r = RULES.PLAYER_R;
+    return { x0: cx - r, x1: cx + r, y0: cy - r, y1: cy + r };
+  }
+  const touchesPlayer = (w, b) => { const q = playerBox(w.player); return b.x < q.x1 && q.x0 < b.x + b.w && b.y < q.y1 && q.y0 < b.y + b.h; };
 
   const manh = (ax, ay, bx, by) => Math.abs(ax - bx) + Math.abs(ay - by);
   function gap(r, x, y) {   // 사각형 바깥으로 얼마나 떨어졌나 (안이면 0, 0)
@@ -9568,7 +9572,7 @@ const MAP_FILES = {"arthurian":{"compressionlevel":-1,"type":"map","version":"1.
   function freeForMob(w, x, y, n = 1, self = null) {
     const b = body(x, y, n), p = w.player;
     for (let j = y; j < y + n; j++) for (let i = x; i < x + n; i++) if (wall(w, i, j)) return false;
-    return !inRect(b, p.x, p.y)
+    return !inRect(b, p.x, p.y) && !touchesPlayer(w, b)
       && !w.mobs.some(o => o !== self && overlaps(b, body(o.x, o.y, sizeOf(o))))
       && !w.map.posts.some(q => overlaps(b, q) && w.hooks.postAlive(q.enemy))
       && !w.map.ports.some(q => overlaps(b, q))
@@ -9650,11 +9654,7 @@ const MAP_FILES = {"arthurian":{"compressionlevel":-1,"type":"map","version":"1.
     if (w.encounter) return ev;
     w.time += dt;
     const p = w.player;
-    p.wait -= dt;
-    if (p.dir && p.vec && p.wait <= 0) {
-      const len = stepPlayer(w, ev);                       // 대각선 한 걸음은 √2 칸 — 어느 쪽으로든 같은 빠르기
-      p.wait = Math.max(0, p.wait + len / RULES.PLAYER_SPEED);
-    } else if (!p.dir && p.wait < 0) p.wait = 0;
+    if (p.dir && p.vec) walk(w, dt, ev);
 
     for (const m of w.mobs) {
       if (w.encounter) break;
@@ -9676,47 +9676,58 @@ const MAP_FILES = {"arthurian":{"compressionlevel":-1,"type":"map","version":"1.
     ev.push({ type: 'contact', ...enc });
   }
 
-  // 한 걸음 — 누른 쪽을 끼고 있는 두 방향(여덟 방향 중) 가운데, 걸은 뒤 줄(p.line)에서 덜 벗어나는 쪽으로. 그래서 비스듬히 밀면 비스듬히 곧게 갑니다.
-  // 대각선은 두 옆 칸이 다 트였을 때만 (벽 · 나무 모서리를 깎아 지나가지 않게). 막히면 다른 하나, 그다음 그 대각선의 가로 · 세로 걸음으로
-  // 벽을 따라 미끄러지되, 누른 쪽으로 조금이라도 나아가는 걸음만 (곧게 민 채로 벽에 닿으면 옆으로 새지 않음). 걸은 길이(1 · √2)를 돌려줍니다
-  function stepPlayer(w, ev) {
-    const p = w.player, L = p.line || { x: p.x, y: p.y, v: p.vec }, v = L.v;
-    const k = ((Math.floor(Math.atan2(v.y, v.x) / (Math.PI / 4)) % 8) + 8) % 8, m0 = DIR8[k], m1 = DIR8[(k + 1) % 8];
-    const off = m => Math.abs((p.x + m[0] - L.x) * v.y - (p.y + m[1] - L.y) * v.x);
-    const tries = off(m0) <= off(m1) ? [m0, m1] : [m1, m0];
-    const diag = tries.find(m => m[0] && m[1]);
-    if (diag) for (const m of Math.abs(v.x) >= Math.abs(v.y) ? [[diag[0], 0], [0, diag[1]]] : [[0, diag[1]], [diag[0], 0]])
-      if (!tries.some(t => t[0] === m[0] && t[1] === m[1]) && m[0] * v.x + m[1] * v.y > 0.2) tries.push(m);
-    for (let i = 0; i < tries.length; i++) {
-      const [dx, dy] = tries[i], r = stepTo(w, dx, dy, ev);
-      if (r === 'wall') continue;
-      if (r === 'moved' && i > 0 && p.vec) p.line = { x: p.x, y: p.y, v };   // 비켜 걸었으면 여기서 줄을 새로
-      return r === 'moved' && dx && dy ? Math.SQRT2 : 1;
+  // 걷기 — 누른 쪽으로 초당 PLAYER_SPEED 칸, 칸에 매이지 않고. 한 번에 0.2칸 넘게 옮기지 않도록 잘게 나눠, 가로 · 세로를 따로 옮깁니다
+  // (그래서 벽에 비스듬히 닿으면 벽을 따라 미끄러짐)
+  function walk(w, dt, ev) {
+    const p = w.player, d = RULES.PLAYER_SPEED * Math.min(dt, 0.1), n = Math.max(1, Math.ceil(d / 0.2));
+    for (let i = 0; i < n && p.vec && !w.encounter; i++) {
+      const vy = p.vec.y;
+      if (slide(w, p.vec.x * d / n, 0, ev, true) === 'stop' || !p.vec) break;
+      if (slide(w, 0, vy * d / n, ev, true) === 'stop') break;
     }
-    return 1;
   }
-  // 한 칸 옮기기 — 'moved' 옮김 · 'wall' 막혀 못 감(다른 쪽을 해 봄) · 'event' 닿은 것이 있음(닫힌 문 · 몬스터 · 보물상자 · 상인)
-  function stepTo(w, dx, dy, ev) {
-    const p = w.player, nx = p.x + dx, ny = p.y + dy;
-    if (dx && dy && (wall(w, p.x + dx, p.y) || wall(w, p.x, p.y + dy))) return 'wall';
-    const port = portAt(w, nx, ny);
-    if (port && !w.hooks.portOpen(port)) { ev.push({ type: 'closed', port }); return 'event'; }
-    if (wall(w, nx, ny)) return 'wall';
-    const mob = mobAt(w, nx, ny);
-    if (mob) { meet(w, ev, { mob, first: 'player' }); return 'event'; }
-    const post = postAt(w, nx, ny);
-    if (post) { meet(w, ev, { post, first: 'player' }); return 'event'; }
-    const chest = chestAt(w, nx, ny);
-    if (chest) {
-      if (!w.hooks.chestOpen(chest.chest)) { halt(p); p.needRelease = true; ev.push({ type: 'chest', chest }); return 'event'; }
-      return 'wall';                                       // 연 상자는 그냥 막힌 칸
+  // 몸을 (mx, my) 만큼 — 'ok' 옮김 · 'blocked' 막힘(벽 · 물 · 나무 · 닫힌 문 · 연 상자) · 'stop' 닿은 것이 있어 멈춤(몬스터 · 정예 자리 · 닫힌 상자 · 상인 · 열린 문으로 들어섬)
+  // assist — 막혔을 때 몸 한가운데 줄의 앞 칸이 트였으면 그 줄 가운데로 살짝 비켜 (한 칸짜리 길 · 문에 쉽게 들어가게)
+  function slide(w, mx, my, ev, assist) {
+    const p = w.player, cx = p.x + 0.5 + p.ox + mx, cy = p.y + 0.5 + p.oy + my, q = playerBox(p, cx, cy);
+    let blocked = false;
+    for (let j = Math.floor(q.y0); j <= Math.floor(q.y1 - 1e-9); j++) for (let i = Math.floor(q.x0); i <= Math.floor(q.x1 - 1e-9); i++) {
+      const port = portAt(w, i, j);
+      if (port && !w.hooks.portOpen(port)) { ev.push({ type: 'closed', port }); blocked = true; continue; }
+      if (wall(w, i, j)) { blocked = true; continue; }
+      const mob = mobAt(w, i, j);
+      if (mob) { meet(w, ev, { mob, first: 'player' }); return 'stop'; }
+      const post = postAt(w, i, j);
+      if (post) { meet(w, ev, { post, first: 'player' }); return 'stop'; }
+      const chest = chestAt(w, i, j);
+      if (chest) {
+        if (!w.hooks.chestOpen(chest.chest)) { halt(p); p.needRelease = true; ev.push({ type: 'chest', chest }); return 'stop'; }
+        blocked = true; continue;                          // 연 상자는 그냥 막힌 칸
+      }
+      const shop = merchantAt(w, i, j);
+      if (shop) { halt(p); p.needRelease = true; ev.push({ type: 'merchant', npc: shop }); return 'stop'; }
     }
-    const shop = merchantAt(w, nx, ny);
-    if (shop) { halt(p); p.needRelease = true; ev.push({ type: 'merchant', npc: shop }); return 'event'; }
-    p.fromX = p.x; p.fromY = p.y;
-    p.x = nx; p.y = ny;
-    if (port && port.to) ev.push({ type: 'port', port });
-    return 'moved';
+    if (blocked) {
+      if (!assist) return 'blocked';
+      const r = RULES.PLAYER_R, a = Math.abs(mx || my);
+      // 막힌 칸 바로 앞까지는 다가감 — 잘게 나눈 한 걸음만큼 벽 앞에 틈이 남지 않게
+      if (mx) { const d = (mx > 0 ? Math.floor(q.x1 - 1e-9) - r : Math.floor(q.x0) + 1 + r) - (p.x + 0.5 + p.ox); if (d * mx > 1e-9 && Math.abs(d) < a && slide(w, d, 0, ev, false) === 'stop') return 'stop'; }
+      if (my) { const d = (my > 0 ? Math.floor(q.y1 - 1e-9) - r : Math.floor(q.y0) + 1 + r) - (p.y + 0.5 + p.oy); if (d * my > 1e-9 && Math.abs(d) < a && slide(w, 0, d, ev, false) === 'stop') return 'stop'; }
+      const ccx = p.x + 0.5 + p.ox, ccy = p.y + 0.5 + p.oy;
+      const nudge = (t, c) => Math.max(-a, Math.min(a, t - c));   // 그 줄 가운데 쪽으로, 이번에 옮기려던 만큼까지만
+      if (mx && !wall(w, Math.floor(cx + Math.sign(mx) * r), Math.floor(ccy))) { const t = nudge(Math.floor(ccy) + 0.5, ccy); if (Math.abs(t) > 1e-6) return slide(w, 0, t, ev, false); }
+      if (my && !wall(w, Math.floor(ccx), Math.floor(cy + Math.sign(my) * r))) { const t = nudge(Math.floor(ccx) + 0.5, ccx); if (Math.abs(t) > 1e-6) return slide(w, t, 0, ev, false); }
+      return 'blocked';
+    }
+    const px = p.x, py = p.y;
+    p.x = Math.floor(cx); p.y = Math.floor(cy);
+    p.ox = cx - 0.5 - p.x; p.oy = cy - 0.5 - p.y;
+    if (p.x !== px || p.y !== py) {
+      p.fromX = px; p.fromY = py;
+      const port = portAt(w, p.x, p.y);
+      if (port && port.to) { ev.push({ type: 'port', port }); return 'stop'; }   // 몸 한가운데가 문 칸에 들어서면
+    }
+    return 'ok';
   }
 
   // 지금 무엇을 할지 — 어슬렁(wander) · 쫓기(chase) · 달아나기(flee) · 제 구역으로 돌아가기(return)
@@ -9739,7 +9750,7 @@ const MAP_FILES = {"arthurian":{"compressionlevel":-1,"type":"map","version":"1.
     const p = w.player, n = sizeOf(m), a = w.map.areas[m.area], f = homeField(w, a, n);
     if (m.mode === 'chase') {
       const s = toward(w, m, (x, y) => gap(body(x, y, n), p.x, p.y), true);
-      if (s && inRect(body(s.x, s.y, n), p.x, p.y)) return meet(w, ev, { mob: m, first: 'foe' });
+      if (s && (inRect(body(s.x, s.y, n), p.x, p.y) || touchesPlayer(w, body(s.x, s.y, n)))) return meet(w, ev, { mob: m, first: 'foe' });
       if (s) { m.x = s.x; m.y = s.y; }
       m.wait = 1 / RULES.CHASE_SPEED;
     } else if (m.mode === 'flee') {
@@ -9766,7 +9777,7 @@ const MAP_FILES = {"arthurian":{"compressionlevel":-1,"type":"map","version":"1.
     for (const [dx, dy] of STEPS) {
       const x = m.x + dx, y = m.y + dy, g = gapAt(x, y);
       if (g.dx + g.dy >= d0) continue;
-      const touch = toPlayer && inRect(body(x, y, n), w.player.x, w.player.y);
+      const touch = toPlayer && (inRect(body(x, y, n), w.player.x, w.player.y) || touchesPlayer(w, body(x, y, n)));
       if (!touch && !freeForMob(w, x, y, n, m)) continue;
       const score = (dx ? g0.dx : g0.dy) + w.rng() * 0.5;   // 많이 벌어진 쪽부터 좁힙니다
       if (score > bestScore) { best = { x, y }; bestScore = score; }
@@ -9835,6 +9846,7 @@ const MAP_FILES = {"arthurian":{"compressionlevel":-1,"type":"map","version":"1.
     if (!best) return;
     p.fromX = p.x; p.fromY = p.y;
     p.x = best.x; p.y = best.y;
+    p.ox = 0; p.oy = 0;                                    // 밀려난 칸 한가운데에
   }
 
   const api = { RULES, TEMPER_BY_ARCH, DIRS, temperOf, mulberry, parseTiled, createWorld, setInput, tick, resolve, areaAt, mobAt, postAt, portAt, chestAt, merchantAt };
@@ -10890,25 +10902,25 @@ const MapView = (function () {
     const live = () => v.world && shown() && !o.paused();
 
     // ---------- 부드럽게 ----------
-    // 규칙은 칸 그대로(map.js) — 보이는 자리만 칸 사이를 미끄러져 따라갑니다. 걷는 동안은 살짝 들썩입니다.
-    // 미끄러지는 빠르기는 그 걸음의 빠르기와 같게: 나는 초당 12칸, 몬스터는 초당 3칸 (어슬렁 · 달아나기는 미끄러진 뒤 잠깐 섬).
+    // 몬스터는 규칙이 칸 그대로(map.js) — 보이는 자리만 칸 사이를 미끄러져 따라갑니다 (초당 3칸 · 어슬렁 · 달아나기는 미끄러진 뒤 잠깐 섬).
+    // 나는 규칙부터 칸 사이를 걸으므로(map.js 의 ox · oy) 그 자리 그대로 그립니다. 걷는 동안은 살짝 들썩입니다.
     const glide = new WeakMap();   // 나 · 몬스터 → 보이는 자리 { x, y, phase }
     function seenAt(e, speed, dt) {
+      const exact = e.ox !== undefined, tx = e.x + (e.ox || 0), ty = e.y + (e.oy || 0);
       let g = glide.get(e);
-      if (!g || Math.hypot(g.x - e.x, g.y - e.y) > 2.5) {   // 처음 보거나 멀리 옮겨졌으면(문 · 불러오기) 그 자리에 (대각선 한 걸음 뒤처진 것은 그대로 따라감)
-        g = { x: e.x, y: e.y, phase: 0, moving: false, walked: 0, idle: 1 };
+      if (!g || Math.hypot(g.x - tx, g.y - ty) > 2.5) {   // 처음 보거나 멀리 옮겨졌으면(문 · 불러오기) 그 자리에
+        g = { x: tx, y: ty, phase: 0, moving: false, walked: 0, idle: 1 };
         glide.set(e, g);
         return g;
       }
-      const step = speed * dt;
-      const moving = g.x !== e.x || g.y !== e.y;
-      const ddx = e.x - g.x, ddy = e.y - g.y, dd = Math.hypot(ddx, ddy);   // 곧은 줄로 따라감 — 대각선 걸음도 같은 빠르기로
-      if (dd <= step) { g.x = e.x; g.y = e.y; } else { g.x += ddx / dd * step; g.y += ddy / dd * step; }
-      g.phase = moving ? g.phase + dt * speed * Math.PI : 0;   // 한 칸에 한 번 들썩
-      // 걸은 칸 수 — 칸과 칸 사이에 잠깐 멈춰도 이어서 세고(걸음 A · B 가 번갈아), 조금 서 있으면 처음부터
+      const ddx = tx - g.x, ddy = ty - g.y, dd = Math.hypot(ddx, ddy), moving = dd > 1e-6;
+      const go = exact ? dd : Math.min(dd, speed * dt);   // 이번 장면에 옮긴 만큼
+      if (exact || dd <= go) { g.x = tx; g.y = ty; } else { g.x += ddx / dd * go; g.y += ddy / dd * go; }
+      g.phase = moving ? g.phase + go * Math.PI : 0;     // 한 칸에 한 번 들썩
+      // 걸은 칸 수 — 잠깐 멈춰도 이어서 세고(걸음 A · B 가 번갈아), 조금 서 있으면 처음부터
       g.moving = moving;
       g.idle = moving ? 0 : g.idle + dt;
-      g.walked = moving ? g.walked + step : g.idle > 0.15 ? 0 : g.walked;
+      g.walked = moving ? g.walked + go : g.idle > 0.15 ? 0 : g.walked;
       return g;
     }
     v.seenAt = e => glide.get(e);   // 시험 · 살펴보기용
