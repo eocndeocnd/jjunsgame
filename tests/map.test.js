@@ -694,7 +694,7 @@ test('열리기 전엔 없는 문(appears) — 보이지도 막히지도 않는 
   assert.ok(ev2.some(e => e.type === 'port' && e.port.name === 'secret'), '들어섬');
 });
 
-test('건물 — 3격 몰락한 왕의 성은 바깥 지도에선 남쪽 정면 가운데에 문 하나 난 닫힌 건물, 들어가면 따로 뽑은 성 안 (예전 큰 방 그대로)', () => {
+test('건물 — 3격 몰락한 왕의 성은 바깥 지도에선 남쪽 정면 가운데에 문 하나 난 닫힌 건물, 들어가면 깔개 끝에 보스 · 양옆에 기둥인 성 안', () => {
   const over = loadMap('overworld'), c = loadMap('castle');
   const door = over.ports.find(p => p.name === 'castle');
   assert.ok(door.door && door.to === 'castle.out' && door.w === 4 && door.h === 1);
@@ -716,13 +716,27 @@ test('건물 — 3격 몰락한 왕의 성은 바깥 지도에선 남쪽 정면 
   assert.equal(c.props.title, '몰락한 왕의 성');
   assert.ok(c.props.interior);
   const out = c.ports.find(p => p.name === 'out');
-  assert.ok(out.door && out.to === 'overworld.castle' && out.w === door.w);
+  const hall = gen.BUILDINGS.find(b => b.id === 'castle').hall;
+  assert.ok(out.door && out.to === 'overworld.castle' && out.w === hall.aisle);
   assert.ok(Math.abs(c.start.x - (out.x + out.w / 2)) <= 1 && c.start.y === out.y - 1, '성 안 시작점은 나가는 문 바로 위');
-  let pillars = 0;
-  for (let k = 0; k < c.w * c.h; k++) if (c.tile[k] === 4) pillars++;
-  assert.equal(pillars, 4 * 3 * 2 + 4 * 3 * 3, '기둥 여덟 — 위 줄 넷은 3×2칸 · 아래 줄 넷은 3×3칸 (예전 큰 방 그대로)');
+  // 기둥은 깔개 양옆에 마주 보게 — 가운데 줄을 두고 좌우가 꼭 맞음, 한쪽에 넷씩
+  const mid = (c.w - 1) / 2;
+  let left = 0, right = 0;
+  for (let k = 0; k < c.w * c.h; k++) if (c.tile[k] === 4) {
+    const x = k % c.w, y = (k / c.w) | 0;
+    assert.equal(c.tile[y * c.w + (c.w - 1 - x)], 4, '기둥 좌우가 꼭 맞음');
+    if (x < mid) left++; else right++;
+  }
+  assert.equal(left, 4 * hall.pillar * hall.pillar);
+  assert.equal(right, 4 * hall.pillar * hall.pillar);
+  // 깔개 — 나가는 문간에서 곧장 위로 보스 발밑의 단까지, 보스는 그 끝 가운데
+  const king = c.posts[0];
+  assert.equal(king.x + (king.w - 1) / 2, mid, '보스는 가운데 줄');
+  assert.equal(out.x + (out.w - 1) / 2, mid, '나가는 문도 가운데 줄');
+  for (let y = king.y + king.h + 1; y < out.y; y++) for (let x = out.x; x < out.x + out.w; x++)
+    assert.equal(c.look[y * c.w + x] & 15, gen.CARPET, `깔개 (${x}, ${y})`);
   const dc = walk(c, [c.start.y * c.w + c.start.x]);
-  const king = c.posts[0], near = [];
+  const near = [];
   for (let x = king.x; x < king.x + king.w; x++) near.push((king.y + king.h) * c.w + x);
   assert.ok(near.some(i => dc[i] >= 0), '들어서서 몰락한 왕에게 닿음');
 });

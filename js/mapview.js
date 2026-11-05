@@ -171,12 +171,36 @@ const MapView = (function () {
         if (!seen(port.x, port.y, port.w, port.h)) continue;
         const open = w.hooks.portOpen(port);
         if (port.appears && !open) continue;              // 열리기 전엔 없는 문 (보스를 꺾으면 나타나는 숨은 굴의 구멍)
+        const revealed = port.hole && port.appears;       // 보스를 꺾어 나타난 숨은 굴 구멍 — 눈에 확 띄게 (사용자 요청)
         if (port.hole) {
           const cx = ox + (port.x + port.w / 2) * T, cy = oy + (port.y + port.h / 2) * T, rx = port.w * T / 2 - 1, ry = port.h * T / 2 + T * 0.1;
-          ctx.fillStyle = '#5c3a1a';
+          const now = performance.now() / 1000, pulse = 0.5 + 0.5 * Math.sin(now * 3.2);
+          if (revealed) {                                 // 둘레에 숨 쉬듯 번지는 금빛
+            const g = ctx.createRadialGradient(cx, cy, rx * 0.4, cx, cy, rx * 1.9);
+            g.addColorStop(0, `rgba(255, 214, 120, ${0.35 + 0.3 * pulse})`);
+            g.addColorStop(1, 'rgba(255, 214, 120, 0)');
+            ctx.fillStyle = g;
+            ctx.beginPath(); ctx.ellipse(cx, cy, rx * 1.9, ry * 2.6, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.save(); ctx.shadowColor = '#ffd76a'; ctx.shadowBlur = T * (0.4 + 0.5 * pulse);
+          }
+          ctx.fillStyle = revealed ? '#c8a24a' : '#5c3a1a';
           ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); ctx.fill();
+          if (revealed) ctx.restore();
           ctx.fillStyle = '#0b0603';
           ctx.beginPath(); ctx.ellipse(cx, cy + T * 0.06, rx - T * 0.22, ry - T * 0.18, 0, 0, Math.PI * 2); ctx.fill();
+          if (revealed) {
+            ctx.fillStyle = `rgba(150, 90, 230, ${0.25 + 0.25 * pulse})`;   // 구멍 속 보랏빛
+            ctx.beginPath(); ctx.ellipse(cx, cy + T * 0.1, (rx - T * 0.22) * 0.6, (ry - T * 0.18) * 0.5, 0, 0, Math.PI * 2); ctx.fill();
+            for (let i = 0; i < 6; i++) {                 // 둘레를 도는 반짝이
+              const a = now * 1.4 + i * Math.PI / 3, sx = cx + Math.cos(a) * rx * 1.25, sy = cy + Math.sin(a) * ry * 1.7, s = T * (0.07 + 0.05 * Math.sin(now * 5 + i));
+              ctx.fillStyle = '#fff3c4';
+              ctx.beginPath(); ctx.moveTo(sx, sy - s * 2); ctx.lineTo(sx + s, sy); ctx.lineTo(sx, sy + s * 2); ctx.lineTo(sx - s, sy); ctx.closePath(); ctx.fill();
+            }
+            const ay = cy - ry - T * 0.35 - Math.abs(Math.sin(now * 4)) * T * 0.25, aw = T * 0.28;   // 통통 튀는 ▼
+            ctx.beginPath(); ctx.moveTo(cx - aw, ay - aw); ctx.lineTo(cx + aw, ay - aw); ctx.lineTo(cx, ay + aw * 0.4); ctx.closePath();
+            ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(28,16,7,0.85)'; ctx.stroke();
+            ctx.fillStyle = '#ffd76a'; ctx.fill();
+          }
         } else if (!(port.door && art)) {                 // 건물 문(door)은 지도 그림이 성문 · 문간으로 그림
           ctx.fillStyle = open ? '#3fae4a' : '#5c3a1a';
           ctx.fillRect(ox + port.x * T + 2, oy + port.y * T + 2, port.w * T - 4, port.h * T - 4);
@@ -187,7 +211,7 @@ const MapView = (function () {
           ctx.font = `bold ${Math.max(10, Math.round(T * 0.42))}px system-ui, sans-serif`;
           ctx.textAlign = 'center';
           ctx.textBaseline = below ? 'top' : 'bottom';
-          const tx = ox + (port.x + port.w / 2) * T, ty = below ? oy + (port.y + port.h) * T + 3 : oy + port.y * T - 3;
+          const tx = ox + (port.x + port.w / 2) * T, ty = below ? oy + (port.y + port.h) * T + 3 : oy + port.y * T - 3 - (revealed ? T * 0.9 : 0);   // 나타난 구멍은 ▼ 위에
           ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(28,16,7,0.85)';
           ctx.strokeText(port.label + (open ? '' : ' 🔒'), tx, ty);
           ctx.fillStyle = '#f6e7c3';

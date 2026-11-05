@@ -490,11 +490,11 @@
 
   // ---------- 건물 안 (지도 속성 interior) — 벽 · 기둥 · 나가는 문간 ----------
   // 위 벽(바닥 바로 위 세 칸)은 벽돌 벽면 — 깃발과 횃불이 번갈아 걸림. 옆 · 아래 벽은 어두운 벽 윗면(바닥 쪽 가장자리만 살짝 밝게)
-  function hallWall(e, X, Y, lx, ly) {
+  function hallWall(m, e, X, Y, lx, ly) {
     if (e.up) {
       const fy = (3 - e.up) * P + ly, FH = 3 * P;
       if (fy < 5) return fy === 4 ? c3(CK.line) : c3(CK.inner);
-      const ph = ((X % 96) + 96) % 96, tx = ((X + 48) % 96 + 96) % 96 - 48;
+      const sx = X - (m.w * P >> 1) + 48, ph = ((sx % 96) + 96) % 96, tx = ((sx + 48) % 96 + 96) % 96 - 48;   // 가운데(보스 위)에 깃발, 좌우로 마주 보게
       const b = bannerPix(41, 8, 14, 32, ph, fy);
       if (b) return b;
       // 횃불 — 쇠 받침 · 불꽃, 둘레 벽은 따뜻하게
@@ -729,7 +729,7 @@
   function paintGround(m, A, e, X, Y, lx, ly) {
     const t = e.t;
     if (t === POOL) return e.raw === LAVA ? lava(X, Y) : water(m, A, X, Y);
-    if ((t === WALL || t < 0) && m.props && m.props.interior) return hallWall(e, X, Y, lx, ly);
+    if ((t === WALL || t < 0) && m.props && m.props.interior) return hallWall(m, e, X, Y, lx, ly);
     if (t === WALL || t < 0) {
       if (e.face) return faceColor(e.face.bio, e.face.ter, X, Y, Y - e.face.top);
       return vnoise(X * 0.03, Y * 0.03, 50) > 0.72 ? c3('#16121f') : C.void;
