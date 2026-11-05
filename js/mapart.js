@@ -196,7 +196,7 @@
   }
 
   // 땅 아래로 떨어지는 옆면 — 위 칸의 땅에 따라 벽돌 · 흑요석 · 묘지돌 · 바위 · 흙. fy 는 위 땅 가장자리에서 몇 점 아래 (내려갈수록 어둠)
-  function faceColor(b, t, X, Y, fy) {
+  function faceColor(b, t, X, Y, fy, hang = 4) {
     const n = hash(X, Y, 30), depth = Math.min(1, fy / (2 * P));
     let c;
     if (t === COBBLE || t === CANAL || (t === TILES && b !== 6)) {                     // 벽돌
@@ -230,21 +230,22 @@
       if (Math.abs(vnoise(X * 0.15, Y * 0.04, 32) - 0.5) < 0.018) c = c3('#3a5a2a');
     }
     // 위 땅의 가장자리 — 풀은 몇 점 늘어지고, 그 밖은 한 점 밝은 턱
-    if (t === GRASS && fy < 2 + ((hash(X >> 1, 0, 35) * 4) | 0)) return c3((C.grass[b] || C.grass[0])[fy < 2 ? 0 : 3]);
+    if (t === GRASS && fy < 2 + ((hash(X >> 1, 0, 35) * hang) | 0)) return c3((C.grass[b] || C.grass[0])[fy < 2 ? 0 : 3]);
     if (fy === 0) c = mix(c, WHITE, 0.18);
     return mul(c, 1 - depth * 0.6);
   }
 
-  // 물 — 물가에서 멀수록 짙게 (칸 사이는 부드럽게), 물가 거품 · 짧은 물결 · 반짝
-  function water(m, A, X, Y) {
+  // 물 — 물가에서 멀수록 짙게 (칸 사이는 부드럽게), 물가 거품 · 짧은 물결 · 반짝.
+  // s 는 물가 모양(poolField)으로 잰 물가에서의 거리 (물가 칸만 — 그 밖은 멀다고 봄). 거품은 이 둥근 물가를 따라
+  function water(m, A, X, Y, s = 9) {
     const fx = X / P - 0.5, fy = Y / P - 0.5, x0 = Math.floor(fx), y0 = Math.floor(fy), ax = fx - x0, ay = fy - y0;
     const g = (x, y) => (x >= 0 && y >= 0 && x < m.w && y < m.h ? Math.min(A.dist[y * m.w + x], 5) : 0);
     const dep = (g(x0, y0) * (1 - ax) + g(x0 + 1, y0) * ax) * (1 - ay) + (g(x0, y0 + 1) * (1 - ax) + g(x0 + 1, y0 + 1) * ax) * ay;
     const d = Math.min(1, Math.max(0, dep - 0.6) / 2.2);
     let c = mix(C.waterShallow, C.waterDeep, sm(Math.min(1, d * 0.85 + vnoise(X * 0.025, Y * 0.025, 40) * 0.15)));
     const f = hash(X, Y, 39);
-    if (d < 0.06 && f < 0.5) return mix(c, C.foam, 0.55);
-    if (d < 0.14 && f < 0.14) return mix(c, C.foam, 0.3);
+    if (s < 0.1 && f < 0.6) return mix(c, C.foam, 0.55);
+    if (s < 0.22 && f < 0.2) return mix(c, C.foam, 0.3);
     // 물결 — 다섯 점짜리 가로줄 (줄마다 엇갈림), 그 바로 아래 줄은 살짝 짙게
     const sh = (Y * 5) & 7, p = (X + sh) & 7;
     if (p >= 1 && p <= 5 && hash((X + sh) >> 3, Y, 41) < 0.03) return mix(c, [220, 245, 250], 0.32);
@@ -262,6 +263,12 @@
     if (r < 0.085) return c3('#e0501e');
     const c = mix(c3('#8a2414'), c3('#4a120e'), fbm(u * 0.08, w * 0.08, 26));
     return hash(X, Y, 27) < 0.01 ? c3('#2a0a08') : c;
+  }
+  // 용암가 — 땅에 닿는 가장자리는 식어 굳은 검은 껍질 (s 는 water 와 같은 물가에서의 거리)
+  function lavaPix(X, Y, s = 9) {
+    if (s < 0.06) return c3('#1e0a08');
+    if (s < 0.15 + vnoise(X * 0.2, Y * 0.2, 87) * 0.1) return hash(X, Y, 88) < 0.2 ? c3('#6a2214') : c3('#45140e');
+    return lava(X, Y);
   }
 
   // ---------- 건물 — 몰락한 왕의 성 (바깥 지도의 닫힌 건물 한 채, 남쪽 정면 가운데 성문) ----------
@@ -911,7 +918,28 @@
     };
     for (const q of [...(m.ports || []), ...(m.posts || [])]) mark(q.x, q.y, q.w || 1, q.h || 1);
     for (const q of [...(m.chests || []), ...(m.npcs || [])]) mark(q.x, q.y, 1, 1);
-    const A = { dist, chunks: new Map(), bAt, buildings, noProp };
+    // 물가 모양 (poolField) 의 칸 값 — 물 · 용암 1, 땅 0, 벽 · 다리 · 지도 밖은 0.5 (어느 쪽으로도 안 끌어당김)
+    const pv = new Float32Array(m.w * m.h);
+    for (let k = 0; k < m.w * m.h; k++) { const t = m.tile[k]; pv[k] = t === POOL ? 1 : t === WALL || t < 0 || isBridge(m, k) ? 0.5 : 0; }
+    // 그 값을 둘레 칸과 고루 섞은 것 (1 2 1 무게) — 비스듬한 계단 물가가 곧게 펴지도록
+    const pb = new Float32Array(m.w * m.h), pvAt = (x, y) => (x < 0 || y < 0 || x >= m.w || y >= m.h ? 0.5 : pv[y * m.w + x]);
+    for (let y = 0; y < m.h; y++) for (let x = 0; x < m.w; x++) {
+      let a = 0;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) a += pvAt(x + dx, y + dy) * (dx ? 1 : 2) * (dy ? 1 : 2);
+      pb[y * m.w + x] = a / 16;
+    }
+    // 칸마다 얼마나 깎아도 되는지 — 같은 것(물끼리 · 땅끼리)으로 2×2 를 이루는 칸은 넉넉히, 한 칸 폭 물길 · 한 칸 땅은 조금만 (칸대로 막히는 것과 그림이 어긋나지 않게)
+    // 물 칸은 아래로 물이 몇 칸 이어지는지도 (얕은 물은 옆면을 낮게)
+    const ps = new Float32Array(m.w * m.h), run = new Uint8Array(m.w * m.h);
+    const same = (x, y, v) => { const u = pvAt(x, y); return u === v || u === 0.5; };
+    for (let y = 0; y < m.h; y++) for (let x = 0; x < m.w; x++) {
+      const k = y * m.w + x, v = pv[k];
+      let thick = v === 0.5;
+      for (const [ox, oy] of [[0, 0], [-1, 0], [0, -1], [-1, -1]]) if (!thick && same(x + ox, y + oy, v) && same(x + ox + 1, y + oy, v) && same(x + ox, y + oy + 1, v) && same(x + ox + 1, y + oy + 1, v)) thick = true;
+      ps[k] = thick ? POOL_SLACK : 0.12;
+    }
+    for (let y = m.h - 1; y >= 0; y--) for (let x = 0; x < m.w; x++) { const k = y * m.w + x; if (pv[k] === 1) run[k] = Math.min(9, 1 + (y + 1 < m.h ? run[k + m.w] : 0)); }
+    const A = { dist, chunks: new Map(), bAt, buildings, noProp, pv, pb, ps, run };
     prepared.set(m.look, A);
     return A;
   }
@@ -987,7 +1015,26 @@
       e.nearRoad = false;
       for (let dy = -1; dy <= 1 && !e.nearRoad; dy++) for (let dx = -1; dx <= 1; dx++) if (at(tx + dx, ty + dy) === ROAD) { e.nearRoad = true; break; }
     }
-    if (t === FLOOR && !e.dais && raw !== CARPET && !A.noProp[k]) e.prop = rubbleOf(m, e, tx, ty) || propOf(e, tx, ty);   // 길 곁 칸이면 길 위 점은 뺌 (paint)
+    // 물가 — 곁(여덟 칸)에 땅이 있는 물 · 용암 칸, 곁에 물 · 용암이 있는 땅 칸 (그 칸의 점마다 poolField 로 물인지 땅인지)
+    const onMap = (x, y) => x >= 0 && y >= 0 && x < m.w && y < m.h;
+    if (t === POOL) {
+      e.bridgeAbove = onMap(tx, ty - 1) && isBridge(m, k - m.w);
+      for (const [dx, dy] of SHORE8) {
+        const x = tx + dx, y = ty + dy;
+        if (!onMap(x, y) || !land(m.tile[y * m.w + x]) || isBridge(m, y * m.w + x)) continue;
+        const lk = m.look[y * m.w + x];
+        e.shore = true; e.gTer = terOf(lk & 15); e.gBio = lk >> 4; e.hot = raw === LAVA;   // 물 칸 안으로 둥글게 나온 땅은 이 이웃 땅의 무늬
+        break;
+      }
+    } else if (land(t) && !e.bridge) {
+      for (const [dx, dy] of SHORE8) {
+        const x = tx + dx, y = ty + dy;
+        if (!onMap(x, y) || m.tile[y * m.w + x] !== POOL) continue;
+        e.shore = true; e.hot = (m.look[y * m.w + x] & 15) === LAVA;
+        break;
+      }
+    }
+    if (t === FLOOR && !e.dais && raw !== CARPET && !A.noProp[k] && !e.shore) e.prop = rubbleOf(m, e, tx, ty) || propOf(e, tx, ty);   // 길 곁 칸이면 길 위 점은 뺌 (paint)
     return e;
   }
 
@@ -1027,6 +1074,62 @@
     return c;
   }
 
+  // ---------- 물가 · 용암가 — 물이 땅보다 한 단 낮게 (사용자 요청 — 모든 격) ----------
+  // 물 · 용암 모양도 길처럼 칸 가운데 값(A.pv)을 부드럽게 이어 잡음으로 흔든 0.5 언저리를 물가로 — 칸 계단이 아니라 둥글게 이어진 물가.
+  // 위(북쪽) 땅 가장자리 밑엔 그 땅의 옆면(벼랑)이 몇 점 보이고 그 밑이 물 · 용암 — 내려다보는 쪽에서 물이 한 단 낮아 보이게.
+  // 옆 · 아래(남쪽) 물가는 옆면이 안 보이는 쪽이라 땅 가장자리 한 점 테두리만. 막히는지는 그대로 칸대로 (그림만 둥글게)
+  const SHORE8 = [[0, -1], [-1, 0], [1, 0], [0, 1], [-1, -1], [1, -1], [-1, 1], [1, 1]];   // 위 땅을 먼저 (옆면 무늬)
+  const isBridge = (m, k) => m.tile[k] === ROAD && ((m.look[k] & 15) === WATER || (m.look[k] & 15) === CANAL || (m.look[k] & 15) === LAVA);
+  // 고루 섞은 값(A.pb)으로 모양을 잡되, 칸대로의 값(A.pv)에서 POOL_SLACK 넘게는 안 벗어나게 — 한 칸 폭 물길 · 한 칸 땅도 가운데는 남음
+  const POOL_SLACK = 0.34;
+  function poolField(A, m, X, Y) {                                     // 0 이상이면 물 · 용암 (가장자리에서 얼마나 안쪽인지)
+    const fx = X / P - 0.5, fy = Y / P - 0.5, x0 = Math.floor(fx), y0 = Math.floor(fy), ax = sm(fx - x0), ay = sm(fy - y0), W = m.w;
+    const i00 = y0 * W + x0, inX0 = x0 >= 0, inX1 = x0 + 1 < W, inY0 = y0 >= 0, inY1 = y0 + 1 < m.h;
+    const bil = arr => {
+      const v00 = inX0 && inY0 ? arr[i00] : 0.5, v10 = inX1 && inY0 ? arr[i00 + 1] : 0.5;
+      const v01 = inX0 && inY1 ? arr[i00 + W] : 0.5, v11 = inX1 && inY1 ? arr[i00 + W + 1] : 0.5;
+      return (v00 * (1 - ax) + v10 * ax) * (1 - ay) + (v01 * (1 - ax) + v11 * ax) * ay - 0.5;
+    };
+    const s = bil(A.pv), b = bil(A.pb), k = bil(A.ps) + 0.5;
+    return Math.min(Math.max(b, s - k), s + k) - (vnoise(X * 0.05, Y * 0.05, 83) - 0.5) * 0.2;
+  }
+  // 물가 모양 안쪽의 점 — 바로 위 몇 점 안에 땅 가장자리가 있으면 그 땅의 옆면, 그 밑동 바로 아래는 물거품 한 줄 · 그늘 (용암은 달아오른 줄)
+  function poolPixel(m, A, e, X, Y, s, ly) {
+    // 옆면 높이 8~10 점 (물가를 따라 조금씩 다르게) — 아래로 한 칸뿐인 얕은 물은 4 점, 두 칸이면 6 점
+    const tx = Math.floor(X / P), ty = Math.floor(Y / P), here = ty * m.w + tx;
+    const r = A.run[here] || (ty + 1 < m.h ? A.run[here + m.w] : 0) || 1;
+    const FH = r === 1 ? 4 : r === 2 ? 6 : 8 + Math.round(vnoise(X * 0.09, 0.5, 85) * 2);
+    for (let k = 1; k <= FH + 3; k++) {
+      const y = Y - k;
+      if (y < 0) break;
+      const ck = Math.floor(y / P) * m.w + tx, ct = m.tile[ck];
+      if (ct === WALL || ct < 0 || isBridge(m, ck)) break;              // 벽 · 다리 밑엔 옆면 없음
+      if (poolField(A, m, X, y) >= 0) continue;
+      const fy = k - 1;                                                  // 땅 가장자리에서 몇 점 아래
+      if (fy < FH) {
+        const lk = m.look[ck], own = ct !== POOL;                       // 옆면 무늬는 그 위 땅 (물 칸 안으로 나온 땅이면 이 칸 곁의 땅)
+        return shoreFace(own ? lk >> 4 : e.gBio !== undefined ? e.gBio : e.bio, own ? terOf(lk & 15) : e.gTer !== undefined ? e.gTer : e.ter, X, Y, fy, FH, e.hot);
+      }
+      const w = fy - FH, base = e.hot ? lava(X, Y) : water(m, A, X, Y, s);
+      if (e.hot) return w === 0 ? mix(C.lavaHot, [255, 244, 190], 0.35) : mix(base, C.lavaHot, w === 1 ? 0.45 : 0.2);
+      return w === 0 && hash(X, Y, 86) < 0.65 ? mix(base, C.foam, 0.5) : mul(base, w === 1 ? 0.76 : 0.88);
+    }
+    const c = e.hot ? lavaPix(X, Y, s) : water(m, A, X, Y, s);
+    return e.bridgeAbove && ly < 3 ? mul(c, 0.62) : c;                   // 다리 바로 밑은 그늘
+  }
+  // 물가의 옆면 — 땅 아래로 떨어지는 옆면(faceColor)을 물가 높이로: 아래로 갈수록 어둡고, 물에 닿는 밑동은 젖어 짙게 · 용암 쪽은 달아오름
+  function shoreFace(b, t, X, Y, fy, FH, hot) {
+    let c = mul(faceColor(b, t, X, Y, fy, 2), 1 - 0.3 * fy / FH);   // 풀은 두세 점만 늘어짐
+    if (fy === FH - 1) c = mul(c, 0.66);
+    if (hot) c = mix(c, c3('#ff6a20'), 0.06 + 0.55 * (fy / FH) ** 2);
+    return c;
+  }
+  // 물가 모양 바깥(땅)의 점 — 옆 · 위에 물 · 용암이 닿으면 한 점 테두리 (용암 곁은 달아오른 빛)
+  function shoreRim(m, A, e, X, Y, c) {
+    if (poolField(A, m, X - 1, Y) < 0 && poolField(A, m, X + 1, Y) < 0 && poolField(A, m, X, Y - 1) < 0) return c;
+    return e.hot ? mix(c, c3('#ff7a2a'), 0.5) : mul(c, 0.58);
+  }
+
   // 점 하나의 색 — 칸 e 안의 (lx, ly) 번째 점, 지도 전체로는 (X, Y)
   function paint(m, A, e, X, Y, lx, ly) {
     if (e.b !== undefined) return buildingPixel(A, e, X, Y);
@@ -1034,17 +1137,23 @@
     if (e.raw === DOORWAY) return doorwayPix(e, X, Y, lx, ly);
     if (e.pb) return pillarFloor(e, X, Y);
     if (e.raw === CARPET && e.t === FLOOR) { const c = carpetPix(e, X, Y, lx); return e.shadeTop && ly < e.shadeTop ? mul(c, 0.62 + 0.38 * ly / e.shadeTop) : c; }
+    if (e.shore) {                                                       // 물가 칸 — 이 점이 물가 모양 안쪽이면 물 · 용암 (옆면 포함)
+      const s = poolField(A, m, X, Y);
+      if (s >= 0) return poolPixel(m, A, e, X, Y, s, ly);
+      if (e.t === POOL) return shoreRim(m, A, e, X, Y, texture(e.gTer, e.gBio, X, Y));   // 물 칸 안으로 둥글게 나온 땅
+    }
     let c = paintGround(m, A, e, X, Y, lx, ly);
     if (e.prop && !(e.nearRoad && roadField(m, X, Y, 0) >= -0.08)) c = propPixel(e.prop, lx, ly, c);
     if (e.dais) {
       const R = P - 1, d = Math.min(e.dais.l ? lx : 99, e.dais.r ? R - lx : 99, e.dais.u ? ly : 99, e.dais.d ? R - ly : 99);
       if (d === 0) c = c3(CK.line); else if (d <= 2) c = mix(c, c3(CK.gold), d === 1 ? 0.5 : 0.25);
     }
+    if (e.shore) c = shoreRim(m, A, e, X, Y, c);
     return e.shadeTop && ly < e.shadeTop ? mul(c, 0.62 + 0.38 * ly / e.shadeTop) : c;
   }
   function paintGround(m, A, e, X, Y, lx, ly) {
     const t = e.t;
-    if (t === POOL) return e.raw === LAVA ? lava(X, Y) : water(m, A, X, Y);
+    if (t === POOL) { const c = e.raw === LAVA ? lava(X, Y) : water(m, A, X, Y); return e.bridgeAbove && ly < 3 ? mul(c, 0.62) : c; }
     if ((t === WALL || t < 0) && m.props && m.props.interior) return hallWall(m, e, X, Y, lx, ly);
     if (t === WALL || t < 0) {
       if (e.face) return faceColor(e.face.bio, e.face.ter, X, Y, Y - e.face.top);
