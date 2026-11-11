@@ -603,6 +603,7 @@ git push
 | `index.html` | 화면 뼈대 | 요소 추가/삭제 |
 | `design/` | 화면 시안 (빌드에 안 들어감) | 디자인을 다시 고를 때 |
 | `docs/MAP-REFERENCE-PLAN.md` | **월드맵을 걸어 다니는 방식으로 바꾸는 계획** (옛 계획은 `docs/MAP-PLAN.md`) | 다음 큰 작업 |
+| `docs/CITY-PLAN.md` | **도시와 그 공간을 오가는 게임으로 바꾸는 계획** — 강해질 때마다 하나씩 열리는 차례 (아직 만든 것 없음) | 그다음 큰 작업 |
 | `js/map.js` · `js/mapview.js` · `maps/` · `tests/` | 월드맵 — 걷기 규칙 · 그리기와 조이스틱 · Tiled 지도 · 자동 시험. 지도는 `build.py` 가 `js/maps.js` 로 감싸 게임에 넣습니다 (그 파일은 고치지 말고 `maps/*.tmj` 를 고칠 것) | 맵 작업 |
 | `tools/sim.html` · `tools/sim.js` | **자동 플레이 시뮬레이터** (개발용, 빌드에 안 들어감) | 밸런스를 숫자로 확인 |
 
