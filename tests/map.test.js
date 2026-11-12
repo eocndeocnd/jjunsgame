@@ -1064,6 +1064,22 @@ test('도시 — 집 앞 시작점에서 골목 막다른 곳의 이상한 게�
     const b = blds[owner.get(p.y * city.w + p.x)];
     assert.ok(b && p.y === b.y + b.h - 1 && p.x >= b.x && p.x + p.w <= b.x + b.w, `${p.label} — 건물 아래 줄`);
     assert.ok(cellsOf(city, p).every(i => city.solid[i]) && !p.to, `${p.label} — 아직 닫힘`);
-    assert.ok(d[(p.y + 1) * city.w + p.x] >= 0, `${p.label} 앞은 걸을 수 있음`);
+    assert.ok(d[(p.y + 1) * city.w + p.x] >= 0, `${p.label || p.name} 앞은 걸을 수 있음`);
   }
+  // 있어야 하는 건물 — 헌터 협회(가장 큼) · 헌터백화점 · 4대 길드 넷 · 집 · 내 길드가 될 빈 건물 · 암시장이 들어설 자리
+  const doors = city.ports.filter(q => q.door).map(q => q.name).sort();
+  assert.deepEqual(doors, ['association', 'blackmarket', 'dept', 'guild1', 'guild2', 'guild3', 'guild4', 'home', 'myguild']);
+  const area = b => b.w * b.h, hq = blds.find(b => b.kind === 'hq');
+  assert.ok(blds.every(b => b === hq || area(b) < area(hq)), '헌터 협회가 가장 큰 건물');
+  assert.equal(blds.filter(b => b.kind === 'guild').length, 4);
+  // 건물끼리 붙지 않음 (옛 동네 골목 끝의 덧붙인 채 — 두 칸짜리 — 만 빼고)
+  for (const [n, b] of blds.entries()) for (const [k, c] of blds.entries()) {
+    if (k <= n || area(b) <= 4 || area(c) <= 4) continue;
+    const gapX = Math.max(c.x - (b.x + b.w), b.x - (c.x + c.w)), gapY = Math.max(c.y - (b.y + b.h), b.y - (c.y + c.h));
+    assert.ok(gapX >= 1 || gapY >= 1, `건물 ${n}(${b.kind}) · ${k}(${c.kind}) 사이가 뜸`);
+  }
+  // 가림막 친 빈터 셋 — 못 들어감
+  const SNOW = 8, lots = new Set();
+  for (let i = 0; i < city.w * city.h; i++) if ((city.look[i] & 15) === SNOW) { assert.ok(city.solid[i], '빈터는 막힘'); lots.add(i); }
+  assert.ok(lots.size >= 3 * 7 * 11, '빈터 셋');
 });
