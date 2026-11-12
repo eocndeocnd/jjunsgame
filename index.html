@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/galmuri@2.40.3/dist/galmuri.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/neodgm/neodgm-webfont@1.601/neodgm/style.css">
-<link rel="stylesheet" href="css/style.css?v=20261106010733">
+<link rel="stylesheet" href="css/style.css?v=20261112135609">
 </head>
 <body data-tab="journey">
 
@@ -192,6 +192,25 @@
   </div>
 </div>
 
+<!-- 그 공간에서 걸어 나가기 — 지하수로 첫 공간의 이상한 게이트에 닿으면 (ui.js 의 askLeave) -->
+<div id="leaveModal" class="modal enh-modal leave-modal hidden">
+  <div class="modal-back" data-closeleave></div>
+  <div class="modal-card">
+    <div class="modal-head">
+      <h3>도시로 나간다</h3>
+      <button class="btn tiny" data-closeleave>닫기</button>
+    </div>
+    <div class="leave-body">
+      <p>나가면 이번 회차는 여기서 끝난다. 격은 두고 나간다.</p>
+      <p class="leave-keep">전리품 · 강화석 · 골드는 그대로 남는다.</p>
+      <div class="chest-actions">
+        <button class="btn" data-closeleave>그만둔다</button>
+        <button class="btn primary" id="leaveOkBtn">나간다</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- 상인에게서 장비를 살 때 — 값 단추를 누르면 그 장비의 능력치를 다 보여 주고 「구매하시겠습니까?」 (ui.js 의 openBuy) -->
 <div id="buyModal" class="modal enh-modal buy-modal hidden">
   <div class="modal-back" data-closebuy></div>
@@ -303,18 +322,18 @@
 </div>
 
 <!-- 맨 뒤의 헤진 지도. 게임과 상관없이 먼저 그려둡니다. -->
-<script src="js/backdrop.js?v=20261106010733"></script>
+<script src="js/backdrop.js?v=20261112135609"></script>
 <!-- 효과음과 배경음. 소리 파일 없이 그 자리에서 만듭니다. -->
-<script src="js/sound.js?v=20261106010733"></script>
+<script src="js/sound.js?v=20261112135609"></script>
 <!-- 전투 이펙트 — assets/fx 의 그림 두 장에서 프레임을 잘라 씁니다 -->
-<script src="js/fx.js?v=20261106010733"></script>
-<script src="js/data.js?v=20261106010733"></script>
-<script src="js/game.js?v=20261106010733"></script>
+<script src="js/fx.js?v=20261112135609"></script>
+<script src="js/data.js?v=20261112135609"></script>
+<script src="js/game.js?v=20261112135609"></script>
 <!-- 월드맵 — 지도(maps/*.tmj 를 build.py 가 감싼 것) · 걷기 규칙 · 그리기 -->
-<script src="js/maps.js?v=20261106010733"></script>
-<script src="js/map.js?v=20261106010733"></script>
-<script src="js/mapart.js?v=20261106010733"></script>
-<script src="js/mapview.js?v=20261106010733"></script>
-<script src="js/ui.js?v=20261106010733"></script>
+<script src="js/maps.js?v=20261112135609"></script>
+<script src="js/map.js?v=20261112135609"></script>
+<script src="js/mapart.js?v=20261112135609"></script>
+<script src="js/mapview.js?v=20261112135609"></script>
+<script src="js/ui.js?v=20261112135609"></script>
 </body>
 </html>

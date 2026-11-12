@@ -243,6 +243,8 @@ const MapView = (function () {
             ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(28,16,7,0.85)'; ctx.stroke();
             ctx.fillStyle = '#ffd76a'; ctx.fill();
           }
+        } else if (port.rift) {                            // 이상한 게이트 — 도시 골목 막다른 곳 · 지하수로 첫 공간 (그림은 mapart 의 drawRift)
+          if (art) MapArt.drawRift(ctx, ox + (port.x + port.w / 2) * T, oy + (port.y + port.h) * T, T, performance.now() / 1000);
         } else if (!(port.door && art)) {                 // 건물 문(door)은 지도 그림이 성문 · 문간으로 그림
           ctx.fillStyle = open ? '#3fae4a' : '#5c3a1a';
           ctx.fillRect(ox + port.x * T + 2, oy + port.y * T + 2, port.w * T - 4, port.h * T - 4);
@@ -253,7 +255,7 @@ const MapView = (function () {
           ctx.font = `bold ${Math.max(10, Math.round(T * 0.42))}px system-ui, sans-serif`;
           ctx.textAlign = 'center';
           ctx.textBaseline = below ? 'top' : 'bottom';
-          const tx = ox + (port.x + port.w / 2) * T, ty = below ? oy + (port.y + port.h) * T + 3 : oy + port.y * T - 3 - (revealed ? T * 0.9 : 0);   // 나타난 구멍은 ▼ 위에
+          const tx = ox + (port.x + port.w / 2) * T, ty = below ? oy + (port.y + port.h) * T + 3 : oy + port.y * T - 3 - (revealed ? T * 0.9 : port.rift ? T * 1.7 : 0);   // 나타난 구멍은 ▼ 위에, 이상한 게이트는 그 꼭대기 위에
           ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(28,16,7,0.85)';
           ctx.strokeText(port.label + (open ? '' : ' 🔒'), tx, ty);
           ctx.fillStyle = '#f6e7c3';
@@ -432,7 +434,8 @@ const MapView = (function () {
       temper: id => MapRules.temperOf(getEnemy(id).arch),
       rollAura: () => rollAura(),
       postAlive: id => { const f = getEnemy(id); return !!f && !isDowned(id) && isRevealed(f); },   // 이 여정에 꺾었거나 아직 안 나타난 히든은 없음
-      portOpen: p => !p.opensAfter || isDowned(p.opensAfter),
+      // 꺾어야 열리는 문 · 도시가 열린 뒤에만 있는 문 (지하수로 첫 공간의 도시로 나가는 게이트 — needsCity)
+      portOpen: p => (!p.opensAfter || isDowned(p.opensAfter)) && (!p.needsCity || (!!State.meta && !!State.meta.cityOpen)),
       size: id => (getEnemy(id) || {}).size || 1,  // 지도에서 차지하는 n × n 칸 (data.js ENEMY_SIZE)
       chestOpen: id => !!State.meta && State.meta.chestsOpened.includes(id),  // 연 보물상자 (game.js 의 openChest)
       merchantHere: n => { const m = State.run && State.run.merchant; return !!m && !State.run.over && !!ZONES[m.zone] && ZONES[m.zone].id === n.zone; }

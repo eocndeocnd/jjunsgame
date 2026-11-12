@@ -88,6 +88,11 @@
     const cell = o => ({ x: Math.floor(o.x / tw), y: Math.floor(o.y / th) });
 
     for (const o of objects('secrets')) eachCell(m, rect(o), (x, y) => { m.secret[y * w + x] = 1; m.solid[y * w + x] = 0; });
+    // 걸을 수 있는 네모 (지도 속성 walk — 「x,y,w,h」) — 그 밖은 그림만 이어지고 막힘 (도시: 화면 가장자리 너머로도 거리가 이어져 보이게)
+    if (m.props.walk) {
+      const [bx, by, bw, bh] = String(m.props.walk).split(',').map(Number);
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (x < bx || y < by || x >= bx + bw || y >= by + bh) m.solid[y * w + x] = 1;
+    }
     // 구역 — x · y · w · h 는 다각형이면 그것을 감싸는 네모. 어느 칸이 어느 구역인지는 areaAt (겹치면 뒤의 것)
     m.areaAt = new Int16Array(w * h).fill(-1);
     m.areas = objects('areas').map((o, i) => {

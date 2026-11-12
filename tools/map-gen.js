@@ -487,6 +487,9 @@ function sewer(data) {
     open: 4,
     order: { 1: SEWER.order },
     chests: SEWER.chests,
+    // 도시로 나가는 이상한 게이트 — 첫 공간 아래 가장자리 가운데. 도시가 열린 뒤(첫 회차가 끝난 뒤)에만 나타남 (needsCity).
+    // 들어서면 그 회차가 끝나고 도시로 (ui.js 의 askLeave → game.js 의 leaveSpace)
+    entry: o => ({ name: 'city', label: '도시로', x: o.x + (FIELD_W >> 1) - 1, y: o.y + FIELD_H - 1, w: 2, h: 1, to: 'city.gate', rift: true, appears: true, needsCity: true }),
     look: (room, t) => t === WATER ? look(OL.WATER, 1)
       : room && room.kind === 'S.' ? look(OL.COBBLE, 7) : room && room.kind === 'B' ? look(OL.TILES, 8) : look(OL.COBBLE, 1),
     exit: { name: 'out', label: '바깥', to: 'overworld.sewer' }
@@ -1144,13 +1147,135 @@ function hub(data) {
   return buildTmj({ w: W, h: H, tiles, ports, npcs, props: { title: '문의 광장' } });
 }
 
+// ---------- 도시 (city) — 회차와 회차 사이에 머무는 곳 (docs/CITY-PLAN.md 1-가 · 초안) ----------
+// 첫 회차가 끝난 뒤부터 회차는 여기서 시작합니다. 골목 안 막다른 곳의 이상한 게이트(나에게만 보임)로 들어가면 지하수로 첫 공간,
+// 지하수로 첫 공간의 같은 게이트로 나오면 그 회차가 끝나고 여기로 (game.js 의 leaveSpace).
+// 칸 그림 — # 건물(CITY_BUILDINGS 의 네모로 한 채씩) · . 보도 · = 찻길 · z 횡단보도 · , 잔디 · T 잔디의 나무 · t 보도의 가로수
+//           p 공원 길 · a 골목 · x 찻길 끝 막음 · G 이상한 게이트 (골목 막다른 곳) · S 시작점 (집 문 앞 보도)
+const CITY_BIO = 10;                                         // 도시 — 그림(js/mapart.js 의 CITY)이 이 격 번호로 도시 무늬를 고름
+const CITY_GRID = [
+  '################################################',   // 0
+  '################################################',   // 1
+  '##############GG################################',   // 2
+  '##############aa################################',   // 3
+  '##############aa##################,T,,##########',   // 4
+  '##############aa##################,,,T##########',   // 5
+  '##############aa##################T,,,##########',   // 6
+  '##############aa##################,,T,##########',   // 7
+  '##############aa##################,,,,##########',   // 8
+  '##############aa##################T,,,##########',   // 9
+  '##############aa##################,,,,##########',   // 10
+  '.....t....S...aa......t...........t.....t....t..',   // 11
+  '................................................',   // 12
+  'x=================zzz==========================x',   // 13
+  'x=================zzz==========================x',   // 14
+  'x=================zzz==========================x',   // 15
+  'x=================zzz==========================x',   // 16
+  '..........................zzzz..................',   // 17  (zzzz — 세로 찻길을 건너는 횡단보도)
+  '....t.....t.....t.........zzzz....t.....t.....t.',   // 18  (가로수는 아래 줄 — 위 줄이면 나무가 찻길 위로 솟아 보임)
+  ',,T,,,,,T,,,,,,,,,p,,,T,..====..################',   // 19
+  ',T,,,,,,,,,,T,,,,,p,,,,,..====..################',   // 20
+  ',,,,,T,,,,,,,,,,,,p,,,T,..====..################',   // 21
+  'pppppppppppppppppppppppp..====..################',   // 22
+  ',,T,,,,,,T,,,,T,,,p,,,,,..====..################',   // 23
+  ',,,,,,T,,,,,,,,,,,p,T,,,..====..################',   // 24
+  'T,,,,,,,,,,,,T,,,,p,,,,T..====..################',   // 25
+  '########################..====..################',   // 26
+  '########################..====..################',   // 27
+  '########################..====..################',   // 28
+  '########################..====..################',   // 29
+  '########################..====..################',   // 30
+  '########################..xxxx..################'    // 31
+];
+// 건물 — 칸 네모 [x, y, w, h] · kind(그림: villa 빌라 · shop 가게 · office 유리 빌딩 · apt 아파트 · back 뒤 건물 · store 상가) ·
+// door { x, w, name, label } (아래 줄의 문 — 지금은 닫혀 있음. 무기점 안은 다음 조각 1-나) · roof(옥상 꾸밈 — tank 물탱크 · heli 헬기장 · solar 태양판)
+const CITY_BUILDINGS = [
+  { x: 0, y: 0, w: 7, h: 11, kind: 'apt' },
+  { x: 7, y: 0, w: 7, h: 2, kind: 'back' },
+  { x: 14, y: 0, w: 10, h: 2, kind: 'back' },                // 골목이 끝나는 벽 — 이상한 게이트가 이 앞에 섬
+  { x: 7, y: 2, w: 7, h: 9, kind: 'villa', roof: 'tank', door: { x: 10, w: 1, name: 'home', label: '집' } },
+  { x: 16, y: 2, w: 8, h: 9, kind: 'shop', door: { x: 19, w: 2, name: 'weapons', label: '무기점' } },
+  { x: 24, y: 0, w: 10, h: 11, kind: 'office', roof: 'heli' },
+  { x: 34, y: 0, w: 4, h: 4, kind: 'back' },
+  { x: 38, y: 0, w: 10, h: 11, kind: 'apt', roof: 'solar' },
+  { x: 0, y: 26, w: 9, h: 6, kind: 'apt', roof: 'solar' },
+  { x: 9, y: 26, w: 8, h: 6, kind: 'store' },
+  { x: 17, y: 26, w: 7, h: 6, kind: 'villa', roof: 'tank' },
+  { x: 32, y: 19, w: 8, h: 13, kind: 'office', roof: 'heli' },
+  { x: 40, y: 19, w: 8, h: 13, kind: 'apt' }
+];
+// 둘레 — 걷는 곳(위 그림) 바깥에 거리를 더 그려 두어 화면 가장자리 너머가 까맣지 않게 (걷지는 못함 — 지도 속성 walk).
+// 위 · 아래는 건물 한 줄(CITY_BAND 의 생김새를 돌아가며), 왼쪽 · 오른쪽은 가장자리 칸을 그대로 늘림 (찻길은 막음 없이 이어지고, 나무는 빼고)
+const CITY_PAD = { t: 7, b: 6, l: 9, r: 9 };
+const CITY_BAND = [['office', 'heli'], ['apt', null], ['back', null], ['apt', 'solar'], ['villa', 'tank'], ['office', null], ['store', null]];
+function city() {
+  const CH = CITY_GRID.length, CW = CITY_GRID[0].length, PD = CITY_PAD;
+  CITY_GRID.forEach((row, y) => { if (row.length !== CW) throw new Error(`도시 — ${y}번째 줄 폭이 ${row.length} (${CW} 이어야 함)`); });
+  const W = CW + PD.l + PD.r, H = CH + PD.t + PD.b;
+  const PLAIN = { x: '=', S: '.', G: 'a', t: '.', T: ',' };          // 둘레로 늘릴 때 — 막음 · 시작점 · 게이트 · 나무는 맨땅으로
+  const grid = Array.from({ length: H }, (_, y) => Array.from({ length: W }, (_, x) => {
+    const cy = y - PD.t, cx = x - PD.l;
+    if (cy < 0 || cy >= CH) return '#';
+    if (cx >= 0 && cx < CW) return CITY_GRID[cy][cx];
+    const ch = CITY_GRID[cy][Math.max(0, Math.min(CW - 1, cx))];
+    return PLAIN[ch] || ch;
+  }).join(''));
+  // 건물 — 그림 안의 것은 둘레만큼 옮기고, 왼쪽 · 오른쪽 가장자리에 닿은 것은 둘레까지 늘림. 위 · 아래 둘레엔 건물 한 줄
+  const blds = CITY_BUILDINGS.map(b => {
+    const n = { ...b, x: b.x + PD.l, y: b.y + PD.t, door: b.door && { ...b.door, x: b.door.x + PD.l } };
+    if (b.x === 0) { n.x -= PD.l; n.w += PD.l; }
+    if (b.x + b.w === CW) n.w += PD.r;
+    return n;
+  });
+  for (const [y0, h] of [[0, PD.t], [PD.t + CH, PD.b]]) {
+    for (let x = 0, i = y0 ? 3 : 0; x < W; i++) {
+      const w = Math.min(W - x, 9 + ((i * 5) % 7));
+      const [kind, roof] = CITY_BAND[i % CITY_BAND.length];
+      blds.push({ x, y: y0, w: W - x - w < 5 ? W - x : w, h, kind, roof });
+      x += W - x - w < 5 ? W - x : w;
+    }
+  }
+  const tiles = new Uint8Array(W * H), lk = new Uint8Array(W * H);
+  const kinds = {
+    '#': [WALL, BUILD], '.': [FLOOR, OL.PAVE], '=': [FLOOR, OL.DIRT], z: [FLOOR, OL.COBBLE], ',': [FLOOR, OL.GRASS], T: [TREE, OL.GRASS],
+    t: [TREE, OL.PAVE], p: [FLOOR, OL.TILES], a: [FLOOR, OL.ROCKY], x: [WALL, OL.DIRT], G: [FLOOR, OL.ROCKY], S: [FLOOR, OL.PAVE]
+  };
+  let start = null, gate = null;
+  grid.forEach((row, y) => {
+    [...row].forEach((ch, x) => {
+      const k = kinds[ch];
+      if (!k) throw new Error(`도시 — 모르는 칸 「${ch}」 (${x}, ${y})`);
+      tiles[y * W + x] = k[0]; lk[y * W + x] = look(k[1], CITY_BIO);
+      if (ch === 'S') start = { x, y };
+      if (ch === 'G' && !gate) gate = { x, y };
+    });
+  });
+  // 건물 네모는 그림의 # 와 꼭 맞아야 하고, 서로 겹치지 않고, # 를 빠짐없이 덮어야 함
+  const owner = new Int16Array(W * H).fill(-1), ports = [];
+  blds.forEach((b, i) => {
+    for (let y = b.y; y < b.y + b.h; y++) for (let x = b.x; x < b.x + b.w; x++) {
+      if (grid[y][x] !== '#') throw new Error(`도시 — 건물 ${i} 이(가) 건물 칸이 아닌 (${x}, ${y}) 를 덮음`);
+      if (owner[y * W + x] >= 0) throw new Error(`도시 — 건물 ${owner[y * W + x]} 와 ${i} 가 (${x}, ${y}) 에서 겹침`);
+      owner[y * W + x] = i;
+    }
+    if (b.door) ports.push({ name: b.door.name, label: b.door.label, x: b.door.x, y: b.y + b.h - 1, w: b.door.w, h: 1, door: true });
+  });
+  for (let k = 0; k < W * H; k++) if (grid[(k / W) | 0][k % W] === '#' && owner[k] < 0) throw new Error(`도시 — (${k % W}, ${(k / W) | 0}) 의 건물 칸이 어느 건물에도 안 듦`);
+  if (!start || !gate) throw new Error('도시 — 시작점(S) · 이상한 게이트(G) 가 그림에 없음');
+  // 이상한 게이트 — 골목 막다른 곳, 나에게만 보임 (그림은 mapview 의 rift). 들어가면 지하수로 첫 공간의 같은 게이트 앞
+  ports.push({ name: 'gate', x: gate.x, y: gate.y, w: 2, h: 1, to: 'sewer.city', rift: true });
+  return buildTmj({ w: W, h: H, tiles, look: lk, ports, npcs: [{ name: 'start', x: start.x, y: start.y }],
+    props: { title: '헌터들의 도시', city: true, walk: `${PD.l},${PD.t},${CW},${CH}`,
+      blds: JSON.stringify(blds.map(({ x, y, w, h, kind, roof }) => ({ x, y, w, h, kind, roof }))) } });
+}
+
 // 뽑을 지도 전부 — { 파일 이름: 만드는 함수 }
 function allMaps(data) {
-  const out = { sewer: sewer(data), overworld: overworld(data), hub: hub(data) };
+  const out = { sewer: sewer(data), overworld: overworld(data), hub: hub(data), city: city() };
   for (const s of SECRET_ROOMS) out[s.id] = secretRoom(data, s);
   for (const b of BUILDINGS) out[b.id] = buildingInterior(data, b);
   REALMS.forEach((r, i) => { out[r.name] = realm(data, r, i); });
   return out;
 }
 
-module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, looksPng, encodePng, generate, sewer, overworld, hub, secretRoom, buildingInterior, allMaps, layoutFromPlan, HUB_DOORS, REALMS, SEWER, SECRET_ROOMS, BUILDINGS, BUILD, DOORWAY, CARPET, RUIN };
+module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, looksPng, encodePng, generate, sewer, overworld, hub, city, CITY_GRID, CITY_BUILDINGS, CITY_BIO, secretRoom, buildingInterior, allMaps, layoutFromPlan, HUB_DOORS, REALMS, SEWER, SECRET_ROOMS, BUILDINGS, BUILD, DOORWAY, CARPET, RUIN };

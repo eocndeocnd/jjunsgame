@@ -598,6 +598,8 @@ function load() {
     State.meta.settings = { ...defaultSettings(), ...(data.settings || {}) };
     for (const k of FIXED_SETTINGS) State.meta.settings[k] = defaultSettings()[k];
     State.meta.tutorialDone = !!data.tutorialDone;
+    // 도시가 생기기 전의 저장본 — 회차를 한 번이라도 끝냈으면(두 번째 회차부터) 도시가 열린 것으로
+    State.meta.cityOpen = data.cityOpen === undefined ? num(data.runCount) > 1 : !!data.cityOpen;
     State.meta.namelessMet = !!data.namelessMet;
     State.meta.weights = { ...defaultWeights(), ...(data.weights || {}) };
     State.meta.autoAlloc = data.autoAlloc !== false;
@@ -675,6 +677,7 @@ function freshMeta() {
     bestZone: 1,
     cleared: false,
     namelessMet: false,
+    cityOpen: false,                  // 도시가 열렸는가 — 첫 회차가 끝나면 열리고, 그 뒤로 회차는 도시에서 시작합니다 (docs/CITY-PLAN.md)
     layout: LAYOUT_VERSION            // 저장본의 지역 번호 순서 (격 재편 뒤 = 2)
   };
 }
@@ -945,6 +948,7 @@ function freshRun() {
     merchant: null,      // 이번 회차의 떠돌이 상인 — { zone, wares, bought } (없으면 null)
     over: false,
     victory: false,
+    walkedOut: false,    // 스스로 걸어 나와 끝난 회차인가 (leaveSpace) — 끝 화면의 글이 다름
     reason: ''
   };
 }
@@ -952,13 +956,16 @@ function freshRun() {
 function startRun() {
   State.meta.runCount += 1;
   State.run = freshRun();
+  if (State.meta.cityOpen) State.run.mapId = 'city';   // 도시가 열린 뒤로는 도시에서 — 골목의 이상한 게이트로 그 공간에 들어감
   State.run.merchant = rollMerchant(0);
   if (State.meta.autoAlloc) commitPoints();
 
   State.log = [];
   const z = ZONES[0];
   const banked = bankedEnergy();
-  pushLog('info', `${State.meta.runCount}회차 — 아무것도 아닌 상태로 ${z.name}에 선다. 에너지 ${State.run.energy}.`);
+  pushLog('info', State.meta.cityOpen
+    ? `${State.meta.runCount}회차 — 도시에서 눈을 뜬다. 에너지 ${State.run.energy}.`
+    : `${State.meta.runCount}회차 — 아무것도 아닌 상태로 ${z.name}에 선다. 에너지 ${State.run.energy}.`);
   if (banked > 0) pushLog('devour', `이미 삼켜둔 격이 ${State.meta.banked.length}. 에너지 +${banked}를 들고 시작한다.`);
   save();
 }
@@ -969,15 +976,28 @@ function endRun(reason) {
   run.reason = reason;
   run.encounter = null;
   if (run.level > State.meta.bestLevel) State.meta.bestLevel = run.level;
+  State.meta.cityOpen = true;          // 첫 회차가 끝나면 도시가 열림 — 다음 회차는 도시에서 눈을 뜸
 
   if (run.victory) {
     pushLog('rank', `━━ 여정의 끝 — ${State.meta.runCount}회차에 모든 격을 넘어섰다 ━━`);
+  } else if (run.walkedOut) {
+    const r = rankOf(run.level);
+    pushLog('info', `도시로 나왔다 — 격은 그 공간에 두고 나왔다  (${knownRank(r.n) ? `제${r.n}격 ${r.name}` : '???'} · Lv.${fmtLevel(run.level)} · ${run.kills}명을 꺾음)`);
   } else {
     const r = rankOf(run.level);
     pushLog('death', `격이 무너졌다 — ${reason}  (${knownRank(r.n) ? `제${r.n}격 ${r.name}` : '???'} · Lv.${fmtLevel(run.level)} · ${run.kills}명을 꺾음)`);
     pushLog('info', '격은 사라졌지만 빼앗은 것은 남는다.');
   }
   save();
+}
+
+// 그 공간에서 스스로 걸어 나옴 — 지하수로 첫 공간의 이상한 게이트 (도시가 열린 뒤에만 있음). 그 회차는 여기서 끝나고, 격은 두고 나옵니다
+function leaveSpace() {
+  const run = State.run;
+  if (!run || run.over || run.encounter || run.lastResult) return false;
+  run.walkedOut = true;
+  endRun('스스로 걸어 나왔다');
+  return true;
 }
 
 // 에너지가 바닥났고 아직 마주한 적이 없으면 여정이 끝납니다.

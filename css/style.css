@@ -2437,6 +2437,11 @@ body.fight-locked #dollSwapBtn { display: none; }
 .chest-body .res-lines { margin-bottom: 0; }
 .chest-actions { display: flex; }
 .chest-actions .btn { flex: 1; }
+/* 도시로 나가기 — 지하수로 첫 공간의 이상한 게이트 (ui.js 의 askLeave) */
+.leave-body { padding: 2px 2px 0; }
+.leave-body p { margin: 0 0 8px; line-height: 1.5; }
+.leave-body .leave-keep { opacity: 0.75; font-size: 0.92em; margin-bottom: 14px; }
+.leave-body .chest-actions { gap: 8px; }
 
 /* 「슬롯 강화」 — 올릴 수 있는 칸이 있으면 앞에 그 수가 초록 알약으로 */
 .doll-mode.ready { background: #f0f5dc; box-shadow: 2px 2px 0 var(--frame-out), 0 0 0 2px rgba(63, 122, 58, 0.35); }

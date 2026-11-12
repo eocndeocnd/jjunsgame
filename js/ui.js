@@ -1390,6 +1390,26 @@ function isChestOpen() {
   return !!m && !m.classList.contains('hidden');
 }
 
+// ---------- 도시로 나가기 — 지하수로 첫 공간의 이상한 게이트에 닿으면 ----------
+// 나가면 이번 회차가 끝나므로(game.js 의 leaveSpace) 한 번 묻습니다. 그만두면 그 자리에서 다시 걷습니다
+function askLeave() {
+  const m = $('leaveModal');
+  if (m) m.classList.remove('hidden');
+}
+function closeLeave() {
+  const m = $('leaveModal');
+  if (m) m.classList.add('hidden');
+  render();
+}
+function isLeaveOpen() {
+  const m = $('leaveModal');
+  return !!m && !m.classList.contains('hidden');
+}
+function confirmLeave() {
+  $('leaveModal').classList.add('hidden');
+  fadeThrough(() => { leaveSpace(); });     // 화면이 까매졌다가 끝 화면 (다음 회차는 도시에서)
+}
+
 // 결과 창에서는 달라지는 능력치를 앞의 둘까지만 — 나머지는 「…」 (다 보려면 부위 창). 「낀다」가 스크롤 없이 보이게
 const RES_DIFF_MAX = 2;
 function dropWear(item) {
@@ -1697,6 +1717,10 @@ function onMapEvents(evs) {
       const got = openChest(e.chest);
       if (got) { Sound.play('drop'); showChest(got); }
       changed = true;
+    } else if (e.type === 'port' && e.port.to && e.port.needsCity) {
+      askLeave();                          // 그 공간에서 도시로 나가는 게이트 — 나가면 회차가 끝나므로 한 번 묻습니다
+      changed = true;
+      break;
     } else if (e.type === 'port' && e.port.to) {
       fadeThrough(() => goThroughPort(e.port));   // 화면이 까매졌다가 다음 지도의 문(구멍) 앞에서 밝아짐
       changed = true;
@@ -1889,6 +1913,7 @@ function wireKeys() {
         else if (isAvatarModalOpen()) closeAvatarModal();
         else if (isSwapModalOpen()) closeSwapModal();    // 교환 창은 강화 창 위에도 뜹니다
         else if (isChestOpen()) closeChest();
+        else if (isLeaveOpen()) closeLeave();
         else if (isBuyOpen()) closeBuy();                // 구매 창은 상점 창 위에 뜹니다
         else if (isShopOpen()) closeShop();
         else if (isSlotModalOpen()) closeSlotModal();
@@ -2573,7 +2598,7 @@ function isBuyOpen() {
   return !!m && !m.classList.contains('hidden');
 }
 
-function isAnyModalOpen() { return isAvatarModalOpen() || isSlotModalOpen() || isSwapModalOpen() || isShopOpen() || isBuyOpen() || isChestOpen() || isRosterModalOpen() || isSaveModalOpen() || isAdminOpen(); }
+function isAnyModalOpen() { return isAvatarModalOpen() || isSlotModalOpen() || isSwapModalOpen() || isShopOpen() || isBuyOpen() || isChestOpen() || isLeaveOpen() || isRosterModalOpen() || isSaveModalOpen() || isAdminOpen(); }
 
 // 그 부위의 강화를 반영한 실제 수치를 보여줍니다 — 장부상 수치가 아니라 몸에 붙는 값.
 // 강화는 부위에 붙으므로, 목록에 있는 것 무엇을 끼든 이 값이 됩니다.
@@ -2668,9 +2693,11 @@ function renderOverlay() {
   card.classList.toggle('victory', !!run.victory);
   // 마왕 너머를 본 뒤로는, 격이 무너지는 화면 구석에 눈 하나가 아주 옅게 스칩니다 (말은 없습니다)
   card.classList.toggle('watched', wallSeen() && !run.victory);
-  $('overTitle').textContent = run.victory ? '모든 격을 넘어섰다' : '격이 무너졌다';
+  $('overTitle').textContent = run.victory ? '모든 격을 넘어섰다' : run.walkedOut ? '도시로 나왔다' : '격이 무너졌다';
   // 깼을 때는 제목이 곧 사연이라 아래 줄을 비웁니다 (비면 CSS 가 숨깁니다)
-  $('overReason').textContent = run.victory ? '' : run.reason;
+  $('overReason').textContent = run.victory ? '' : run.walkedOut ? '격은 그 공간에 두고 나왔다.' : run.reason;
+  // 다음 회차는 도시에서 — 쓰러졌으면 눈을 뜨고, 걸어 나왔으면 그대로 도시로 (도시가 열리기 전의 저장본만 「다시 오른다」)
+  $('newRunBtn').firstChild.textContent = !State.meta.cityOpen ? '다시 오른다' : run.walkedOut ? '도시로 간다' : '도시에서 눈을 뜬다';
 
   $('overStats').innerHTML = `
     <li><span class="k">도달한 지역</span><span class="v">${run.zoneIndex + 1}지역 · ${zone.name}</span></li>
@@ -2683,7 +2710,7 @@ function renderOverlay() {
   // 끝을 알리는 소리는 그 회차에 한 번만
   if (soundedOver !== run) {
     soundedOver = run;
-    Sound.play(run.victory ? 'victory' : 'gameOver');
+    Sound.play(run.victory ? 'victory' : run.walkedOut ? 'zoneMove' : 'gameOver');
   }
   $('overlay').classList.remove('hidden');
 }
@@ -3178,6 +3205,8 @@ function init() {
   for (const b of document.querySelectorAll('[data-closeshop]')) b.addEventListener('click', closeShop);
   for (const b of document.querySelectorAll('#buyModal > [data-closebuy], #buyModal .modal-head [data-closebuy]')) b.addEventListener('click', closeBuy);
   for (const b of document.querySelectorAll('[data-closechest]')) b.addEventListener('click', closeChest);
+  for (const b of document.querySelectorAll('[data-closeleave]')) b.addEventListener('click', closeLeave);
+  $('leaveOkBtn').addEventListener('click', confirmLeave);
 
   const ago = $('agOk');
   if (ago) ago.addEventListener('click', () => $('avatarGain').classList.add('hidden'));
