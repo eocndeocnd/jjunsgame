@@ -243,6 +243,7 @@ const MapView = (function () {
             ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(28,16,7,0.85)'; ctx.stroke();
             ctx.fillStyle = '#ffd76a'; ctx.fill();
           }
+        } else if (port.edge) {                            // 지도 가장자리 통로(옛 동네 ⇄ 도시) — 칸은 그리지 않고 이름표만
         } else if (port.rift) {                            // 이상한 게이트 — 도시 골목 막다른 곳 · 지하수로 첫 공간 (그림은 mapart 의 drawRift)
           if (art) MapArt.drawRift(ctx, ox + (port.x + port.w / 2) * T, oy + (port.y + port.h) * T, T, performance.now() / 1000);
         } else if (!(port.door && art)) {                 // 건물 문(door)은 지도 그림이 성문 · 문간으로 그림

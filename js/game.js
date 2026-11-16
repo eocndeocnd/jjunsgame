@@ -974,7 +974,7 @@ function freshRun() {
 function startRun() {
   State.meta.runCount += 1;
   State.run = freshRun();
-  if (State.meta.cityOpen) State.run.mapId = 'city';   // 도시가 열린 뒤로는 도시에서 — 골목의 이상한 게이트로 그 공간에 들어감
+  if (State.meta.cityOpen) State.run.mapId = 'oldtown';   // 도시가 열린 뒤로는 옛 동네의 집 앞에서 — 골목의 이상한 게이트로 그 공간에 들어감
   State.run.merchant = rollMerchant(0);
   if (State.meta.autoAlloc) commitPoints();
 

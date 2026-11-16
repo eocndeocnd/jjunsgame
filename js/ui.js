@@ -1734,6 +1734,11 @@ function doorStep(data, port) {
   const inPort = (x, y) => data.ports.some(p => inRect(p, x, y));
   const free = (x, y) => x >= 0 && y >= 0 && x < data.w && y < data.h && !data.solid[y * data.w + x] && !inPort(x, y)
     && !data.posts.some(p => inRect(p, x, y) && alive(p.enemy));
+  // 지도 가장자리 통로(옛 동네 ⇄ 도시)는 통로 안쪽(arrive 쪽) 가운데 줄부터 — 넘어오자마자 도로 넘어가지 않게
+  if (port.arrive === 'left' || port.arrive === 'right') {
+    const x = port.arrive === 'left' ? port.x - 1 : port.x + port.w, mid = port.y + (port.h >> 1);
+    for (const y of [mid, ...Array.from({ length: port.h }, (_, i) => port.y + i)]) if (free(x, y)) return { x, y };
+  }
   for (let x = port.x; x < port.x + port.w; x++) {
     if (free(x, port.y + port.h)) return { x, y: port.y + port.h };
     if (free(x, port.y - 1)) return { x, y: port.y - 1 };

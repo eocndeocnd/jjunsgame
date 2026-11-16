@@ -1035,51 +1035,68 @@ test('미끄러지듯 걷기 — 한 칸짜리 길 · 문 앞에서 조금 비�
   assert.ok(Math.abs(p.oy) < 0.13, `줄 가운데로 비켜 (${p.oy.toFixed(3)})`);
 });
 
-// ---------- 도시 (docs/CITY-PLAN.md 1-가) ----------
-test('도시 — 집 앞 시작점에서 골목 막다른 곳의 이상한 게이트까지 걸어서 닿고, 그 게이트는 지하수로 첫 공간의 게이트와 서로 이어짐 · 건물 네모가 건물 칸을 빠짐없이', () => {
-  const city = loadMap('city'), sewer = loadMap('sewer');
-  const gate = city.ports.find(p => p.name === 'gate'), back = sewer.ports.find(p => p.name === 'city');
-  assert.ok(gate && gate.rift && gate.to === 'sewer.city', '도시 → 지하수로');
-  assert.ok(back && back.rift && back.appears && back.needsCity && back.to === 'city.gate', '지하수로 → 도시 (도시가 열린 뒤에만)');
-  const d = walk(city, [city.start.y * city.w + city.start.x]);
-  assert.ok(cellsOf(city, gate).every(i => d[i] >= 0), '시작점에서 게이트에 닿음');
+// ---------- 도시 — 옛 동네 · 헌터들의 도시 (docs/CITY-PLAN.md 1-가) ----------
+// 지도 속성 blds 의 건물 네모가 건물 칸(겉모습 BUILD)을 빠짐없이 · 겹치지 않게 덮고, 문은 그 건물 아래 줄 · 아직 닫힘
+function checkTown(m, d) {
+  const blds = JSON.parse(m.props.blds), BUILD = 12, owner = new Map(), area = b => b.w * b.h;
+  for (const [n, b] of blds.entries()) for (const i of cellsOf(m, b)) {
+    assert.ok(!owner.has(i), `${m.id} 건물 ${n} 겹침`);
+    owner.set(i, n);
+    assert.equal(m.look[i] & 15, BUILD, `${m.id} 건물 ${n} — 건물 칸이 아닌 곳을 덮음`);
+  }
+  for (let i = 0; i < m.w * m.h; i++) if ((m.look[i] & 15) === BUILD) assert.ok(owner.has(i), `${m.id} 건물 칸 ${i % m.w},${(i / m.w) | 0} 이(가) 어느 건물에도 안 듦`);
+  for (const p of m.ports.filter(q => q.door)) {
+    const b = blds[owner.get(p.y * m.w + p.x)];
+    assert.ok(b && p.y === b.y + b.h - 1 && p.x >= b.x && p.x + p.w <= b.x + b.w, `${m.id} ${p.label || p.name} — 건물 아래 줄`);
+    assert.ok(cellsOf(m, p).every(i => m.solid[i]) && !p.to, `${m.id} ${p.label || p.name} — 아직 닫힘`);
+    assert.ok(d[(p.y + 1) * m.w + p.x] >= 0, `${m.id} ${p.label || p.name} 앞은 걸을 수 있음`);
+  }
+  // 건물끼리 붙지 않음 (골목 끝의 덧붙인 채 — 두 칸짜리 — 만 빼고)
+  for (const [n, b] of blds.entries()) for (const [k, c] of blds.entries()) {
+    if (k <= n || area(b) <= 4 || area(c) <= 4) continue;
+    const gapX = Math.max(c.x - (b.x + b.w), b.x - (c.x + c.w)), gapY = Math.max(c.y - (b.y + b.h), b.y - (c.y + c.h));
+    assert.ok(gapX >= 1 || gapY >= 1, `${m.id} 건물 ${n}(${b.kind}) · ${k}(${c.kind}) 사이가 뜸`);
+  }
+  assert.equal(m.areas.length, 0);
+  assert.equal(m.posts.length, 0);
+  assert.equal(m.chests.length, 0);
+  return blds;
+}
+
+test('도시 — 옛 동네(집 앞에서 시작 · 골목 막다른 곳의 이상한 게이트 · 오른쪽 끝 통로) ⇄ 헌터들의 도시(왼쪽 끝 통로 · 협회 · 백화점 · 4대 길드 · 빈터)', () => {
+  const old = loadMap('oldtown'), city = loadMap('city'), sewer = loadMap('sewer');
+  const dOld = walk(old, [old.start.y * old.w + old.start.x]), dCity = walk(city, [city.start.y * city.w + city.start.x]);
+  // 옛 동네 — 게이트는 지하수로 첫 공간의 게이트와 서로 이어짐
+  const gate = old.ports.find(p => p.name === 'gate'), back = sewer.ports.find(p => p.name === 'city');
+  assert.ok(gate && gate.rift && gate.to === 'sewer.city', '옛 동네 → 지하수로');
+  assert.ok(back && back.rift && back.appears && back.needsCity && back.to === 'oldtown.gate', '지하수로 → 옛 동네 (도시가 열린 뒤에만)');
+  assert.ok(cellsOf(old, gate).every(i => dOld[i] >= 0), '집 앞에서 게이트에 닿음');
   const plaza = sewer.areas.find(a => a.name === '첫 공간');
   assert.ok(back.x >= plaza.x && back.x + back.w <= plaza.x + plaza.w && back.y >= plaza.y && back.y < plaza.y + plaza.h, '지하수로 게이트는 첫 공간 안');
   const ds = walk(sewer, [sewer.start.y * sewer.w + sewer.start.x]);
   assert.ok(cellsOf(sewer, back).every(i => ds[i] >= 0), '지하수로 시작점에서 닿음');
-  // 지역이 없는 지도 — 몬스터 · 정해진 자리 · 상자 없음, 이름은 지도 속성 title
-  assert.equal(city.areas.length, 0);
-  assert.equal(city.posts.length, 0);
-  assert.equal(city.chests.length, 0);
+  // 가장자리 통로 — 옛 동네 오른쪽 끝 ⇄ 도시 왼쪽 끝, 서로를 가리키고 걸어서 닿음
+  const toCity = old.ports.find(p => p.name === 'city'), toOld = city.ports.find(p => p.name === 'oldtown');
+  assert.ok(toCity && toCity.edge && toCity.to === 'city.oldtown' && toCity.arrive === 'left');
+  assert.ok(toOld && toOld.edge && toOld.to === 'oldtown.city' && toOld.arrive === 'right');
+  const walkBox = m => String(m.props.walk).split(',').map(Number);
+  const [ox, , ow] = walkBox(old), [cx] = walkBox(city);
+  assert.equal(toCity.x, ox + ow - 1, '옛 동네 걷는 곳의 오른쪽 끝');
+  assert.equal(toOld.x, cx, '도시 걷는 곳의 왼쪽 끝');
+  assert.ok(cellsOf(old, toCity).every(i => dOld[i] >= 0) && cellsOf(city, toOld).every(i => dCity[i] >= 0), '두 통로 다 걸어서 닿음');
+  assert.ok(!old.solid[(toCity.y + 1) * old.w + toCity.x - 1] && !city.solid[(toOld.y + 1) * city.w + toOld.x + 1], '넘어와 서는 안쪽 칸이 트임');
+  assert.equal(old.props.title, '옛 동네');
   assert.equal(city.props.title, '헌터들의 도시');
-  // 건물 — 네모끼리 안 겹치고 건물 칸(겉모습 BUILD)을 빠짐없이 덮음, 문은 그 건물 아래 줄 · 아직 닫힘(벽)
-  const blds = JSON.parse(city.props.blds), BUILD = 12, owner = new Map();
-  for (const [n, b] of blds.entries()) for (const i of cellsOf(city, b)) {
-    assert.ok(!owner.has(i), `건물 ${n} 겹침`);
-    owner.set(i, n);
-    assert.equal(city.look[i] & 15, BUILD, `건물 ${n} — 건물 칸이 아닌 곳을 덮음`);
-  }
-  for (let i = 0; i < city.w * city.h; i++) if ((city.look[i] & 15) === BUILD) assert.ok(owner.has(i), `건물 칸 ${i % city.w},${(i / city.w) | 0} 이(가) 어느 건물에도 안 듦`);
-  for (const p of city.ports.filter(q => q.door)) {
-    const b = blds[owner.get(p.y * city.w + p.x)];
-    assert.ok(b && p.y === b.y + b.h - 1 && p.x >= b.x && p.x + p.w <= b.x + b.w, `${p.label} — 건물 아래 줄`);
-    assert.ok(cellsOf(city, p).every(i => city.solid[i]) && !p.to, `${p.label} — 아직 닫힘`);
-    assert.ok(d[(p.y + 1) * city.w + p.x] >= 0, `${p.label || p.name} 앞은 걸을 수 있음`);
-  }
-  // 있어야 하는 건물 — 헌터 협회(가장 큼) · 헌터백화점 · 4대 길드 넷 · 집 · 내 길드가 될 빈 건물 · 암시장이 들어설 자리
-  const doors = city.ports.filter(q => q.door).map(q => q.name).sort();
-  assert.deepEqual(doors, ['association', 'blackmarket', 'dept', 'guild1', 'guild2', 'guild3', 'guild4', 'home', 'myguild']);
-  const area = b => b.w * b.h, hq = blds.find(b => b.kind === 'hq');
-  assert.ok(blds.every(b => b === hq || area(b) < area(hq)), '헌터 협회가 가장 큰 건물');
-  assert.equal(blds.filter(b => b.kind === 'guild').length, 4);
-  // 건물끼리 붙지 않음 (옛 동네 골목 끝의 덧붙인 채 — 두 칸짜리 — 만 빼고)
-  for (const [n, b] of blds.entries()) for (const [k, c] of blds.entries()) {
-    if (k <= n || area(b) <= 4 || area(c) <= 4) continue;
-    const gapX = Math.max(c.x - (b.x + b.w), b.x - (c.x + c.w)), gapY = Math.max(c.y - (b.y + b.h), b.y - (c.y + c.h));
-    assert.ok(gapX >= 1 || gapY >= 1, `건물 ${n}(${b.kind}) · ${k}(${c.kind}) 사이가 뜸`);
-  }
-  // 가림막 친 빈터 셋 — 못 들어감
-  const SNOW = 8, lots = new Set();
-  for (let i = 0; i < city.w * city.h; i++) if ((city.look[i] & 15) === SNOW) { assert.ok(city.solid[i], '빈터는 막힘'); lots.add(i); }
-  assert.ok(lots.size >= 3 * 7 * 11, '빈터 셋');
+  // 있어야 하는 건물
+  const oldBlds = checkTown(old, dOld), cityBlds = checkTown(city, dCity);
+  assert.deepEqual(old.ports.filter(q => q.door).map(q => q.name).sort(), ['blackmarket', 'home', 'myguild']);
+  assert.deepEqual(city.ports.filter(q => q.door).map(q => q.name).sort(), ['association', 'dept', 'guild1', 'guild2', 'guild3', 'guild4']);
+  const area = b => b.w * b.h, hq = cityBlds.find(b => b.kind === 'hq');
+  assert.ok(cityBlds.every(b => b === hq || area(b) < area(hq)), '헌터 협회가 가장 큰 건물');
+  assert.equal(cityBlds.filter(b => b.kind === 'guild').length, 4);
+  assert.ok(!oldBlds.some(b => b.kind === 'hq' || b.kind === 'guild' || b.kind === 'dept' || b.kind === 'tower'), '옛 동네엔 미래 건물이 없음');
+  // 가림막 친 빈터 셋 — 못 들어감 (도시)
+  const SNOW = 8, lots = [];
+  for (let i = 0; i < city.w * city.h; i++) if ((city.look[i] & 15) === SNOW) { assert.ok(city.solid[i], '빈터는 막힘'); lots.push(i); }
+  assert.ok(lots.length >= 3 * 7 * 11, '빈터 셋');
 });
