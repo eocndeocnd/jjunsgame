@@ -232,8 +232,8 @@ const State = {
     stones: stoneZeros(),             // 부위 → 강화석. 이미 가진 전리품을 분해해서 모읍니다 (특수장비 포함)
     enhance: slotZeros(),             // 부위 → 강화 단계 (0 ~ ENHANCE_MAX)
     equipped: emptyEquipped(),
-    weights: defaultWeights(),        // 앞으로 들어올 포인트의 분배 규칙
-    autoAlloc: true,                  // 레벨업 때 알아서 찍어줄 것인가
+    weights: defaultWeights(),        // 앞으로 들어올 포인트의 분배 규칙 (자동 분배)
+    autoAlloc: false,                 // 자동 분배 — 레벨업 때 비율대로 알아서 찍음. 기본은 직접 분배(꺼짐 — 사용자 결정)
     seen: [],                         // 한 번이라도 마주친 적 id
     tutorialDone: false,         // 튜토리얼을 봤는가
     sets: [null, null, null],    // 세 벌의 차림. equipped 는 늘 sets[activeSet] 과 같습니다
@@ -471,6 +471,24 @@ function commitPoints() {
   return pool;
 }
 
+// 직접 분배 — 한 스탯에 n 포인트를 찍습니다. 남은 것이 n 보다 적으면 남은 것을 다 찍습니다 (사용자 결정).
+// 찍은 만큼을 돌려줍니다. 꾹 누르는 동안 여러 번 불리므로 저장은 부른 쪽이 손을 뗄 때 한 번 (ui.js 의 allocPress)
+function spendPoints(stat, n) {
+  const run = State.run;
+  if (!run || !STAT_KEYS.includes(stat) || run.unspent <= 0 || !(n > 0)) return 0;
+  const give = Math.min(Math.floor(n), run.unspent);
+  run.spent[stat] += give;
+  run.unspent -= give;
+  return give;
+}
+
+// 직접 분배의 단위 넷 — 남은 포인트의 자릿수에 맞춰 커집니다 (사용자 결정: 레벨이 수백만이면 포인트도 수천만이라).
+// 남은 것이 1,000 보다 적으면 ×1 · ×10 · ×100 · ×1000, 3.2억이면 ×10만 · ×100만 · ×1000만 · ×1억
+function allocSteps(unspent) {
+  const top = Math.max(1000, Math.pow(10, Math.floor(Math.log10(Math.max(1, unspent)))));
+  return [top / 1000, top / 100, top / 10, top];
+}
+
 // 자동 분배를 켜두면 레벨이 오를 때마다 알아서 들어갑니다.
 // 레벨이 한 번에 수천씩 오르는 게임이라 매번 손으로 찍는 건 고역이니까요.
 function setAutoAlloc(on) {
@@ -657,7 +675,7 @@ function freshMeta() {
     enhance: slotZeros(),
     equipped: emptyEquipped(),
     weights: defaultWeights(),
-    autoAlloc: true,
+    autoAlloc: false,                 // 직접 분배가 기본 (사용자 결정 — 예전 저장본은 저장된 대로)
     seen: [],
     tutorialDone: false,
     sets: [null, null, null],

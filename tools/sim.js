@@ -154,6 +154,7 @@ function simStart(seed = 1, onDone) {
   Math.random = mulberry32(seed);
   currentSlot = 0;                    // 아무것도 저장하지 않습니다
   State.meta = freshMeta();
+  State.meta.autoAlloc = true;        // 사람은 직접 찍는 게 기본이지만 시뮬은 비율대로 알아서 (예전 기본값 그대로)
   State.meta.settings.autoEquip = true;
   State.meta.tutorialDone = true;
 

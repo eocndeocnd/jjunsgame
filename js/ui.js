@@ -432,35 +432,62 @@ function renderHero() {
 }
 
 // ---------- 스탯 분배 ----------
+// 직접 분배(기본) — 스탯마다 단위 넷(남은 포인트의 자릿수에 맞춰 커짐, game.js 의 allocSteps)을 눌러 찍습니다.
+//   단위보다 적게 남았으면 남은 것을 다 찍고, 꾹 누르면 계속 찍힙니다 (사용자 결정).
+// 자동 분배 — 비율(칸)을 정해 두면 레벨이 오를 때마다 그 비율대로 알아서 찍힙니다 (예전 방식).
+// 큰 수의 단위 이름 — 1 · 10 · 100 · 1000 · 1만 · 10만 · … · 1억 · … · 1조 · … · 1경
+function unitLabel(n) {
+  const k = Math.round(Math.log10(n)), names = ['', '만', '억', '조', '경'];
+  const big = Math.floor(k / 4);
+  return big >= names.length ? `1e${k}` : `${Math.pow(10, k % 4)}${names[big]}`;
+}
 function renderAlloc(run) {
-  const w = State.meta.weights;
-  const sum = STAT_KEYS.reduce((n, k) => n + (w[k] || 0), 0);
-  const alloc = allocatedStats();
   const auto = State.meta.autoAlloc;
-
   $('pointCount').textContent = run.unspent > 0 ? `${fmt(run.unspent)}P 남음` : '';
-
-  // 행 전체가 버튼입니다. 한 번 누르면 그 스탯이 한 칸 차지하고,
-  // 비율은 칸 수대로 알아서 다시 나뉩니다.
-  // 왼쪽 굵은 막대 = 이미 찍힌 것, 오른쪽 연한 막대 = 이번에 들어갈 몫.
+  const alloc = allocatedStats();
   const spentSum = STAT_KEYS.reduce((n, k) => n + run.spent[k], 0);
-
-  $('alloc').innerHTML = `
+  const top = `
     <div class="alloc-top">
       <div class="alloc-pool ${run.unspent > 0 ? 'ready' : ''}">
         <span class="pool-k">안 찍은 포인트</span>
         <span class="pool-v">${fmt(run.unspent)}</span>
       </div>
-      <button class="btn tiny auto-toggle ${auto ? 'on' : ''}" id="autoAllocBtn">
-        자동 ${auto ? '켜짐' : '꺼짐'}
-      </button>
-    </div>
-  ` + STAT_INFO.map(s => {
-    const n = w[s.id] || 0;
-    const share = sum > 0 ? Math.round(n / sum * 100) : 0;
-    const held = spentSum > 0 ? run.spent[s.id] / spentSum * 100 : 0;
-    const incoming = sum > 0 ? Math.floor(run.unspent * n / sum) : 0;
-    return `
+      <div class="alloc-mode">
+        <button class="btn tiny ${auto ? '' : 'on'}" data-mode="manual">직접</button>
+        <button class="btn tiny ${auto ? 'on' : ''}" data-mode="auto">자동</button>
+      </div>
+    </div>`;
+  if (!auto) {
+    const steps = allocSteps(run.unspent), none = run.unspent <= 0;
+    $('alloc').innerHTML = top + STAT_INFO.map(s => {
+      const held = spentSum > 0 ? run.spent[s.id] / spentSum * 100 : 0;
+      return `
+      <div class="alloc-row manual ${run.spent[s.id] > 0 ? 'has' : ''}">
+        <div class="alloc-head">
+          <span class="alloc-name">${s.name}</span>
+          <span class="alloc-slots">${run.spent[s.id] > 0 ? `${fmt(run.spent[s.id])}P` : ''}</span>
+          <span class="alloc-share">+${fmt(alloc[s.id])}</span>
+        </div>
+        <div class="alloc-bar"><div class="alloc-fill" style="width:${held}%"></div></div>
+        <div class="alloc-steps">
+          ${steps.map((n, i) => `<button class="btn tiny alloc-step" data-stat="${s.id}" data-step="${i}" ${none ? 'disabled' : ''}>+${unitLabel(n)}</button>`).join('')}
+        </div>
+        ${s.desc ? `<div class="alloc-foot"><span class="alloc-desc">${s.desc}</span></div>` : ''}
+      </div>`;
+    }).join('') + `
+      <p class="hint alloc-note">꾹 누르면 계속 찍힌다 · 단위보다 적게 남으면 남은 것을 다 찍는다<br>찍은 포인트는 되돌릴 수 없다</p>`;
+    for (const b of document.querySelectorAll('.alloc-step')) {
+      b.addEventListener('pointerdown', ev => { if (ev.button === 0 || ev.pointerType !== 'mouse') { ev.preventDefault(); allocPress(b.dataset.stat, +b.dataset.step); } });
+      b.addEventListener('click', ev => { if (ev.detail === 0) { allocStep(b.dataset.stat, +b.dataset.step); allocRelease(false); } });   // 키보드로 누른 것
+      b.addEventListener('contextmenu', ev => ev.preventDefault());                 // 폰에서 꾹 누를 때 메뉴가 안 뜨게
+    }
+  } else {
+    // 자동 — 행을 누를 때마다 그 스탯이 한 칸 차지하고, 비율은 칸 수대로 나뉩니다. 굵은 막대 = 이미 찍힌 것, 빗금 = 비율
+    const w = State.meta.weights, sum = STAT_KEYS.reduce((n, k) => n + (w[k] || 0), 0);
+    $('alloc').innerHTML = top + STAT_INFO.map(s => {
+      const n = w[s.id] || 0, share = sum > 0 ? Math.round(n / sum * 100) : 0;
+      const held = spentSum > 0 ? run.spent[s.id] / spentSum * 100 : 0;
+      return `
       <button class="alloc-row ${n ? 'has' : ''}" data-add="${s.id}">
         <div class="alloc-head">
           <span class="alloc-name">${s.name}</span>
@@ -473,46 +500,66 @@ function renderAlloc(run) {
         </div>
         <div class="alloc-foot">
           ${s.desc ? `<span class="alloc-desc">${s.desc}</span>` : ''}
-          ${incoming > 0 ? `<span class="alloc-incoming">이번에 ${fmt(incoming)}P</span>` : ''}
           ${n ? `<span class="alloc-sub" data-sub="${s.id}">−</span>` : ''}
         </div>
       </button>`;
-  }).join('') + `
-    ${sum === 0
-      ? '<p class="hint alloc-empty">눌러서 비율을 정한다</p>'
-      : ''}
-    <button class="btn primary alloc-commit" id="commitBtn"
-      ${run.unspent > 0 && sum > 0 ? '' : 'disabled'}>
-      ${run.unspent > 0 ? `${fmt(run.unspent)}P 찍는다` : '찍을 포인트 없음'}
-    </button>
-    <p class="hint alloc-note">찍은 포인트는 되돌릴 수 없다</p>
-    <div class="alloc-presets">
-      <button class="btn tiny" data-preset="1,1,1,1,1">균형</button>
-      <button class="btn tiny" data-preset="1,4,1,2,0">공격</button>
-      <button class="btn tiny" data-preset="4,1,3,1,0">방어</button>
-      <button class="btn tiny" data-preset="1,2,1,5,1">민첩</button>
-      <button class="btn tiny" data-preset="1,1,1,1,4">행운</button>
-      <button class="btn tiny" data-preset="0,0,0,0,0">비움</button>
-    </div>`;
-
-  for (const b of document.querySelectorAll('[data-add]')) {
-    b.addEventListener('click', ev => {
-      // 행 안의 − 를 눌렀으면 더하지 말고 빼야 합니다
-      const minus = ev.target.closest('[data-sub]');
-      if (minus) { addWeight(minus.dataset.sub, -1); render(); return; }
-      addWeight(b.dataset.add, 1);
-      render();
-    });
+    }).join('') + `
+      ${sum === 0 ? '<p class="hint alloc-empty">눌러서 비율을 정한다 — 레벨이 오를 때마다 이 비율대로 알아서 찍힌다</p>' : '<p class="hint alloc-note">레벨이 오를 때마다 이 비율대로 알아서 찍힌다<br>찍은 포인트는 되돌릴 수 없다</p>'}
+      <div class="alloc-presets">
+        <button class="btn tiny" data-preset="1,1,1,1,1">균형</button>
+        <button class="btn tiny" data-preset="1,4,1,2,0">공격</button>
+        <button class="btn tiny" data-preset="4,1,3,1,0">방어</button>
+        <button class="btn tiny" data-preset="1,2,1,5,1">민첩</button>
+        <button class="btn tiny" data-preset="1,1,1,1,4">행운</button>
+        <button class="btn tiny" data-preset="0,0,0,0,0">비움</button>
+      </div>`;
+    for (const b of document.querySelectorAll('[data-add]')) {
+      b.addEventListener('click', ev => {
+        const minus = ev.target.closest('[data-sub]');                              // 행 안의 − 를 눌렀으면 빼기
+        if (minus) addWeight(minus.dataset.sub, -1); else addWeight(b.dataset.add, 1);
+        commitPoints();                                                            // 비율이 생기면 남은 포인트도 바로
+        render();
+      });
+    }
+    for (const b of document.querySelectorAll('[data-preset]')) {
+      b.addEventListener('click', () => { setWeights(...b.dataset.preset.split(',').map(Number)); commitPoints(); render(); });
+    }
   }
-  for (const b of document.querySelectorAll('[data-preset]')) {
-    b.addEventListener('click', () => {
-      setWeights(...b.dataset.preset.split(',').map(Number));
-      render();
-    });
+  for (const b of document.querySelectorAll('[data-mode]')) {
+    b.addEventListener('click', () => { setAutoAlloc(b.dataset.mode === 'auto'); render(); });
   }
-  $('commitBtn').addEventListener('click', () => { commitPoints(); Sound.play('commit'); render(); });
-  $('autoAllocBtn').addEventListener('click', () => { setAutoAlloc(!State.meta.autoAlloc); render(); });
 }
+
+// 직접 분배 — 누르면 한 번 찍고, 꾹 누르고 있으면 잠깐 뒤부터 계속 찍힘. 손을 떼면(어디서든) 멈추고 저장 · 화면 전체를 다시 그림.
+// 누르는 동안엔 분배 칸만 다시 그립니다 (단위가 남은 포인트에 맞춰 바뀌어도 같은 자리의 단추로 이어서)
+const ALLOC_HOLD_DELAY = 350, ALLOC_HOLD_EVERY = 60;
+let allocHold = null;
+function allocStep(stat, idx) {
+  const run = State.run;
+  if (!run) return 0;
+  const got = spendPoints(stat, allocSteps(run.unspent)[idx]);
+  if (got) renderAlloc(run);
+  return got;
+}
+function allocPress(stat, idx) {
+  allocRelease(true);
+  if (!allocStep(stat, idx)) return;
+  Sound.play('tick');
+  allocHold = { stat, idx, timer: setTimeout(function again() {
+    if (!allocHold) return;
+    if (!allocStep(stat, idx)) { allocRelease(); return; }
+    allocHold.timer = setTimeout(again, ALLOC_HOLD_EVERY);
+  }, ALLOC_HOLD_DELAY) };
+}
+function allocRelease(quiet) {
+  const was = !!allocHold;
+  if (allocHold) clearTimeout(allocHold.timer);
+  allocHold = null;
+  if (quiet) return;
+  save();
+  if (was || quiet === false) render();
+}
+for (const t of ['pointerup', 'pointercancel', 'blur']) window.addEventListener(t, () => { if (allocHold) allocRelease(); });
 
 // value 가 문자열이면 그대로 씁니다 (크리티컬처럼 "27% · ×2.5" 같은 값)
 // 0.078 → "7.8%"
@@ -883,6 +930,9 @@ function scheduleAutoContinue() {
 let battle = null;                       // { r: 그 결과, i: 지금까지 보여준 줄 수, step: 줄 간격(ms), timer }
 const BATTLE_PACE = { 1: 90, 2: 260 };   // 빠르게 · 보통 — 한 줄에 몇 ms
 const BATTLE_MAX_MS = 6000;              // 긴 전투도 이 안에 끝나게 줄 간격을 줄입니다
+// 길어지는 싸움은 점점 빠르게 — 시작하고 3초가 지나면 ×2, 6초가 지나면 ×3 (사용자 결정). 빨라지면 싸움 칸 구석에 「×2」
+const BATTLE_RAMP = [[6000, 3], [3000, 2]];
+const battleRamp = () => { const t = performance.now() - battle.t0; for (const [ms, k] of BATTLE_RAMP) if (t >= ms) return k; return 1; };
 // 기록은 최근 여섯 줄만 — 위에 초상이 들어와서 줄였습니다. 폰은 한 화면에 들어오게 다섯 줄.
 const battleLines = () => (window.innerWidth <= 860 ? 5 : 6);
 
@@ -893,7 +943,7 @@ function startBattle(r, logFrom) {
   const log = r && r.replay && r.replay.log;
   if (!speed || !log || !log.length) return;
   const step = Math.max(30, Math.min(BATTLE_PACE[speed] || 260, BATTLE_MAX_MS / log.length));
-  battle = { r, i: 0, step, logFrom: logFrom || 0, held: heldSpoils(r) };
+  battle = { r, i: 0, step, logFrom: logFrom || 0, held: heldSpoils(r), t0: performance.now() };
   battle.timer = setTimeout(tickBattle, step);
 }
 
@@ -961,8 +1011,10 @@ function tickBattle() {
     Sound.play(battle.r.win ? 'win' : 'lose', { delay: 0.15 });
     jingled.add(battle.r);
   }
-  // 마지막 줄을 보여준 뒤 잠깐 멈췄다가 결과로
-  battle.timer = setTimeout(battle.i >= n ? finishBattle : tickBattle, battle.i >= n ? 700 : battle.step);
+  // 마지막 줄을 보여준 뒤 잠깐 멈췄다가 결과로 (길어진 싸움은 그 멈춤도 빨라진 만큼 짧게)
+  const k = battleRamp(), tag = $('btSpeed');
+  if (tag) { tag.textContent = k > 1 ? `×${k}` : ''; tag.classList.toggle('on', k > 1); }
+  battle.timer = setTimeout(battle.i >= n ? finishBattle : tickBattle, battle.i >= n ? 700 / k : battle.step / k);
 }
 
 // 기록 한 줄 → 효과음 이름
@@ -1070,6 +1122,7 @@ function battleCard(b) {
         <div class="bt-bar"><div class="bt-fill foe" id="btFoeFill"></div></div>
       </div>
       <div class="bt-arena" id="btArena">
+        <span class="bt-speed" id="btSpeed"></span>
         <div class="portrait bt-foe" id="btFoe"><span class="portrait-ic">${foe.icon}</span></div>
         <div class="portrait bt-hero" id="btHero">${heroSprite()}</div>
       </div>
@@ -2894,7 +2947,7 @@ const NAMELESS_TALK = [
   '…들리나. 벽이 깨졌으니 이쪽 말도 닿는 모양이군.',
   '여기까지 올라온 자는 오랜만이다. 이제부터는 이름을 가진 것들이 길을 막는다. 그중 몇은 — 너를 마음에 들어 할지도 모르지.',
   '꺾은 상대가 너를 자기 몫으로 삼는 것. 그걸 <b>화신</b>이라 부른다.',
-  '다만 쉽게 오지 않는다. <b>백 번을 꺾어도 한 번 올까 말까</b> — 보스라면 그보다 더 드물지. 눈에 드는 놈이 있거든 <b>몇 번이고 다시 꺾어라.</b> 여정이 끝나도 그것들은 제자리에 다시 선다.',
+  '다만 쉽게 오지 않는다. <b>서른 번을 꺾어도 한 번 올까 말까</b> — 보스라면 그보다 조금 더 드물지. 눈에 드는 놈이 있거든 <b>몇 번이고 다시 꺾어라.</b> 여정이 끝나도 그것들은 제자리에 다시 선다.',
   '삼은 화신의 이름이 네 이름 앞에 붙는다. 얻는 것도 잃는 것도 한쪽으로 크게 기운다. <b>한 번에 하나</b>만 삼을 수 있고, 싸우는 동안에는 못 바꾼다. 고르는 건 이 창 맨 위의 칸에서 한다.',
   '아직 아무도 너를 고르지 않았으니, 그때까지는 <b>내가 대신 맡아 주지.</b> 이름은 묻지 마라. 없다.'
 ];

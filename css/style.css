@@ -475,6 +475,17 @@ h3::before { content: '◆ '; color: var(--wax); }
 .alloc-sub:hover { border-color: var(--danger); color: var(--danger); }
 
 .alloc-empty { text-align: center; margin: 8px 0; }
+/* 직접 분배 — 행은 단추가 아니라 칸, 아래에 단위 넷 · 위의 직접 / 자동 바꾸기 */
+.alloc-row.manual { cursor: default; }
+.alloc-row.manual:hover { border-color: var(--line-soft); background: var(--paper-hi); }
+.alloc-row.manual.has, .alloc-row.manual.has:hover { border-color: var(--line); }
+.alloc-row.manual:active { background: var(--paper-hi); }
+.alloc-steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin: 2px 0 4px; }
+.alloc-step { padding: 7px 2px; white-space: nowrap; touch-action: manipulation; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.alloc-mode { display: flex; }
+.alloc-mode .btn { padding: 6px 10px; }
+.alloc-mode .btn + .btn { margin-left: -2px; }
+.alloc-mode .btn.on { background: var(--accent); border-color: var(--accent); color: #fff6e0; }
 .alloc-presets { display: flex; gap: 7px; margin-top: 14px; }
 .alloc-presets .btn { flex: 1; padding: 6px 2px; white-space: nowrap; }
 
@@ -792,6 +803,14 @@ kbd {
   padding: 4px 0 2px;
 }
 .bt-foe { width: min(50%, 190px); }
+/* 길어진 싸움이 빨라질 때 — 싸움 칸 오른쪽 위의 「×2」 · 「×3」 */
+.bt-speed {
+  position: absolute; top: 6px; right: 8px; z-index: 2;
+  font-size: 13px; font-weight: 700; letter-spacing: 0.04em;
+  color: #fff3c4; background: rgba(28, 16, 7, 0.72); border: 2px solid var(--accent);
+  padding: 1px 7px; opacity: 0; transition: opacity 0.2s;
+}
+.bt-speed.on { opacity: 1; }
 .bt-foe .portrait-ic { font-size: clamp(56px, 19vw, 100px); }
 .bt-hero { width: min(21%, 78px); --pf-in: #5f8f3e; }
 .bt-hero .portrait-ic { font-size: clamp(28px, 9vw, 42px); }
