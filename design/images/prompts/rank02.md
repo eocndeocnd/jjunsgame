@@ -43,15 +43,15 @@ If a name describes a different kind of object than its type, draw the object fr
 
 | 칸 | 장비 | 부위 | 나온 곳 | 잘라서 둘 곳 |
 |---|---|---|---|---|
-| 1 | 경량 티타늄 장검 | 무기 | 헌터백화점 | `assets/items/dept_saber.png` |
-| 2 | 뒤틀린 지팡이 | 무기 | 숲의 마녀 | `assets/items/forestwitch_0.png` |
-| 3 | 재생의 곤봉 | 무기 | 트롤 킹 | `assets/items/trollking_0.png` |
-| 4 | 접이식 전술 방패 | 보조무기 | 헌터백화점 | `assets/items/dept_foldshield.png` |
-| 5 | 군용 방패 | 보조무기 | 홉고블린 | `assets/items/hobgoblin_0.png` |
-| 6 | 뿌리 방패 | 보조무기 | 트렌트 | `assets/items/treant_1.png` |
-| 7 | 돌 뿔 | 투구 | 가고일 | `assets/items/gargoyle_1.png` |
-| 8 | 뿔 달린 투구 | 투구 | 오크 장군 | `assets/items/orcgeneral_2.png` |
-| 9 | 가죽 흉갑 | 갑옷 | 오크 전사 | `assets/items/orc_1.png` |
+| 1 | 경량 티타늄 장검 | 무기 | 헌터백화점 | `assets/items/dept_saber.png` ✅ |
+| 2 | 뒤틀린 지팡이 | 무기 | 숲의 마녀 | `assets/items/forestwitch_0.png` ✅ |
+| 3 | 재생의 곤봉 | 무기 | 트롤 킹 | `assets/items/trollking_0.png` ✅ |
+| 4 | 접이식 전술 방패 | 보조무기 | 헌터백화점 | `assets/items/dept_foldshield.png` ✅ |
+| 5 | 군용 방패 | 보조무기 | 홉고블린 | `assets/items/hobgoblin_0.png` ✅ |
+| 6 | 뿌리 방패 | 보조무기 | 트렌트 | `assets/items/treant_1.png` ✅ |
+| 7 | 돌 뿔 | 투구 | 가고일 | `assets/items/gargoyle_1.png` ✅ |
+| 8 | 뿔 달린 투구 | 투구 | 오크 장군 | `assets/items/orcgeneral_2.png` ✅ |
+| 9 | 가죽 흉갑 | 갑옷 | 오크 전사 | `assets/items/orc_1.png` ✅ |
 
 ## 시트 2-B — 갑옷 · 어깨 · 장갑 · 허리띠 · 각반 · 신발 (9개)
 
@@ -96,15 +96,15 @@ If a name describes a different kind of object than its type, draw the object fr
 
 | 칸 | 장비 | 부위 | 나온 곳 | 잘라서 둘 곳 |
 |---|---|---|---|---|
-| 1 | 트롤가죽 갑주 | 갑옷 | 트롤 킹 | `assets/items/trollking_1.png` |
-| 2 | 통나무 어깨받이 | 어깨 | 오우거 | `assets/items/ogre_0.png` |
-| 3 | 장군의 견장 | 어깨 | 오크 장군 | `assets/items/orcgeneral_0.png` |
-| 4 | 오크 손등가리개 | 장갑 | 오크 전사 | `assets/items/orc_2.png` |
-| 5 | 군용 허리띠 | 허리띠 | 홉고블린 | `assets/items/hobgoblin_2.png` |
-| 6 | 덩굴 허리띠 | 허리띠 | 트렌트 | `assets/items/treant_2.png` |
-| 7 | 늪지 각반 | 각반 | 리저드맨 | `assets/items/lizardman_1.png` |
-| 8 | 두꺼운 각반 | 각반 | 오우거 | `assets/items/ogre_1.png` |
-| 9 | 그림자 신 | 신발 | 다크 엘프 자객 | `assets/items/darkelf_1.png` |
+| 1 | 트롤가죽 갑주 | 갑옷 | 트롤 킹 | `assets/items/trollking_1.png` ✅ |
+| 2 | 통나무 어깨받이 | 어깨 | 오우거 | `assets/items/ogre_0.png` ✅ |
+| 3 | 장군의 견장 | 어깨 | 오크 장군 | `assets/items/orcgeneral_0.png` ✅ |
+| 4 | 오크 손등가리개 | 장갑 | 오크 전사 | `assets/items/orc_2.png` ✅ |
+| 5 | 군용 허리띠 | 허리띠 | 홉고블린 | `assets/items/hobgoblin_2.png` ✅ |
+| 6 | 덩굴 허리띠 | 허리띠 | 트렌트 | `assets/items/treant_2.png` ✅ |
+| 7 | 늪지 각반 | 각반 | 리저드맨 | `assets/items/lizardman_1.png` ✅ |
+| 8 | 두꺼운 각반 | 각반 | 오우거 | `assets/items/ogre_1.png` ✅ |
+| 9 | 그림자 신 | 신발 | 다크 엘프 자객 | `assets/items/darkelf_1.png` ✅ |
 
 ## 시트 2-C — 신발 · 망토 · 반지 · 목걸이 · 팔찌 (9개)
 
@@ -148,15 +148,15 @@ If a name describes a different kind of object than its type, draw the object fr
 
 | 칸 | 장비 | 부위 | 나온 곳 | 잘라서 둘 곳 |
 |---|---|---|---|---|
-| 1 | 깃털 신 | 신발 | 하피 | `assets/items/harpy_0.png` |
-| 2 | 이슬 맺힌 이끼 망토 | 망토 | 보물상자 | `assets/items/chest_forest_cloak.png` |
-| 3 | 깃털 망토 | 망토 | 하피 | `assets/items/harpy_2.png` |
-| 4 | 암살자의 인장 | 반지 | 다크 엘프 자객 | `assets/items/darkelf_2.png` |
-| 5 | 마녀의 고리 | 반지 | 숲의 마녀 | `assets/items/forestwitch_2.png` |
-| 6 | 석화의 눈 | 목걸이 | 바실리스크 | `assets/items/basilisk_0.png` |
-| 7 | 숲의 심장 | 목걸이 | 트롤 킹 | `assets/items/trollking_2.png` |
-| 8 | 석화의 팔찌 | 팔찌 | 바실리스크 | `assets/items/basilisk_2.png` |
-| 9 | 돌 팔찌 | 팔찌 | 가고일 | `assets/items/gargoyle_2.png` |
+| 1 | 깃털 신 | 신발 | 하피 | `assets/items/harpy_0.png` ✅ |
+| 2 | 이슬 맺힌 이끼 망토 | 망토 | 보물상자 | `assets/items/chest_forest_cloak.png` ✅ |
+| 3 | 깃털 망토 | 망토 | 하피 | `assets/items/harpy_2.png` ✅ |
+| 4 | 암살자의 인장 | 반지 | 다크 엘프 자객 | `assets/items/darkelf_2.png` ✅ |
+| 5 | 마녀의 고리 | 반지 | 숲의 마녀 | `assets/items/forestwitch_2.png` ✅ |
+| 6 | 석화의 눈 | 목걸이 | 바실리스크 | `assets/items/basilisk_0.png` ✅ |
+| 7 | 숲의 심장 | 목걸이 | 트롤 킹 | `assets/items/trollking_2.png` ✅ |
+| 8 | 석화의 팔찌 | 팔찌 | 바실리스크 | `assets/items/basilisk_2.png` ✅ |
+| 9 | 돌 팔찌 | 팔찌 | 가고일 | `assets/items/gargoyle_2.png` ✅ |
 
 ## 하나씩 뽑기 (시트가 잘 안 될 때)
 
