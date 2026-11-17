@@ -353,6 +353,7 @@ function renderRecords() {
     ${record('빼앗은 격', `${m.bossesBeaten.length}/${known}`, bm > 1.01 ? 'boost' : '')}
     ${bm > 1.01 ? record('영구 경험치', `×${bm.toFixed(1)}`, 'boost') : ''}
     ${record('골드', fmt(num(m.gold)))}
+    ${m.cityOpen ? record('돈', fmtWon(num(m.won))) : ''}
     ${record('전리품', `${ownedIds().length}/${knownItems().length}`)}
     ${record('도감 완성', `${completedRanks()}/${known}`, completedRanks() ? 'boost' : '')}
     ${m.cleared ? record('', '클리어', 'cleared') : ''}
@@ -693,6 +694,7 @@ function renderHud(zone) {
       const on = isSetActive(n);
       return `<button class="hud-set ${on ? 'on' : ''}" data-jset="${n}" ${on ? 'disabled' : ''} title="세트 ${n + 1}">${n + 1}</button>`;
     }).join('')}</div>
+    ${inTown() ? `<span class="hud-chip hud-glass hud-won" title="가진 돈 — 도시에서 씁니다">${fmtWon(num(State.meta.won))}</span>` : ''}
     <button class="hud-chip hud-glass" id="rosterBtn" title="이 지역에 있는 것">도감 ${run.zoneIndex + 1} / ${knownZoneCount()}</button>
     ${run.unspent > 0 ? '<button class="hud-chip hud-glass ready" id="jAllocBtn">스탯 분배<span class="alloc-pip on"></span></button>' : ''}`;
   // 지역 이름 — 게임에 들어선 뒤 처음 그릴 때와, 다른 지역이나 지역이 없는 지도(문의 광장)에 들어설 때
@@ -1632,6 +1634,11 @@ function currentMapId() {
   return run.mapId;
 }
 function onMapZone() { return !!currentMapId(); }
+// 도시에 서 있나 — 옛 동네 · 헌터들의 도시(props.city) · 가게 안(props.store). 도시에서는 머리 위에 가진 돈이 보입니다
+function inTown() {
+  const id = currentMapId(), p = id && maps[id] && maps[id].props;
+  return !!p && !!(p.city || p.store);
+}
 
 // 지역 머리의 이름 — 지역이 없는 지도(문의 광장)에서는 그 지도의 이름
 function placeName(zone) {
@@ -2601,9 +2608,11 @@ function renderShop() {
   if (!shopHere()) { closeShop(); return; }
   if (shopKind === 'mats') { renderMatShop(); return; }
   const dept = isDeptShop();
-  const gold = num(State.meta.gold);
+  // 지갑 — 백화점(도시)은 돈(원), 떠돌이 상인(그 공간)은 골드
+  const gold = num(dept ? State.meta.won : State.meta.gold);
+  const cost = n => dept ? fmtWon(n) : `${fmt(n)} 골드`;
   $('shopTitle').textContent = dept ? `헌터백화점 · ${DEPT_SECTIONS[shopKind].name}` : '떠돌이 상인';
-  $('shopGold').textContent = `골드 ${fmt(gold)}`;
+  $('shopGold').textContent = dept ? `돈 ${fmtWon(gold)}` : `골드 ${fmt(gold)}`;
   // 물건 한 줄 — coming 이면 「입고 예정」(흐리게, 살 수 없음)
   const card = (item, coming) => {
     const can = gold >= item.price;
@@ -2620,8 +2629,8 @@ function renderShop() {
           ${item.note ? `<div class="inv-note">${item.note}</div>` : ''}
         </div>
         <div class="inv-act">${coming
-          ? `<span class="ware-soon">입고 예정<small>${fmt(item.price)} 골드</small></span>`
-          : `<button class="btn" data-buy="${item.id}" ${can ? '' : 'disabled'}>${fmt(item.price)} 골드</button>`}</div>
+          ? `<span class="ware-soon">입고 예정<small>${cost(item.price)}</small></span>`
+          : `<button class="btn" data-buy="${item.id}" ${can ? '' : 'disabled'}>${cost(item.price)}</button>`}</div>
       </div>`;
   };
   // 산 물건은 상점에서 사라집니다
@@ -2668,26 +2677,26 @@ function renderShop() {
 
 // ---------- 재료 창구 (헌터백화점 1층) — 재료로 만들기 · 강화석으로 바꾸기 · 팔기 ----------
 // 재료마다 한 묶음: 머리에 재료 이름 · 가진 수 · 팔기 단추(1개 · 모두), 아래에 그 재료로 만드는 장비.
-// 아직 없는 장비는 「만든다」(재료 + 골드 — 만들면 「지금 낄까요?」), 이미 가진 장비는 「강화석」(재료 → 그 부위 강화석 — 예전에 겹쳐 주웠을 때와 같은 양).
+// 아직 없는 장비는 「만든다」(재료 + 돈 — 만들면 「지금 낄까요?」), 이미 가진 장비는 「강화석」(재료 → 그 부위 강화석 — 예전에 겹쳐 주웠을 때와 같은 양).
 // 보이는 재료는 한 번이라도 손에 넣어 본 것 — 가진 것이 있거나, 그 재료로 만든 장비가 있는 것 (아직 못 본 몬스터의 재료는 숨김)
 // 맨 위는 핵 — 모든 몬스터가 남기는 팔 것 (격마다 한 가지). 가진 격만 한 줄씩, 「모두 판다」 한 번으로 다 팝니다. 만드는 데는 쓰지 않습니다.
 function renderMatShop() {
-  const gold = num(State.meta.gold);
+  const won = num(State.meta.won);      // 도시의 돈 — 판 값도 만드는 값도 원
   $('shopTitle').textContent = `헌터백화점 · ${DEPT_SECTIONS.mats.name}`;
-  $('shopGold').textContent = `골드 ${fmt(gold)}`;
+  $('shopGold').textContent = `돈 ${fmtWon(won)}`;
   const cores = Object.values(CORES).filter(c => matsOf(c.id) > 0);
   const coreSum = cores.reduce((s, c) => s + c.sell * matsOf(c.id), 0);
   const coreBlock = cores.length ? `
     <div class="mat-block core-block">
       <div class="mat-head">
         <span class="mat-name">💠 핵 <b>${fmt(cores.reduce((s, c) => s + matsOf(c.id), 0))}개</b></span>
-        <span class="mat-sell"><button class="btn primary" id="sellCoresBtn">모두 판다 +${fmt(coreSum)}</button></span>
+        <span class="mat-sell"><button class="btn primary" id="sellCoresBtn">모두 판다 +${fmtWon(coreSum)}</button></span>
       </div>
       <div class="core-list">${cores.map(c => `
         <div class="core-row">
           <span class="core-name">${c.name} <b>${fmt(matsOf(c.id))}개</b></span>
-          <span class="core-worth">1개 ${fmt(c.sell)} 골드</span>
-          <button class="btn tiny" data-sellmat="${c.id}" data-n="${matsOf(c.id)}">판다 +${fmt(c.sell * matsOf(c.id))}</button>
+          <span class="core-worth">1개 ${fmtWon(c.sell)}</span>
+          <button class="btn tiny" data-sellmat="${c.id}" data-n="${matsOf(c.id)}">판다 +${fmtWon(c.sell * matsOf(c.id))}</button>
         </div>`).join('')}</div>
     </div>` : '';
   const blocks = Object.values(MATERIALS).map(mat => {
@@ -2700,7 +2709,7 @@ function renderMatShop() {
       const spec = itemSpecialText(item);
       const act = owned
         ? `<button class="btn" data-matstone="${item.id}" ${have >= c.n ? '' : 'disabled'}><b>강화석 +${fmt(matStoneYield(item))}</b><span>재료 ${c.n}개</span></button>`
-        : `<button class="btn primary" data-craft="${item.id}" ${have >= c.n && gold >= c.gold ? '' : 'disabled'}><b>만든다</b><span>재료 ${c.n}개 · ${fmt(c.gold)} 골드</span></button>`;
+        : `<button class="btn primary" data-craft="${item.id}" ${have >= c.n && won >= c.won ? '' : 'disabled'}><b>만든다</b><span>재료 ${c.n}개 · ${fmtWon(c.won)}</span></button>`;
       return `
       <div class="inv-item ware${owned ? ' made' : ''}">
         <span class="inv-art">${item.fromIcon}</span>
@@ -2717,8 +2726,8 @@ function renderMatShop() {
       <div class="mat-head">
         <span class="mat-name">${mat.icon} ${mat.name} <b>${fmt(have)}개</b></span>
         <span class="mat-sell">
-          <button class="btn tiny" data-sellmat="${mat.id}" data-n="1" ${have ? '' : 'disabled'}>1개 판다 +${fmt(mat.sell)}</button>
-          <button class="btn tiny" data-sellmat="${mat.id}" data-n="${have}" ${have > 1 ? '' : 'disabled'}>모두 +${fmt(mat.sell * have)}</button>
+          <button class="btn tiny" data-sellmat="${mat.id}" data-n="1" ${have ? '' : 'disabled'}>1개 판다 +${fmtWon(mat.sell)}</button>
+          <button class="btn tiny" data-sellmat="${mat.id}" data-n="${have}" ${have > 1 ? '' : 'disabled'}>모두 +${fmtWon(mat.sell * have)}</button>
         </span>
       </div>
       <div class="inventory shop-wares">${cards}</div>
@@ -2751,7 +2760,9 @@ function openBuy(id) {
   const item = getItem(id);
   if (!item || !shopHere()) return;
   buyId = id;
-  const gold = num(State.meta.gold), m = slotMult(item.slot);
+  // 지갑 — 백화점은 돈(원), 떠돌이 상인은 골드
+  const dept = isDeptShop(), gold = num(dept ? State.meta.won : State.meta.gold), m = slotMult(item.slot);
+  const cost = n => dept ? fmtWon(n) : `${fmt(n)} 골드`, left = n => dept ? fmtWon(n) : fmt(n);
   const worn = getItem(State.meta.equipped[item.slot]);
   const stats = [
     ...STAT_INFO.filter(s => item[s.id]).map(s => `<li><span>${s.name}</span><b>+${fmt(item[s.id] * m)}</b></li>`),
@@ -2770,7 +2781,7 @@ function openBuy(id) {
       <div class="buy-k">${worn ? `지금 낀 『${worn.name}』${josa(worn.name, '과', '와')} 견주면` : '지금 이 부위는 비어 있음'}</div>
       <div class="inv-diff">${itemDiffText(item, worn, m)}</div>
     </div>
-    <div class="buy-price"><span>${fmt(item.price)} 골드</span><span class="buy-left">가진 골드 ${fmt(gold)} → ${fmt(gold - item.price)}</span></div>
+    <div class="buy-price"><span>${cost(item.price)}</span><span class="buy-left">가진 ${dept ? '돈' : '골드'} ${left(gold)} → ${left(gold - item.price)}</span></div>
     <div class="buy-ask">구매하시겠습니까?</div>
     <div class="buy-actions">
       <button class="btn" data-closebuy>그만둔다</button>
@@ -3298,6 +3309,7 @@ function renderAdmin() {
         <button class="btn tiny" data-adm="itemsAll" ${off}>모든 전리품</button>
         <button class="btn tiny" data-adm="stones" ${off}>강화석 +1,000</button>
         <button class="btn tiny" data-adm="gold" ${off}>골드 +10,000</button>
+        <button class="btn tiny" data-adm="won" ${off}>돈 +1,000만 원</button>
         <button class="btn tiny" data-adm="merchant" ${off}>떠돌이 상인을 여기로</button>
         <button class="btn tiny" data-adm="avatar" ${off}>화신 하나 얻기</button>
         <button class="btn tiny" data-adm="special" ${off}>특수장비 칸 모두</button>
@@ -3367,6 +3379,9 @@ function adminAction(a) {
       break;
     case 'gold':
       meta.gold = num(meta.gold) + 10000;
+      break;
+    case 'won':
+      meta.won = num(meta.won) + 10000000;
       break;
     case 'avatar': {
       // 아직 없는 화신 하나를 무작위로 — 처음이면 바로 삼습니다

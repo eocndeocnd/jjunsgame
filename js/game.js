@@ -609,6 +609,10 @@ function load() {
     State.meta.specialOpened = Array.isArray(data.specialOpened) ? data.specialOpened : [];
     State.meta.chestsOpened = Array.isArray(data.chestsOpened) ? data.chestsOpened.filter(id => typeof id === 'string') : [];
     State.meta.gold = Math.max(0, Math.floor(num(data.gold)));
+    // 돈(원)이 생기기 전의 저장본 — 그때의 골드는 도시와 그 공간에서 같이 쓰던 것이라, 돈으로 옮기지 않고 없앱니다 (사용자 결정).
+    // 가방의 핵 · 재료는 그대로라, 재료 창구에 팔면 돈이 됩니다
+    if (data.won === undefined) State.meta.gold = 0;
+    State.meta.won = Math.max(0, Math.floor(num(data.won)));
     State.meta.mats = {};
     for (const [id, n] of Object.entries(data.mats || {})) if (matInfo(id) && num(n) > 0) State.meta.mats[id] = Math.floor(num(n));
     State.meta.avatars = Array.isArray(data.avatars) ? data.avatars.filter(id => canBecomeAvatar(getEnemy(id))) : [];
@@ -690,7 +694,8 @@ function freshMeta() {
     specialOpened: [],
     chestsOpened: [],
     mats: {},
-    gold: 0,                          // 골드 — 회차가 끝나도 남습니다
+    gold: 0,                          // 골드 — 그 공간의 화폐 (떠돌이 상인). 회차가 끝나도 남습니다
+    won: 0,                           // 돈(원) — 도시의 화폐. 들고 나온 핵 · 재료를 팔아 벌고 백화점에서 씁니다. 골드와는 못 바꿉니다
     avatars: [],                      // 얻은 화신 (적 id) — 회차가 끝나도 남습니다
     avatar: null,                     // 지금 삼은 화신 — 한 번에 하나
     runCount: 0,
@@ -1312,12 +1317,12 @@ function deptComing(section) {
 function buyDept(id) {
   const it = getItem(id);
   if (!State.meta.cityOpen || !it || !it.store || owns(id) || it.rank.n > deptOpenRank()) return false;
-  if (num(State.meta.gold) < it.price) return false;
-  State.meta.gold -= it.price;
+  if (num(State.meta.won) < it.price) return false;      // 도시는 돈(원)으로 — 골드는 받지 않습니다
+  State.meta.won -= it.price;
   State.meta.owned[id] = 1;
   markFresh(it);
   autoEquipIfBetter(it);                // 알아서 갈아끼우기가 켜져 있을 때만 (지금은 시뮬만 켭니다 — 사람은 구매 창이 「지금 낄까요」를 묻습니다)
-  pushLog('drop', `헌터백화점에서 『${it.name}』${josa(it.name, '을', '를')} 샀다 — ${fmt(it.price)} 골드`);
+  pushLog('drop', `헌터백화점에서 『${it.name}』${josa(it.name, '을', '를')} 샀다 — ${fmtWon(it.price)}`);
   save();
   return true;
 }
@@ -1691,17 +1696,18 @@ function rollMats(enemyId, auraMult = 1) {
   if (mat) give(mat, 1 + (Math.random() < dropChanceFor(foe, auraMult) ? 1 : 0));
   return out;
 }
-// 재료 창구(헌터백화점) — 도시가 열린 뒤에. 셋 다 성공하면 참(만들기는 만든 장비, 바꾸기는 강화석 수, 팔기는 받은 골드).
-// 만든다: 아직 없는 장비 — 재료 n개 + 골드
+// 재료 창구(헌터백화점) — 도시가 열린 뒤에. 셋 다 성공하면 참(만들기는 만든 장비, 바꾸기는 강화석 수, 팔기는 받은 돈).
+// 값을 치르고 받는 것은 모두 돈(원) — 도시의 화폐 (골드는 그 공간에서만).
+// 만든다: 아직 없는 장비 — 재료 n개 + 돈
 function craftItem(id) {
   const it = getItem(id), c = it && it.craft;
-  if (!State.meta.cityOpen || !c || owns(id) || matsOf(c.mat) < c.n || num(State.meta.gold) < c.gold) return null;
+  if (!State.meta.cityOpen || !c || owns(id) || matsOf(c.mat) < c.n || num(State.meta.won) < c.won) return null;
   State.meta.mats[c.mat] = matsOf(c.mat) - c.n;
-  State.meta.gold -= c.gold;
+  State.meta.won -= c.won;
   State.meta.owned[id] = 1;
   markFresh(it);
   autoEquipIfBetter(it);
-  pushLog('drop', `재료 창구에서 『${it.name}』${josa(it.name, '을', '를')} 만들었다 — ${MATERIALS[c.mat].name} ${c.n}개 · ${fmt(c.gold)} 골드`);
+  pushLog('drop', `재료 창구에서 『${it.name}』${josa(it.name, '을', '를')} 만들었다 — ${MATERIALS[c.mat].name} ${c.n}개 · ${fmtWon(c.won)}`);
   save();
   return it;
 }
@@ -1717,33 +1723,33 @@ function matToStones(id) {
   save();
   return stones;
 }
-// 판다: 재료 · 핵 n개 → 골드 (1개에 그것의 sell)
+// 판다: 재료 · 핵 n개 → 돈 (1개에 그것의 sell 원)
 function sellMats(matId, n) {
   const mat = matInfo(matId), k = Math.min(Math.floor(num(n)), matsOf(matId));
   if (!State.meta.cityOpen || !mat || !(k > 0)) return 0;
-  const gold = mat.sell * k;
+  const won = mat.sell * k;
   State.meta.mats[matId] = matsOf(matId) - k;
-  State.meta.gold = num(State.meta.gold) + gold;
-  pushLog('drop', `재료 창구에 ${mat.name} ${fmt(k)}개를 팔았다 — +${fmt(gold)} 골드`);
+  State.meta.won = num(State.meta.won) + won;
+  pushLog('drop', `재료 창구에 ${mat.name} ${fmt(k)}개를 팔았다 — +${fmtWon(won)}`);
   save();
-  return gold;
+  return won;
 }
 
-// 핵을 모두 판다 — 가진 핵 전부를 한 번에. 받은 골드 (없으면 0)
+// 핵을 모두 판다 — 가진 핵 전부를 한 번에. 받은 돈 (없으면 0)
 function sellAllCores() {
   if (!State.meta.cityOpen) return 0;
-  let gold = 0, count = 0;
+  let won = 0, count = 0;
   for (const core of Object.values(CORES)) {
     const k = matsOf(core.id);
     if (!k) continue;
-    gold += core.sell * k; count += k;
+    won += core.sell * k; count += k;
     State.meta.mats[core.id] = 0;
   }
   if (!count) return 0;
-  State.meta.gold = num(State.meta.gold) + gold;
-  pushLog('drop', `재료 창구에 핵 ${fmt(count)}개를 팔았다 — +${fmt(gold)} 골드`);
+  State.meta.won = num(State.meta.won) + won;
+  pushLog('drop', `재료 창구에 핵 ${fmt(count)}개를 팔았다 — +${fmtWon(won)}`);
   save();
-  return gold;
+  return won;
 }
 
 // ---------- 알아서 갈아끼우기 ----------
@@ -2025,6 +2031,19 @@ function fmt(n) {
   if (abs < 10000) return NUM_KO.format(Math.round(n));
   for (const [v, s] of UNITS) if (abs >= v) return (n / v).toFixed(2) + s;
   return NUM_KO.format(Math.round(n));
+}
+
+// 돈(원) — 「5,000원 · 30만 원 · 123.4만 원 · 1.23억 원」. 큰 단위는 네 자리까지, 그 아래는 버립니다 (가진 돈이 실제보다 많아 보이지 않게)
+const WON_UNITS = [[1e16, '경'], [1e12, '조'], [1e8, '억'], [1e4, '만']];
+function fmtWon(n) {
+  if (n === null || n === undefined || !isFinite(n)) return '-';
+  const sign = n < 0 ? '-' : '', abs = Math.abs(Math.round(n));
+  for (const [v, s] of WON_UNITS) {
+    if (abs < v) continue;
+    const x = abs / v, f = x >= 1000 ? 1 : x >= 100 ? 10 : x >= 10 ? 100 : 1000;
+    return `${sign}${NUM_KO.format(Math.floor(x * f + 1e-6) / f)}${s} 원`;
+  }
+  return `${sign}${NUM_KO.format(abs)}원`;
 }
 
 // 레벨은 자릿수를 그대로 보여줍니다 — 1,000만은 눈으로 봐야 맛이 나니까.

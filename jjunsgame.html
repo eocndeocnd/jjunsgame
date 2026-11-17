@@ -2722,6 +2722,7 @@ body.facing .map-stage canvas, body.drawer-open .map-stage canvas { filter: brig
 .hud-set.on { background: var(--wax); box-shadow: 0 0 0 1px var(--wax-lo), 0 0 0 2px var(--brass); cursor: default; }
 .hud-chip { border: 0; font: inherit; font-size: 12px; line-height: 1.3; padding: 5px 9px; cursor: pointer; }
 .hud-chip.ready { background: var(--wax); }
+.hud-chip.hud-won { cursor: default; font-variant-numeric: tabular-nums; white-space: nowrap; }   /* 도시에서 — 가진 돈(원) */
 /* 왼쪽 아래 레벨 · 맨 아래 가장자리의 경험치 줄 (id 는 싸운 뒤 굴러 올라가는 연출 — ui.js 의 paintLevel 이 씀) */
 .hud-lv { position: fixed; left: 10px; bottom: calc(env(safe-area-inset-bottom) + 12px); z-index: 5; pointer-events: none;
           font-family: var(--font-t); font-size: 17px; line-height: 1.2; color: var(--cream); white-space: nowrap;
@@ -4537,7 +4538,7 @@ const RULES = {
   // 첫 회차가 제1격 하나로 다 갔습니다. 그 지점을 앞으로 당기는 값입니다.
   RANK_XP_EARLY: 2.0,
   AURA_CHANCE: 0.12,      // 화신이 이상한 기운을 두르고 나타날 확률 — 지도에서는 빛나는 놈이 보여 골라 잡을 수 있어 0.22 에서 낮춤
-  // 골드 — 싸워서 이기면 떨어집니다. 회차가 끝나도 남습니다 (떠돌이 상인에게서 씁니다).
+  // 골드 — 그 공간의 화폐. 싸워서 이기면 떨어집니다. 회차가 끝나도 남습니다 (떠돌이 상인에게서 씁니다 — 도시에서는 못 씁니다: 아래 「돈」).
   // 한 번 이길 때 = GOLD_BASE × GOLD_GROWTH^(격−1) × 종류(일반 1 · 정예 4 · 히든 5 · 보스 10) × 기운 × 골드 배수
   // 골드 배수 = 행운 배수(분배) × (1 + 장비의 골드 획득)
   GOLD_BASE: 5,
@@ -4545,18 +4546,27 @@ const RULES = {
   // 떠돌이 상인의 물건 값 = 그 격 일반 화신 한 번 몫의 이만큼 배.
   // 소지품은 4~6격 기준이라 4격 약 2,000 · 5격 약 3,900 · 6격 약 7,400골드 — 몇 회차를 모아야 하나 살 수 있는 값입니다.
   WARE_PRICE: 60,
-  // 헌터백화점의 물건 값 = 그 격 일반 몬스터 한 번 몫의 이만큼 배 (1격 300 · 2격 570 · 3격 1,080 · 4격 2,060 · 5격 3,910 · 6격 7,430골드).
-  // 그 격에 머무는 한 회차에 60~70마리 몫을 벌어서, 한 회차 벌면 하나 사는 값입니다 (시뮬: 2격에 머무는 회차마다 약 600골드).
-  DEPT_PRICE: 60,
+  // 돈 (원) — 도시의 화폐 (docs/CITY-PLAN.md 「돈과 골드」 2번). 그 공간에서 들고 나온 것(핵 · 재료)을 재료 창구에 **팔아서만** 법니다.
+  // 골드와는 서로 바꿀 수 없습니다 — 백화점 물건 · 재료로 만들기는 돈으로, 떠돌이 상인은 골드로.
+  // 눈금: 골드 1 몫 = WON_SCALE 원 (「300원짜리 단검」은 어색해서 — 1격 단검 24만 원, 1격의 핵 1개 1만 원). 아래 값들은 골드 몫으로 적고 이 눈금을 곱합니다.
+  WON_SCALE: 1000,
+  // 핵 1개 판 값 = 그 격 일반 한 마리 골드 몫의 이만큼 배 (× WON_SCALE) — 1격 1만 · 2격 1.9만 · 3격 3.6만 · 4격 6.9만 원 …
+  CORE_SELL: 2,
+  // 헌터백화점의 물건 값 = 그 격 일반 몬스터 한 번 골드 몫의 이만큼 배 × WON_SCALE
+  //   (1격 24만 · 2격 46만 · 3격 87만 · 4격 165만 · 5격 313만 · 6격 594만 원) — **그 격의 핵 24개에 하나.**
+  // 이 값의 잣대는 「첫 회차에 번 돈으로, 2회차를 시작할 때 1격 무기 하나를 살 수 있나」입니다 (시뮬로 첫 회차에 모으는 핵은 18~50개 — 보스를 꺾은 판은 35개 넘게. 12판 중 10판이 2회차에 하나를 삽니다).
+  //   시뮬(시드 1~12 — 3격 · 7격에 처음 닿는 회차 평균): 핵 60개 · 30개에 하나(못 삼) 10.6 ~ 11.3 · 17 → 24개 · 20개에 하나(삼) 8.5 ~ 8.7 · 14.
+  //   그 문턱만 넘으면 더 싸게 해도 그대로입니다 — 그 뒤로는 돈이 아니라 힘이 발목을 잡습니다.
+  DEPT_PRICE: 48,
   // 재료 (도시 1-다) — 장비를 떨어뜨릴 리 없는 짐승은 장비 대신 제 재료를 줍니다 (data.js 의 MATERIALS).
   // 한 마리에 1개, 전리품 확률만큼 하나 더 (행운 · 기운이 그대로 듦). 재료 MAT_PER_ITEM 개 = 예전에 그 장비를 한 번 주운 셈:
-  //   아직 없는 장비면 골드(그 격 일반 CRAFT_PRICE 마리 몫)를 얹어 만들고, 이미 가진 장비면 분해했을 때와 같은 강화석으로 바꿉니다.
-  //   남는 재료는 1개에 그 격 일반 MAT_SELL 마리 몫 골드로 팝니다.
+  //   아직 없는 장비면 돈(그 격 일반 CRAFT_PRICE 마리 몫 × WON_SCALE — 1격 4만 · 2격 8만 원: 그 격의 핵 4개)을 얹어 만들고, 이미 가진 장비면 분해했을 때와 같은 강화석으로 바꿉니다.
+  //   남는 재료는 1개에 그 격 일반 MAT_SELL 마리 몫(× WON_SCALE — 1격 5,000 · 2격 1만 원)으로 팝니다.
   // 2개인 까닭 — 예전엔 장비 둘을 저마다 전리품 확률(1격 81% · 2격 52%)로 굴려 한 마리에 1.6 · 1.0개가 나왔습니다.
   //   재료는 한 마리에 1.8 · 1.5개라, 2개에 하나면 한 마리에 0.9 · 0.76개 — 예전의 56% · 73% (3개면 37% · 49% 라 너무 짬).
   //   만들려면 도시에 다녀와야 하는 몫까지 치면 예전보다 느립니다 (시뮬: 3격에 처음 닿는 회차 평균 6 → 10).
   MAT_PER_ITEM: 2,
-  CRAFT_PRICE: 10,
+  CRAFT_PRICE: 8,
   MAT_SELL: 1,
   // 회차마다 떠돌이 상인이 나타날 확률 (카벙클을 처음 꺾은 그 회차는 반드시 나타납니다)
   MERCHANT_CHANCE: 0.5,
@@ -6857,12 +6867,12 @@ for (const [id, name, slot, icon, r, arch, note, gold] of MERCHANT_WARES) {
 }
 
 // ---------- 헌터백화점 (도시 — docs/CITY-PLAN.md 1-나) ----------
-// 사람의 기술로 만든 장비를 골드로 팝니다. 지금은 1층 무기 매장뿐 — 격마다 무기 하나 · 보조무기 하나 (1~6격).
+// 사람의 기술로 만든 장비를 돈(원)으로 팝니다. 지금은 1층 무기 매장뿐 — 격마다 무기 하나 · 보조무기 하나 (1~6격).
 // 그 격 물건은 앞 격의 보스를 꺾으면 들어옵니다 (1격 물건은 처음부터 — game.js 의 deptOpenRank).
 // 한 번 사면 내 것이 되고 진열대에서 사라집니다. 몬스터 전리품이 아니라서 전리품 예산 밖입니다 (tools/loot-check.js).
 //   [id, 이름, 부위, 아이콘, 격, 성격, 상품 설명 한 줄]
 //   성능은 그 격 지역의 가장 센 일반 몬스터 것의 DEPT_GRADE 배 (정예 1.4 · 보스 1.8 보다 아래 — 사서 뚫되 잡아서 얻는 것이 더 좋게),
-//   값은 priceFor(격, DEPT_PRICE). store 는 매장 이름 (지금은 weapon 하나).
+//   값은 priceFor(격, DEPT_PRICE) × WON_SCALE 원. store 는 매장 이름 (지금은 weapon 하나).
 const DEPT_ID = 'dept';
 const DEPT_GRADE = 1.2;
 const DEPT_SECTIONS = { weapon: { name: '무기 매장', icon: '🧑‍💼' }, mats: { name: '재료 창구', icon: '🧑‍🔧' } };   // mats — 재료로 만들기 · 바꾸기 · 팔기 (MATERIALS)
@@ -6897,7 +6907,7 @@ for (const [id, name, slot, icon, r, arch, note] of DEPT_WARES) {
     level, rank,
     from: DEPT_ID, fromName: '헌터백화점', fromIcon: icon,
     store: 'weapon',
-    price: priceFor(r, RULES.DEPT_PRICE),
+    price: priceFor(r, RULES.DEPT_PRICE) * RULES.WON_SCALE,      // 원 (떠돌이 상인의 price 는 골드)
     ...makeItemStats(slot, level, DEPT_GRADE, arch, false)
   });
 }
@@ -6921,21 +6931,21 @@ for (const [foeId, name, icon] of [
   if (!foe || foe.kind !== 'normal') throw new Error(`재료 — ${foeId} 이(가) 일반 몬스터가 아님`);
   const worth = goldFor(foe);
   MATERIALS[foeId] = { id: foeId, name, icon, from: foeId, fromName: foe.name, rank: foe.rank,
-                       sell: Math.max(1, Math.round(worth * RULES.MAT_SELL)) };
+                       sell: Math.max(1, Math.round(worth * RULES.MAT_SELL)) * RULES.WON_SCALE };      // 원
   foe.mat = foeId;
-  for (const it of ITEMS) if (it.from === foeId) it.craft = { mat: foeId, n: RULES.MAT_PER_ITEM, gold: priceFor(foe.rank.n, RULES.CRAFT_PRICE) };
+  for (const it of ITEMS) if (it.from === foeId) it.craft = { mat: foeId, n: RULES.MAT_PER_ITEM, won: priceFor(foe.rank.n, RULES.CRAFT_PRICE) * RULES.WON_SCALE };
 }
 
 // ---------- 핵 (도시 계획 「돈과 골드」 1번) ----------
 // **모든 몬스터가 팔 것을 남깁니다** (사용자 결정) — 격마다 한 가지, 그 격의 핵. 어느 격에서 싸우든 도시에 팔 것이 생깁니다.
 // 꺾을 때마다 종류만큼: 일반 1 · 정예 4 · 히든 5 · 보스 10개 (골드와 같은 배수 — KINDS 의 gold), 기운을 두른 상대는 그 배수만큼 더.
-// 판 값은 1개에 그 격 일반 한 마리 몫 (MAT_SELL). 재료와 같은 가방(meta.mats)에 담기고 재료 창구에서 팝니다 — 만드는 데는 쓰지 않습니다.
+// 판 값은 1개에 그 격 일반 한 마리 골드 몫의 CORE_SELL 배 × WON_SCALE 원 (1격 1만 · 2격 1.9만 · 3격 3.6만 원 …). 재료와 같은 가방(meta.mats)에 담기고 재료 창구에서 팝니다 — 만드는 데는 쓰지 않습니다.
 // 짐승은 핵에 더해 제 재료(MATERIALS)도 줍니다. 이름은 가칭.
 const CORES = {};
 for (const rank of RANKS) {
   const id = `core${rank.n}`;
   CORES[id] = { id, name: `제${rank.n}격의 핵`, icon: '💠', rank, core: true,
-                sell: Math.max(1, Math.round(RULES.GOLD_BASE * Math.pow(RULES.GOLD_GROWTH, rank.n - 1) * RULES.MAT_SELL)) };
+                sell: Math.max(1, Math.round(RULES.GOLD_BASE * Math.pow(RULES.GOLD_GROWTH, rank.n - 1) * RULES.CORE_SELL)) * RULES.WON_SCALE };
 }
 // 가방에 담기는 것 하나 (재료 · 핵) — id 로
 function matInfo(id) { return MATERIALS[id] || CORES[id] || null; }
@@ -8177,6 +8187,10 @@ function load() {
     State.meta.specialOpened = Array.isArray(data.specialOpened) ? data.specialOpened : [];
     State.meta.chestsOpened = Array.isArray(data.chestsOpened) ? data.chestsOpened.filter(id => typeof id === 'string') : [];
     State.meta.gold = Math.max(0, Math.floor(num(data.gold)));
+    // 돈(원)이 생기기 전의 저장본 — 그때의 골드는 도시와 그 공간에서 같이 쓰던 것이라, 돈으로 옮기지 않고 없앱니다 (사용자 결정).
+    // 가방의 핵 · 재료는 그대로라, 재료 창구에 팔면 돈이 됩니다
+    if (data.won === undefined) State.meta.gold = 0;
+    State.meta.won = Math.max(0, Math.floor(num(data.won)));
     State.meta.mats = {};
     for (const [id, n] of Object.entries(data.mats || {})) if (matInfo(id) && num(n) > 0) State.meta.mats[id] = Math.floor(num(n));
     State.meta.avatars = Array.isArray(data.avatars) ? data.avatars.filter(id => canBecomeAvatar(getEnemy(id))) : [];
@@ -8258,7 +8272,8 @@ function freshMeta() {
     specialOpened: [],
     chestsOpened: [],
     mats: {},
-    gold: 0,                          // 골드 — 회차가 끝나도 남습니다
+    gold: 0,                          // 골드 — 그 공간의 화폐 (떠돌이 상인). 회차가 끝나도 남습니다
+    won: 0,                           // 돈(원) — 도시의 화폐. 들고 나온 핵 · 재료를 팔아 벌고 백화점에서 씁니다. 골드와는 못 바꿉니다
     avatars: [],                      // 얻은 화신 (적 id) — 회차가 끝나도 남습니다
     avatar: null,                     // 지금 삼은 화신 — 한 번에 하나
     runCount: 0,
@@ -8880,12 +8895,12 @@ function deptComing(section) {
 function buyDept(id) {
   const it = getItem(id);
   if (!State.meta.cityOpen || !it || !it.store || owns(id) || it.rank.n > deptOpenRank()) return false;
-  if (num(State.meta.gold) < it.price) return false;
-  State.meta.gold -= it.price;
+  if (num(State.meta.won) < it.price) return false;      // 도시는 돈(원)으로 — 골드는 받지 않습니다
+  State.meta.won -= it.price;
   State.meta.owned[id] = 1;
   markFresh(it);
   autoEquipIfBetter(it);                // 알아서 갈아끼우기가 켜져 있을 때만 (지금은 시뮬만 켭니다 — 사람은 구매 창이 「지금 낄까요」를 묻습니다)
-  pushLog('drop', `헌터백화점에서 『${it.name}』${josa(it.name, '을', '를')} 샀다 — ${fmt(it.price)} 골드`);
+  pushLog('drop', `헌터백화점에서 『${it.name}』${josa(it.name, '을', '를')} 샀다 — ${fmtWon(it.price)}`);
   save();
   return true;
 }
@@ -9259,17 +9274,18 @@ function rollMats(enemyId, auraMult = 1) {
   if (mat) give(mat, 1 + (Math.random() < dropChanceFor(foe, auraMult) ? 1 : 0));
   return out;
 }
-// 재료 창구(헌터백화점) — 도시가 열린 뒤에. 셋 다 성공하면 참(만들기는 만든 장비, 바꾸기는 강화석 수, 팔기는 받은 골드).
-// 만든다: 아직 없는 장비 — 재료 n개 + 골드
+// 재료 창구(헌터백화점) — 도시가 열린 뒤에. 셋 다 성공하면 참(만들기는 만든 장비, 바꾸기는 강화석 수, 팔기는 받은 돈).
+// 값을 치르고 받는 것은 모두 돈(원) — 도시의 화폐 (골드는 그 공간에서만).
+// 만든다: 아직 없는 장비 — 재료 n개 + 돈
 function craftItem(id) {
   const it = getItem(id), c = it && it.craft;
-  if (!State.meta.cityOpen || !c || owns(id) || matsOf(c.mat) < c.n || num(State.meta.gold) < c.gold) return null;
+  if (!State.meta.cityOpen || !c || owns(id) || matsOf(c.mat) < c.n || num(State.meta.won) < c.won) return null;
   State.meta.mats[c.mat] = matsOf(c.mat) - c.n;
-  State.meta.gold -= c.gold;
+  State.meta.won -= c.won;
   State.meta.owned[id] = 1;
   markFresh(it);
   autoEquipIfBetter(it);
-  pushLog('drop', `재료 창구에서 『${it.name}』${josa(it.name, '을', '를')} 만들었다 — ${MATERIALS[c.mat].name} ${c.n}개 · ${fmt(c.gold)} 골드`);
+  pushLog('drop', `재료 창구에서 『${it.name}』${josa(it.name, '을', '를')} 만들었다 — ${MATERIALS[c.mat].name} ${c.n}개 · ${fmtWon(c.won)}`);
   save();
   return it;
 }
@@ -9285,33 +9301,33 @@ function matToStones(id) {
   save();
   return stones;
 }
-// 판다: 재료 · 핵 n개 → 골드 (1개에 그것의 sell)
+// 판다: 재료 · 핵 n개 → 돈 (1개에 그것의 sell 원)
 function sellMats(matId, n) {
   const mat = matInfo(matId), k = Math.min(Math.floor(num(n)), matsOf(matId));
   if (!State.meta.cityOpen || !mat || !(k > 0)) return 0;
-  const gold = mat.sell * k;
+  const won = mat.sell * k;
   State.meta.mats[matId] = matsOf(matId) - k;
-  State.meta.gold = num(State.meta.gold) + gold;
-  pushLog('drop', `재료 창구에 ${mat.name} ${fmt(k)}개를 팔았다 — +${fmt(gold)} 골드`);
+  State.meta.won = num(State.meta.won) + won;
+  pushLog('drop', `재료 창구에 ${mat.name} ${fmt(k)}개를 팔았다 — +${fmtWon(won)}`);
   save();
-  return gold;
+  return won;
 }
 
-// 핵을 모두 판다 — 가진 핵 전부를 한 번에. 받은 골드 (없으면 0)
+// 핵을 모두 판다 — 가진 핵 전부를 한 번에. 받은 돈 (없으면 0)
 function sellAllCores() {
   if (!State.meta.cityOpen) return 0;
-  let gold = 0, count = 0;
+  let won = 0, count = 0;
   for (const core of Object.values(CORES)) {
     const k = matsOf(core.id);
     if (!k) continue;
-    gold += core.sell * k; count += k;
+    won += core.sell * k; count += k;
     State.meta.mats[core.id] = 0;
   }
   if (!count) return 0;
-  State.meta.gold = num(State.meta.gold) + gold;
-  pushLog('drop', `재료 창구에 핵 ${fmt(count)}개를 팔았다 — +${fmt(gold)} 골드`);
+  State.meta.won = num(State.meta.won) + won;
+  pushLog('drop', `재료 창구에 핵 ${fmt(count)}개를 팔았다 — +${fmtWon(won)}`);
   save();
-  return gold;
+  return won;
 }
 
 // ---------- 알아서 갈아끼우기 ----------
@@ -9593,6 +9609,19 @@ function fmt(n) {
   if (abs < 10000) return NUM_KO.format(Math.round(n));
   for (const [v, s] of UNITS) if (abs >= v) return (n / v).toFixed(2) + s;
   return NUM_KO.format(Math.round(n));
+}
+
+// 돈(원) — 「5,000원 · 30만 원 · 123.4만 원 · 1.23억 원」. 큰 단위는 네 자리까지, 그 아래는 버립니다 (가진 돈이 실제보다 많아 보이지 않게)
+const WON_UNITS = [[1e16, '경'], [1e12, '조'], [1e8, '억'], [1e4, '만']];
+function fmtWon(n) {
+  if (n === null || n === undefined || !isFinite(n)) return '-';
+  const sign = n < 0 ? '-' : '', abs = Math.abs(Math.round(n));
+  for (const [v, s] of WON_UNITS) {
+    if (abs < v) continue;
+    const x = abs / v, f = x >= 1000 ? 1 : x >= 100 ? 10 : x >= 10 ? 100 : 1000;
+    return `${sign}${NUM_KO.format(Math.floor(x * f + 1e-6) / f)}${s} 원`;
+  }
+  return `${sign}${NUM_KO.format(abs)}원`;
 }
 
 // 레벨은 자릿수를 그대로 보여줍니다 — 1,000만은 눈으로 봐야 맛이 나니까.
@@ -13373,6 +13402,7 @@ function renderRecords() {
     ${record('빼앗은 격', `${m.bossesBeaten.length}/${known}`, bm > 1.01 ? 'boost' : '')}
     ${bm > 1.01 ? record('영구 경험치', `×${bm.toFixed(1)}`, 'boost') : ''}
     ${record('골드', fmt(num(m.gold)))}
+    ${m.cityOpen ? record('돈', fmtWon(num(m.won))) : ''}
     ${record('전리품', `${ownedIds().length}/${knownItems().length}`)}
     ${record('도감 완성', `${completedRanks()}/${known}`, completedRanks() ? 'boost' : '')}
     ${m.cleared ? record('', '클리어', 'cleared') : ''}
@@ -13713,6 +13743,7 @@ function renderHud(zone) {
       const on = isSetActive(n);
       return `<button class="hud-set ${on ? 'on' : ''}" data-jset="${n}" ${on ? 'disabled' : ''} title="세트 ${n + 1}">${n + 1}</button>`;
     }).join('')}</div>
+    ${inTown() ? `<span class="hud-chip hud-glass hud-won" title="가진 돈 — 도시에서 씁니다">${fmtWon(num(State.meta.won))}</span>` : ''}
     <button class="hud-chip hud-glass" id="rosterBtn" title="이 지역에 있는 것">도감 ${run.zoneIndex + 1} / ${knownZoneCount()}</button>
     ${run.unspent > 0 ? '<button class="hud-chip hud-glass ready" id="jAllocBtn">스탯 분배<span class="alloc-pip on"></span></button>' : ''}`;
   // 지역 이름 — 게임에 들어선 뒤 처음 그릴 때와, 다른 지역이나 지역이 없는 지도(문의 광장)에 들어설 때
@@ -14652,6 +14683,11 @@ function currentMapId() {
   return run.mapId;
 }
 function onMapZone() { return !!currentMapId(); }
+// 도시에 서 있나 — 옛 동네 · 헌터들의 도시(props.city) · 가게 안(props.store). 도시에서는 머리 위에 가진 돈이 보입니다
+function inTown() {
+  const id = currentMapId(), p = id && maps[id] && maps[id].props;
+  return !!p && !!(p.city || p.store);
+}
 
 // 지역 머리의 이름 — 지역이 없는 지도(문의 광장)에서는 그 지도의 이름
 function placeName(zone) {
@@ -15621,9 +15657,11 @@ function renderShop() {
   if (!shopHere()) { closeShop(); return; }
   if (shopKind === 'mats') { renderMatShop(); return; }
   const dept = isDeptShop();
-  const gold = num(State.meta.gold);
+  // 지갑 — 백화점(도시)은 돈(원), 떠돌이 상인(그 공간)은 골드
+  const gold = num(dept ? State.meta.won : State.meta.gold);
+  const cost = n => dept ? fmtWon(n) : `${fmt(n)} 골드`;
   $('shopTitle').textContent = dept ? `헌터백화점 · ${DEPT_SECTIONS[shopKind].name}` : '떠돌이 상인';
-  $('shopGold').textContent = `골드 ${fmt(gold)}`;
+  $('shopGold').textContent = dept ? `돈 ${fmtWon(gold)}` : `골드 ${fmt(gold)}`;
   // 물건 한 줄 — coming 이면 「입고 예정」(흐리게, 살 수 없음)
   const card = (item, coming) => {
     const can = gold >= item.price;
@@ -15640,8 +15678,8 @@ function renderShop() {
           ${item.note ? `<div class="inv-note">${item.note}</div>` : ''}
         </div>
         <div class="inv-act">${coming
-          ? `<span class="ware-soon">입고 예정<small>${fmt(item.price)} 골드</small></span>`
-          : `<button class="btn" data-buy="${item.id}" ${can ? '' : 'disabled'}>${fmt(item.price)} 골드</button>`}</div>
+          ? `<span class="ware-soon">입고 예정<small>${cost(item.price)}</small></span>`
+          : `<button class="btn" data-buy="${item.id}" ${can ? '' : 'disabled'}>${cost(item.price)}</button>`}</div>
       </div>`;
   };
   // 산 물건은 상점에서 사라집니다
@@ -15688,26 +15726,26 @@ function renderShop() {
 
 // ---------- 재료 창구 (헌터백화점 1층) — 재료로 만들기 · 강화석으로 바꾸기 · 팔기 ----------
 // 재료마다 한 묶음: 머리에 재료 이름 · 가진 수 · 팔기 단추(1개 · 모두), 아래에 그 재료로 만드는 장비.
-// 아직 없는 장비는 「만든다」(재료 + 골드 — 만들면 「지금 낄까요?」), 이미 가진 장비는 「강화석」(재료 → 그 부위 강화석 — 예전에 겹쳐 주웠을 때와 같은 양).
+// 아직 없는 장비는 「만든다」(재료 + 돈 — 만들면 「지금 낄까요?」), 이미 가진 장비는 「강화석」(재료 → 그 부위 강화석 — 예전에 겹쳐 주웠을 때와 같은 양).
 // 보이는 재료는 한 번이라도 손에 넣어 본 것 — 가진 것이 있거나, 그 재료로 만든 장비가 있는 것 (아직 못 본 몬스터의 재료는 숨김)
 // 맨 위는 핵 — 모든 몬스터가 남기는 팔 것 (격마다 한 가지). 가진 격만 한 줄씩, 「모두 판다」 한 번으로 다 팝니다. 만드는 데는 쓰지 않습니다.
 function renderMatShop() {
-  const gold = num(State.meta.gold);
+  const won = num(State.meta.won);      // 도시의 돈 — 판 값도 만드는 값도 원
   $('shopTitle').textContent = `헌터백화점 · ${DEPT_SECTIONS.mats.name}`;
-  $('shopGold').textContent = `골드 ${fmt(gold)}`;
+  $('shopGold').textContent = `돈 ${fmtWon(won)}`;
   const cores = Object.values(CORES).filter(c => matsOf(c.id) > 0);
   const coreSum = cores.reduce((s, c) => s + c.sell * matsOf(c.id), 0);
   const coreBlock = cores.length ? `
     <div class="mat-block core-block">
       <div class="mat-head">
         <span class="mat-name">💠 핵 <b>${fmt(cores.reduce((s, c) => s + matsOf(c.id), 0))}개</b></span>
-        <span class="mat-sell"><button class="btn primary" id="sellCoresBtn">모두 판다 +${fmt(coreSum)}</button></span>
+        <span class="mat-sell"><button class="btn primary" id="sellCoresBtn">모두 판다 +${fmtWon(coreSum)}</button></span>
       </div>
       <div class="core-list">${cores.map(c => `
         <div class="core-row">
           <span class="core-name">${c.name} <b>${fmt(matsOf(c.id))}개</b></span>
-          <span class="core-worth">1개 ${fmt(c.sell)} 골드</span>
-          <button class="btn tiny" data-sellmat="${c.id}" data-n="${matsOf(c.id)}">판다 +${fmt(c.sell * matsOf(c.id))}</button>
+          <span class="core-worth">1개 ${fmtWon(c.sell)}</span>
+          <button class="btn tiny" data-sellmat="${c.id}" data-n="${matsOf(c.id)}">판다 +${fmtWon(c.sell * matsOf(c.id))}</button>
         </div>`).join('')}</div>
     </div>` : '';
   const blocks = Object.values(MATERIALS).map(mat => {
@@ -15720,7 +15758,7 @@ function renderMatShop() {
       const spec = itemSpecialText(item);
       const act = owned
         ? `<button class="btn" data-matstone="${item.id}" ${have >= c.n ? '' : 'disabled'}><b>강화석 +${fmt(matStoneYield(item))}</b><span>재료 ${c.n}개</span></button>`
-        : `<button class="btn primary" data-craft="${item.id}" ${have >= c.n && gold >= c.gold ? '' : 'disabled'}><b>만든다</b><span>재료 ${c.n}개 · ${fmt(c.gold)} 골드</span></button>`;
+        : `<button class="btn primary" data-craft="${item.id}" ${have >= c.n && won >= c.won ? '' : 'disabled'}><b>만든다</b><span>재료 ${c.n}개 · ${fmtWon(c.won)}</span></button>`;
       return `
       <div class="inv-item ware${owned ? ' made' : ''}">
         <span class="inv-art">${item.fromIcon}</span>
@@ -15737,8 +15775,8 @@ function renderMatShop() {
       <div class="mat-head">
         <span class="mat-name">${mat.icon} ${mat.name} <b>${fmt(have)}개</b></span>
         <span class="mat-sell">
-          <button class="btn tiny" data-sellmat="${mat.id}" data-n="1" ${have ? '' : 'disabled'}>1개 판다 +${fmt(mat.sell)}</button>
-          <button class="btn tiny" data-sellmat="${mat.id}" data-n="${have}" ${have > 1 ? '' : 'disabled'}>모두 +${fmt(mat.sell * have)}</button>
+          <button class="btn tiny" data-sellmat="${mat.id}" data-n="1" ${have ? '' : 'disabled'}>1개 판다 +${fmtWon(mat.sell)}</button>
+          <button class="btn tiny" data-sellmat="${mat.id}" data-n="${have}" ${have > 1 ? '' : 'disabled'}>모두 +${fmtWon(mat.sell * have)}</button>
         </span>
       </div>
       <div class="inventory shop-wares">${cards}</div>
@@ -15771,7 +15809,9 @@ function openBuy(id) {
   const item = getItem(id);
   if (!item || !shopHere()) return;
   buyId = id;
-  const gold = num(State.meta.gold), m = slotMult(item.slot);
+  // 지갑 — 백화점은 돈(원), 떠돌이 상인은 골드
+  const dept = isDeptShop(), gold = num(dept ? State.meta.won : State.meta.gold), m = slotMult(item.slot);
+  const cost = n => dept ? fmtWon(n) : `${fmt(n)} 골드`, left = n => dept ? fmtWon(n) : fmt(n);
   const worn = getItem(State.meta.equipped[item.slot]);
   const stats = [
     ...STAT_INFO.filter(s => item[s.id]).map(s => `<li><span>${s.name}</span><b>+${fmt(item[s.id] * m)}</b></li>`),
@@ -15790,7 +15830,7 @@ function openBuy(id) {
       <div class="buy-k">${worn ? `지금 낀 『${worn.name}』${josa(worn.name, '과', '와')} 견주면` : '지금 이 부위는 비어 있음'}</div>
       <div class="inv-diff">${itemDiffText(item, worn, m)}</div>
     </div>
-    <div class="buy-price"><span>${fmt(item.price)} 골드</span><span class="buy-left">가진 골드 ${fmt(gold)} → ${fmt(gold - item.price)}</span></div>
+    <div class="buy-price"><span>${cost(item.price)}</span><span class="buy-left">가진 ${dept ? '돈' : '골드'} ${left(gold)} → ${left(gold - item.price)}</span></div>
     <div class="buy-ask">구매하시겠습니까?</div>
     <div class="buy-actions">
       <button class="btn" data-closebuy>그만둔다</button>
@@ -16318,6 +16358,7 @@ function renderAdmin() {
         <button class="btn tiny" data-adm="itemsAll" ${off}>모든 전리품</button>
         <button class="btn tiny" data-adm="stones" ${off}>강화석 +1,000</button>
         <button class="btn tiny" data-adm="gold" ${off}>골드 +10,000</button>
+        <button class="btn tiny" data-adm="won" ${off}>돈 +1,000만 원</button>
         <button class="btn tiny" data-adm="merchant" ${off}>떠돌이 상인을 여기로</button>
         <button class="btn tiny" data-adm="avatar" ${off}>화신 하나 얻기</button>
         <button class="btn tiny" data-adm="special" ${off}>특수장비 칸 모두</button>
@@ -16387,6 +16428,9 @@ function adminAction(a) {
       break;
     case 'gold':
       meta.gold = num(meta.gold) + 10000;
+      break;
+    case 'won':
+      meta.won = num(meta.won) + 10000000;
       break;
     case 'avatar': {
       // 아직 없는 화신 하나를 무작위로 — 처음이면 바로 삼습니다

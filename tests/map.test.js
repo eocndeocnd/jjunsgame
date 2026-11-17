@@ -1157,7 +1157,7 @@ test('재료 — 1~2격의 짐승 일곱은 장비 대신 제 재료를 주고, 
   assert.equal(made.length, 14);
   for (const it of made) {
     assert.ok(givers.some(e => e.id === it.from && e.mat === it.craft.mat), `${it.name} — 그 몬스터의 재료로`);
-    assert.ok(it.craft.n >= 1 && it.craft.gold > 0 && !it.store && !it.ware && !it.chest);
+    assert.ok(it.craft.n >= 1 && it.craft.won > 0 && !it.store && !it.ware && !it.chest);
   }
   for (const e of givers) assert.ok(ITEMS.filter(i => i.from === e.id).every(i => i.craft), `${e.name} 의 장비는 모두 만드는 것`);
   assert.ok(ITEMS.filter(i => !givers.some(e => e.id === i.from)).every(i => !i.craft), '다른 몬스터의 장비는 그대로 떨어짐');
@@ -1170,4 +1170,68 @@ test('핵 — 스무 격마다 한 가지, 격이 오르면 값도 오르고 재
   for (const r of RANKS) assert.ok(CORES[`core${r.n}`] && CORES[`core${r.n}`].rank.n === r.n && CORES[`core${r.n}`].core, `${r.n}격의 핵`);
   for (let n = 2; n <= RANKS.length; n++) assert.ok(CORES[`core${n}`].sell > CORES[`core${n - 1}`].sell, '격이 오르면 판 값도 오름');
   assert.ok(Object.keys(MATERIALS).every(id => !CORES[id]), '재료와 번호가 안 겹침');
+});
+
+// 규칙(js/game.js)까지 올린 판 — 저장 · 사고팔기처럼 화면 없이 볼 수 있는 것을 시험합니다. saves 는 미리 넣어 둘 저장(localStorage)
+function loadGame(saves = {}) {
+  const store = { ...saves };
+  const ctx = { console, setTimeout, clearTimeout,
+    localStorage: { getItem: k => (k in store ? store[k] : null), setItem: (k, v) => { store[k] = String(v); }, removeItem: k => { delete store[k]; } } };
+  ctx.window = ctx;
+  vm.createContext(ctx);
+  for (const f of ['js/data.js', 'js/game.js']) vm.runInContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), ctx, { filename: f });
+  return code => JSON.parse(vm.runInContext(`JSON.stringify((() => { ${code} })())`, ctx));
+}
+const slotKey = n => `jjunsgame.rpg.v3.slot${n}`;
+
+test('돈(원) — 도시는 돈으로 사고판다: 핵 · 재료를 판 값은 돈, 백화점 · 만들기는 돈으로 (골드로는 못 삼)', () => {
+  const run = loadGame({ [slotKey(1)]: JSON.stringify({ runCount: 5, cityOpen: true, won: 0, gold: 5000000, owned: {}, mats: { core1: 200, giantrat: 3 } }) });
+  const r = run(`
+    currentSlot = 1; blockSaving(); load();
+    const craft = ITEMS.find(i => i.craft && i.craft.mat === 'giantrat');
+    const out = { start: [State.meta.gold, State.meta.won] };
+    out.noMoney = [buyDept('dept_knife'), !!craftItem(craft.id)];
+    out.sold = sellAllCores();
+    out.afterSell = [State.meta.gold, State.meta.won, matsOf('core1')];
+    out.soldMat = sellMats('giantrat', 1);
+    out.made = !!craftItem(craft.id);
+    out.bought = buyDept('dept_knife');
+    out.end = [State.meta.gold, State.meta.won, matsOf('giantrat')];
+    out.owns = [owns(craft.id), owns('dept_knife')];
+    out.v = { core: CORES.core1.sell, mat: MATERIALS.giantrat.sell, craft: craft.craft.won, n: craft.craft.n, knife: getItem('dept_knife').price, scale: RULES.WON_SCALE };
+    return out;`);
+  const v = r.v;
+  assert.deepEqual(r.start, [5000000, 0]);
+  assert.deepEqual(r.noMoney, [false, false], '골드가 아무리 많아도 돈이 없으면 못 삼');
+  assert.equal(r.sold, 200 * v.core);
+  assert.deepEqual(r.afterSell, [5000000, 200 * v.core, 0], '핵을 판 값은 돈으로 — 골드는 그대로');
+  assert.equal(r.soldMat, v.mat);
+  assert.ok(r.made && r.bought);
+  assert.deepEqual(r.end, [5000000, 200 * v.core + v.mat - v.craft - v.knife, 3 - 1 - v.n], '값은 돈에서 빠지고 골드는 그대로');
+  assert.deepEqual(r.owns, [true, true]);
+  for (const n of [v.core, v.mat, v.craft, v.knife]) assert.ok(n > 0 && n % v.scale === 0, '도시의 값은 돈의 눈금(WON_SCALE)으로');
+});
+
+test('돈(원) — 돈이 생기기 전의 저장은 골드를 옮기지 않고 없앰 (가방은 그대로), 그 뒤의 저장은 골드 그대로', () => {
+  const run = loadGame({
+    [slotKey(1)]: JSON.stringify({ runCount: 5, cityOpen: true, gold: 4321, owned: {}, mats: { core1: 7 } }),                 // 예전 저장 — won 이 없음
+    [slotKey(2)]: JSON.stringify({ runCount: 5, cityOpen: true, gold: 4321, won: 150000, owned: {}, mats: { core1: 7 } })
+  });
+  const r = run(`
+    blockSaving();
+    currentSlot = 1; load();
+    const a = [State.meta.gold, State.meta.won, matsOf('core1')], saved = JSON.parse(JSON.stringify(State.meta));
+    currentSlot = 2; load();
+    const b = [State.meta.gold, State.meta.won, matsOf('core1')];
+    return { a, b, again: saved.won, fresh: [freshMeta().gold, freshMeta().won] };`);
+  assert.deepEqual(r.a, [0, 0, 7]);
+  assert.equal(r.again, 0, '한 번 옮긴 저장에는 won 이 적혀 — 다음부터는 골드를 지우지 않음');
+  assert.deepEqual(r.b, [4321, 150000, 7]);
+  assert.deepEqual(r.fresh, [0, 0]);
+});
+
+test('돈 표기 — 5,000원 · 30만 원 · 123.4만 원 · 1.234억 원 (큰 단위는 네 자리까지, 아래는 버림)', () => {
+  const run = loadGame();
+  const r = run(`return [0, 5000, 10000, 18000, 300000, 1234000, 7430000, 99999000, 123400000, 56780000000000, -270000].map(fmtWon);`);
+  assert.deepEqual(r, ['0원', '5,000원', '1만 원', '1.8만 원', '30만 원', '123.4만 원', '743만 원', '9,999만 원', '1.234억 원', '56.78조 원', '-27만 원']);
 });

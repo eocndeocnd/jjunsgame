@@ -2706,6 +2706,7 @@ body.facing .map-stage canvas, body.drawer-open .map-stage canvas { filter: brig
 .hud-set.on { background: var(--wax); box-shadow: 0 0 0 1px var(--wax-lo), 0 0 0 2px var(--brass); cursor: default; }
 .hud-chip { border: 0; font: inherit; font-size: 12px; line-height: 1.3; padding: 5px 9px; cursor: pointer; }
 .hud-chip.ready { background: var(--wax); }
+.hud-chip.hud-won { cursor: default; font-variant-numeric: tabular-nums; white-space: nowrap; }   /* 도시에서 — 가진 돈(원) */
 /* 왼쪽 아래 레벨 · 맨 아래 가장자리의 경험치 줄 (id 는 싸운 뒤 굴러 올라가는 연출 — ui.js 의 paintLevel 이 씀) */
 .hud-lv { position: fixed; left: 10px; bottom: calc(env(safe-area-inset-bottom) + 12px); z-index: 5; pointer-events: none;
           font-family: var(--font-t); font-size: 17px; line-height: 1.2; color: var(--cream); white-space: nowrap;
