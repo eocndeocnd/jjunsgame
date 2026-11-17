@@ -93,10 +93,11 @@ function simChooseAvatar() {
 }
 
 // 헌터백화점 — 회차를 시작할 때 들릅니다. 높은 격 물건부터, 지금 낀 것보다 낮은 격이면 사지 않습니다.
-// 재료 창구에서는 재료가 모인 대로 — 없는 장비는 만들고, 가진 장비의 재료는 강화석으로 바꿉니다 (골드가 모자라면 다음에).
+// 재료 창구에서는 먼저 핵을 모두 팔고, 재료가 모인 대로 — 없는 장비는 만들고, 가진 장비의 재료는 강화석으로 바꿉니다 (골드가 모자라면 다음에).
 function simShop() {
   if (!SIM.SHOP || typeof deptWares !== 'function' || !State.meta.cityOpen) return 0;
   let bought = 0;
+  if (typeof sellAllCores === 'function') sellAllCores();   // 핵은 모두 팝니다 — 그 골드로 만들고 삽니다
   if (typeof craftItem === 'function') {
     const made = ITEMS.filter(i => i.craft);
     for (const it of made) if (!simOwns(it.id) && craftItem(it.id)) bought++;

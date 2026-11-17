@@ -2874,3 +2874,8 @@ body.meeting .enc-portrait .portrait-ic { font-size: clamp(90px, 34vw, 190px); }
 .inv-item.ware.made { background: var(--paper-hi); }
 /* 조우 카드 · 도감 줄의 재료 칸 */
 .ed-item.mat .ed-name, .rd.mat .rd-k { font-weight: 700; }
+/* 재료 창구의 핵 묶음 — 격마다 한 줄 (이름 · 가진 수 · 1개 값 · 판다) */
+.core-list { display: flex; flex-direction: column; gap: 4px; }
+.core-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 8px; padding: 4px 8px; background: var(--paper-hi); border: 2px solid var(--line); font-size: 12px; }
+.core-row .core-worth { font-size: 10px; color: var(--text-dim); white-space: nowrap; }
+.core-block .mat-sell .btn { padding: 5px 10px; font-size: 11px; }

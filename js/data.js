@@ -2434,6 +2434,20 @@ for (const [foeId, name, icon] of [
   for (const it of ITEMS) if (it.from === foeId) it.craft = { mat: foeId, n: RULES.MAT_PER_ITEM, gold: priceFor(foe.rank.n, RULES.CRAFT_PRICE) };
 }
 
+// ---------- 핵 (도시 계획 「돈과 골드」 1번) ----------
+// **모든 몬스터가 팔 것을 남깁니다** (사용자 결정) — 격마다 한 가지, 그 격의 핵. 어느 격에서 싸우든 도시에 팔 것이 생깁니다.
+// 꺾을 때마다 종류만큼: 일반 1 · 정예 4 · 히든 5 · 보스 10개 (골드와 같은 배수 — KINDS 의 gold), 기운을 두른 상대는 그 배수만큼 더.
+// 판 값은 1개에 그 격 일반 한 마리 몫 (MAT_SELL). 재료와 같은 가방(meta.mats)에 담기고 재료 창구에서 팝니다 — 만드는 데는 쓰지 않습니다.
+// 짐승은 핵에 더해 제 재료(MATERIALS)도 줍니다. 이름은 가칭.
+const CORES = {};
+for (const rank of RANKS) {
+  const id = `core${rank.n}`;
+  CORES[id] = { id, name: `제${rank.n}격의 핵`, icon: '💠', rank, core: true,
+                sell: Math.max(1, Math.round(RULES.GOLD_BASE * Math.pow(RULES.GOLD_GROWTH, rank.n - 1) * RULES.MAT_SELL)) };
+}
+// 가방에 담기는 것 하나 (재료 · 핵) — id 로
+function matInfo(id) { return MATERIALS[id] || CORES[id] || null; }
+
 // ---------- 보물상자 (지도의 chests 층 — 자리는 tools/map-gen.js 가 놓음) ----------
 // 닿으면 열리고 한 번만 열립니다 (State.meta.chestsOpened — 회차가 끝나도 그대로, 사용자 결정). 함정(미믹)은 없음.
 // 격마다 작은 상자 둘 · 큰 상자 하나 (지하수로는 작은 것 셋). 든 것은 지도의 점 속성(chest = id · rank · big · item)으로 정합니다:

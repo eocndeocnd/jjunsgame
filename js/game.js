@@ -244,7 +244,7 @@ const State = {
     banked: [],                       // 격을 삼켜 에너지를 영구 적립한 적 id
     specialOpened: [],                // 특수장비 칸을 열어준 히든 id — 이 수만큼 칸이 열려 있습니다
     chestsOpened: [],                 // 연 보물상자 id — 한 번만 열립니다 (지도의 chests 층 · data.js 의 chestLoot)
-    mats: {},                         // 재료 id → 개수 (data.js 의 MATERIALS) — 회차가 끝나도 남습니다
+    mats: {},                         // 재료 · 핵 id → 개수 (data.js 의 MATERIALS · CORES) — 회차가 끝나도 남습니다
     runCount: 0,
     bestLevel: 1,
     bestKill: 0,                      // 지금까지 꺾은 가장 높은 레벨
@@ -610,7 +610,7 @@ function load() {
     State.meta.chestsOpened = Array.isArray(data.chestsOpened) ? data.chestsOpened.filter(id => typeof id === 'string') : [];
     State.meta.gold = Math.max(0, Math.floor(num(data.gold)));
     State.meta.mats = {};
-    for (const [id, n] of Object.entries(data.mats || {})) if (MATERIALS[id] && num(n) > 0) State.meta.mats[id] = Math.floor(num(n));
+    for (const [id, n] of Object.entries(data.mats || {})) if (matInfo(id) && num(n) > 0) State.meta.mats[id] = Math.floor(num(n));
     State.meta.avatars = Array.isArray(data.avatars) ? data.avatars.filter(id => canBecomeAvatar(getEnemy(id))) : [];
     State.meta.avatar = State.meta.avatars.includes(data.avatar) ? data.avatar : null;
     State.meta.seen = Array.isArray(data.seen) ? data.seen : [];
@@ -1476,7 +1476,7 @@ function engage() {
   const multText = bits.length ? `  (${bits.join(' · ')})` : '';
 
   pushLog('battle',
-    `${enemy.icon} ${enemy.name}${josa(enemy.name, '을', '를')} 꺾었다 (Lv.${fmtLevel(enemy.level)}) — ${result.turns}턴, +${fmt(xp)} EXP · +${fmt(gold)} 골드${multText}`);
+    `${enemy.icon} ${enemy.name}${josa(enemy.name, '을', '를')} 꺾었다 (Lv.${fmtLevel(enemy.level)}) — ${result.turns}턴, +${fmt(xp)} EXP · +${fmt(gold)} 골드${mats.map(m => ` · ${m.mat.icon} ${m.mat.name} +${fmt(m.n)}`).join('')}${multText}`);
 
   if (levelsGained > 0) {
     const before = rankOf(run.level - levelsGained);
@@ -1496,8 +1496,6 @@ function engage() {
       ? `${g}『${d.item.name}』${josa(d.item.name, '을', '를')} 빼앗았다`
       : `${g}『${d.item.name}』 — 이미 가진 것이라 분해했다. ${SLOT_NAMES[d.item.slot]} 강화석 +${fmt(d.stones)}`);
   }
-
-  if (mats) pushLog('drop', `${mats.mat.icon} ${mats.mat.name} +${fmt(mats.n)} (가진 것 ${fmt(matsOf(mats.mat.id))}개)`);
 
   if (run.level > State.meta.bestLevel) State.meta.bestLevel = run.level;
 
@@ -1680,14 +1678,18 @@ function rollDrops(enemyId, auraMult = 1) {
 
 // ---------- 재료 ----------
 // 재료를 주는 몬스터(foe.mat)를 꺾으면 1개, 전리품 확률만큼 하나 더 — 행운 · 전리품 장비 · 기운이 여기에도 듭니다.
-// → { mat, n } | null
+// 모든 몬스터는 그 격의 핵(CORES)도 남깁니다 — 종류만큼(일반 1 · 정예 4 · 히든 5 · 보스 10), 기운을 두른 상대는 그 배수만큼 더.
+// → [{ mat, n }, …] — 핵이 먼저, 짐승이면 그 뒤에 제 재료
 function matsOf(id) { return Math.max(0, Math.floor(num(State.meta.mats && State.meta.mats[id]))); }
 function rollMats(enemyId, auraMult = 1) {
-  const foe = getEnemy(enemyId), mat = foe && MATERIALS[foe.mat];
-  if (!mat) return null;
-  const n = 1 + (Math.random() < dropChanceFor(foe, auraMult) ? 1 : 0);
-  State.meta.mats[mat.id] = matsOf(mat.id) + n;
-  return { mat, n };
+  const foe = getEnemy(enemyId), out = [];
+  if (!foe) return out;
+  const give = (mat, n) => { State.meta.mats[mat.id] = matsOf(mat.id) + n; out.push({ mat, n }); };
+  const core = foe.rank && CORES[`core${foe.rank.n}`];
+  if (core) give(core, Math.max(1, Math.round(KINDS[foe.kind].gold * auraMult)));
+  const mat = MATERIALS[foe.mat];
+  if (mat) give(mat, 1 + (Math.random() < dropChanceFor(foe, auraMult) ? 1 : 0));
+  return out;
 }
 // 재료 창구(헌터백화점) — 도시가 열린 뒤에. 셋 다 성공하면 참(만들기는 만든 장비, 바꾸기는 강화석 수, 팔기는 받은 골드).
 // 만든다: 아직 없는 장비 — 재료 n개 + 골드
@@ -1715,14 +1717,31 @@ function matToStones(id) {
   save();
   return stones;
 }
-// 판다: 재료 n개 → 골드 (1개에 MATERIALS 의 sell)
+// 판다: 재료 · 핵 n개 → 골드 (1개에 그것의 sell)
 function sellMats(matId, n) {
-  const mat = MATERIALS[matId], k = Math.min(Math.floor(num(n)), matsOf(matId));
+  const mat = matInfo(matId), k = Math.min(Math.floor(num(n)), matsOf(matId));
   if (!State.meta.cityOpen || !mat || !(k > 0)) return 0;
   const gold = mat.sell * k;
   State.meta.mats[matId] = matsOf(matId) - k;
   State.meta.gold = num(State.meta.gold) + gold;
   pushLog('drop', `재료 창구에 ${mat.name} ${fmt(k)}개를 팔았다 — +${fmt(gold)} 골드`);
+  save();
+  return gold;
+}
+
+// 핵을 모두 판다 — 가진 핵 전부를 한 번에. 받은 골드 (없으면 0)
+function sellAllCores() {
+  if (!State.meta.cityOpen) return 0;
+  let gold = 0, count = 0;
+  for (const core of Object.values(CORES)) {
+    const k = matsOf(core.id);
+    if (!k) continue;
+    gold += core.sell * k; count += k;
+    State.meta.mats[core.id] = 0;
+  }
+  if (!count) return 0;
+  State.meta.gold = num(State.meta.gold) + gold;
+  pushLog('drop', `재료 창구에 핵 ${fmt(count)}개를 팔았다 — +${fmt(gold)} 골드`);
   save();
   return gold;
 }

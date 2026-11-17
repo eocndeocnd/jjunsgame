@@ -1328,7 +1328,8 @@ function resultCard(r, run) {
   if (r.win) {
     lines.push(row('경험치', `+${fmt(r.xp)}`, mults.length ? mults.join(' · ') : ''));
     if (r.gold) lines.push(row('골드', `+${fmt(r.gold)}`));
-    if (r.mats) lines.push(row('재료', `${r.mats.mat.icon} ${r.mats.mat.name} +${fmt(r.mats.n)}`, `가진 것 ${fmt(matsOf(r.mats.mat.id))}개`));   // 장비 대신 재료를 주는 몬스터
+    // 들고 나갈 것 — 그 격의 핵(모든 몬스터), 짐승이면 제 재료도. 오른쪽에 가진 수
+    if (r.mats && r.mats.length) lines.push(row('재료', r.mats.map(m => `${m.mat.icon} ${m.mat.core ? '핵' : m.mat.name} +${fmt(m.n)}`).join(' · '), `가진 것 ${r.mats.map(m => fmt(matsOf(m.mat.id))).join(' · ')}`));
     const lvFinal = r.levelsGained > 0 ? `Lv.${fmtLevel(r.levelBefore)} → Lv.${fmtLevel(run.level)}` : `Lv.${fmtLevel(run.level)}`;
     lines.push(row('레벨', `<span id="resLv" data-final="${lvFinal}">${lvFinal}</span>`, r.levelsGained > 0 ? `+${fmtLevel(r.levelsGained)}` : ''));
     // 경험치 바 — 위쪽 지역 창이 빠진 대신 여기서 차오릅니다 (paintLevel 이 resXpFill 도 움직입니다)
@@ -2565,14 +2566,14 @@ const CLERK_TALK = {
   empty: ['「지금 있는 건 다 가져가셨어요. 새 물건이 들어오면… 또 오시겠죠.」']
 };
 const MAT_TALK = {
-  none: ['「오늘은 빈손이시네요. 짐승 종류는 가죽이든 돌조각이든 가져오시면 봐 드려요.」'],
+  none: ['「오늘은 빈손이시네요. 핵이든 가죽이든 돌조각이든 가져오시면 봐 드려요.」'],
   first: ['「이건… 어디서 구하셨어요? 아뇨, 대답 안 하셔도 돼요. 상태는 좋네요.」', '「등록 헌터 납품만 받는 게 원칙인데… 뭐, 원칙은 원칙이고요.」'],
   again: ['「또 가져오셨네요. 장부엔 \'개인 소장품\'이라고 적어 둘게요.」', '「이 정도 양이면 보통은 길드 단위인데. …혼자세요?」']
 };
 function clerkLine(kind) {
   const pick = list => list[Math.floor(Math.random() * list.length)];
   if (kind === 'mats') {
-    const any = Object.keys(MATERIALS).some(id => matsOf(id) > 0), made = ITEMS.some(i => i.craft && owns(i.id));
+    const any = Object.keys(State.meta.mats || {}).some(id => matsOf(id) > 0), made = ITEMS.some(i => i.craft && owns(i.id));
     return pick(!any ? MAT_TALK.none : made ? MAT_TALK.again : MAT_TALK.first);
   }
   const owned = ITEMS.some(i => i.store === kind && owns(i.id));
@@ -2669,10 +2670,26 @@ function renderShop() {
 // 재료마다 한 묶음: 머리에 재료 이름 · 가진 수 · 팔기 단추(1개 · 모두), 아래에 그 재료로 만드는 장비.
 // 아직 없는 장비는 「만든다」(재료 + 골드 — 만들면 「지금 낄까요?」), 이미 가진 장비는 「강화석」(재료 → 그 부위 강화석 — 예전에 겹쳐 주웠을 때와 같은 양).
 // 보이는 재료는 한 번이라도 손에 넣어 본 것 — 가진 것이 있거나, 그 재료로 만든 장비가 있는 것 (아직 못 본 몬스터의 재료는 숨김)
+// 맨 위는 핵 — 모든 몬스터가 남기는 팔 것 (격마다 한 가지). 가진 격만 한 줄씩, 「모두 판다」 한 번으로 다 팝니다. 만드는 데는 쓰지 않습니다.
 function renderMatShop() {
   const gold = num(State.meta.gold);
   $('shopTitle').textContent = `헌터백화점 · ${DEPT_SECTIONS.mats.name}`;
   $('shopGold').textContent = `골드 ${fmt(gold)}`;
+  const cores = Object.values(CORES).filter(c => matsOf(c.id) > 0);
+  const coreSum = cores.reduce((s, c) => s + c.sell * matsOf(c.id), 0);
+  const coreBlock = cores.length ? `
+    <div class="mat-block core-block">
+      <div class="mat-head">
+        <span class="mat-name">💠 핵 <b>${fmt(cores.reduce((s, c) => s + matsOf(c.id), 0))}개</b></span>
+        <span class="mat-sell"><button class="btn primary" id="sellCoresBtn">모두 판다 +${fmt(coreSum)}</button></span>
+      </div>
+      <div class="core-list">${cores.map(c => `
+        <div class="core-row">
+          <span class="core-name">${c.name} <b>${fmt(matsOf(c.id))}개</b></span>
+          <span class="core-worth">1개 ${fmt(c.sell)} 골드</span>
+          <button class="btn tiny" data-sellmat="${c.id}" data-n="${matsOf(c.id)}">판다 +${fmt(c.sell * matsOf(c.id))}</button>
+        </div>`).join('')}</div>
+    </div>` : '';
   const blocks = Object.values(MATERIALS).map(mat => {
     const have = matsOf(mat.id), items = ITEMS.filter(i => i.craft && i.craft.mat === mat.id);
     if (!have && !items.some(i => owns(i.id))) return '';
@@ -2708,7 +2725,10 @@ function renderMatShop() {
     </div>`;
   }).join('');
   $('shopBody').innerHTML = `<div class="shop-say">${DEPT_SECTIONS.mats.icon} ${shopSay}</div>`
-    + (blocks || '<div class="adm-note">가져온 재료가 없다 — 장비를 지니지 않는 짐승을 꺾으면 재료가 나온다</div>');
+    + coreBlock
+    + (blocks || (coreBlock ? '' : '<div class="adm-note">가져온 것이 없다 — 몬스터를 꺾으면 핵이, 장비를 지니지 않는 짐승을 꺾으면 재료도 나온다</div>'));
+  const all = $('sellCoresBtn');
+  if (all) all.addEventListener('click', () => { if (sellAllCores()) { Sound.play('stone'); render(); } });
   for (const b of $('shopBody').querySelectorAll('[data-craft]')) b.addEventListener('click', () => {
     const id = b.dataset.craft;
     if (!craftItem(id)) return;

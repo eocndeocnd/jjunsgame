@@ -423,7 +423,7 @@ test('큰 몬스터 — 몸이 안 들어가는 좁은 길로는 쫓아오지 �
 function loadData() {
   const text = fs.readFileSync(path.join(ROOT, 'js/data.js'), 'utf8');
   // JSON 으로 한 번 거쳐 이쪽 배열로 — vm 안에서 만든 배열은 deepEqual 이 다른 것으로 봅니다
-  return JSON.parse(vm.runInNewContext(`${text}\n;JSON.stringify({ ENEMIES, ZONES, ITEMS })`, {}));
+  return JSON.parse(vm.runInNewContext(`${text}\n;JSON.stringify({ ENEMIES, ZONES, ITEMS, CORES, MATERIALS, RANKS })`, {}));
 }
 function walk(m, sources, blocked) {
   const d = new Int32Array(m.w * m.h).fill(-1), q = [];
@@ -1161,4 +1161,13 @@ test('재료 — 1~2격의 짐승 일곱은 장비 대신 제 재료를 주고, 
   }
   for (const e of givers) assert.ok(ITEMS.filter(i => i.from === e.id).every(i => i.craft), `${e.name} 의 장비는 모두 만드는 것`);
   assert.ok(ITEMS.filter(i => !givers.some(e => e.id === i.from)).every(i => !i.craft), '다른 몬스터의 장비는 그대로 떨어짐');
+});
+
+test('핵 — 스무 격마다 한 가지, 격이 오르면 값도 오르고 재료와 번호가 안 겹침', () => {
+  const { CORES, MATERIALS, RANKS } = loadData();
+  const cores = Object.values(CORES);
+  assert.equal(cores.length, RANKS.length);
+  for (const r of RANKS) assert.ok(CORES[`core${r.n}`] && CORES[`core${r.n}`].rank.n === r.n && CORES[`core${r.n}`].core, `${r.n}격의 핵`);
+  for (let n = 2; n <= RANKS.length; n++) assert.ok(CORES[`core${n}`].sell > CORES[`core${n - 1}`].sell, '격이 오르면 판 값도 오름');
+  assert.ok(Object.keys(MATERIALS).every(id => !CORES[id]), '재료와 번호가 안 겹침');
 });
