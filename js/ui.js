@@ -838,9 +838,11 @@ function rankChests(n) {
 // 이름은 뺐습니다 — 한 줄에 셋씩 들어가야 해서 자리가 없고,
 // **뭘 아직 못 얻었는지**만 보면 되는 자리라 그림과 부위면 충분합니다.
 function rosterDrops(foe) {
-  const table = dropTable(foe.id);
+  const table = dropTable(foe.id), mat = MATERIALS[foe.mat];
   if (!table.length) return '<span class="r-drops"></span>';
-  return `<span class="r-drops">${table.map(it => {
+  // 재료를 주는 몬스터 — 재료 칸이 먼저, 그 뒤가 그 재료로 만드는 것
+  const matChip = mat ? `<span class="rd mat" title="${mat.name} — 가진 것 ${fmt(matsOf(mat.id))}개"><span class="rd-ic">${mat.icon}</span><span class="rd-k">재료 ${fmt(matsOf(mat.id))}</span></span>` : '';
+  return `<span class="r-drops">${matChip}${table.map(it => {
     const have = owns(it.id);
     return `<span class="rd ${have ? 'have' : 'miss'}" title="${SLOT_NAMES[it.slot]} · ${have ? it.name : '아직 못 얻음'}">
               <span class="rd-ic">${have ? it.fromIcon : '?'}</span>
@@ -1326,6 +1328,7 @@ function resultCard(r, run) {
   if (r.win) {
     lines.push(row('경험치', `+${fmt(r.xp)}`, mults.length ? mults.join(' · ') : ''));
     if (r.gold) lines.push(row('골드', `+${fmt(r.gold)}`));
+    if (r.mats) lines.push(row('재료', `${r.mats.mat.icon} ${r.mats.mat.name} +${fmt(r.mats.n)}`, `가진 것 ${fmt(matsOf(r.mats.mat.id))}개`));   // 장비 대신 재료를 주는 몬스터
     const lvFinal = r.levelsGained > 0 ? `Lv.${fmtLevel(r.levelBefore)} → Lv.${fmtLevel(run.level)}` : `Lv.${fmtLevel(run.level)}`;
     lines.push(row('레벨', `<span id="resLv" data-final="${lvFinal}">${lvFinal}</span>`, r.levelsGained > 0 ? `+${fmtLevel(r.levelsGained)}` : ''));
     // 경험치 바 — 위쪽 지역 창이 빠진 대신 여기서 차오릅니다 (paintLevel 이 resXpFill 도 움직입니다)
@@ -1502,14 +1505,20 @@ function row(k, v, note) {
 //
 // "다 모았다" 를 알 수 있어야 **이 녀석을 또 잡을 이유가 있는지** 판단이 섭니다.
 function dropStrip(foe) {
-  const table = dropTable(foe.id);
+  const table = dropTable(foe.id), mat = MATERIALS[foe.mat];
   if (!table.length) return '';
   const left = table.filter(i => !owns(i.id)).length;
   // 글자로 설명하지 않습니다 — ???? 칸이 남아 있는지만 보면 됩니다.
+  // 재료를 주는 몬스터는 맨 앞에 재료 칸(가진 수) — 그 뒤의 칸은 그 재료로 만드는 것입니다
+  const matCell = mat ? `
+            <div class="ed-item mat">
+              <span class="ed-ic">${mat.icon}</span>
+              <span class="ed-name">${mat.name} ${fmt(matsOf(mat.id))}</span>
+            </div>` : '';
   return `
     <div class="enc-drops ${left === 0 ? 'done' : ''}">
-      <div class="ed-list" style="grid-template-columns:repeat(${table.length}, minmax(0, 1fr))">
-        ${table.map(it => {
+      <div class="ed-list" style="grid-template-columns:repeat(${table.length + (mat ? 1 : 0)}, minmax(0, 1fr))">
+        ${matCell}${table.map(it => {
           const have = owns(it.id);
           return `
             <div class="ed-item ${have ? 'have' : 'miss'}">
@@ -2555,10 +2564,19 @@ const CLERK_TALK = {
   again: ['「지난번 건 잘 쓰셨어요? …어디서 쓰셨는지는 안 물어볼게요.」', '「또 오셨네요. 협회엔 말 안 했어요. 말할 것도 없고요.」'],
   empty: ['「지금 있는 건 다 가져가셨어요. 새 물건이 들어오면… 또 오시겠죠.」']
 };
+const MAT_TALK = {
+  none: ['「오늘은 빈손이시네요. 짐승 종류는 가죽이든 돌조각이든 가져오시면 봐 드려요.」'],
+  first: ['「이건… 어디서 구하셨어요? 아뇨, 대답 안 하셔도 돼요. 상태는 좋네요.」', '「등록 헌터 납품만 받는 게 원칙인데… 뭐, 원칙은 원칙이고요.」'],
+  again: ['「또 가져오셨네요. 장부엔 \'개인 소장품\'이라고 적어 둘게요.」', '「이 정도 양이면 보통은 길드 단위인데. …혼자세요?」']
+};
 function clerkLine(kind) {
+  const pick = list => list[Math.floor(Math.random() * list.length)];
+  if (kind === 'mats') {
+    const any = Object.keys(MATERIALS).some(id => matsOf(id) > 0), made = ITEMS.some(i => i.craft && owns(i.id));
+    return pick(!any ? MAT_TALK.none : made ? MAT_TALK.again : MAT_TALK.first);
+  }
   const owned = ITEMS.some(i => i.store === kind && owns(i.id));
-  const list = !deptWares(kind).length ? CLERK_TALK.empty : owned ? CLERK_TALK.again : CLERK_TALK.first;
-  return list[Math.floor(Math.random() * list.length)];
+  return pick(!deptWares(kind).length ? CLERK_TALK.empty : owned ? CLERK_TALK.again : CLERK_TALK.first);
 }
 function openShop(kind = 'merchant') {
   shopKind = kind;
@@ -2580,6 +2598,7 @@ function isShopOpen() {
 function renderShop() {
   if (!isShopOpen()) return;
   if (!shopHere()) { closeShop(); return; }
+  if (shopKind === 'mats') { renderMatShop(); return; }
   const dept = isDeptShop();
   const gold = num(State.meta.gold);
   $('shopTitle').textContent = dept ? `헌터백화점 · ${DEPT_SECTIONS[shopKind].name}` : '떠돌이 상인';
@@ -2644,6 +2663,65 @@ function renderShop() {
     });
   }
   for (const b of document.querySelectorAll('[data-buy]')) b.addEventListener('click', () => openBuy(b.dataset.buy));
+}
+
+// ---------- 재료 창구 (헌터백화점 1층) — 재료로 만들기 · 강화석으로 바꾸기 · 팔기 ----------
+// 재료마다 한 묶음: 머리에 재료 이름 · 가진 수 · 팔기 단추(1개 · 모두), 아래에 그 재료로 만드는 장비.
+// 아직 없는 장비는 「만든다」(재료 + 골드 — 만들면 「지금 낄까요?」), 이미 가진 장비는 「강화석」(재료 → 그 부위 강화석 — 예전에 겹쳐 주웠을 때와 같은 양).
+// 보이는 재료는 한 번이라도 손에 넣어 본 것 — 가진 것이 있거나, 그 재료로 만든 장비가 있는 것 (아직 못 본 몬스터의 재료는 숨김)
+function renderMatShop() {
+  const gold = num(State.meta.gold);
+  $('shopTitle').textContent = `헌터백화점 · ${DEPT_SECTIONS.mats.name}`;
+  $('shopGold').textContent = `골드 ${fmt(gold)}`;
+  const blocks = Object.values(MATERIALS).map(mat => {
+    const have = matsOf(mat.id), items = ITEMS.filter(i => i.craft && i.craft.mat === mat.id);
+    if (!have && !items.some(i => owns(i.id))) return '';
+    const cards = items.map(item => {
+      const c = item.craft, owned = owns(item.id);
+      const worn = getItem(State.meta.equipped[item.slot]);
+      const diff = owned ? '' : itemDiffText(item, worn, slotMult(item.slot));
+      const spec = itemSpecialText(item);
+      const act = owned
+        ? `<button class="btn" data-matstone="${item.id}" ${have >= c.n ? '' : 'disabled'}><b>강화석 +${fmt(matStoneYield(item))}</b><span>재료 ${c.n}개</span></button>`
+        : `<button class="btn primary" data-craft="${item.id}" ${have >= c.n && gold >= c.gold ? '' : 'disabled'}><b>만든다</b><span>재료 ${c.n}개 · ${fmt(c.gold)} 골드</span></button>`;
+      return `
+      <div class="inv-item ware${owned ? ' made' : ''}">
+        <span class="inv-art">${item.fromIcon}</span>
+        <div class="inv-body">
+          <div class="inv-head">${itemTag(item)}<span class="inv-name">${item.name}</span>${owned ? '<span class="mat-have">가짐</span>' : ''}</div>
+          <div class="inv-stats">${SLOT_NAMES[item.slot]} · ${itemStatText(item) || '—'}${spec ? ` <span class="inv-spec">${spec}</span>` : ''}</div>
+          ${diff ? `<div class="inv-diff">${diff}</div>` : ''}
+        </div>
+        <div class="inv-act mat-act">${act}</div>
+      </div>`;
+    }).join('');
+    return `
+    <div class="mat-block">
+      <div class="mat-head">
+        <span class="mat-name">${mat.icon} ${mat.name} <b>${fmt(have)}개</b></span>
+        <span class="mat-sell">
+          <button class="btn tiny" data-sellmat="${mat.id}" data-n="1" ${have ? '' : 'disabled'}>1개 판다 +${fmt(mat.sell)}</button>
+          <button class="btn tiny" data-sellmat="${mat.id}" data-n="${have}" ${have > 1 ? '' : 'disabled'}>모두 +${fmt(mat.sell * have)}</button>
+        </span>
+      </div>
+      <div class="inventory shop-wares">${cards}</div>
+    </div>`;
+  }).join('');
+  $('shopBody').innerHTML = `<div class="shop-say">${DEPT_SECTIONS.mats.icon} ${shopSay}</div>`
+    + (blocks || '<div class="adm-note">가져온 재료가 없다 — 장비를 지니지 않는 짐승을 꺾으면 재료가 나온다</div>');
+  for (const b of $('shopBody').querySelectorAll('[data-craft]')) b.addEventListener('click', () => {
+    const id = b.dataset.craft;
+    if (!craftItem(id)) return;
+    Sound.play('equip');
+    render();
+    askWear(id);
+  });
+  for (const b of $('shopBody').querySelectorAll('[data-matstone]')) b.addEventListener('click', () => {
+    if (matToStones(b.dataset.matstone)) { Sound.play('stone'); render(); }
+  });
+  for (const b of $('shopBody').querySelectorAll('[data-sellmat]')) b.addEventListener('click', () => {
+    if (sellMats(b.dataset.sellmat, Number(b.dataset.n))) { Sound.play('stone'); render(); }
+  });
 }
 
 // ---------- 장비 사기 — 능력치를 다 보여 주고 묻습니다 ----------

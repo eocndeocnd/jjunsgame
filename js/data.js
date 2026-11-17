@@ -56,6 +56,16 @@ const RULES = {
   // 헌터백화점의 물건 값 = 그 격 일반 몬스터 한 번 몫의 이만큼 배 (1격 300 · 2격 570 · 3격 1,080 · 4격 2,060 · 5격 3,910 · 6격 7,430골드).
   // 그 격에 머무는 한 회차에 60~70마리 몫을 벌어서, 한 회차 벌면 하나 사는 값입니다 (시뮬: 2격에 머무는 회차마다 약 600골드).
   DEPT_PRICE: 60,
+  // 재료 (도시 1-다) — 장비를 떨어뜨릴 리 없는 짐승은 장비 대신 제 재료를 줍니다 (data.js 의 MATERIALS).
+  // 한 마리에 1개, 전리품 확률만큼 하나 더 (행운 · 기운이 그대로 듦). 재료 MAT_PER_ITEM 개 = 예전에 그 장비를 한 번 주운 셈:
+  //   아직 없는 장비면 골드(그 격 일반 CRAFT_PRICE 마리 몫)를 얹어 만들고, 이미 가진 장비면 분해했을 때와 같은 강화석으로 바꿉니다.
+  //   남는 재료는 1개에 그 격 일반 MAT_SELL 마리 몫 골드로 팝니다.
+  // 2개인 까닭 — 예전엔 장비 둘을 저마다 전리품 확률(1격 81% · 2격 52%)로 굴려 한 마리에 1.6 · 1.0개가 나왔습니다.
+  //   재료는 한 마리에 1.8 · 1.5개라, 2개에 하나면 한 마리에 0.9 · 0.76개 — 예전의 56% · 73% (3개면 37% · 49% 라 너무 짬).
+  //   만들려면 도시에 다녀와야 하는 몫까지 치면 예전보다 느립니다 (시뮬: 3격에 처음 닿는 회차 평균 6 → 10).
+  MAT_PER_ITEM: 2,
+  CRAFT_PRICE: 10,
+  MAT_SELL: 1,
   // 회차마다 떠돌이 상인이 나타날 확률 (카벙클을 처음 꺾은 그 회차는 반드시 나타납니다)
   MERCHANT_CHANCE: 0.5,
   // 떠돌이 상인의 강화석 값 — 강화석 1개에 몇 골드. 1~6지역 어디에 나타나든 같은 상인이라 값도 같습니다.
@@ -2363,7 +2373,7 @@ for (const [id, name, slot, icon, r, arch, note, gold] of MERCHANT_WARES) {
 //   값은 priceFor(격, DEPT_PRICE). store 는 매장 이름 (지금은 weapon 하나).
 const DEPT_ID = 'dept';
 const DEPT_GRADE = 1.2;
-const DEPT_SECTIONS = { weapon: { name: '무기 매장', icon: '🧑‍💼' } };
+const DEPT_SECTIONS = { weapon: { name: '무기 매장', icon: '🧑‍💼' }, mats: { name: '재료 창구', icon: '🧑‍🔧' } };   // mats — 재료로 만들기 · 바꾸기 · 팔기 (MATERIALS)
 const DEPT_WARES = [
   // 제1격
   ['dept_knife',     '보급형 합금 단검',   'weapon',  '🔪', 1, 'fierce', '협회 인증 입문용. 날보다 손잡이에 공을 들였다.'],
@@ -2398,6 +2408,30 @@ for (const [id, name, slot, icon, r, arch, note] of DEPT_WARES) {
     price: priceFor(r, RULES.DEPT_PRICE),
     ...makeItemStats(slot, level, DEPT_GRADE, arch, false)
   });
+}
+
+// ---------- 재료 (도시 — docs/CITY-PLAN.md 1-다) ----------
+// 장비를 떨어뜨릴 리 없는 짐승 · 벌레 · 돌덩이는 장비 대신 **제 재료**를 줍니다 (사용자 결정 — 지금은 1~2격의 일곱).
+// 그 몬스터의 장비는 번호 그대로 「재료로 만든 것」이 됩니다 (item.craft) — 이미 가진 사람의 장비는 바뀌지 않습니다.
+// 만들기 · 강화석으로 바꾸기 · 팔기는 헌터백화점 1층의 재료 창구에서 (game.js 의 craftItem · matToStones · sellMats). 재료는 첫 회차부터 쌓입니다.
+//   몬스터 id → [재료 이름, 아이콘]
+const MATERIALS = {};
+for (const [foeId, name, icon] of [
+  ['giantrat',   '쥐 가죽',          '🐀'],
+  ['cavespider', '질긴 거미줄',      '🕸️'],
+  ['darkwolf',   '검은 늑대 가죽',   '🐺'],
+  ['harpy',      '하피 깃털',        '🪶'],
+  ['treant',     '트렌트 나무껍질',  '🪵'],
+  ['gargoyle',   '가고일 돌조각',    '🪨'],
+  ['basilisk',   '바실리스크 비늘',  '🐍']
+]) {
+  const foe = ENEMIES.find(e => e.id === foeId);
+  if (!foe || foe.kind !== 'normal') throw new Error(`재료 — ${foeId} 이(가) 일반 몬스터가 아님`);
+  const worth = goldFor(foe);
+  MATERIALS[foeId] = { id: foeId, name, icon, from: foeId, fromName: foe.name, rank: foe.rank,
+                       sell: Math.max(1, Math.round(worth * RULES.MAT_SELL)) };
+  foe.mat = foeId;
+  for (const it of ITEMS) if (it.from === foeId) it.craft = { mat: foeId, n: RULES.MAT_PER_ITEM, gold: priceFor(foe.rank.n, RULES.CRAFT_PRICE) };
 }
 
 // ---------- 보물상자 (지도의 chests 층 — 자리는 tools/map-gen.js 가 놓음) ----------

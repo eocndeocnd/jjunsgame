@@ -2861,3 +2861,16 @@ body.meeting .enc-portrait .portrait-ic { font-size: clamp(90px, 34vw, 190px); }
 .inv-item.ware.coming { opacity: 0.55; filter: saturate(0.5); }
 .ware-soon { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 6px 8px; border: 2px dashed var(--line); font-size: 11px; font-weight: 700; white-space: nowrap; }
 .ware-soon small { font-size: 10px; font-weight: 400; opacity: 0.85; }
+
+/* 재료 창구 (헌터백화점 1층) — 재료마다 한 묶음: 머리(이름 · 가진 수 · 팔기), 아래에 그 재료로 만드는 장비 */
+.mat-block { margin-top: 12px; }
+.mat-block:first-of-type { margin-top: 0; }
+.mat-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; padding: 6px 8px; margin-bottom: 6px; background: var(--paper-lo); border: 2px solid var(--line); font-size: 12px; }
+.mat-name b { margin-left: 4px; }
+.mat-sell { display: flex; gap: 6px; }
+.mat-act .btn { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 6px 8px; font-size: 11px; white-space: nowrap; }
+.mat-act .btn span { font-size: 10px; font-weight: 400; opacity: 0.85; }
+.mat-have { margin-left: 6px; padding: 0 5px; border: 1px solid var(--line); font-size: 10px; font-weight: 400; }
+.inv-item.ware.made { background: var(--paper-hi); }
+/* 조우 카드 · 도감 줄의 재료 칸 */
+.ed-item.mat .ed-name, .rd.mat .rd-k { font-weight: 700; }

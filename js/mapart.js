@@ -502,14 +502,14 @@
 
   // ---------- 가게 안 (지도 속성 store — 헌터백화점 1층, tools/map-gen.js 의 DEPT) ----------
   // 바깥 백화점과 같은 빛깔 — 상아색 벽 · 금테 · 포도주색, 거기에 청록 빛줄. 위 벽(세 칸 높이)은 지도 속성 wall 의 구역마다 다르게:
-  //   rack 무기 진열 벽 · esc 2층으로 가는 에스컬레이터 · buy 셔터 내린 창구. 가구(blds 의 kind)는 storeProp 이 칸 안에 납작하게 (윗면 + 앞면)
+  //   rack 무기 진열 벽 · esc 2층으로 가는 에스컬레이터 · mats 재료 창구(선반에 재료가 놓인 창 셋). 가구(blds 의 kind)는 storeProp 이 칸 안에 납작하게 (윗면 + 앞면)
   const STC = {
     ivory: ['#ece6d8', '#e4ddcd', '#f3eee2', '#d8d0bf'], seam: '#c9c0ad', dark: ['#3b3542', '#342f3b', '#443d4c', '#2a2630'],
     carpet: ['#6f1a26', '#661722', '#7a2030', '#59131d'],
     gold: '#c9a24a', goldDim: '#8a6d2c', wine: '#6f1a26', red: '#b0202e', glow: '#62e6ee', line: '#12141a', wall: '#ebe4d4', velvet: '#2a1c26',
     steel: ['#dfe6ee', '#aeb8c4', '#ffffff', '#7d8794']
   };
-  const STORE_KINDS = { counter: 1, closed: 1, case: 1, rope: 1, plant: 1, bench: 1 };
+  const STORE_KINDS = { counter: 1, case: 1, rope: 1, plant: 1, bench: 1 };
   const storeZones = (m, A) => A.storeZones || (A.storeZones = JSON.parse((m.props && m.props.wall) || '[]'));
   // 큰 상아색 판 — 서른두 점마다 줄눈, 은은한 결, 군데군데 비스듬한 윤
   function storeTile(X, Y) {
@@ -613,12 +613,23 @@
         if (ax < 0.6) c = mul(c, 0.8);
         return mix(c, c3('#fff3cf'), sy / 39 * 0.28);                               // 위층에서 내려오는 빛
       }
-      if (z.kind === 'buy') {                                                       // 매입 창구 — 금테 창 셋, 셔터가 내려와 있음
+      if (z.kind === 'mats') {                                                      // 재료 창구 — 금테 창 셋, 말아 올린 셔터 아래로 따뜻한 불빛 · 선반마다 재료(가죽 · 깃털 · 돌조각 · 비늘 …)
         const ix = zx - 5, k = Math.floor(ix / 35), wx = ix - k * 35;
         if (ix < 0 || k > 2 || wx >= 32 || fy < 9 || fy > 38) return fy === 39 || fy === 40 ? c3('#d8cfbb') : wall;
         if (wx === 0 || wx === 31 || fy === 9 || fy === 38) return c3(STC.gold);
-        if (fy === 36 && wx >= 14 && wx <= 17) return c3('#3a3d45');                // 셔터 손잡이
-        return c3((fy - 10) % 3 === 0 ? '#6f757f' : (fy - 10) % 3 === 1 ? '#a4aab3' : '#8b919b');
+        if (fy <= 12) return c3(fy === 12 ? '#5a5f69' : (fy & 1) ? '#a4aab3' : '#8b919b');   // 말아 올린 셔터
+        const back = mix(c3('#3a2a22'), c3('#ffd98a'), 0.18 + 0.1 * Math.sin(wx / 31 * Math.PI));
+        for (const shelf of [20, 29, 37]) {
+          if (fy === shelf) return c3('#8a6a42');                                   // 선반
+          const h = shelf - fy, slot = Math.floor((wx - 2) / 5), sx = (wx - 2) - slot * 5;
+          if (h < 1 || h > 6 || wx < 2 || wx > 29 || sx === 4) continue;
+          const r = hash(k * 16 + slot, shelf, 383), tall = 2 + Math.floor(hash(k * 16 + slot, shelf, 384) * 5);
+          if (r < 0.2 || h > tall) continue;                                        // 빈 자리 · 그 물건의 키
+          const pal = ['#9a6a3c', '#e3e8ee', '#8fc4dc', '#8d939f', '#4f9f6a', '#6a4a2a', '#b98a54'];
+          const c = c3(pal[Math.floor(r * 97) % pal.length]);
+          return h === tall ? mix(c, WHITE, 0.3) : sx === 3 ? mul(c, 0.8) : c;
+        }
+        return back;
       }
       return wall;
     }
@@ -644,11 +655,6 @@
     if (k === 'counter') {
       if (px >= 5 && px <= 13 && py >= 2 && py <= 6) return px === 5 || px === 13 || py === 2 || py === 6 ? c3('#22252c') : mix(c3(STC.glow), WHITE, py === 3 ? 0.5 : 0.1);   // 계산 단말
       if (px >= W - 12 && px <= W - 6 && py >= 3 && py <= 5) return c3(py === 4 ? '#f3ede4' : STC.gold);                                                                   // 놓인 쟁반
-      return counterBody(px, py, W);
-    }
-    if (k === 'closed') {                                                           // 닫힌 창구 — 창마다 「닫힘」 팻말
-      const s = ((px - 5) % 35 + 35) % 35 - 12;
-      if (px > 4 && px < W - 6 && s >= 0 && s < 8 && py >= 2 && py <= 6) return py === 2 || py === 6 || s === 0 || s === 7 ? c3('#7d1622') : py === 4 ? c3('#f3ede4') : c3(STC.red);
       return counterBody(px, py, W);
     }
     if (k === 'case') {                                                             // 유리 진열장 — 어두운 깔개 위에 무기(왼쪽 매장) · 방패(오른쪽), 유리의 비스듬한 윤, 아래는 빛줄 두른 받침

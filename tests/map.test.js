@@ -1112,7 +1112,7 @@ test('헌터백화점 — 도시의 백화점 문으로 들어가면 1층, 무�
   assert.ok(dept.props.interior && dept.props.store, '가게 안 지도');
   // 점원 — 무기 매장, 그 칸에는 못 서고 곁에는 설 수 있음
   const clerks = dept.npcs.filter(n => n.shop);
-  assert.deepEqual(clerks.map(n => n.shop), ['weapon']);
+  assert.deepEqual(clerks.map(n => n.shop), ['weapon', 'mats'], '무기 매장 · 재료 창구');
   const blocked = new Set(clerks.map(n => n.y * dept.w + n.x));
   const d = walk(dept, [dept.start.y * dept.w + dept.start.x], blocked);
   for (const n of clerks) assert.ok([[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => d[(n.y + dy) * dept.w + n.x + dx] >= 0), '점원 곁에 설 수 있음');
@@ -1122,9 +1122,9 @@ test('헌터백화점 — 도시의 백화점 문으로 들어가면 1층, 무�
   const blds = JSON.parse(dept.props.blds);
   for (const b of blds) for (const i of cellsOf(dept, b)) assert.ok(dept.solid[i], `${b.kind} 은 막힌 칸`);
   for (let y = clerks[0].y + 1; y < out.y; y++) for (let x = out.x; x < out.x + out.w; x++) assert.ok(!dept.solid[y * dept.w + x], '가운데 통로는 비어 있음');
-  for (const kind of ['counter', 'case', 'rope', 'closed']) assert.ok(blds.some(b => b.kind === kind), `${kind} 이(가) 있음`);
-  // 이름표만 있는 곳(2층 · 매입 창구)은 들어갈 수 없음
-  for (const name of ['floor2', 'buyback']) { const p = dept.ports.find(q => q.name === name); assert.ok(p && !p.to && p.label, `${name} — 이름표만`); }
+  for (const kind of ['counter', 'case', 'rope']) assert.ok(blds.some(b => b.kind === kind), `${kind} 이(가) 있음`);
+  // 이름표만 있는 곳(2층)은 들어갈 수 없음
+  for (const name of ['floor2']) { const p = dept.ports.find(q => q.name === name); assert.ok(p && !p.to && p.label, `${name} — 이름표만`); }
   // 점원에게 걸어가 닿으면 상점 사건 한 번, 그 앞에 선 채로
   const w = M.createWorld(dept, {}, 1);
   w.mobs = [];
@@ -1146,4 +1146,19 @@ test('헌터백화점 물건 — 1~6격마다 무기 하나 · 보조무기 하�
   const price = r => wares.find(i => i.rank.n === r).price;
   for (let r = 2; r <= 6; r++) assert.ok(price(r) > price(r - 1), '격이 오르면 값도 오름');
   assert.equal(new Set(ITEMS.map(i => i.id)).size, ITEMS.length, '번호가 겹치지 않음');
+});
+
+test('재료 — 1~2격의 짐승 일곱은 장비 대신 제 재료를 주고, 그 장비 열넷은 번호 그대로 「재료로 만드는 것」', () => {
+  const { ENEMIES, ITEMS } = loadData();
+  const givers = ENEMIES.filter(e => e.mat);
+  assert.deepEqual(givers.map(e => e.id).sort(), ['basilisk', 'cavespider', 'darkwolf', 'gargoyle', 'giantrat', 'harpy', 'treant']);
+  assert.ok(givers.every(e => e.kind === 'normal' && e.rank.n <= 2 && e.mat === e.id), '일반 몬스터 · 1~2격 · 제 재료');
+  const made = ITEMS.filter(i => i.craft);
+  assert.equal(made.length, 14);
+  for (const it of made) {
+    assert.ok(givers.some(e => e.id === it.from && e.mat === it.craft.mat), `${it.name} — 그 몬스터의 재료로`);
+    assert.ok(it.craft.n >= 1 && it.craft.gold > 0 && !it.store && !it.ware && !it.chest);
+  }
+  for (const e of givers) assert.ok(ITEMS.filter(i => i.from === e.id).every(i => i.craft), `${e.name} 의 장비는 모두 만드는 것`);
+  assert.ok(ITEMS.filter(i => !givers.some(e => e.id === i.from)).every(i => !i.craft), '다른 몬스터의 장비는 그대로 떨어짐');
 });

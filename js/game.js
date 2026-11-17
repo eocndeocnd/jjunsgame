@@ -244,6 +244,7 @@ const State = {
     banked: [],                       // 격을 삼켜 에너지를 영구 적립한 적 id
     specialOpened: [],                // 특수장비 칸을 열어준 히든 id — 이 수만큼 칸이 열려 있습니다
     chestsOpened: [],                 // 연 보물상자 id — 한 번만 열립니다 (지도의 chests 층 · data.js 의 chestLoot)
+    mats: {},                         // 재료 id → 개수 (data.js 의 MATERIALS) — 회차가 끝나도 남습니다
     runCount: 0,
     bestLevel: 1,
     bestKill: 0,                      // 지금까지 꺾은 가장 높은 레벨
@@ -608,6 +609,8 @@ function load() {
     State.meta.specialOpened = Array.isArray(data.specialOpened) ? data.specialOpened : [];
     State.meta.chestsOpened = Array.isArray(data.chestsOpened) ? data.chestsOpened.filter(id => typeof id === 'string') : [];
     State.meta.gold = Math.max(0, Math.floor(num(data.gold)));
+    State.meta.mats = {};
+    for (const [id, n] of Object.entries(data.mats || {})) if (MATERIALS[id] && num(n) > 0) State.meta.mats[id] = Math.floor(num(n));
     State.meta.avatars = Array.isArray(data.avatars) ? data.avatars.filter(id => canBecomeAvatar(getEnemy(id))) : [];
     State.meta.avatar = State.meta.avatars.includes(data.avatar) ? data.avatar : null;
     State.meta.seen = Array.isArray(data.seen) ? data.seen : [];
@@ -686,6 +689,7 @@ function freshMeta() {
     banked: [],
     specialOpened: [],
     chestsOpened: [],
+    mats: {},
     gold: 0,                          // 골드 — 회차가 끝나도 남습니다
     avatars: [],                      // 얻은 화신 (적 id) — 회차가 끝나도 남습니다
     avatar: null,                     // 지금 삼은 화신 — 한 번에 하나
@@ -1449,6 +1453,7 @@ function engage() {
   const levelBefore = run.level;
   const levelsGained = gainXp(xp);
   const drops = rollDrops(enemy.id, aura ? aura.dropMult : 1);
+  const mats = rollMats(enemy.id, aura ? aura.dropMult : 1);
   // 골드 — 기운이 두른 상대일수록, 행운과 골드 획득 장비가 많을수록. 조금씩 흔들립니다.
   const gold = Math.max(1, Math.round(goldFor(enemy) * (aura ? aura.dropMult : 1) * goldMult() * (0.85 + Math.random() * 0.3)));
   State.meta.gold = num(State.meta.gold) + gold;
@@ -1492,6 +1497,8 @@ function engage() {
       : `${g}『${d.item.name}』 — 이미 가진 것이라 분해했다. ${SLOT_NAMES[d.item.slot]} 강화석 +${fmt(d.stones)}`);
   }
 
+  if (mats) pushLog('drop', `${mats.mat.icon} ${mats.mat.name} +${fmt(mats.n)} (가진 것 ${fmt(matsOf(mats.mat.id))}개)`);
+
   if (run.level > State.meta.bestLevel) State.meta.bestLevel = run.level;
 
   // 정예·히든·보스는 이 여정에서 다시 만날 수 없습니다 — 그래서 그 전리품이 귀합니다
@@ -1511,7 +1518,7 @@ function engage() {
   // 결과 화면이 보고 그릴 내용
   run.lastResult = {
     win: true, enemy, turns: result.turns, aura,
-    xp, gap, auraXp, bossM, levelBefore, levelsGained, drops, devoured, gold, avatarGained,
+    xp, gap, auraXp, bossM, levelBefore, levelsGained, drops, mats, devoured, gold, avatarGained,
     openedPath: false, replay
   };
 
@@ -1646,7 +1653,8 @@ function rollDrops(enemyId, auraMult = 1) {
   const result = [];
 
   // 특수장비는 3지역의 숨은 것(카벙클)을 처음 꺾기 전엔 떨어지지 않습니다
-  const hits = dropTable(enemyId).filter(it => !(it.slot === 'special' && !merchantUnlocked()) && Math.random() < chance);
+  // 재료로 만드는 장비(item.craft)는 떨어지지 않습니다 — 그 몬스터는 재료를 줍니다 (rollMats)
+  const hits = dropTable(enemyId).filter(it => !it.craft && !(it.slot === 'special' && !merchantUnlocked()) && Math.random() < chance);
   const keep = hits.map(it => ({ it, k: (owns(it.id) ? 1 : 0) + Math.random() * 0.5 })).sort((p, q) => p.k - q.k)
     .slice(0, DROP_MAX).map(h => h.it);
   for (const it of hits) {
@@ -1668,6 +1676,55 @@ function rollDrops(enemyId, auraMult = 1) {
     result.push({ item: it, isNew: true, autoWorn: worn });
   }
   return result;
+}
+
+// ---------- 재료 ----------
+// 재료를 주는 몬스터(foe.mat)를 꺾으면 1개, 전리품 확률만큼 하나 더 — 행운 · 전리품 장비 · 기운이 여기에도 듭니다.
+// → { mat, n } | null
+function matsOf(id) { return Math.max(0, Math.floor(num(State.meta.mats && State.meta.mats[id]))); }
+function rollMats(enemyId, auraMult = 1) {
+  const foe = getEnemy(enemyId), mat = foe && MATERIALS[foe.mat];
+  if (!mat) return null;
+  const n = 1 + (Math.random() < dropChanceFor(foe, auraMult) ? 1 : 0);
+  State.meta.mats[mat.id] = matsOf(mat.id) + n;
+  return { mat, n };
+}
+// 재료 창구(헌터백화점) — 도시가 열린 뒤에. 셋 다 성공하면 참(만들기는 만든 장비, 바꾸기는 강화석 수, 팔기는 받은 골드).
+// 만든다: 아직 없는 장비 — 재료 n개 + 골드
+function craftItem(id) {
+  const it = getItem(id), c = it && it.craft;
+  if (!State.meta.cityOpen || !c || owns(id) || matsOf(c.mat) < c.n || num(State.meta.gold) < c.gold) return null;
+  State.meta.mats[c.mat] = matsOf(c.mat) - c.n;
+  State.meta.gold -= c.gold;
+  State.meta.owned[id] = 1;
+  markFresh(it);
+  autoEquipIfBetter(it);
+  pushLog('drop', `재료 창구에서 『${it.name}』${josa(it.name, '을', '를')} 만들었다 — ${MATERIALS[c.mat].name} ${c.n}개 · ${fmt(c.gold)} 골드`);
+  save();
+  return it;
+}
+// 강화석으로 바꾼다: 이미 가진 장비 — 재료 n개를, 그 장비를 또 주워 분해했을 때와 같은 강화석으로 (세공 유물도 그대로 듦)
+function matStoneYield(it) { return Math.round(stoneYield(it) * (1 + num(heroStats().stoneRate))); }
+function matToStones(id) {
+  const it = getItem(id), c = it && it.craft;
+  if (!State.meta.cityOpen || !c || !owns(id) || matsOf(c.mat) < c.n) return 0;
+  const stones = matStoneYield(it);
+  State.meta.mats[c.mat] = matsOf(c.mat) - c.n;
+  State.meta.stones[it.slot] = stonesOf(it.slot) + stones;
+  pushLog('drop', `재료 창구에서 ${MATERIALS[c.mat].name} ${c.n}개를 ${SLOT_NAMES[it.slot]} 강화석 ${fmt(stones)}개로 바꿨다`);
+  save();
+  return stones;
+}
+// 판다: 재료 n개 → 골드 (1개에 MATERIALS 의 sell)
+function sellMats(matId, n) {
+  const mat = MATERIALS[matId], k = Math.min(Math.floor(num(n)), matsOf(matId));
+  if (!State.meta.cityOpen || !mat || !(k > 0)) return 0;
+  const gold = mat.sell * k;
+  State.meta.mats[matId] = matsOf(matId) - k;
+  State.meta.gold = num(State.meta.gold) + gold;
+  pushLog('drop', `재료 창구에 ${mat.name} ${fmt(k)}개를 팔았다 — +${fmt(gold)} 골드`);
+  save();
+  return gold;
 }
 
 // ---------- 알아서 갈아끼우기 ----------
