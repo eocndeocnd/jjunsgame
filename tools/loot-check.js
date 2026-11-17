@@ -5,7 +5,7 @@
 //    · 몬스터마다 전리품 수 — 보스 3 · 일반 1~2 · 묶음 밖 정예 2 · 묶음 정예 1 · 히든 0~2 (특수장비 포함)
 //    · 일반 중에 전리품이 하나뿐인 것은 격마다 둘까지 (대부분은 둘)
 //    · 격마다 열세 부위가 모두 나오고, 한 부위는 많아야 셋 (특수장비 · 상인 물건은 빼고 셉니다)
-//    · 전리품 전체가 예산(BUDGET)을 넘지 않는다 — 몬스터가 늘어도 전리품은 늘지 않게
+//    · 전리품 전체가 예산(BUDGET)을 넘지 않는다 — 몬스터가 늘어도 전리품은 늘지 않게 (가게에서 사는 물건은 빼고 셈)
 //    · 같은 번호가 두 번 나오지 않는다
 //
 //  브라우저와 Node 양쪽에서 같은 파일이 돕니다 (node tools/cli.js check-loot).
@@ -31,10 +31,11 @@
     for (const it of d.ITEMS) {
       if (ids.has(it.id)) errors.push(`${it.id} — 같은 번호가 두 번 나옵니다`);
       ids.add(it.id);
-      if (it.ware || it.chest) continue;                    // 상인 물건 · 상자 전용 장비는 몬스터 전리품이 아님
+      if (it.ware || it.chest || it.store) continue;        // 상인 물건 · 상자 전용 장비 · 가게 물건은 몬스터 전리품이 아님
       (byFoe[it.from] = byFoe[it.from] || []).push(it);
     }
-    if (d.ITEMS.length > BUDGET) errors.push(`전리품이 ${d.ITEMS.length}개 — 예산 ${BUDGET}개를 넘었습니다`);
+    const loot = d.ITEMS.filter(i => !i.store);              // 가게(헌터백화점) 물건은 예산 밖 — 골드로 사는 것이라 전리품이 아님 (사용자 결정)
+    if (loot.length > BUDGET) errors.push(`전리품이 ${loot.length}개 — 예산 ${BUDGET}개를 넘었습니다`);
 
     for (const r of d.RANKS) {
       const foes = d.ENEMIES.filter(e => e.rank.n === r.n);
@@ -49,7 +50,7 @@
       if (singles > SINGLE_NORMALS_MAX) errors.push(`${r.n}격 — 전리품이 하나뿐인 일반이 ${singles} (격마다 ${SINGLE_NORMALS_MAX}까지)`);
 
       const tally = Object.fromEntries(d.SLOT_IDS.map(s => [s, 0]));
-      for (const it of d.ITEMS) if (!it.ware && !it.chest && it.slot !== 'special' && it.rank.n === r.n) tally[it.slot]++;
+      for (const it of d.ITEMS) if (!it.ware && !it.chest && !it.store && it.slot !== 'special' && it.rank.n === r.n) tally[it.slot]++;
       for (const s of d.SLOT_IDS) {
         if (tally[s] < SLOT_MIN) errors.push(`${r.n}격 — ${s} 이(가) 하나도 없습니다`);
         if (tally[s] > SLOT_MAX) errors.push(`${r.n}격 — ${s} 이(가) ${tally[s]}개 (많아야 ${SLOT_MAX})`);
@@ -57,7 +58,7 @@
     }
     const counts = Object.values(byFoe).map(l => l.length);
     const share = k => Math.round(counts.filter(n => n === k).length / Math.max(1, counts.length) * 100);
-    infos.push(`전리품 ${d.ITEMS.length}/${BUDGET}개 · 몬스터마다 2개 ${share(2)}% · 1개 ${share(1)}% · 3개 ${share(3)}%`);
+    infos.push(`전리품 ${loot.length}/${BUDGET}개${d.ITEMS.length > loot.length ? ` (가게 물건 ${d.ITEMS.length - loot.length}개는 따로)` : ''} · 몬스터마다 2개 ${share(2)}% · 1개 ${share(1)}% · 3개 ${share(3)}%`);
     return { ok: errors.length === 0, errors, infos };
   }
 

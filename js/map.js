@@ -17,7 +17,7 @@
 //             · door(건물 문 — 바깥 지도의 건물 정면 · 안 지도의 나가는 문간, 지도 그림이 그림)
 //    (지도 자체의 속성 title — 지역이 없는 지도의 이름, 문의 광장 같은 · interior — 건물 안 지도)
 //    secrets  사각형 — 숨은 입구. 벽으로 그려져 있어도 지나갈 수 있습니다
-//    npc      점 — start(시작점) · merchant(상인 자리 — 상인이 와 있으면 막힌 칸, 닿으면 상점) · avatarDoor(화신 문)
+//    npc      점 — start(시작점) · merchant(상인 자리 — 상인이 와 있으면 막힌 칸, 닿으면 상점) · avatarDoor(화신 문) · clerk(가게 점원 — shop 속성이 매장 이름, 늘 막힌 칸 · 닿으면 상점)
 //    chests   점 — 보물상자. 속성 chest(상자 id) · rank(격) · big(큰 상자) · item(큰 상자의 전용 장비 — data.js 의 chestLoot). 그 칸은 막히고, 닫힌 상자에 닿으면 연다
 // ============================================================
 (function (root) {
@@ -226,6 +226,8 @@
   function chestAt(w, x, y) { return w.map.chests.find(c => c.x === x && c.y === y) || null; }
   // 지금 상인이 와 있는 상인 자리 (그 칸이면)
   function merchantAt(w, x, y) { return w.map.npcs.find(n => n.name === 'merchant' && n.x === x && n.y === y && w.hooks.merchantHere(n)) || null; }
+  // 가게 점원이 선 칸 (npc 층의 점에 shop 속성 — 헌터백화점의 매장). 늘 막힌 칸이고 닿으면 상점
+  function shopAt(w, x, y) { return w.map.npcs.find(n => n.shop && n.x === x && n.y === y) || null; }
   function portAt(w, x, y) { return w.map.ports.find(p => inRect(p, x, y) && (!p.appears || w.hooks.portOpen(p))) || null; }
   function wall(w, x, y) {
     if (x < 0 || y < 0 || x >= w.map.w || y >= w.map.h || w.map.solid[y * w.map.w + x]) return true;
@@ -356,6 +358,7 @@
   //   { type: 'area', area }    다른 구역에 들어섰다 (밀려나 들어선 것도)
   //   { type: 'chest', chest }  닫힌 보물상자에 닿았다 — 그 자리에 선 채로 (연 뒤에는 그냥 막힌 칸)
   //   { type: 'merchant', npc } 와 있는 떠돌이 상인에게 닿았다 — 그 자리에 선 채로 (상점)
+  //   { type: 'shop', npc }     가게 점원에게 닿았다 — 그 자리에 선 채로 (npc.shop 매장의 상점 창)
   function tick(w, dt) {
     const ev = [];
     if (w.encounter) return ev;
@@ -413,6 +416,8 @@
       }
       const shop = merchantAt(w, i, j);
       if (shop) { halt(p); p.needRelease = true; ev.push({ type: 'merchant', npc: shop }); return 'stop'; }
+      const clerk = shopAt(w, i, j);
+      if (clerk) { halt(p); p.needRelease = true; ev.push({ type: 'shop', npc: clerk }); return 'stop'; }
     }
     if (blocked) {
       if (!assist) return 'blocked';
@@ -546,7 +551,7 @@
     let best = null, bestScore = -1;
     for (const [dx, dy] of STEPS) {
       const x = p.x + dx, y = p.y + dy;
-      if (wall(w, x, y) || mobAt(w, x, y) || postAt(w, x, y) || chestAt(w, x, y) || merchantAt(w, x, y) || (portAt(w, x, y) || {}).to) continue;
+      if (wall(w, x, y) || mobAt(w, x, y) || postAt(w, x, y) || chestAt(w, x, y) || merchantAt(w, x, y) || shopAt(w, x, y) || (portAt(w, x, y) || {}).to) continue;
       const score = manh(x, y, fx, fy) + (x === p.fromX && y === p.fromY ? 0.5 : 0);   // 걸어온 칸이면 그쪽으로
       if (score > bestScore) { best = { x, y }; bestScore = score; }
     }
@@ -556,7 +561,7 @@
     p.ox = 0; p.oy = 0;                                    // 밀려난 칸 한가운데에
   }
 
-  const api = { RULES, TEMPER_BY_ARCH, DIRS, temperOf, mulberry, parseTiled, createWorld, setInput, tick, resolve, areaAt, mobAt, postAt, portAt, chestAt, merchantAt };
+  const api = { RULES, TEMPER_BY_ARCH, DIRS, temperOf, mulberry, parseTiled, createWorld, setInput, tick, resolve, areaAt, mobAt, postAt, portAt, chestAt, merchantAt, shopAt };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.MapRules = api;
 })(typeof window !== 'undefined' ? window : globalThis);

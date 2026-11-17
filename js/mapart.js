@@ -494,9 +494,215 @@
   // 건물 칸의 점 — 덩어리를 그릴 때 그 자리만 (한 채를 한꺼번에 그리면 120ms 쯤 멈칫해서, 땅처럼 덩어리마다 나눠 그림)
   function buildingPixel(A, e, X, Y) {
     const B = A.buildings[e.b];
+    if (STORE_KINDS[B.kind]) return storeProp(B, X - B.x0 * P, Y - B.y0 * P, X, Y);   // 가게 안의 가구
     if (B.kind) return cityBuilding(B, X - B.x0 * P, Y - B.y0 * P, X, Y);   // 도시의 건물
     if (!B.G) B.G = castleGeom(B);
     return castlePix(B.G, X - B.x0 * P, Y - B.y0 * P, X, Y);
+  }
+
+  // ---------- 가게 안 (지도 속성 store — 헌터백화점 1층, tools/map-gen.js 의 DEPT) ----------
+  // 바깥 백화점과 같은 빛깔 — 상아색 벽 · 금테 · 포도주색, 거기에 청록 빛줄. 위 벽(세 칸 높이)은 지도 속성 wall 의 구역마다 다르게:
+  //   rack 무기 진열 벽 · esc 2층으로 가는 에스컬레이터 · buy 셔터 내린 창구. 가구(blds 의 kind)는 storeProp 이 칸 안에 납작하게 (윗면 + 앞면)
+  const STC = {
+    ivory: ['#ece6d8', '#e4ddcd', '#f3eee2', '#d8d0bf'], seam: '#c9c0ad', dark: ['#3b3542', '#342f3b', '#443d4c', '#2a2630'],
+    carpet: ['#6f1a26', '#661722', '#7a2030', '#59131d'],
+    gold: '#c9a24a', goldDim: '#8a6d2c', wine: '#6f1a26', red: '#b0202e', glow: '#62e6ee', line: '#12141a', wall: '#ebe4d4', velvet: '#2a1c26',
+    steel: ['#dfe6ee', '#aeb8c4', '#ffffff', '#7d8794']
+  };
+  const STORE_KINDS = { counter: 1, closed: 1, case: 1, rope: 1, plant: 1, bench: 1 };
+  const storeZones = (m, A) => A.storeZones || (A.storeZones = JSON.parse((m.props && m.props.wall) || '[]'));
+  // 큰 상아색 판 — 서른두 점마다 줄눈, 은은한 결, 군데군데 비스듬한 윤
+  function storeTile(X, Y) {
+    const sx = ((X % 32) + 32) % 32, sy = ((Y % 32) + 32) % 32;
+    if (sx === 0 || sy === 0) return c3(STC.seam);
+    let c = shadeOf(STC.ivory, fbm(X * 0.035, Y * 0.035, 373) * 0.75 + hash(X >> 5, Y >> 5, 374) * 0.25);
+    if (Math.abs(vnoise(X * 0.05, Y * 0.02, 375) - 0.5) < 0.008) c = mul(c, 0.975);   // 돌결 — 금 간 것처럼 보이지 않게 아주 옅게
+    if (hash(X >> 5, Y >> 5, 376) < 0.35 && Math.abs(sx - sy) < 2 && sx > 6 && sx < 22) c = mix(c, WHITE, 0.4);
+    return c;
+  }
+  function storeFloor(m, e, X, Y, lx) {
+    if (e.ter !== PAVE) return storeTile(X, Y);
+    // 가운데 통로 — 포도주색 깔개, 양 가장자리에 금빛 줄, 안에 금빛 마름모 (문간의 깔개와 이어짐)
+    const tx = Math.floor(X / P), ty = Math.floor(Y / P);
+    const aisle = x => x >= 0 && x < m.w && m.tile[ty * m.w + x] === FLOOR && (m.look[ty * m.w + x] & 15) === PAVE;
+    const L = !aisle(tx - 1), R = !aisle(tx + 1);
+    if ((L && lx === 1) || (R && lx === P - 2)) return c3(STC.gold);
+    if ((L && lx === 0) || (R && lx === P - 1)) return c3(STC.goldDim);
+    let c = shadeOf(STC.carpet, fbm(X * 0.06, Y * 0.06, 371) * 0.6 + hash(X, Y, 372) * 0.4);
+    if ((L && lx === 3) || (R && lx === P - 4)) return c3(STC.goldDim);
+    const dx = Math.abs(((X % 32) + 32) % 32 - 16), dy = Math.abs(((Y % 32) + 32) % 32 - 16);
+    if (dx + dy === 11) c = mix(c, c3(STC.gold), 0.55);
+    return c;
+  }
+  // 나가는 문간 — 금빛 문틀 사이로 포도주색 깔개, 밖에서 드는 빛 (아래로 갈수록 밝게)
+  function storeDoorway(e, X, Y, lx, ly) {
+    const R = P - 1;
+    if ((!e.dL && lx < 3) || (!e.dR && lx > R - 3)) { const k = !e.dL && lx < 3 ? lx : R - lx; return k === 0 ? c3(STC.line) : c3(k === 1 ? STC.gold : STC.goldDim); }
+    const c = ly === 2 || ly === 12 ? c3(STC.gold) : ly < 2 ? c3(STC.dark[0]) : ((X + Y) & 3) === 0 ? c3('#7d2230') : c3(STC.wine);
+    return mix(c, c3('#fff3cf'), 0.08 + ly / P * 0.45);
+  }
+  // 진열 벽의 무기 한 자루 — 칸 가운데가 wx = 0, 위가 wy = 0 (세로 27점). 없으면 null
+  function rackWeapon(kind, wx, wy) {
+    const ax = Math.abs(wx), st = c3(wx < 0 ? STC.steel[2] : wx > 0 ? STC.steel[1] : STC.steel[0]);
+    if (kind === 0) {                                                               // 장검 — 긴 날 · 금빛 가드 · 손잡이
+      if (wy < 18) return ax <= (wy < 2 ? 0 : 1) ? st : null;
+      if (wy < 20) return ax <= 4 ? c3(STC.gold) : null;
+      if (wy < 25) return ax <= 1 ? c3(wy % 2 ? '#3a2a22' : '#55402f') : null;
+      return wy === 25 && ax <= 1 ? c3(STC.gold) : null;
+    }
+    if (kind === 1) {                                                               // 창 — 마름모 날 · 긴 자루
+      if (wy < 8) return ax <= Math.min(wy, 7 - wy) * 0.7 + 0.3 ? st : null;
+      if (wy === 8) return ax <= 2 ? c3(STC.gold) : null;
+      return wy <= 26 && ax === 0 ? c3('#8a6a42') : null;
+    }
+    if (kind === 2) {                                                               // 도끼 — 자루 오른쪽에 반달 날
+      if (wy >= 3 && wy <= 11 && wx >= 1 && wx <= 5 - Math.abs(wy - 7) * 0.6) return wx >= 4 - Math.abs(wy - 7) * 0.6 ? c3(STC.steel[2]) : c3(STC.steel[1]);
+      if (wy >= 2 && wy <= 26 && ax === 0) return c3(wy < 13 ? '#55402f' : '#8a6a42');
+      return null;
+    }
+    if (wy >= 5 && wy < 19) return ax <= 1 ? (ax === 0 ? c3('#e9fbfd') : c3(STC.glow)) : ax === 2 ? mix(c3(STC.velvet), c3(STC.glow), 0.35) : null;   // 빛나는 날의 단검
+    if (wy === 19) return ax <= 3 ? c3('#3b3f4a') : null;
+    return wy > 19 && wy < 25 && ax <= 1 ? c3('#22252c') : null;
+  }
+  function storeWall(m, A, e, X, Y, lx, ly) {
+    if (e.up) {
+      const fy = (3 - e.up) * P + ly, tx = Math.floor(X / P);
+      if (fy === 0) return c3(STC.line);
+      if (fy <= 2) return c3(STC.gold);
+      if (fy === 3) return c3(STC.goldDim);
+      const z = storeZones(m, A).find(q => tx >= q.x && tx < q.x + q.w);
+      let wall = mul(c3(STC.wall), 1 - fy / 48 * 0.1);
+      if (fy >= 42) wall = fy === 42 ? c3(STC.goldDim) : fy === 47 ? c3('#6a614f') : c3('#c2b8a2');   // 아랫단
+      if (!z) {                                                                     // 구역 사이 — 벽기둥과 따뜻한 벽등
+        const ax = Math.abs(lx - 7.5);
+        if (fy < 42 && ax < 4) wall = ax > 3 ? c3('#cfc6b0') : mix(wall, WHITE, 0.3);
+        if (ax < 4 && (fy === 6 || fy === 7 || fy === 39 || fy === 40)) return c3(STC.gold);
+        const g = Math.hypot(lx - 7.5, fy - 18);
+        if (g < 2.2) return c3('#fff6d8');
+        if (g < 9 && fy < 42) wall = mix(wall, c3('#ffd98a'), 0.45 * (1 - g / 9));
+        return wall;
+      }
+      const zx = X - z.x * P, ZW = z.w * P;
+      if (z.kind === 'rack') {                                                      // 무기 진열 벽 — 금테 두른 어두운 벽감, 위에 청록 빛줄, 무기가 줄지어 걸림
+        if (zx < 3 || zx >= ZW - 3 || fy < 6 || fy > 40) return wall;
+        if (zx === 3 || zx === ZW - 4 || fy === 6 || fy === 40) return c3(STC.gold);
+        if (fy === 7 || fy === 8) return c3(fy === 7 ? '#e9fbfd' : STC.glow);
+        let c = mix(c3(STC.velvet), c3(STC.glow), Math.max(0, 0.3 * (1 - (fy - 9) / 12)));
+        const ix = zx - 6, slot = Math.floor(ix / 14), wx = ix - slot * 14 - 7, wy = fy - 12;
+        if (ix >= 0 && slot < Math.floor((ZW - 12) / 14)) {
+          const wpn = rackWeapon(slot % 4, wx, wy);
+          if (wpn) return wpn;
+          if (wy === -1 && Math.abs(wx) <= 2) return c3(STC.goldDim);               // 걸이
+          if (wx === -7 && fy > 9) c = mul(c, 0.8);                                 // 칸 사이 줄
+        }
+        if (fy >= 38) c = mix(c, c3(STC.glow), 0.18);
+        return c;
+      }
+      if (z.kind === 'esc') {                                                       // 에스컬레이터 — 위로 멀어지는 계단, 양옆 유리 난간, 위에 올라가는 화살표
+        const mx = zx - ZW / 2 + 0.5;
+        if (fy < 8) return fy >= 4 && fy <= 6 && Math.abs(mx) <= (fy - 4) + 0.5 ? c3(STC.glow) : wall;
+        if (zx < 2 || zx >= ZW - 2) return wall;
+        if (zx === 2 || zx === ZW - 3 || fy === 8) return c3(STC.gold);
+        const sy = 47 - fy, hw = 19 - sy * 0.2, ax = Math.abs(mx);
+        if (ax > hw + 3) return mix(c3('#17141c'), c3('#fff3cf'), 0.08 + sy / 39 * 0.1);
+        if (ax > hw + 2) return c3('#0d0e12');                                      // 손잡이
+        if (ax > hw) return mix(c3('#274b55'), c3(STC.glow), 0.25 + 0.2 * (sy / 39));   // 유리 난간
+        const step = Math.floor(Math.sqrt(sy) * 2.4);
+        let c = c3(step % 2 ? '#5d626e' : '#3d414b');
+        if (Math.floor(Math.sqrt(sy + 1) * 2.4) !== step) c = c3('#8d939f');        // 디딤판 앞 모서리
+        if (ax < 0.6) c = mul(c, 0.8);
+        return mix(c, c3('#fff3cf'), sy / 39 * 0.28);                               // 위층에서 내려오는 빛
+      }
+      if (z.kind === 'buy') {                                                       // 매입 창구 — 금테 창 셋, 셔터가 내려와 있음
+        const ix = zx - 5, k = Math.floor(ix / 35), wx = ix - k * 35;
+        if (ix < 0 || k > 2 || wx >= 32 || fy < 9 || fy > 38) return fy === 39 || fy === 40 ? c3('#d8cfbb') : wall;
+        if (wx === 0 || wx === 31 || fy === 9 || fy === 38) return c3(STC.gold);
+        if (fy === 36 && wx >= 14 && wx <= 17) return c3('#3a3d45');                // 셔터 손잡이
+        return c3((fy - 10) % 3 === 0 ? '#6f757f' : (fy - 10) % 3 === 1 ? '#a4aab3' : '#8b919b');
+      }
+      return wall;
+    }
+    if (!e.rim) return c3('#17141c');
+    let c = mul(c3('#2c2832'), 0.9 + hash(X >> 2, Y >> 2, 380) * 0.2);              // 옆 · 아래 벽의 윗면 — 바닥 쪽 가장자리에 금빛 줄
+    const R = P - 1, d = Math.min(e.rim.l ? lx : 99, e.rim.r ? R - lx : 99, e.rim.u ? ly : 99, e.rim.d ? R - ly : 99);
+    if (d === 0) return c3(STC.line);
+    if (d === 1) return c3(STC.gold);
+    if (d < 4) c = mix(c, c3('#c2b8a2'), 0.35);
+    return c;
+  }
+  const storeGround = (m, A, e, X, Y, lx, ly) => (e.t === WALL || e.t < 0 ? storeWall(m, A, e, X, Y, lx, ly) : storeFloor(m, e, X, Y, lx));
+  // 계산대 몸 — 흰 돌 윗면(0~8) · 금빛 줄 · 포도주색 앞면에 금빛 세로 살과 청록 빛줄
+  function counterBody(px, py, W) {
+    if (px === 0 || px === W - 1 || py === 0 || py === 15) return c3(STC.line);
+    if (py < 8) return mix(c3('#f6f2e8'), c3('#d9d2c2'), (hash(px >> 1, py >> 1, 381) < 0.25 ? 0.5 : 0) + py * 0.03);
+    if (py === 8) return c3(STC.gold);
+    if (py === 13) return c3(STC.glow);
+    return px % 12 === 6 ? c3(STC.goldDim) : mul(c3(STC.wine), py === 9 ? 0.75 : 1);
+  }
+  function storeProp(B, px, py, X, Y) {
+    const W = B.w * P, floor = storeTile(X, Y), k = B.kind;
+    if (k === 'counter') {
+      if (px >= 5 && px <= 13 && py >= 2 && py <= 6) return px === 5 || px === 13 || py === 2 || py === 6 ? c3('#22252c') : mix(c3(STC.glow), WHITE, py === 3 ? 0.5 : 0.1);   // 계산 단말
+      if (px >= W - 12 && px <= W - 6 && py >= 3 && py <= 5) return c3(py === 4 ? '#f3ede4' : STC.gold);                                                                   // 놓인 쟁반
+      return counterBody(px, py, W);
+    }
+    if (k === 'closed') {                                                           // 닫힌 창구 — 창마다 「닫힘」 팻말
+      const s = ((px - 5) % 35 + 35) % 35 - 12;
+      if (px > 4 && px < W - 6 && s >= 0 && s < 8 && py >= 2 && py <= 6) return py === 2 || py === 6 || s === 0 || s === 7 ? c3('#7d1622') : py === 4 ? c3('#f3ede4') : c3(STC.red);
+      return counterBody(px, py, W);
+    }
+    if (k === 'case') {                                                             // 유리 진열장 — 어두운 깔개 위에 무기(왼쪽 매장) · 방패(오른쪽), 유리의 비스듬한 윤, 아래는 빛줄 두른 받침
+      if (px === 0 || px === W - 1 || py === 0 || py === 15) return c3(STC.line);
+      if (py === 10) return c3(STC.gold);
+      if (py > 10) return py === 12 ? c3(STC.glow) : mul(c3(STC.dark[0]), px % 8 === 0 ? 0.8 : 1);
+      if (px === 1 || px === W - 2 || py === 1) return c3('#bfe9ee');
+      let c = mix(c3(STC.velvet), c3(STC.wine), 0.25);
+      const t = B.tone | 0;
+      if (t < 4) {                                                                  // 눕힌 칼 — 날 · 가드 · 손잡이
+        const blade = t === 3 ? [c3('#e9fbfd'), c3(STC.glow)] : [c3(STC.steel[2]), c3(STC.steel[1])];
+        if (px >= 5 && px <= 21 && (py === 5 || py === 6) && !(px === 5 && py === 6)) c = blade[py - 5];
+        else if (px === 22 && py >= 3 && py <= 8) c = c3(STC.gold);
+        else if (px >= 23 && px <= 27 && (py === 5 || py === 6)) c = c3(px % 2 ? '#3a2a22' : '#55402f');
+        else if (t === 1 && px >= 6 && px <= 9 && py >= 3 && py <= 8 && Math.abs(py - 5.5) <= (px - 5) * 0.8) c = c3(STC.steel[1]);   // 넓은 날
+        else if (t === 2 && px >= 5 && px <= 21 && (py === 4 || py === 7) && px % 3 === 0) c = c3(STC.steel[3]);                    // 톱니
+      } else {                                                                      // 둥근 방패 · 네모 방패
+        const dx = px - 15.5, dy = (py - 5.5) * 1.6, r = Math.hypot(dx, dy), tone = ['#2f5f9a', '#9a2f3a', '#3a7d5a', '#7a5fa8'][t - 4];
+        if (t % 2 === 0) { if (r < 7.2) c = r > 5.8 ? c3(STC.steel[1]) : r < 1.8 ? c3(STC.gold) : c3(tone); }
+        else if (Math.abs(dx) < 7 && py >= 2 && py <= 8) c = Math.abs(dx) > 5.5 || py === 2 || py === 8 ? c3(STC.steel[1]) : Math.abs(dx) < 1 || py === 5 ? c3(STC.gold) : c3(tone);
+      }
+      return ((px + py * 2) % 19) < 2 ? mix(c, WHITE, 0.4) : c;
+    }
+    if (k === 'rope') {                                                             // 막아 둔 줄 — 금빛 기둥 사이로 늘어진 붉은 줄 (바닥이 비침)
+      const posts = [4, W >> 1, W - 5];
+      for (const q of posts) {
+        const ax = Math.abs(px - q);
+        if (py >= 12 && py <= 14 && ax <= 3) return py === 14 ? c3(STC.line) : c3(STC.goldDim);
+        if (py >= 2 && py < 12 && ax <= 1) return py <= 3 ? c3('#f3dc8a') : ax === 0 ? c3(STC.gold) : c3(STC.goldDim);
+      }
+      for (let i = 0; i < posts.length - 1; i++) {
+        const a = posts[i], b = posts[i + 1];
+        if (px <= a + 1 || px >= b - 1) continue;
+        const y = 5 + Math.sin((px - a) / (b - a) * Math.PI) * 3.5;
+        if (py >= y - 0.5 && py < y + 1.5) return c3(py < y + 0.5 ? STC.red : '#7d1622');
+        if (py === 14 && px % 2 === 0) return mul(floor, 0.85);                     // 줄 그림자
+      }
+      return floor;
+    }
+    if (k === 'plant') {                                                            // 화분 — 흰 도기에 금빛 띠, 둥글게 퍼진 잎
+      const dx = px - 7.5, r = Math.hypot(dx, (py - 5.5) * 1.1);
+      if (py >= 9 && Math.abs(dx) <= 4.5 - (py - 9) * 0.4) return py === 14 ? c3('#8f8777') : py === 10 ? c3(STC.gold) : mix(c3('#f6f2e8'), c3('#cfc6b0'), dx > 1 ? 0.6 : 0);
+      if (r < 6.2) { const h = hash(px, py, 382); return r > 5.3 ? c3('#1f5f38') : h < 0.3 ? c3('#4faf6a') : h < 0.7 ? c3('#3f9a5c') : c3('#2f7d4a'); }
+      if (py === 15 && Math.abs(dx) <= 5) return mul(floor, 0.82);
+      return floor;
+    }
+    if (k === 'bench') {                                                            // 긴 의자 — 포도주색 가죽, 금빛 다리
+      if (py < 3 || py > 13) return py === 14 && px > 1 && px < W - 2 ? mul(floor, 0.84) : floor;
+      if (px === 0 || px === W - 1 || py === 3 || py === 13) return c3(STC.line);
+      if (px <= 2 || px >= W - 3) return c3(STC.gold);
+      if (py >= 11) return c3('#4a0f18');
+      return px % 8 === 4 && py === 7 ? c3('#4a0f18') : mix(c3('#8a2433'), c3(STC.wine), py > 7 ? 0.7 : 0.1);
+    }
+    return floor;
   }
 
   // ---------- 건물 안 (지도 속성 interior) — 벽 · 기둥 · 나가는 문간 ----------
@@ -985,7 +1191,8 @@
     }
     if ((t === WALL || t < 0) && m.props && m.props.interior) {
       // 건물 안 — 바로 아래 세 칸 안에 바닥이 있으면 위 벽의 벽면(e.up = 바닥에서 몇 칸 위), 곁에 바닥이 있으면 벽 윗면의 가장자리
-      const open = (x, y) => { const u = at(x, y); return u !== WALL && u >= 0; };
+      // (가게 안의 가구 칸은 막힌 칸이지만 벽은 아님 — 그 위의 벽면이 한 칸 밀리지 않게 열린 칸으로 침)
+      const open = (x, y) => { const u = at(x, y); return (u !== WALL && u >= 0) || (lookAt(x, y) & 15) === BUILD; };
       for (let d = 1; d <= 3; d++) { if (!open(tx, ty + d)) continue; let wall = true; for (let j = 1; j < d; j++) if (open(tx, ty + j)) wall = false; if (wall) { e.up = d; break; } }
       if (!e.up && [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [1, -1], [-1, 1], [1, 1]].some(([dx, dy]) => open(tx + dx, ty + dy)))
         e.rim = { l: open(tx - 1, ty), r: open(tx + 1, ty), u: open(tx, ty - 1), d: open(tx, ty + 1) };
@@ -1740,7 +1947,7 @@
   function paint(m, A, e, X, Y, lx, ly) {
     if (e.b !== undefined) return buildingPixel(A, e, X, Y);
     if (e.ruin) return ruinPix(e, X, Y);
-    if (e.raw === DOORWAY) return doorwayPix(e, X, Y, lx, ly);
+    if (e.raw === DOORWAY) return m.props && m.props.store ? storeDoorway(e, X, Y, lx, ly) : doorwayPix(e, X, Y, lx, ly);
     if (e.pb) return pillarFloor(e, X, Y);
     if (e.raw === CARPET && e.t === FLOOR) { const c = carpetPix(e, X, Y, lx); return e.shadeTop && ly < e.shadeTop ? mul(c, 0.62 + 0.38 * ly / e.shadeTop) : c; }
     if (e.shore) {                                                       // 물가 칸 — 이 점이 물가 모양 안쪽이면 물 · 용암 (옆면 포함)
@@ -1760,6 +1967,7 @@
   function paintGround(m, A, e, X, Y, lx, ly) {
     const t = e.t;
     if (t === POOL) { const c = e.raw === LAVA ? lava(X, Y) : water(m, A, X, Y); return e.bridgeAbove && ly < 3 ? mul(c, 0.62) : c; }
+    if (m.props && m.props.store) return storeGround(m, A, e, X, Y, lx, ly);   // 가게 안 (헌터백화점)
     if (e.bio === CITY) return cityGround(m, A, e, X, Y, lx, ly);
     if ((t === WALL || t < 0) && m.props && m.props.interior) return hallWall(m, e, X, Y, lx, ly);
     if (t === WALL || t < 0) {
@@ -2093,7 +2301,21 @@
       }
     }
     // 횃불 (건물 안 위 벽) — 불꽃 모양이 바뀌며 흔들리고 둘레 빛이 커졌다 작아짐, 가끔 불똥
-    if (m.props && m.props.interior) torchesOf(m, A).forEach(([X, Y], i) => {
+    // 가게 안 — 에스컬레이터 디딤판 모서리가 위로 흘러감 (위 벽의 esc 구역 — storeWall 과 같은 셈)
+    if (m.props && m.props.store) for (const z of storeZones(m, A)) {
+      if (z.kind !== 'esc' || z.x + z.w < x0 - 1 || z.x > x1 + 1) continue;
+      let fr = 0;
+      while (fr < m.h && m.tile[fr * m.w + z.x] === WALL && (m.look[fr * m.w + z.x] & 15) !== BUILD) fr++;
+      const Y0 = (fr - 3) * P, mid = (z.x + z.w / 2) * P, fl = (t * 1.1) % 1;
+      for (let k = 0; k < 15; k++) {
+        const s = (k + fl) / 2.4, sy = s * s;
+        if (sy > 38) break;
+        const hw = 19 - sy * 0.2;
+        ctx.fillStyle = `rgba(214,238,246,${(0.5 - sy / 39 * 0.3).toFixed(2)})`;
+        ctx.fillRect(ox + (mid - hw) * u, oy + (Y0 + 47 - sy) * u, hw * 2 * u, u);
+      }
+    }
+    if (m.props && m.props.interior && !m.props.store) torchesOf(m, A).forEach(([X, Y], i) => {
       if (X < (x0 - 2) * P || X > (x1 + 2) * P || Y < (y0 - 2) * P || Y > (y1 + 2) * P) return;
       const fl = 0.75 + 0.25 * Math.sin(t * 13 + i * 2) * Math.sin(t * 7.3 + i), sx = ox + X * u, sy = oy + Y * u;
       const gr = ctx.createRadialGradient(sx, sy, u, sx, sy, 20 * fl * u);

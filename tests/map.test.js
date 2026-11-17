@@ -1048,7 +1048,8 @@ function checkTown(m, d) {
   for (const p of m.ports.filter(q => q.door)) {
     const b = blds[owner.get(p.y * m.w + p.x)];
     assert.ok(b && p.y === b.y + b.h - 1 && p.x >= b.x && p.x + p.w <= b.x + b.w, `${m.id} ${p.label || p.name} — 건물 아래 줄`);
-    assert.ok(cellsOf(m, p).every(i => m.solid[i]) && !p.to, `${m.id} ${p.label || p.name} — 아직 닫힘`);
+    if (p.to) assert.ok(cellsOf(m, p).every(i => !m.solid[i] && d[i] >= 0), `${m.id} ${p.label || p.name} — 열린 문은 걸어 들어감`);
+    else assert.ok(cellsOf(m, p).every(i => m.solid[i]), `${m.id} ${p.label || p.name} — 아직 닫힘`);
     assert.ok(d[(p.y + 1) * m.w + p.x] >= 0, `${m.id} ${p.label || p.name} 앞은 걸을 수 있음`);
   }
   // 건물끼리 붙지 않음 (골목 끝의 덧붙인 채 — 두 칸짜리 — 만 빼고)
@@ -1091,6 +1092,8 @@ test('도시 — 옛 동네(집 앞에서 시작 · 골목 막다른 곳의 이�
   const oldBlds = checkTown(old, dOld), cityBlds = checkTown(city, dCity);
   assert.deepEqual(old.ports.filter(q => q.door).map(q => q.name).sort(), ['blackmarket', 'home', 'myguild']);
   assert.deepEqual(city.ports.filter(q => q.door).map(q => q.name).sort(), ['association', 'dept', 'guild1', 'guild2', 'guild3', 'guild4']);
+  assert.deepEqual(city.ports.filter(q => q.door && q.to).map(q => q.name), ['dept'], '지금 열린 문은 헌터백화점뿐');
+  assert.ok(!old.ports.some(q => q.door && q.to), '옛 동네의 문은 아직 다 닫힘');
   const area = b => b.w * b.h, hq = cityBlds.find(b => b.kind === 'hq');
   assert.ok(cityBlds.every(b => b === hq || area(b) < area(hq)), '헌터 협회가 가장 큰 건물');
   assert.equal(cityBlds.filter(b => b.kind === 'guild').length, 4);
@@ -1099,4 +1102,48 @@ test('도시 — 옛 동네(집 앞에서 시작 · 골목 막다른 곳의 이�
   const SNOW = 8, lots = [];
   for (let i = 0; i < city.w * city.h; i++) if ((city.look[i] & 15) === SNOW) { assert.ok(city.solid[i], '빈터는 막힘'); lots.push(i); }
   assert.ok(lots.length >= 3 * 7 * 11, '빈터 셋');
+});
+
+test('헌터백화점 — 도시의 백화점 문으로 들어가면 1층, 무기 매장 점원에게 닿으면 상점(선 채로), 나가면 다시 도시의 문 앞 · 가구는 통로를 막지 않음', () => {
+  const city = loadMap('city'), dept = loadMap('dept');
+  const door = city.ports.find(p => p.name === 'dept'), out = dept.ports.find(p => p.name === 'out');
+  assert.equal(door.to, 'dept.out', '도시의 백화점 문 → 백화점 안');
+  assert.equal(out.to, 'city.dept', '백화점 안의 문 → 도시의 백화점 문');
+  assert.ok(dept.props.interior && dept.props.store, '가게 안 지도');
+  // 점원 — 무기 매장, 그 칸에는 못 서고 곁에는 설 수 있음
+  const clerks = dept.npcs.filter(n => n.shop);
+  assert.deepEqual(clerks.map(n => n.shop), ['weapon']);
+  const blocked = new Set(clerks.map(n => n.y * dept.w + n.x));
+  const d = walk(dept, [dept.start.y * dept.w + dept.start.x], blocked);
+  for (const n of clerks) assert.ok([[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => d[(n.y + dy) * dept.w + n.x + dx] >= 0), '점원 곁에 설 수 있음');
+  for (let i = 0; i < dept.w * dept.h; i++) if (!dept.solid[i] && !blocked.has(i)) assert.ok(d[i] >= 0, `갇힌 칸 없음 (${i % dept.w}, ${(i / dept.w) | 0})`);
+  assert.ok(cellsOf(dept, out).every(i => d[i] >= 0), '나가는 문에 닿음');
+  // 가구 — 막힌 칸, 통로(나가는 문 위로 곧게)는 비어 있음
+  const blds = JSON.parse(dept.props.blds);
+  for (const b of blds) for (const i of cellsOf(dept, b)) assert.ok(dept.solid[i], `${b.kind} 은 막힌 칸`);
+  for (let y = clerks[0].y + 1; y < out.y; y++) for (let x = out.x; x < out.x + out.w; x++) assert.ok(!dept.solid[y * dept.w + x], '가운데 통로는 비어 있음');
+  for (const kind of ['counter', 'case', 'rope', 'closed']) assert.ok(blds.some(b => b.kind === kind), `${kind} 이(가) 있음`);
+  // 이름표만 있는 곳(2층 · 매입 창구)은 들어갈 수 없음
+  for (const name of ['floor2', 'buyback']) { const p = dept.ports.find(q => q.name === name); assert.ok(p && !p.to && p.label, `${name} — 이름표만`); }
+  // 점원에게 걸어가 닿으면 상점 사건 한 번, 그 앞에 선 채로
+  const w = M.createWorld(dept, {}, 1);
+  w.mobs = [];
+  const c = clerks[0];
+  w.player.x = c.x; w.player.y = c.y + 2; w.player.ox = 0; w.player.oy = 0;
+  M.setInput(w, 'up');
+  const ev = run(w, 1).filter(e => e.type === 'shop');
+  assert.equal(ev.length, 1, '닿을 때 한 번');
+  assert.equal(ev[0].npc.shop, 'weapon');
+  assert.equal(w.player.y, c.y + 1, '점원 앞에 선 채로');
+});
+
+test('헌터백화점 물건 — 1~6격마다 무기 하나 · 보조무기 하나, 값은 격마다 오르고 몬스터 전리품과 번호가 안 겹침', () => {
+  const { ITEMS } = loadData();
+  const wares = ITEMS.filter(i => i.store);
+  assert.equal(wares.length, 12);
+  for (let r = 1; r <= 6; r++) assert.deepEqual(wares.filter(i => i.rank.n === r).map(i => i.slot).sort(), ['offhand', 'weapon'], `${r}격`);
+  assert.ok(wares.every(i => i.store === 'weapon' && i.price > 0 && !i.ware && !i.chest));
+  const price = r => wares.find(i => i.rank.n === r).price;
+  for (let r = 2; r <= 6; r++) assert.ok(price(r) > price(r - 1), '격이 오르면 값도 오름');
+  assert.equal(new Set(ITEMS.map(i => i.id)).size, ITEMS.length, '번호가 겹치지 않음');
 });

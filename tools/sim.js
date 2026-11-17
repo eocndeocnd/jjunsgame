@@ -14,6 +14,8 @@
 //    - 보스를 꺾었으면 다음 지역 첫 상대에게 MOVE_MIN 이상일 때 넘어간다
 //    - 강화가 있으면 강화석이 모이는 대로 가장 낮은 부위부터 강화한다
 //      (특수장비 강화석과 +15 를 다 채운 부위의 강화석은 가장 낮은 부위로 바꿔 몰아준다)
+//    - 도시가 열린 뒤로는 회차를 시작할 때 헌터백화점에 들러, 살 수 있는 것 중 높은 격부터 삽니다
+//      (지금 낀 것이 더 높은 격이면 건너뜀 — SIM.SHOP 을 끄면 안 삽니다: 앞뒤를 견줄 때)
 //    - 회차가 끝나면 그 회차에 막힌 보스를 상대로 가장 센 화신(화신 없이 가는 것도 후보)을 고른다
 //      (예전엔 처음 얻은 화신을 끝까지 썼습니다 — 처음 화신이 싸움에 약한 것이면 그 시드만 수백 회차 막혔습니다)
 // ============================================================
@@ -23,6 +25,7 @@ const SIM = {
   ROAD_MIN: 0.5,
   MOVE_MIN: 0.6,
   SAMPLES: 120,        // 판단용 승률 추정 횟수 (실제 전투는 한 번만 굴립니다)
+  SHOP: true,          // 헌터백화점에서 장비를 사는가 (끄면 사기 전 길이와 견줄 수 있습니다)
   MAX_RUNS: 400,
   MAX_STEPS: 5000      // 한 회차에서 무한루프 방지
 };
@@ -87,6 +90,20 @@ function simChooseAvatar() {
     if (p > bestP) { bestP = p; best = id; }
   }
   m.avatar = best;
+}
+
+// 헌터백화점 — 회차를 시작할 때 들릅니다. 높은 격 물건부터, 지금 낀 것보다 낮은 격이면 사지 않습니다.
+function simShop() {
+  if (!SIM.SHOP || typeof deptWares !== 'function' || !State.meta.cityOpen) return 0;
+  let bought = 0;
+  for (const section of Object.keys(DEPT_SECTIONS)) {
+    for (const it of deptWares(section).sort((a, b) => b.rank.n - a.rank.n)) {
+      const worn = getItem(State.meta.equipped[it.slot]);
+      if (worn && worn.rank.n > it.rank.n) continue;
+      if (buyDept(it.id)) bought++;
+    }
+  }
+  return bought;
 }
 
 // 정해진 자리 하나와 싸웁니다. 삼키는 검이 있고 아직 안 삼킨 자리면 검으로 바꿔 듭니다.
@@ -163,6 +180,7 @@ function simStart(seed = 1, onDone) {
 
   function oneRun() {
     startRun();
+    const shopped = simShop();
     const stat = { fights: 0, losses: 0, retreats: 0 };
     simPlayRun(stat);
     const run = State.run;
@@ -182,6 +200,7 @@ function simStart(seed = 1, onDone) {
       n: State.meta.runCount, zone, level: run.level, kills: run.kills,
       fights: stat.fights, losses: stat.losses, retreats: stat.retreats,
       bosses: State.meta.bossesBeaten.length, owned: ownedIds().length,
+      gold: Math.round(num(State.meta.gold)), shopped,
       energy: startEnergy(),
       enh: typeof enhanceLevel === 'function' ? SLOT_IDS.map(enhanceLevel).join(',') : ''
     });

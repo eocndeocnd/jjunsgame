@@ -1213,7 +1213,7 @@ const CITY = {
     { kind: 'hq', x: 13, y: 1, w: 20, h: 13, door: { x: 21, w: 4, name: 'association', label: '헌터 협회' } },
     { kind: 'guild', tone: 0, x: 2, y: 5, w: 8, h: 9, door: { x: 5, w: 2, name: 'guild1', label: '불꽃 길드' } },      // 길드 이름은 가칭 (나중에 다시 정함)
     { kind: 'guild', tone: 1, x: 36, y: 5, w: 8, h: 9, door: { x: 39, w: 2, name: 'guild2', label: '파도 길드' } },
-    { kind: 'dept', x: 2, y: 27, w: 16, h: 9, door: { x: 8, w: 4, name: 'dept', label: '헌터백화점' } },
+    { kind: 'dept', x: 2, y: 27, w: 16, h: 9, door: { x: 8, w: 4, name: 'dept', label: '헌터백화점', to: 'dept.out' } },   // 안은 DEPT (1층)
     { kind: 'guild', tone: 2, x: 27, y: 27, w: 8, h: 9, door: { x: 30, w: 2, name: 'guild3', label: '왕관 길드' } },
     { kind: 'guild', tone: 3, x: 37, y: 27, w: 8, h: 9, door: { x: 40, w: 2, name: 'guild4', label: '달 길드' } },
     // 둘레 — 걷지 못하는 곳의 빌딩들 (왼쪽 둘째 길 아래는 옛 동네로 가는 보도가 이어져 보이게 비움)
@@ -1253,7 +1253,8 @@ function townMap(C, name) {
     blds.push({ x: x0, y: y0, w: x1 - x0, h: y1 - y0, kind: b.kind, roof: b.roof, tone: b.tone });
     if (b.door) {
       if (b.door.x < b.x || b.door.x + b.door.w > b.x + b.w) throw new Error(`${name} — ${b.door.name} 문이 건물 밖`);
-      ports.push({ name: b.door.name, label: b.door.label, x: b.door.x + PD.l, y: b.y + PD.t + b.h - 1, w: b.door.w, h: 1, door: true });
+      ports.push({ name: b.door.name, label: b.door.label, x: b.door.x + PD.l, y: b.y + PD.t + b.h - 1, w: b.door.w, h: 1, door: true, ...(b.door.to ? { to: b.door.to } : {}) });   // to 가 없으면 닫힌 문
+      if (b.door.to) for (let i = 0; i < b.door.w; i++) tiles[at(b.door.x + i, b.y + b.h - 1)] = FLOOR;   // 열린 문 — 문 칸으로 걸어 들어감 (겉모습은 건물 그대로)
     }
   });
   C.buildings.forEach((b, i) => each(b.x - 1, b.y - 1, b.w + 2, b.h + 2, (k, x, y) => {
@@ -1282,13 +1283,79 @@ const oldtown = () => townMap(OLDTOWN, '옛 동네');
 const city = () => townMap(CITY, '도시');
 const ROADISH_LOOK = c => (c & 15) === OL.DIRT || (c & 15) === OL.COBBLE;
 
+// ---------- 헌터백화점 안 — 1층 (docs/CITY-PLAN.md 1-나) ----------
+// 위 벽(세 칸 높이)에 왼쪽부터 무기 진열 벽 · 2층으로 가는 에스컬레이터 · 매입 창구. 그 바로 앞줄에 계산대(가운데 빈 칸에 점원) · 막아 둔 줄 · 닫힌 창구.
+// 가운데 통로(어두운 돌 띠) 양옆으로 유리 진열장이 두 줄씩. 아래 벽 가운데가 도시로 나가는 문.
+// 칸은 바닥 기준 (왼쪽 위가 0, 0). 가구는 막힌 칸 — 지도 속성 blds 의 네모(kind)로 넘겨 그림은 mapart 의 storeProp 이, 위 벽 무늬는 속성 wall 로 storeWall 이.
+// 점원은 npc 층의 점 (shop = 매장 이름 — data.js 의 DEPT_SECTIONS). 닿으면 상점 창 (map.js 의 shop 사건)
+const DEPT = {
+  title: '헌터백화점 1층', w: 21, h: 12, to: 'city.dept',
+  wall: [{ x: 1, w: 7, kind: 'rack' }, { x: 9, w: 3, kind: 'esc' }, { x: 13, w: 7, kind: 'buy' }],
+  props: [
+    { kind: 'counter', x: 1, y: 0, w: 3 }, { kind: 'counter', x: 5, y: 0, w: 3 },          // 무기 매장 계산대 — 사이 (4, 0) 에 점원
+    { kind: 'rope', x: 9, y: 0, w: 3 },                                                     // 에스컬레이터 앞 — 막아 둔 줄
+    { kind: 'closed', x: 13, y: 0, w: 7 },                                                  // 매입 창구 — 닫힘 (재료를 파는 곳, 1-다)
+    { kind: 'plant', x: 8, y: 0, w: 1 }, { kind: 'plant', x: 12, y: 0, w: 1 }, { kind: 'plant', x: 0, y: 11, w: 1 }, { kind: 'plant', x: 20, y: 11, w: 1 },
+    { kind: 'case', x: 1, y: 3, w: 2, tone: 0 }, { kind: 'case', x: 5, y: 3, w: 2, tone: 1 }, { kind: 'case', x: 1, y: 6, w: 2, tone: 2 }, { kind: 'case', x: 5, y: 6, w: 2, tone: 3 },
+    { kind: 'case', x: 14, y: 3, w: 2, tone: 4 }, { kind: 'case', x: 18, y: 3, w: 2, tone: 5 }, { kind: 'case', x: 14, y: 6, w: 2, tone: 6 }, { kind: 'case', x: 18, y: 6, w: 2, tone: 7 },
+    { kind: 'bench', x: 3, y: 9, w: 3 }, { kind: 'bench', x: 15, y: 9, w: 3 }
+  ],
+  clerks: [{ x: 4, y: 0, shop: 'weapon', label: '무기 매장' }],
+  signs: [{ name: 'floor2', x: 9, y: 0, w: 3, label: '2층 방어구 매장 · 준비 중' }, { name: 'buyback', x: 13, y: 0, w: 7, label: '매입 창구 · 준비 중' }]
+};
+function deptInterior() {
+  const D = DEPT, TOP = 3, SIDE = 2, BOTTOM = 2, AISLE = 3;
+  const W = D.w + SIDE * 2, H = TOP + D.h + BOTTOM, cx = W >> 1;
+  if (D.w % 2 === 0) throw new Error('헌터백화점 — 바닥 폭은 홀수여야 통로가 가운데에 맞음');
+  const tiles = new Uint8Array(W * H).fill(WALL), lk = new Uint8Array(W * H).fill(look(OL.TILES, CITY_BIO));
+  const at = (x, y) => (y + TOP) * W + x + SIDE, inFloor = (x, y) => x >= 0 && y >= 0 && x < D.w && y < D.h;
+  for (let y = 0; y < D.h; y++) for (let x = 0; x < D.w; x++) tiles[at(x, y)] = FLOOR;
+  const a0 = cx - SIDE - (AISLE >> 1);                                                      // 통로의 왼쪽 칸 (바닥 기준)
+  for (let y = 1; y < D.h; y++) for (let x = a0; x < a0 + AISLE; x++) lk[at(x, y)] = look(OL.PAVE, CITY_BIO);
+  // 가구 — 바닥 안, 서로 안 겹치게, 통로를 막지 않게
+  const blds = [];
+  for (const p of D.props) {
+    const w = p.w || 1, h = p.h || 1;
+    for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
+      const x = p.x + i, y = p.y + j;
+      if (!inFloor(x, y) || tiles[at(x, y)] !== FLOOR) throw new Error(`헌터백화점 — ${p.kind} (${x}, ${y}) 자리가 빈 바닥이 아님`);
+      if (y > 0 && x >= a0 && x < a0 + AISLE) throw new Error(`헌터백화점 — ${p.kind} (${x}, ${y}) 이(가) 가운데 통로를 막음`);
+      tiles[at(x, y)] = WALL; lk[at(x, y)] = look(BUILD, CITY_BIO);
+    }
+    blds.push({ x: p.x + SIDE, y: p.y + TOP, w, h, kind: p.kind, tone: p.tone });
+  }
+  // 나가는 문 — 아래 벽 첫 줄 가운데, 통로와 같은 폭
+  const out = { name: 'out', label: '나가기', x: cx - (AISLE >> 1), y: TOP + D.h, w: AISLE, h: 1, to: D.to, door: true };
+  for (let i = 0; i < out.w; i++) { tiles[out.y * W + out.x + i] = FLOOR; lk[out.y * W + out.x + i] = look(DOORWAY, CITY_BIO); }
+  const ports = [out];
+  for (const s of D.signs) ports.push({ name: s.name, label: s.label, x: s.x + SIDE, y: s.y + TOP, w: s.w, h: 1, door: true });   // 이름표만 — 들어갈 수 없음 (to 없음)
+  const start = { name: 'start', x: out.x + (out.w >> 1), y: out.y - 1 };
+  const npcs = [start];
+  for (const c of D.clerks) {
+    if (!inFloor(c.x, c.y) || tiles[at(c.x, c.y)] !== FLOOR) throw new Error(`헌터백화점 — 점원 (${c.x}, ${c.y}) 자리가 빈 바닥이 아님`);
+    npcs.push({ name: 'clerk', x: c.x + SIDE, y: c.y + TOP, shop: c.shop, label: c.label });
+  }
+  // 들어선 자리에서 걸어서 — 모든 빈 바닥에 닿고(갇힌 칸 없음), 점원마다 곁에 설 수 있어야 함 (점원 칸은 막힌 칸)
+  const blocked = new Set(D.clerks.map(c => at(c.x, c.y))), seen = new Uint8Array(W * H), q = [start.y * W + start.x];
+  seen[q[0]] = 1;
+  for (let n = 0; n < q.length; n++) for (const d of [1, -1, W, -W]) {
+    const j = q[n] + d;
+    if (j < 0 || j >= W * H || seen[j] || tiles[j] !== FLOOR || blocked.has(j) || (Math.abs(d) === 1 && ((j / W) | 0) !== ((q[n] / W) | 0))) continue;
+    seen[j] = 1; q.push(j);
+  }
+  for (let y = 0; y < D.h; y++) for (let x = 0; x < D.w; x++) if (tiles[at(x, y)] === FLOOR && !blocked.has(at(x, y)) && !seen[at(x, y)]) throw new Error(`헌터백화점 — (${x}, ${y}) 에 걸어서 못 감`);
+  for (const c of D.clerks) if (![1, -1, W, -W].some(d => seen[at(c.x, c.y) + d])) throw new Error(`헌터백화점 — 점원 (${c.x}, ${c.y}) 곁에 설 자리가 없음`);
+  return buildTmj({ w: W, h: H, tiles, look: lk, ports, npcs,
+    props: { title: D.title, interior: true, store: true, blds: JSON.stringify(blds), wall: JSON.stringify(D.wall.map(s => ({ x: s.x + SIDE, w: s.w, kind: s.kind }))) } });
+}
+
 // 뽑을 지도 전부 — { 파일 이름: 만드는 함수 }
 function allMaps(data) {
-  const out = { sewer: sewer(data), overworld: overworld(data), hub: hub(data), oldtown: oldtown(), city: city() };
+  const out = { sewer: sewer(data), overworld: overworld(data), hub: hub(data), oldtown: oldtown(), city: city(), dept: deptInterior() };
   for (const s of SECRET_ROOMS) out[s.id] = secretRoom(data, s);
   for (const b of BUILDINGS) out[b.id] = buildingInterior(data, b);
   REALMS.forEach((r, i) => { out[r.name] = realm(data, r, i); });
   return out;
 }
 
-module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, looksPng, encodePng, generate, sewer, overworld, hub, oldtown, city, OLDTOWN, CITY, CITY_BIO, secretRoom, buildingInterior, allMaps, layoutFromPlan, HUB_DOORS, REALMS, SEWER, SECRET_ROOMS, BUILDINGS, BUILD, DOORWAY, CARPET, RUIN };
+module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, looksPng, encodePng, generate, sewer, overworld, hub, oldtown, city, deptInterior, OLDTOWN, CITY, DEPT, CITY_BIO, secretRoom, buildingInterior, allMaps, layoutFromPlan, HUB_DOORS, REALMS, SEWER, SECRET_ROOMS, BUILDINGS, BUILD, DOORWAY, CARPET, RUIN };

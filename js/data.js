@@ -53,6 +53,9 @@ const RULES = {
   // 떠돌이 상인의 물건 값 = 그 격 일반 화신 한 번 몫의 이만큼 배.
   // 소지품은 4~6격 기준이라 4격 약 2,000 · 5격 약 3,900 · 6격 약 7,400골드 — 몇 회차를 모아야 하나 살 수 있는 값입니다.
   WARE_PRICE: 60,
+  // 헌터백화점의 물건 값 = 그 격 일반 몬스터 한 번 몫의 이만큼 배 (1격 300 · 2격 570 · 3격 1,080 · 4격 2,060 · 5격 3,910 · 6격 7,430골드).
+  // 그 격에 머무는 한 회차에 60~70마리 몫을 벌어서, 한 회차 벌면 하나 사는 값입니다 (시뮬: 2격에 머무는 회차마다 약 600골드).
+  DEPT_PRICE: 60,
   // 회차마다 떠돌이 상인이 나타날 확률 (카벙클을 처음 꺾은 그 회차는 반드시 나타납니다)
   MERCHANT_CHANCE: 0.5,
   // 떠돌이 상인의 강화석 값 — 강화석 1개에 몇 골드. 1~6지역 어디에 나타나든 같은 상인이라 값도 같습니다.
@@ -2348,6 +2351,52 @@ for (const [id, name, slot, icon, r, arch, note, gold] of MERCHANT_WARES) {
     price: priceFor(r, RULES.WARE_PRICE),
     ...makeItemStats(slot, level, 1.2, arch, false),
     ...(gold ? { goldRate: gold / 100 } : {})
+  });
+}
+
+// ---------- 헌터백화점 (도시 — docs/CITY-PLAN.md 1-나) ----------
+// 사람의 기술로 만든 장비를 골드로 팝니다. 지금은 1층 무기 매장뿐 — 격마다 무기 하나 · 보조무기 하나 (1~6격).
+// 그 격 물건은 앞 격의 보스를 꺾으면 들어옵니다 (1격 물건은 처음부터 — game.js 의 deptOpenRank).
+// 한 번 사면 내 것이 되고 진열대에서 사라집니다. 몬스터 전리품이 아니라서 전리품 예산 밖입니다 (tools/loot-check.js).
+//   [id, 이름, 부위, 아이콘, 격, 성격, 상품 설명 한 줄]
+//   성능은 그 격 지역의 가장 센 일반 몬스터 것의 DEPT_GRADE 배 (정예 1.4 · 보스 1.8 보다 아래 — 사서 뚫되 잡아서 얻는 것이 더 좋게),
+//   값은 priceFor(격, DEPT_PRICE). store 는 매장 이름 (지금은 weapon 하나).
+const DEPT_ID = 'dept';
+const DEPT_GRADE = 1.2;
+const DEPT_SECTIONS = { weapon: { name: '무기 매장', icon: '🧑‍💼' } };
+const DEPT_WARES = [
+  // 제1격
+  ['dept_knife',     '보급형 합금 단검',   'weapon',  '🔪', 1, 'fierce', '협회 인증 입문용. 날보다 손잡이에 공을 들였다.'],
+  ['dept_buckler',   '폴리카보네이트 방패', 'offhand', '🛡️', 1, 'guard',  '투명해서 앞이 보인다 — 그게 장점인지는 써 봐야 안다.'],
+  // 제2격
+  ['dept_saber',     '경량 티타늄 장검',   'weapon',  '🗡️', 2, 'swift',  '한 손으로 하루 종일 휘둘러도 손목이 남는다.'],
+  ['dept_foldshield', '접이식 전술 방패',  'offhand', '🔰', 2, 'thorn',  '펴는 데 0.4초. 접는 데는 조금 더 걸린다.'],
+  // 제3격
+  ['dept_vibro',     '진동 칼날',          'weapon',  '⚔️', 3, 'pierce', '켜 두면 낮게 운다. 단단한 껍데기에 권한다.'],
+  ['dept_damper',    '충격 흡수 방패',     'offhand', '🛡️', 3, 'guard',  '맞은 자리가 하얗게 떴다가 천천히 돌아온다.'],
+  // 제4격
+  ['dept_heatblade', '열선 대검',          'weapon',  '🔥', 4, 'leech',  '날 가운데 붉은 줄이 달아오른다. 장갑 필수.'],
+  ['dept_plate',     '반응 장갑판',        'offhand', '🧱', 4, 'ward',   '맞는 순간 바깥쪽으로 터져 충격을 민다. 판은 갈아 끼운다.'],
+  // 제5격
+  ['dept_lance',     '전도 합금 창',       'weapon',  '🔱', 5, 'brutal', '몬스터 핵에서 뽑은 선이 심으로 들어 있다.'],
+  ['dept_field',     '휴대용 역장기',      'offhand', '📡', 5, 'thorn',  '켜면 팔뚝 앞에 얇은 빛막이 선다. 배터리 별매.'],
+  // 제6격
+  ['dept_plasma',    '플라즈마 절단검',    'weapon',  '⚡', 6, 'fierce', '매장에서 가장 비싼 칼. 시연은 유리 너머로만 한다.'],
+  ['dept_barrier',   '이동식 방벽',        'offhand', '🚧', 6, 'ward',   '등에 지고 가서 발로 차면 펴진다.']
+];
+const DEPT_MAX_RANK = Math.max(...DEPT_WARES.map(w => w[4]));
+for (const [id, name, slot, icon, r, arch, note] of DEPT_WARES) {
+  const zone = ZONES.findIndex(z => z.rank === r);
+  const level = Math.max(...ENEMIES.filter(e => e.zoneIndex === zone && e.kind === 'normal').map(e => e.level));
+  const rank = RANKS.find(x => x.n === r);
+  ITEMS.push({
+    id, name, slot,
+    grade: 'normal', arch, special: null, unique: false, note: note || null,
+    level, rank,
+    from: DEPT_ID, fromName: '헌터백화점', fromIcon: icon,
+    store: 'weapon',
+    price: priceFor(r, RULES.DEPT_PRICE),
+    ...makeItemStats(slot, level, DEPT_GRADE, arch, false)
   });
 }
 

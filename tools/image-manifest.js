@@ -64,7 +64,9 @@
       const z = i.ware ? null : zones.find(x => x.rank === i.rank.n);   // 상자 전용 장비는 그 상자가 있는 격의 지역
       const specials = SPECIAL_KEYS.filter(k => i[k]).map(k => SPECIAL_INFO[k].name);
       const gemOrRelic = i.special === 'gem' ? '보석(작고 빛나는 돌/결정)' : i.special === 'relic' ? '유물(오래된 작은 물건)' : '';
-      const src = i.ware
+      const src = i.store
+        ? '헌터백화점에서 파는 사람의 기술로 만든 헌터 장비(가까운 미래의 공산품, 새것, 깔끔한 금속과 빛나는 선)'
+        : i.ware
         ? '떠돌이 상인이 파는 먼저 온 이들의 소지품(현대적 일상용품, 낡고 사연이 있어 보이게; 누구의 것인지는 암시하지 말 것)'
         : i.chest
           ? `${z ? z.name : ''}의 보물상자에서만 나오는 물건(제${i.rank.n}격 ${i.rank.name}, 오래 묻혀 있던 보물처럼)`
@@ -73,7 +75,7 @@
       return {
         id: i.id, name: i.name, slot: i.slot, slot_en: SLOT_EN[i.slot], grade: i.grade, grade_ko: KIND_KO[i.grade] || i.grade,
         rank: i.rank.n, rank_name: i.rank.name, zone: z ? z.name : null,
-        from_monster_id: i.ware || i.chest ? null : i.from, from_monster: i.ware ? '떠돌이 상인' : i.fromName,
+        from_monster_id: i.ware || i.chest || i.store ? null : i.from, from_monster: i.ware ? '떠돌이 상인' : i.fromName,
         archetype: i.arch || null, archetype_note: archName(i.arch), special_kind: i.special || null, specials, note: i.note || '',
         placeholder_emoji: i.fromIcon, file: `assets/items/${i.id}.png`, size: '256x256', prompt, style: STYLE
       };

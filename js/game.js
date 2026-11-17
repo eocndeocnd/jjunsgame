@@ -415,7 +415,7 @@ function knownZoneCount() {
 // 지역 하나에 격 하나라, 아는 격도 같은 수입니다
 function knownRank(n) { return n <= knownZoneCount(); }
 // 상인의 물건은 사기 전까지 도감에 없습니다 — 몇 개나 있는지조차 보이지 않습니다
-function knownItems() { return ITEMS.filter(i => knownRank(i.rank.n) && (!(i.ware || i.chest) || owns(i.id))); }
+function knownItems() { return ITEMS.filter(i => knownRank(i.rank.n) && (!(i.ware || i.chest || i.store) || owns(i.id))); }
 
 // 히든이 모습을 드러냈는가 — 그 지역 보스를 한 번이라도 꺾은 뒤.
 // 관측자도 마찬가지로 마왕이 쓰러진 뒤에야 나타납니다 (예전엔 보스 다섯을 꺾으면 마왕보다 먼저 나왔습니다).
@@ -1279,6 +1279,41 @@ function buyWare(id) {
   markFresh(it);
   m.bought.push(id);
   pushLog('drop', `떠돌이 상인에게서 『${it.name}』${josa(it.name, '을', '를')} 샀다 — ${fmt(it.price)} 골드`);
+  save();
+  return true;
+}
+
+// ---------- 헌터백화점 (도시) ----------
+// 지금 들어와 있는 격 — 1격 물건은 처음부터, n격 물건은 (n−1)격 보스를 한 번이라도 꺾으면 들어옵니다 (data.js 의 DEPT_WARES)
+function deptOpenRank() {
+  let r = 1;
+  while (r < DEPT_MAX_RANK) {
+    const boss = zoneBoss(ZONES.findIndex(z => z.rank === r));
+    if (!boss || !State.meta.bossesBeaten.includes(boss.id)) break;
+    r++;
+  }
+  return r;
+}
+// 그 매장에 지금 놓인 것 (아직 안 산 것 — 산 물건은 진열대에서 사라집니다)
+function deptWares(section) {
+  const r = deptOpenRank();
+  return ITEMS.filter(i => i.store === section && i.rank.n <= r && !owns(i.id));
+}
+// 다음에 들어올 것 — 한 격 위 (「입고 예정」으로 흐리게 보여 줍니다). 끝까지 들어왔으면 빈 목록
+function deptComing(section) {
+  const r = deptOpenRank() + 1;
+  return ITEMS.filter(i => i.store === section && i.rank.n === r);
+}
+// 산다 — 도시가 열린 뒤, 들어와 있는 것만. 성공하면 true. (어느 지도에 서 있는지는 묻지 않습니다 — 창은 점원에게 닿아야 열립니다)
+function buyDept(id) {
+  const it = getItem(id);
+  if (!State.meta.cityOpen || !it || !it.store || owns(id) || it.rank.n > deptOpenRank()) return false;
+  if (num(State.meta.gold) < it.price) return false;
+  State.meta.gold -= it.price;
+  State.meta.owned[id] = 1;
+  markFresh(it);
+  autoEquipIfBetter(it);                // 알아서 갈아끼우기가 켜져 있을 때만 (지금은 시뮬만 켭니다 — 사람은 구매 창이 「지금 낄까요」를 묻습니다)
+  pushLog('drop', `헌터백화점에서 『${it.name}』${josa(it.name, '을', '를')} 샀다 — ${fmt(it.price)} 골드`);
   save();
   return true;
 }

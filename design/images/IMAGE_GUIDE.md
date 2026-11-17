@@ -18,7 +18,7 @@
 ## 개수
 
 - 몬스터 297개 (일반 157 · 정예 114 · 히든 6 · 보스 20) — 이 중 **화신 215명**은 몬스터 그림을 화신 그림으로도 씁니다
-- 전리품 537개 — 부위별: weapon 57 · offhand 39 · helm 45 · armor 46 · shoulder 36 · gloves 37 · belt 30 · greaves 35 · boots 34 · cloak 39 · ring 35 · necklace 41 · bracelet 38 · special 25
+- 전리품 549개 — 부위별: weapon 63 · offhand 45 · helm 45 · armor 46 · shoulder 36 · gloves 37 · belt 30 · greaves 35 · boots 34 · cloak 39 · ring 35 · necklace 41 · bracelet 38 · special 25
 
 ## 그 밖의 그림
 
@@ -2975,6 +2975,18 @@
 - `ware_ring` **안쪽에 날짜가 새겨진 반지** (ring, 제6격 성능) → `assets/items/ware_ring.png` — 날짜는 오늘보다 한참 전이다.
 - `ware_greaves` **무릎보호대** (greaves, 제6격 성능) → `assets/items/ware_greaves.png` — 한쪽만 심하게 닳았다.
 - `ware_scarf` **색 바랜 목도리** (shoulder, 제6격 성능) → `assets/items/ware_scarf.png` — 누가 떠 준 것인지 모르는 채 두르게 된다.
+- `dept_knife` **보급형 합금 단검** (weapon, 제1격 성능) → `assets/items/dept_knife.png` — 협회 인증 입문용. 날보다 손잡이에 공을 들였다.
+- `dept_buckler` **폴리카보네이트 방패** (offhand, 제1격 성능) → `assets/items/dept_buckler.png` — 투명해서 앞이 보인다 — 그게 장점인지는 써 봐야 안다.
+- `dept_saber` **경량 티타늄 장검** (weapon, 제2격 성능) → `assets/items/dept_saber.png` — 한 손으로 하루 종일 휘둘러도 손목이 남는다.
+- `dept_foldshield` **접이식 전술 방패** (offhand, 제2격 성능) → `assets/items/dept_foldshield.png` — 펴는 데 0.4초. 접는 데는 조금 더 걸린다.
+- `dept_vibro` **진동 칼날** (weapon, 제3격 성능) → `assets/items/dept_vibro.png` — 켜 두면 낮게 운다. 단단한 껍데기에 권한다.
+- `dept_damper` **충격 흡수 방패** (offhand, 제3격 성능) → `assets/items/dept_damper.png` — 맞은 자리가 하얗게 떴다가 천천히 돌아온다.
+- `dept_heatblade` **열선 대검** (weapon, 제4격 성능) → `assets/items/dept_heatblade.png` — 날 가운데 붉은 줄이 달아오른다. 장갑 필수.
+- `dept_plate` **반응 장갑판** (offhand, 제4격 성능) → `assets/items/dept_plate.png` — 맞는 순간 바깥쪽으로 터져 충격을 민다. 판은 갈아 끼운다.
+- `dept_lance` **전도 합금 창** (weapon, 제5격 성능) → `assets/items/dept_lance.png` — 몬스터 핵에서 뽑은 선이 심으로 들어 있다.
+- `dept_field` **휴대용 역장기** (offhand, 제5격 성능) → `assets/items/dept_field.png` — 켜면 팔뚝 앞에 얇은 빛막이 선다. 배터리 별매.
+- `dept_plasma` **플라즈마 절단검** (weapon, 제6격 성능) → `assets/items/dept_plasma.png` — 매장에서 가장 비싼 칼. 시연은 유리 너머로만 한다.
+- `dept_barrier` **이동식 방벽** (offhand, 제6격 성능) → `assets/items/dept_barrier.png` — 등에 지고 가서 발로 차면 펴진다.
 - `chest_sewer_lamp` **꺼지지 않는 수로 등** (offhand, 제1격 성능) → `assets/items/chest_sewer_lamp.png` — 
 - `chest_forest_cloak` **이슬 맺힌 이끼 망토** (cloak, 제2격 성능) → `assets/items/chest_forest_cloak.png` — 
 - `chest_ruins_crown` **물에 잠긴 왕관** (helm, 제3격 성능) → `assets/items/chest_ruins_crown.png` — 

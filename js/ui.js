@@ -1601,7 +1601,7 @@ function initMap() {
     hooks: MapView.gameHooks(),
     tag: MapView.gameTag,
     paused: mapPaused,
-    marks: merchantMark,
+    marks: mapMarks,
     onEvents: onMapEvents,
     hideActors: () => document.body.classList.contains('facing')   // 조우 · 싸움 · 결과 창이 떠 있으면 땅만
   });
@@ -1771,6 +1771,10 @@ function onMapEvents(evs) {
       Sound.play('encounter');
       openShop();
       changed = true;
+    } else if (e.type === 'shop') {
+      Sound.play('encounter');           // 가게 점원에게 닿으면 그 매장의 상점 창 (헌터백화점)
+      openShop(e.npc.shop);
+      changed = true;
     } else if (e.type === 'chest') {
       const got = openChest(e.chest);
       if (got) { Sound.play('drop'); showChest(got); }
@@ -1794,12 +1798,15 @@ function onMapEvents(evs) {
   if (changed) render();
 }
 
-// 떠돌이 상인이 서 있는 칸 (지금 지도에 그 지역이 있으면) — 닿으면 상점 (map.js 의 merchant 사건)
-function merchantMark() {
+// 지도 위에 얹는 사람들 — 떠돌이 상인이 서 있는 칸(지금 지도에 그 지역이 있으면) · 가게 점원. 닿으면 상점 (map.js 의 merchant · shop 사건)
+function mapMarks() {
+  const npcs = mapView.world.map.npcs, out = [];
   const m = State.run && State.run.merchant;
   const z = m && ZONES[m.zone];
-  const spot = z && mapView.world.map.npcs.find(n => n.name === 'merchant' && n.zone === z.id);
-  return spot ? [{ x: spot.x, y: spot.y, icon: '🎒', label: '상인' }] : [];
+  const spot = z && npcs.find(n => n.name === 'merchant' && n.zone === z.id);
+  if (spot) out.push({ x: spot.x, y: spot.y, icon: '🎒', label: '상인' });
+  for (const n of npcs) if (n.shop && DEPT_SECTIONS[n.shop]) out.push({ x: n.x, y: n.y, icon: DEPT_SECTIONS[n.shop].icon, label: n.label || DEPT_SECTIONS[n.shop].name });
+  return out;
 }
 
 // 지도는 늘 화면 가득 — 창(조우 · 싸움 · 결과)이 뜨면 body.facing 으로 지도가 뒤로 물러나고 지도 위의 것들이 숨습니다.
@@ -2297,7 +2304,7 @@ function renderGear() {
   // 특수장비 칸 넷은 같은 목록(특수장비 전부)을 봅니다.
   const fk = freshKey(selectedSlot);
   // 못 얻은 것 목록도 아는 격까지만 — 마왕 너머의 전리품은 몇 개인지조차 보이지 않습니다
-  const all = itemsInSlot(special ? 'special' : selectedSlot).filter(i => owns(i.id) || (knownRank(i.rank.n) && !(i.ware || i.chest)));
+  const all = itemsInSlot(special ? 'special' : selectedSlot).filter(i => owns(i.id) || (knownRank(i.rank.n) && !(i.ware || i.chest || i.store)));
   const have = all.filter(i => owns(i.id));
   const lockedCount = all.length - have.length;
 
@@ -2533,12 +2540,30 @@ function isSlotModalOpen() {
   return !!m && !m.classList.contains('hidden');
 }
 
-// ---------- 떠돌이 상인의 상점 ----------
-// 지금은 강화석만 팝니다 — 부위를 고르고 10 · 100 · 1,000개 묶음으로. 어느 지역에서든 같은 상인, 같은 값입니다.
-// 물건(MERCHANT_WARES)을 넣으면 아래에 같이 나옵니다 (지금은 비어 있음).
+// ---------- 상점 창 — 떠돌이 상인 · 헌터백화점의 매장이 같이 씁니다 ----------
+// 떠돌이 상인: 소지품 셋까지 + 강화석 (부위를 고르고 10 · 100 · 1,000개 묶음으로. 어느 지역에서든 같은 상인, 같은 값).
+// 헌터백화점(shopKind 가 매장 이름 — data.js 의 DEPT_SECTIONS): 점원의 한마디 · 들어와 있는 물건 · 흐리게 「입고 예정」(한 격 위). 강화석은 안 팝니다.
 let shopSlot = null;   // 강화석을 살 부위. 창을 열 때 지금 고른 부위로 맞춥니다
-function openShop() {
-  if (!merchantHere()) return;
+let shopKind = 'merchant';   // 'merchant' 또는 백화점 매장 이름
+let shopSay = '';            // 점원의 한마디 — 창을 열 때 한 번 고릅니다 (사고 나서 다시 그려도 그대로)
+const isDeptShop = () => shopKind !== 'merchant';
+// 지금 연 상점이 아직 그 자리에 있나 (상인이 떠났거나 도시가 아니면 닫습니다)
+function shopHere() { return isDeptShop() ? !!State.meta.cityOpen && !!DEPT_SECTIONS[shopKind] : merchantHere(); }
+// 점원은 등록증도 없는 손님을 수상쩍어하지만 묻지 않습니다
+const CLERK_TALK = {
+  first: ['「헌터 등록증은… 아, 됐어요. 묻지 않을게요.」', '「처음 뵙는 분인데 손이… 아니에요. 천천히 보세요.」'],
+  again: ['「지난번 건 잘 쓰셨어요? …어디서 쓰셨는지는 안 물어볼게요.」', '「또 오셨네요. 협회엔 말 안 했어요. 말할 것도 없고요.」'],
+  empty: ['「지금 있는 건 다 가져가셨어요. 새 물건이 들어오면… 또 오시겠죠.」']
+};
+function clerkLine(kind) {
+  const owned = ITEMS.some(i => i.store === kind && owns(i.id));
+  const list = !deptWares(kind).length ? CLERK_TALK.empty : owned ? CLERK_TALK.again : CLERK_TALK.first;
+  return list[Math.floor(Math.random() * list.length)];
+}
+function openShop(kind = 'merchant') {
+  shopKind = kind;
+  if (!shopHere()) return;
+  shopSay = isDeptShop() ? clerkLine(kind) : '';
   shopSlot = SLOT_IDS.includes(selectedSlot) ? selectedSlot : SLOT_IDS[0];
   $('shopModal').classList.remove('hidden');
   renderShop();
@@ -2554,22 +2579,19 @@ function isShopOpen() {
 }
 function renderShop() {
   if (!isShopOpen()) return;
-  if (!merchantHere()) { closeShop(); return; }
-  const m = State.run.merchant;
+  if (!shopHere()) { closeShop(); return; }
+  const dept = isDeptShop();
   const gold = num(State.meta.gold);
+  $('shopTitle').textContent = dept ? `헌터백화점 · ${DEPT_SECTIONS[shopKind].name}` : '떠돌이 상인';
   $('shopGold').textContent = `골드 ${fmt(gold)}`;
-  const cards = m.wares.map(id => {
-    const item = getItem(id);
-    if (!item) return '';
-    // 산 물건은 상점에서 사라집니다
-    if (m.bought.includes(id) || owns(id)) return '';
-    const sold = false;
+  // 물건 한 줄 — coming 이면 「입고 예정」(흐리게, 살 수 없음)
+  const card = (item, coming) => {
     const can = gold >= item.price;
     const worn = getItem(State.meta.equipped[item.slot]);
     const diff = itemDiffText(item, worn, slotMult(item.slot));
     const spec = itemSpecialText(item);
     return `
-      <div class="inv-item ware">
+      <div class="inv-item ware${coming ? ' coming' : ''}">
         <span class="inv-art">${item.fromIcon}</span>
         <div class="inv-body">
           <div class="inv-head">${itemTag(item)}<span class="inv-name">${item.name}</span></div>
@@ -2577,9 +2599,27 @@ function renderShop() {
           ${diff ? `<div class="inv-diff">${diff}</div>` : ''}
           ${item.note ? `<div class="inv-note">${item.note}</div>` : ''}
         </div>
-        <div class="inv-act"><button class="btn" data-buy="${id}" ${can ? '' : 'disabled'}>${fmt(item.price)} 골드</button></div>
+        <div class="inv-act">${coming
+          ? `<span class="ware-soon">입고 예정<small>${fmt(item.price)} 골드</small></span>`
+          : `<button class="btn" data-buy="${item.id}" ${can ? '' : 'disabled'}>${fmt(item.price)} 골드</button>`}</div>
       </div>`;
-  }).join('');
+  };
+  // 산 물건은 상점에서 사라집니다
+  const list = dept
+    ? deptWares(shopKind).sort((a, b) => a.rank.n - b.rank.n || SLOT_IDS.indexOf(a.slot) - SLOT_IDS.indexOf(b.slot))
+    : State.run.merchant.wares.map(getItem).filter(i => i && !State.run.merchant.bought.includes(i.id) && !owns(i.id));
+  const cards = list.map(i => card(i, false)).join('');
+  if (dept) {
+    const soon = deptComing(shopKind);
+    const next = soon.length ? `
+      <div class="shop-soon-head">다음에 들어올 물건 — 제${soon[0].rank.n - 1}격의 보스를 꺾으면</div>
+      <div class="inventory shop-wares">${soon.map(i => card(i, true)).join('')}</div>` : '';
+    $('shopBody').innerHTML = `<div class="shop-say">${DEPT_SECTIONS[shopKind].icon} ${shopSay}</div>`
+      + (cards ? `<div class="inventory shop-wares">${cards}</div>` : '<div class="adm-note">지금 들어와 있는 물건은 모두 샀다</div>')
+      + next;
+    for (const b of document.querySelectorAll('[data-buy]')) b.addEventListener('click', () => openBuy(b.dataset.buy));
+    return;
+  }
   // 강화석 — 부위를 고르면 그 부위의 지금 강화석 · 강화 단계와 다음 강화에 드는 수가 보입니다
   const nx = nextEnhance(shopSlot);
   const stones = `
@@ -2611,7 +2651,7 @@ function renderShop() {
 let buyId = null;
 function openBuy(id) {
   const item = getItem(id);
-  if (!item || !merchantHere()) return;
+  if (!item || !shopHere()) return;
   buyId = id;
   const gold = num(State.meta.gold), m = slotMult(item.slot);
   const worn = getItem(State.meta.equipped[item.slot]);
@@ -2640,9 +2680,44 @@ function openBuy(id) {
     </div>`;
   for (const b of $('buyBody').querySelectorAll('[data-closebuy]')) b.addEventListener('click', closeBuy);
   $('buyOkBtn').addEventListener('click', () => {
-    const ok = buyWare(buyId);
+    const got = buyId, ok = isDeptShop() ? buyDept(got) : buyWare(got);
     closeBuy();
-    if (ok) { Sound.play('equip'); render(); }
+    if (!ok) return;
+    Sound.play('equip');
+    render();
+    askWear(got);
+  });
+  $('buyModal').classList.remove('hidden');
+}
+// 산 직후 — 「지금 낄까」를 한 번 묻습니다 (사 놓고 안 낀 채 들어가는 일이 없게). 이미 꼈거나 낄 수 없는 것이면 묻지 않습니다
+function askWear(id) {
+  const item = getItem(id);
+  if (!item || !owns(id) || item.slot === 'special' || !isSlotOpen(item.slot) || equippedSlotOf(id)) return;
+  const m = slotMult(item.slot), worn = getItem(State.meta.equipped[item.slot]);
+  buyId = id;
+  $('buyBody').innerHTML = `
+    <div class="buy-item">
+      <span class="inv-art">${item.fromIcon}</span>
+      <div>
+        <div class="inv-head">${itemTag(item)}<span class="inv-name">${item.name}</span></div>
+        <div class="buy-slot">${SLOT_NAMES[item.slot]} — 샀다</div>
+      </div>
+    </div>
+    <div class="buy-cmp">
+      <div class="buy-k">${worn ? `지금 낀 『${worn.name}』${josa(worn.name, '과', '와')} 견주면` : '지금 이 부위는 비어 있음'}</div>
+      <div class="inv-diff">${itemDiffText(item, worn, m)}</div>
+    </div>
+    <div class="buy-ask">지금 낄까요?</div>
+    <div class="buy-actions">
+      <button class="btn" data-closebuy>나중에</button>
+      <button class="btn primary" id="wearOkBtn">낀다</button>
+    </div>`;
+  for (const b of $('buyBody').querySelectorAll('[data-closebuy]')) b.addEventListener('click', closeBuy);
+  $('wearOkBtn').addEventListener('click', () => {
+    equip(id);
+    closeBuy();
+    Sound.play('equip');
+    render();
   });
   $('buyModal').classList.remove('hidden');
 }
