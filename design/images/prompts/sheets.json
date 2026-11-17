@@ -1,0 +1,3447 @@
+[
+ {
+  "sheet": "design/images/sheets/rank01-A.png",
+  "rank": 1,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "dept_knife",
+    "name": "보급형 합금 단검",
+    "file": "assets/items/dept_knife.png"
+   },
+   {
+    "id": "dungeonguardian_0",
+    "name": "수호자의 대검",
+    "file": "assets/items/dungeonguardian_0.png"
+   },
+   {
+    "id": "goblin_0",
+    "name": "고블린 손도끼",
+    "file": "assets/items/goblin_0.png"
+   },
+   {
+    "id": "slime_0",
+    "name": "녹슨 단검",
+    "file": "assets/items/slime_0.png"
+   },
+   {
+    "id": "chest_sewer_lamp",
+    "name": "꺼지지 않는 수로 등",
+    "file": "assets/items/chest_sewer_lamp.png"
+   },
+   {
+    "id": "dept_buckler",
+    "name": "폴리카보네이트 방패",
+    "file": "assets/items/dept_buckler.png"
+   },
+   {
+    "id": "imp_0",
+    "name": "작은 삼지창",
+    "file": "assets/items/imp_0.png"
+   },
+   {
+    "id": "goblin_1",
+    "name": "찌그러진 투구",
+    "file": "assets/items/goblin_1.png"
+   },
+   {
+    "id": "skeleton_1",
+    "name": "해골 투구",
+    "file": "assets/items/skeleton_1.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank01-B.png",
+  "rank": 1,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "dungeonguardian_1",
+    "name": "고철 판금",
+    "file": "assets/items/dungeonguardian_1.png"
+   },
+   {
+    "id": "goblinchief_1",
+    "name": "전리품 누더기",
+    "file": "assets/items/goblinchief_1.png"
+   },
+   {
+    "id": "zombie_0",
+    "name": "썩은 가죽",
+    "file": "assets/items/zombie_0.png"
+   },
+   {
+    "id": "goblinchief_0",
+    "name": "족장의 어깨뼈",
+    "file": "assets/items/goblinchief_0.png"
+   },
+   {
+    "id": "skeleton_0",
+    "name": "갈비뼈 견갑",
+    "file": "assets/items/skeleton_0.png"
+   },
+   {
+    "id": "darkwolf_2",
+    "name": "늑대발 장갑",
+    "file": "assets/items/darkwolf_2.png"
+   },
+   {
+    "id": "mimic_0",
+    "name": "이빨 달린 상자",
+    "file": "assets/items/mimic_0.png"
+   },
+   {
+    "id": "kobold_2",
+    "name": "코볼트 허리끈",
+    "file": "assets/items/kobold_2.png"
+   },
+   {
+    "id": "kobold_1",
+    "name": "비늘 각반",
+    "file": "assets/items/kobold_1.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank01-C.png",
+  "rank": 1,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "zombie_1",
+    "name": "무거운 발",
+    "file": "assets/items/zombie_1.png"
+   },
+   {
+    "id": "darkwolf_1",
+    "name": "발자국 없는 신",
+    "file": "assets/items/darkwolf_1.png"
+   },
+   {
+    "id": "giantrat_0",
+    "name": "쥐가죽 신",
+    "file": "assets/items/giantrat_0.png"
+   },
+   {
+    "id": "imp_2",
+    "name": "박쥐날개 망토",
+    "file": "assets/items/imp_2.png"
+   },
+   {
+    "id": "cavespider_1",
+    "name": "독니 반지",
+    "file": "assets/items/cavespider_1.png"
+   },
+   {
+    "id": "giantrat_1",
+    "name": "이빨 목걸이",
+    "file": "assets/items/giantrat_1.png"
+   },
+   {
+    "id": "dungeonguardian_2",
+    "name": "지하수로의 열쇠",
+    "file": "assets/items/dungeonguardian_2.png"
+   },
+   {
+    "id": "mimic_1",
+    "name": "가짜 금화",
+    "file": "assets/items/mimic_1.png"
+   },
+   {
+    "id": "cavespider_2",
+    "name": "거미줄 팔찌",
+    "file": "assets/items/cavespider_2.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank02-A.png",
+  "rank": 2,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "dept_saber",
+    "name": "경량 티타늄 장검",
+    "file": "assets/items/dept_saber.png"
+   },
+   {
+    "id": "forestwitch_0",
+    "name": "뒤틀린 지팡이",
+    "file": "assets/items/forestwitch_0.png"
+   },
+   {
+    "id": "trollking_0",
+    "name": "재생의 곤봉",
+    "file": "assets/items/trollking_0.png"
+   },
+   {
+    "id": "dept_foldshield",
+    "name": "접이식 전술 방패",
+    "file": "assets/items/dept_foldshield.png"
+   },
+   {
+    "id": "hobgoblin_0",
+    "name": "군용 방패",
+    "file": "assets/items/hobgoblin_0.png"
+   },
+   {
+    "id": "treant_1",
+    "name": "뿌리 방패",
+    "file": "assets/items/treant_1.png"
+   },
+   {
+    "id": "gargoyle_1",
+    "name": "돌 뿔",
+    "file": "assets/items/gargoyle_1.png"
+   },
+   {
+    "id": "orcgeneral_2",
+    "name": "뿔 달린 투구",
+    "file": "assets/items/orcgeneral_2.png"
+   },
+   {
+    "id": "orc_1",
+    "name": "가죽 흉갑",
+    "file": "assets/items/orc_1.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank02-B.png",
+  "rank": 2,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "trollking_1",
+    "name": "트롤가죽 갑주",
+    "file": "assets/items/trollking_1.png"
+   },
+   {
+    "id": "ogre_0",
+    "name": "통나무 어깨받이",
+    "file": "assets/items/ogre_0.png"
+   },
+   {
+    "id": "orcgeneral_0",
+    "name": "장군의 견장",
+    "file": "assets/items/orcgeneral_0.png"
+   },
+   {
+    "id": "orc_2",
+    "name": "오크 손등가리개",
+    "file": "assets/items/orc_2.png"
+   },
+   {
+    "id": "hobgoblin_2",
+    "name": "군용 허리띠",
+    "file": "assets/items/hobgoblin_2.png"
+   },
+   {
+    "id": "treant_2",
+    "name": "덩굴 허리띠",
+    "file": "assets/items/treant_2.png"
+   },
+   {
+    "id": "lizardman_1",
+    "name": "늪지 각반",
+    "file": "assets/items/lizardman_1.png"
+   },
+   {
+    "id": "ogre_1",
+    "name": "두꺼운 각반",
+    "file": "assets/items/ogre_1.png"
+   },
+   {
+    "id": "darkelf_1",
+    "name": "그림자 신",
+    "file": "assets/items/darkelf_1.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank02-C.png",
+  "rank": 2,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "harpy_0",
+    "name": "깃털 신",
+    "file": "assets/items/harpy_0.png"
+   },
+   {
+    "id": "chest_forest_cloak",
+    "name": "이슬 맺힌 이끼 망토",
+    "file": "assets/items/chest_forest_cloak.png"
+   },
+   {
+    "id": "harpy_2",
+    "name": "깃털 망토",
+    "file": "assets/items/harpy_2.png"
+   },
+   {
+    "id": "darkelf_2",
+    "name": "암살자의 인장",
+    "file": "assets/items/darkelf_2.png"
+   },
+   {
+    "id": "forestwitch_2",
+    "name": "마녀의 고리",
+    "file": "assets/items/forestwitch_2.png"
+   },
+   {
+    "id": "basilisk_0",
+    "name": "석화의 눈",
+    "file": "assets/items/basilisk_0.png"
+   },
+   {
+    "id": "trollking_2",
+    "name": "숲의 심장",
+    "file": "assets/items/trollking_2.png"
+   },
+   {
+    "id": "basilisk_2",
+    "name": "석화의 팔찌",
+    "file": "assets/items/basilisk_2.png"
+   },
+   {
+    "id": "gargoyle_2",
+    "name": "돌 팔찌",
+    "file": "assets/items/gargoyle_2.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank03-A.png",
+  "rank": 3,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "dept_vibro",
+    "name": "진동 칼날",
+    "file": "assets/items/dept_vibro.png"
+   },
+   {
+    "id": "fallenking_0",
+    "name": "왕의 세검",
+    "file": "assets/items/fallenking_0.png"
+   },
+   {
+    "id": "hydra_0",
+    "name": "아홉 머리의 이빨",
+    "file": "assets/items/hydra_0.png"
+   },
+   {
+    "id": "minotaur_0",
+    "name": "미궁의 전투도끼",
+    "file": "assets/items/minotaur_0.png"
+   },
+   {
+    "id": "dept_damper",
+    "name": "충격 흡수 방패",
+    "file": "assets/items/dept_damper.png"
+   },
+   {
+    "id": "irongolem_0",
+    "name": "강철 방패",
+    "file": "assets/items/irongolem_0.png"
+   },
+   {
+    "id": "chest_ruins_crown",
+    "name": "물에 잠긴 왕관",
+    "file": "assets/items/chest_ruins_crown.png"
+   },
+   {
+    "id": "darkknight_2",
+    "name": "빈 투구",
+    "file": "assets/items/darkknight_2.png"
+   },
+   {
+    "id": "fallenking_1",
+    "name": "녹슨 왕관",
+    "file": "assets/items/fallenking_1.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank03-B.png",
+  "rank": 3,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "griffinlord_1",
+    "name": "깃털 흉갑",
+    "file": "assets/items/griffinlord_1.png"
+   },
+   {
+    "id": "hydra_1",
+    "name": "재생하는 비늘",
+    "file": "assets/items/hydra_1.png"
+   },
+   {
+    "id": "chimera_0",
+    "name": "세 짐승의 어깨",
+    "file": "assets/items/chimera_0.png"
+   },
+   {
+    "id": "darkknight_0",
+    "name": "흑철 견갑",
+    "file": "assets/items/darkknight_0.png"
+   },
+   {
+    "id": "irongolem_2",
+    "name": "무쇠 손",
+    "file": "assets/items/irongolem_2.png"
+   },
+   {
+    "id": "minotaur_2",
+    "name": "미궁의 허리띠",
+    "file": "assets/items/minotaur_2.png"
+   },
+   {
+    "id": "stonegolem_2",
+    "name": "화강암 띠",
+    "file": "assets/items/stonegolem_2.png"
+   },
+   {
+    "id": "cockatrice_0",
+    "name": "석화 방지 각반",
+    "file": "assets/items/cockatrice_0.png"
+   },
+   {
+    "id": "stonegolem_1",
+    "name": "돌기둥 각반",
+    "file": "assets/items/stonegolem_1.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank03-C.png",
+  "rank": 3,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "griffinlord_0",
+    "name": "창공의 발톱",
+    "file": "assets/items/griffinlord_0.png"
+   },
+   {
+    "id": "wyvern_0",
+    "name": "날개막 신",
+    "file": "assets/items/wyvern_0.png"
+   },
+   {
+    "id": "manticore_2",
+    "name": "만티코어 망토",
+    "file": "assets/items/manticore_2.png"
+   },
+   {
+    "id": "wyvern_2",
+    "name": "와이번 가죽 망토",
+    "file": "assets/items/wyvern_2.png"
+   },
+   {
+    "id": "harpyqueen_0",
+    "name": "여왕의 깃털",
+    "file": "assets/items/harpyqueen_0.png"
+   },
+   {
+    "id": "manticore_1",
+    "name": "만티코어의 송곳니",
+    "file": "assets/items/manticore_1.png"
+   },
+   {
+    "id": "chimera_1",
+    "name": "뒤섞인 심장",
+    "file": "assets/items/chimera_1.png"
+   },
+   {
+    "id": "fallenking_2",
+    "name": "무너진 옥새",
+    "file": "assets/items/fallenking_2.png"
+   },
+   {
+    "id": "harpyqueen_2",
+    "name": "여왕의 팔찌",
+    "file": "assets/items/harpyqueen_2.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank04-A.png",
+  "rank": 4,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "dept_heatblade",
+    "name": "열선 대검",
+    "file": "assets/items/dept_heatblade.png"
+   },
+   {
+    "id": "giantking_0",
+    "name": "고개를 막은 대검",
+    "file": "assets/items/giantking_0.png"
+   },
+   {
+    "id": "goliath2_0",
+    "name": "베틀채 같은 창",
+    "file": "assets/items/goliath2_0.png"
+   },
+   {
+    "id": "hillgiant_0",
+    "name": "뽑아 든 통바위",
+    "file": "assets/items/hillgiant_0.png"
+   },
+   {
+    "id": "dept_plate",
+    "name": "반응 장갑판",
+    "file": "assets/items/dept_plate.png"
+   },
+   {
+    "id": "ettin_0",
+    "name": "두 머리가 다투는 방패",
+    "file": "assets/items/ettin_0.png"
+   },
+   {
+    "id": "ware_flashlight",
+    "name": "아직 켜지는 손전등",
+    "file": "assets/items/ware_flashlight.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank04-B.png",
+  "rank": 4,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "cyclops_0",
+    "name": "외눈 투구",
+    "file": "assets/items/cyclops_0.png"
+   },
+   {
+    "id": "giantking_1",
+    "name": "산맥의 왕관",
+    "file": "assets/items/giantking_1.png"
+   },
+   {
+    "id": "ware_hardhat",
+    "name": "이름이 번진 안전모",
+    "file": "assets/items/ware_hardhat.png"
+   },
+   {
+    "id": "goliath2_1",
+    "name": "청동 비늘 갑옷",
+    "file": "assets/items/goliath2_1.png"
+   },
+   {
+    "id": "stonegiant_0",
+    "name": "바위산 갑주",
+    "file": "assets/items/stonegiant_0.png"
+   },
+   {
+    "id": "ware_jacket",
+    "name": "구겨진 협회 점퍼",
+    "file": "assets/items/ware_jacket.png"
+   },
+   {
+    "id": "hillgiant_1",
+    "name": "바위를 지는 어깨받이",
+    "file": "assets/items/hillgiant_1.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank04-C.png",
+  "rank": 4,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "chest_giant_knuckle",
+    "name": "거인의 손마디 장갑",
+    "file": "assets/items/chest_giant_knuckle.png"
+   },
+   {
+    "id": "cyclops_1",
+    "name": "벼락을 벼리던 손",
+    "file": "assets/items/cyclops_1.png"
+   },
+   {
+    "id": "firegiant_0",
+    "name": "용암을 주무르는 손",
+    "file": "assets/items/firegiant_0.png"
+   },
+   {
+    "id": "ware_glove",
+    "name": "한 짝뿐인 작업 장갑",
+    "file": "assets/items/ware_glove.png"
+   },
+   {
+    "id": "ettin_1",
+    "name": "둘이 나눠 맨 허리띠",
+    "file": "assets/items/ettin_1.png"
+   },
+   {
+    "id": "frostgiant_0",
+    "name": "서리 내린 각반",
+    "file": "assets/items/frostgiant_0.png"
+   },
+   {
+    "id": "mammoth_0",
+    "name": "눈길을 다지는 각반",
+    "file": "assets/items/mammoth_0.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank04-D.png",
+  "rank": 4,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "ware_boots",
+    "name": "끈이 해진 등산화",
+    "file": "assets/items/ware_boots.png"
+   },
+   {
+    "id": "yeti_0",
+    "name": "큰 발자국 털신",
+    "file": "assets/items/yeti_0.png"
+   },
+   {
+    "id": "yeti_1",
+    "name": "눈보라 털가죽",
+    "file": "assets/items/yeti_1.png"
+   },
+   {
+    "id": "cloudgiant_0",
+    "name": "구름 성의 열쇠고리",
+    "file": "assets/items/cloudgiant_0.png"
+   },
+   {
+    "id": "roc_0",
+    "name": "로크의 알 껍데기",
+    "file": "assets/items/roc_0.png"
+   },
+   {
+    "id": "mammoth_1",
+    "name": "매머드 털 팔찌",
+    "file": "assets/items/mammoth_1.png"
+   },
+   {
+    "id": "giantking_2",
+    "name": "고개의 쐐기돌",
+    "file": "assets/items/giantking_2.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank05-A.png",
+  "rank": 5,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "deathknight_0",
+    "name": "서약의 대검",
+    "file": "assets/items/deathknight_0.png"
+   },
+   {
+    "id": "dept_lance",
+    "name": "전도 합금 창",
+    "file": "assets/items/dept_lance.png"
+   },
+   {
+    "id": "lichking_0",
+    "name": "서리한",
+    "file": "assets/items/lichking_0.png"
+   },
+   {
+    "id": "redhorse_0",
+    "name": "평화를 거두는 큰 칼",
+    "file": "assets/items/redhorse_0.png"
+   },
+   {
+    "id": "balrog_2",
+    "name": "그림자 방패",
+    "file": "assets/items/balrog_2.png"
+   },
+   {
+    "id": "blackhorse_0",
+    "name": "기근의 저울",
+    "file": "assets/items/blackhorse_0.png"
+   },
+   {
+    "id": "dept_field",
+    "name": "휴대용 역장기",
+    "file": "assets/items/dept_field.png"
+   },
+   {
+    "id": "ware_sign",
+    "name": "방패 대신 든 표지판",
+    "file": "assets/items/ware_sign.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank05-B.png",
+  "rank": 5,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "banshee_0",
+    "name": "통곡의 두건",
+    "file": "assets/items/banshee_0.png"
+   },
+   {
+    "id": "lich_2",
+    "name": "학자의 관",
+    "file": "assets/items/lich_2.png"
+   },
+   {
+    "id": "whitehorse_0",
+    "name": "승리의 면류관",
+    "file": "assets/items/whitehorse_0.png"
+   },
+   {
+    "id": "bonedragon_0",
+    "name": "뼈 갑주",
+    "file": "assets/items/bonedragon_0.png"
+   },
+   {
+    "id": "deathknight_1",
+    "name": "사자의 판금",
+    "file": "assets/items/deathknight_1.png"
+   },
+   {
+    "id": "lichking_1",
+    "name": "불사의 판금",
+    "file": "assets/items/lichking_1.png"
+   },
+   {
+    "id": "demonlord_0",
+    "name": "계약의 낙인",
+    "file": "assets/items/demonlord_0.png"
+   },
+   {
+    "id": "incubus_0",
+    "name": "악몽의 어깨",
+    "file": "assets/items/incubus_0.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank05-C.png",
+  "rank": 5,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "ghoul_0",
+    "name": "갈퀴손",
+    "file": "assets/items/ghoul_0.png"
+   },
+   {
+    "id": "ghoul_2",
+    "name": "수의 허리끈",
+    "file": "assets/items/ghoul_2.png"
+   },
+   {
+    "id": "ware_belt",
+    "name": "탄창이 빈 전술 벨트",
+    "file": "assets/items/ware_belt.png"
+   },
+   {
+    "id": "balrog_1",
+    "name": "용암 정강이",
+    "file": "assets/items/balrog_1.png"
+   },
+   {
+    "id": "bonedragon_1",
+    "name": "해골 발톱",
+    "file": "assets/items/bonedragon_1.png"
+   },
+   {
+    "id": "palehorse_0",
+    "name": "죽음이 걸친 창백한 망토",
+    "file": "assets/items/palehorse_0.png"
+   },
+   {
+    "id": "vampire_1",
+    "name": "귀족의 망토",
+    "file": "assets/items/vampire_1.png"
+   },
+   {
+    "id": "ware_raincoat",
+    "name": "찢긴 방수 망토",
+    "file": "assets/items/ware_raincoat.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank05-D.png",
+  "rank": 5,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "wraith_0",
+    "name": "안개 수의",
+    "file": "assets/items/wraith_0.png"
+   },
+   {
+    "id": "demonlord_2",
+    "name": "피로 쓴 서명",
+    "file": "assets/items/demonlord_2.png"
+   },
+   {
+    "id": "succubus_0",
+    "name": "유혹의 반지",
+    "file": "assets/items/succubus_0.png"
+   },
+   {
+    "id": "chest_necro_bell",
+    "name": "장례 종 목걸이",
+    "file": "assets/items/chest_necro_bell.png"
+   },
+   {
+    "id": "lich_1",
+    "name": "성물함",
+    "file": "assets/items/lich_1.png"
+   },
+   {
+    "id": "succubus_1",
+    "name": "훔친 꿈",
+    "file": "assets/items/succubus_1.png"
+   },
+   {
+    "id": "ware_tag",
+    "name": "번호만 남은 인식표",
+    "file": "assets/items/ware_tag.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank05-E.png",
+  "rank": 5,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "banshee_1",
+    "name": "예고의 고리",
+    "file": "assets/items/banshee_1.png"
+   },
+   {
+    "id": "ware_watch",
+    "name": "멈춘 손목시계",
+    "file": "assets/items/ware_watch.png"
+   },
+   {
+    "id": "wraith_1",
+    "name": "원한의 고리",
+    "file": "assets/items/wraith_1.png"
+   },
+   {
+    "id": "lichking_4",
+    "name": "죽지 않는 성물함",
+    "file": "assets/items/lichking_4.png"
+   },
+   {
+    "id": "ravenking_0",
+    "name": "까마귀가 물어 온 청옥",
+    "file": "assets/items/ravenking_0.png"
+   },
+   {
+    "id": "ravenking_1",
+    "name": "검은 깃 부적",
+    "file": "assets/items/ravenking_1.png"
+   },
+   {
+    "id": "vampire_4",
+    "name": "흡혈귀의 송곳니",
+    "file": "assets/items/vampire_4.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank06-A.png",
+  "rank": 6,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "archdemon_0",
+    "name": "심연의 대검",
+    "file": "assets/items/archdemon_0.png"
+   },
+   {
+    "id": "demonking_0",
+    "name": "마왕의 검",
+    "file": "assets/items/demonking_0.png"
+   },
+   {
+    "id": "dept_plasma",
+    "name": "플라즈마 절단검",
+    "file": "assets/items/dept_plasma.png"
+   },
+   {
+    "id": "observer_0",
+    "name": "격을 삼키는 검",
+    "file": "assets/items/observer_0.png"
+   },
+   {
+    "id": "ware_bat",
+    "name": "손잡이만 감긴 쇠파이프",
+    "file": "assets/items/ware_bat.png"
+   },
+   {
+    "id": "dept_barrier",
+    "name": "이동식 방벽",
+    "file": "assets/items/dept_barrier.png"
+   },
+   {
+    "id": "sinsloth_1",
+    "name": "졸음의 방패",
+    "file": "assets/items/sinsloth_1.png"
+   },
+   {
+    "id": "apocalypsebeast_0",
+    "name": "일곱 뿔의 관",
+    "file": "assets/items/apocalypsebeast_0.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank06-B.png",
+  "rank": 6,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "demongeneral_2",
+    "name": "마장의 투구",
+    "file": "assets/items/demongeneral_2.png"
+   },
+   {
+    "id": "sinpride_0",
+    "name": "오만의 관",
+    "file": "assets/items/sinpride_0.png"
+   },
+   {
+    "id": "demonking_1",
+    "name": "마왕의 갑주",
+    "file": "assets/items/demonking_1.png"
+   },
+   {
+    "id": "elderdragon_1",
+    "name": "고룡의 비늘",
+    "file": "assets/items/elderdragon_1.png"
+   },
+   {
+    "id": "sinwrath_0",
+    "name": "분노의 견갑",
+    "file": "assets/items/sinwrath_0.png"
+   },
+   {
+    "id": "ware_scarf",
+    "name": "색 바랜 목도리",
+    "file": "assets/items/ware_scarf.png"
+   },
+   {
+    "id": "demongeneral_3",
+    "name": "마장의 건틀릿",
+    "file": "assets/items/demongeneral_3.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank06-C.png",
+  "rank": 6,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "sinenvy_0",
+    "name": "훔쳐 낀 장갑",
+    "file": "assets/items/sinenvy_0.png"
+   },
+   {
+    "id": "singluttony_0",
+    "name": "부푼 허리띠",
+    "file": "assets/items/singluttony_0.png"
+   },
+   {
+    "id": "apocalypsebeast_1",
+    "name": "짓밟는 각반",
+    "file": "assets/items/apocalypsebeast_1.png"
+   },
+   {
+    "id": "ware_greaves",
+    "name": "무릎보호대",
+    "file": "assets/items/ware_greaves.png"
+   },
+   {
+    "id": "abysstentacle_1",
+    "name": "바닥 없는 신",
+    "file": "assets/items/abysstentacle_1.png"
+   },
+   {
+    "id": "archdemon_2",
+    "name": "군단장의 망토",
+    "file": "assets/items/archdemon_2.png"
+   },
+   {
+    "id": "sinlust_0",
+    "name": "비단 망토",
+    "file": "assets/items/sinlust_0.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank06-D.png",
+  "rank": 6,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "chest_abyss_ring",
+    "name": "왕좌 아래 떨어진 반지",
+    "file": "assets/items/chest_abyss_ring.png"
+   },
+   {
+    "id": "singreed_0",
+    "name": "탐욕의 반지",
+    "file": "assets/items/singreed_0.png"
+   },
+   {
+    "id": "ware_ring",
+    "name": "안쪽에 날짜가 새겨진 반지",
+    "file": "assets/items/ware_ring.png"
+   },
+   {
+    "id": "demonking_2",
+    "name": "마왕의 관",
+    "file": "assets/items/demonking_2.png"
+   },
+   {
+    "id": "worldworm_2",
+    "name": "세계수의 파편",
+    "file": "assets/items/worldworm_2.png"
+   },
+   {
+    "id": "worldworm_3",
+    "name": "갉는 팔찌",
+    "file": "assets/items/worldworm_3.png"
+   },
+   {
+    "id": "elderdragon_4",
+    "name": "고룡의 심장석",
+    "file": "assets/items/elderdragon_4.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank07-A.png",
+  "rank": 7,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "guanyu_0",
+    "name": "청룡언월도",
+    "file": "assets/items/guanyu_0.png"
+   },
+   {
+    "id": "sunzi_0",
+    "name": "병법의 죽간",
+    "file": "assets/items/sunzi_0.png"
+   },
+   {
+    "id": "yisunsin_0",
+    "name": "쌍룡검",
+    "file": "assets/items/yisunsin_0.png"
+   },
+   {
+    "id": "hypatia_0",
+    "name": "천구의",
+    "file": "assets/items/hypatia_0.png"
+   },
+   {
+    "id": "scribe_0",
+    "name": "마르지 않는 뿔병",
+    "file": "assets/items/scribe_0.png"
+   },
+   {
+    "id": "spartacus_1",
+    "name": "검투사의 방패",
+    "file": "assets/items/spartacus_1.png"
+   },
+   {
+    "id": "alexander_0",
+    "name": "정복자의 투구",
+    "file": "assets/items/alexander_0.png"
+   },
+   {
+    "id": "herodotos_0",
+    "name": "기록자의 두건",
+    "file": "assets/items/herodotos_0.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank07-B.png",
+  "rank": 7,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "machao_0",
+    "name": "사자 투구",
+    "file": "assets/items/machao_0.png"
+   },
+   {
+    "id": "yisunsin_1",
+    "name": "두정갑",
+    "file": "assets/items/yisunsin_1.png"
+   },
+   {
+    "id": "zhaoyun_0",
+    "name": "아두를 품은 흉갑",
+    "file": "assets/items/zhaoyun_0.png"
+   },
+   {
+    "id": "genghis_0",
+    "name": "초원의 어깨가리개",
+    "file": "assets/items/genghis_0.png"
+   },
+   {
+    "id": "joan_0",
+    "name": "성녀의 견갑",
+    "file": "assets/items/joan_0.png"
+   },
+   {
+    "id": "scribe_2",
+    "name": "잉크 물든 장갑",
+    "file": "assets/items/scribe_2.png"
+   },
+   {
+    "id": "storyteller_2",
+    "name": "천 하룻밤의 띠",
+    "file": "assets/items/storyteller_2.png"
+   },
+   {
+    "id": "zhangfei_0",
+    "name": "술 호리병 허리띠",
+    "file": "assets/items/zhangfei_0.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank07-C.png",
+  "rank": 7,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "davinci_2",
+    "name": "설계도 각반",
+    "file": "assets/items/davinci_2.png"
+   },
+   {
+    "id": "sunzi_1",
+    "name": "그림자 각반",
+    "file": "assets/items/sunzi_1.png"
+   },
+   {
+    "id": "davinci_1",
+    "name": "비행 장치",
+    "file": "assets/items/davinci_1.png"
+   },
+   {
+    "id": "genghis_1",
+    "name": "천리마의 등자",
+    "file": "assets/items/genghis_1.png"
+   },
+   {
+    "id": "herodotos_2",
+    "name": "여행자의 망토",
+    "file": "assets/items/herodotos_2.png"
+   },
+   {
+    "id": "storyteller_1",
+    "name": "이야기꾼의 해진 외투",
+    "file": "assets/items/storyteller_1.png"
+   },
+   {
+    "id": "archimedes_1",
+    "name": "유레카의 원",
+    "file": "assets/items/archimedes_1.png"
+   },
+   {
+    "id": "huangzhong_0",
+    "name": "노장의 깍지",
+    "file": "assets/items/huangzhong_0.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank07-D.png",
+  "rank": 7,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "joan_2",
+    "name": "재가 되지 않는 심장",
+    "file": "assets/items/joan_2.png"
+   },
+   {
+    "id": "yisunsin_2",
+    "name": "난중일기",
+    "file": "assets/items/yisunsin_2.png"
+   },
+   {
+    "id": "chest_library_cord",
+    "name": "두루마리 끈 팔찌",
+    "file": "assets/items/chest_library_cord.png"
+   },
+   {
+    "id": "hypatia_2",
+    "name": "천문 팔찌",
+    "file": "assets/items/hypatia_2.png"
+   },
+   {
+    "id": "spartacus_2",
+    "name": "끊어진 족쇄",
+    "file": "assets/items/spartacus_2.png"
+   },
+   {
+    "id": "alexander_4",
+    "name": "칼로 끊은 매듭",
+    "file": "assets/items/alexander_4.png"
+   },
+   {
+    "id": "trismegistus_0",
+    "name": "에메랄드 서판",
+    "file": "assets/items/trismegistus_0.png"
+   },
+   {
+    "id": "trismegistus_1",
+    "name": "현자의 돌",
+    "file": "assets/items/trismegistus_1.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank08-A.png",
+  "rank": 8,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "arthur_0",
+    "name": "엑스칼리버",
+    "file": "assets/items/arthur_0.png"
+   },
+   {
+    "id": "lancelot_0",
+    "name": "아론다이트",
+    "file": "assets/items/lancelot_0.png"
+   },
+   {
+    "id": "roland_0",
+    "name": "뒤랑달",
+    "file": "assets/items/roland_0.png"
+   },
+   {
+    "id": "arthur_2",
+    "name": "프리드웬",
+    "file": "assets/items/arthur_2.png"
+   },
+   {
+    "id": "paladin_0",
+    "name": "기도문을 새긴 방패",
+    "file": "assets/items/paladin_0.png"
+   },
+   {
+    "id": "mordred_0",
+    "name": "배신자의 투구",
+    "file": "assets/items/mordred_0.png"
+   },
+   {
+    "id": "templar_0",
+    "name": "붉은 십자 투구",
+    "file": "assets/items/templar_0.png"
+   },
+   {
+    "id": "arthur_1",
+    "name": "펜드래건의 갑주",
+    "file": "assets/items/arthur_1.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank08-B.png",
+  "rank": 8,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "auraknight_1",
+    "name": "오러가 밴 흉갑",
+    "file": "assets/items/auraknight_1.png"
+   },
+   {
+    "id": "berserker_0",
+    "name": "곰가죽 어깨덮개",
+    "file": "assets/items/berserker_0.png"
+   },
+   {
+    "id": "dragonknight_0",
+    "name": "용비늘 견갑",
+    "file": "assets/items/dragonknight_0.png"
+   },
+   {
+    "id": "auraknight_0",
+    "name": "오러를 쥔 건틀릿",
+    "file": "assets/items/auraknight_0.png"
+   },
+   {
+    "id": "bedivere_0",
+    "name": "검을 호수에 던진 손",
+    "file": "assets/items/bedivere_0.png"
+   },
+   {
+    "id": "greenknight_0",
+    "name": "초록 허리띠",
+    "file": "assets/items/greenknight_0.png"
+   },
+   {
+    "id": "roland_1",
+    "name": "론세스바예스의 허리띠",
+    "file": "assets/items/roland_1.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank08-C.png",
+  "rank": 8,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "chest_camelot_greaves",
+    "name": "원탁 기사의 정강이받이",
+    "file": "assets/items/chest_camelot_greaves.png"
+   },
+   {
+    "id": "elcid_1",
+    "name": "마지막 출정의 각반",
+    "file": "assets/items/elcid_1.png"
+   },
+   {
+    "id": "percival_0",
+    "name": "숲에서 온 투박한 각반",
+    "file": "assets/items/percival_0.png"
+   },
+   {
+    "id": "dragonknight_1",
+    "name": "하늘을 딛는 용의 등자",
+    "file": "assets/items/dragonknight_1.png"
+   },
+   {
+    "id": "elcid_0",
+    "name": "바비에카를 몬 박차",
+    "file": "assets/items/elcid_0.png"
+   },
+   {
+    "id": "robinhood_0",
+    "name": "링컨 그린 두건",
+    "file": "assets/items/robinhood_0.png"
+   },
+   {
+    "id": "templar_1",
+    "name": "흰 성전 망토",
+    "file": "assets/items/templar_1.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank08-D.png",
+  "rank": 8,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "gawain_0",
+    "name": "정오의 고리",
+    "file": "assets/items/gawain_0.png"
+   },
+   {
+    "id": "robinhood_1",
+    "name": "화살을 가른 깍지",
+    "file": "assets/items/robinhood_1.png"
+   },
+   {
+    "id": "galahad_0",
+    "name": "성배의 한 줄기 빛",
+    "file": "assets/items/galahad_0.png"
+   },
+   {
+    "id": "paladin_1",
+    "name": "축성된 성표",
+    "file": "assets/items/paladin_1.png"
+   },
+   {
+    "id": "berserker_1",
+    "name": "곰 발톱 팔찌",
+    "file": "assets/items/berserker_1.png"
+   },
+   {
+    "id": "tristan_0",
+    "name": "이졸데의 팔찌",
+    "file": "assets/items/tristan_0.png"
+   },
+   {
+    "id": "ladyofthelake_0",
+    "name": "아발론의 칼집",
+    "file": "assets/items/ladyofthelake_0.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank09-A.png",
+  "rank": 9,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "archmage_0",
+    "name": "별을 부르는 지팡이",
+    "file": "assets/items/archmage_0.png"
+   },
+   {
+    "id": "babayaga_0",
+    "name": "절구공이",
+    "file": "assets/items/babayaga_0.png"
+   },
+   {
+    "id": "merlin_0",
+    "name": "꿈을 꾸는 지팡이",
+    "file": "assets/items/merlin_0.png"
+   },
+   {
+    "id": "summoner_0",
+    "name": "이름을 적은 마도서",
+    "file": "assets/items/summoner_0.png"
+   },
+   {
+    "id": "warlock_0",
+    "name": "끝까지 읽은 금지된 책",
+    "file": "assets/items/warlock_0.png"
+   },
+   {
+    "id": "archmage_1",
+    "name": "마나가 고인 고깔모자",
+    "file": "assets/items/archmage_1.png"
+   },
+   {
+    "id": "merlin_1",
+    "name": "은자의 두건",
+    "file": "assets/items/merlin_1.png"
+   },
+   {
+    "id": "alchemist_0",
+    "name": "얼룩진 연금 앞치마",
+    "file": "assets/items/alchemist_0.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank09-B.png",
+  "rank": 9,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "warlock_1",
+    "name": "그림자 로브",
+    "file": "assets/items/warlock_1.png"
+   },
+   {
+    "id": "circe_0",
+    "name": "베틀에서 짠 숄",
+    "file": "assets/items/circe_0.png"
+   },
+   {
+    "id": "runemage_0",
+    "name": "룬을 새긴 견갑",
+    "file": "assets/items/runemage_0.png"
+   },
+   {
+    "id": "elementalist_0",
+    "name": "네 원소를 쥔 손",
+    "file": "assets/items/elementalist_0.png"
+   },
+   {
+    "id": "salamander2_0",
+    "name": "화염 손",
+    "file": "assets/items/salamander2_0.png"
+   },
+   {
+    "id": "alchemist_1",
+    "name": "약병을 꽂은 허리띠",
+    "file": "assets/items/alchemist_1.png"
+   },
+   {
+    "id": "babayaga_1",
+    "name": "해골 등불 허리띠",
+    "file": "assets/items/babayaga_1.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank09-C.png",
+  "rank": 9,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "chest_avalon_belt",
+    "name": "안개로 짠 허리띠",
+    "file": "assets/items/chest_avalon_belt.png"
+   },
+   {
+    "id": "druid_1",
+    "name": "떡갈나무 껍질 각반",
+    "file": "assets/items/druid_1.png"
+   },
+   {
+    "id": "gnome_0",
+    "name": "땅속을 걷는 각반",
+    "file": "assets/items/gnome_0.png"
+   },
+   {
+    "id": "sylph2_0",
+    "name": "바람의 신",
+    "file": "assets/items/sylph2_0.png"
+   },
+   {
+    "id": "druid_0",
+    "name": "겨우살이 두건",
+    "file": "assets/items/druid_0.png"
+   },
+   {
+    "id": "faust_0",
+    "name": "박사의 검은 가운",
+    "file": "assets/items/faust_0.png"
+   },
+   {
+    "id": "morgan_0",
+    "name": "아발론의 안개 망토",
+    "file": "assets/items/morgan_0.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank09-D.png",
+  "rank": 9,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "morgan_1",
+    "name": "요정 여왕의 반지",
+    "file": "assets/items/morgan_1.png"
+   },
+   {
+    "id": "summoner_1",
+    "name": "계약의 인장",
+    "file": "assets/items/summoner_1.png"
+   },
+   {
+    "id": "merlin_2",
+    "name": "탑에 갇힌 수정",
+    "file": "assets/items/merlin_2.png"
+   },
+   {
+    "id": "runemage_1",
+    "name": "룬 뼈 목걸이",
+    "file": "assets/items/runemage_1.png"
+   },
+   {
+    "id": "undine_0",
+    "name": "사랑을 잃은 물방울",
+    "file": "assets/items/undine_0.png"
+   },
+   {
+    "id": "elementalist_1",
+    "name": "불과 얼음의 팔찌",
+    "file": "assets/items/elementalist_1.png"
+   },
+   {
+    "id": "faust_1",
+    "name": "되찾은 젊음의 팔찌",
+    "file": "assets/items/faust_1.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank10-A.png",
+  "rank": 10,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "cheonma2_0",
+    "name": "천마검",
+    "file": "assets/items/cheonma2_0.png"
+   },
+   {
+    "id": "paeng_0",
+    "name": "팽가의 대도",
+    "file": "assets/items/paeng_0.png"
+   },
+   {
+    "id": "wudang2_0",
+    "name": "송문고검",
+    "file": "assets/items/wudang2_0.png"
+   },
+   {
+    "id": "dalma2_0",
+    "name": "세수경",
+    "file": "assets/items/dalma2_0.png"
+   },
+   {
+    "id": "gaebang2_1",
+    "name": "동냥 바가지",
+    "file": "assets/items/gaebang2_1.png"
+   },
+   {
+    "id": "jegal_0",
+    "name": "백우선",
+    "file": "assets/items/jegal_0.png"
+   },
+   {
+    "id": "bukhae2_1",
+    "name": "서리 투구",
+    "file": "assets/items/bukhae2_1.png"
+   },
+   {
+    "id": "hwasan2_0",
+    "name": "매화 두건",
+    "file": "assets/items/hwasan2_0.png"
+   },
+   {
+    "id": "bukhae2_0",
+    "name": "한빙 갑의",
+    "file": "assets/items/bukhae2_0.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank10-B.png",
+  "rank": 10,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "cheonma2_1",
+    "name": "천마흑포",
+    "file": "assets/items/cheonma2_1.png"
+   },
+   {
+    "id": "shaolin2_1",
+    "name": "철포삼",
+    "file": "assets/items/shaolin2_1.png"
+   },
+   {
+    "id": "tangga2_0",
+    "name": "암기 견대",
+    "file": "assets/items/tangga2_0.png"
+   },
+   {
+    "id": "moyong_0",
+    "name": "되돌리는 손",
+    "file": "assets/items/moyong_0.png"
+   },
+   {
+    "id": "shaolin2_0",
+    "name": "금강 권갑",
+    "file": "assets/items/shaolin2_0.png"
+   },
+   {
+    "id": "gaebang2_0",
+    "name": "아홉 매듭 띠",
+    "file": "assets/items/gaebang2_0.png"
+   },
+   {
+    "id": "zhangsanfeng2_1",
+    "name": "구름 위를 걷는 각반",
+    "file": "assets/items/zhangsanfeng2_1.png"
+   },
+   {
+    "id": "chest_murim_boots",
+    "name": "비무대 모래 묻은 신",
+    "file": "assets/items/chest_murim_boots.png"
+   },
+   {
+    "id": "hwasan2_1",
+    "name": "암향 신",
+    "file": "assets/items/hwasan2_1.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank10-C.png",
+  "rank": 10,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "nangin2_0",
+    "name": "떠돌이 짚신",
+    "file": "assets/items/nangin2_0.png"
+   },
+   {
+    "id": "wudang2_1",
+    "name": "태극 도포",
+    "file": "assets/items/wudang2_1.png"
+   },
+   {
+    "id": "emei2_0",
+    "name": "아미자",
+    "file": "assets/items/emei2_0.png"
+   },
+   {
+    "id": "dalma2_1",
+    "name": "면벽의 염주",
+    "file": "assets/items/dalma2_1.png"
+   },
+   {
+    "id": "namgung2_0",
+    "name": "세가의 옥패",
+    "file": "assets/items/namgung2_0.png"
+   },
+   {
+    "id": "emei2_1",
+    "name": "백팔 염주",
+    "file": "assets/items/emei2_1.png"
+   },
+   {
+    "id": "zhangsanfeng2_0",
+    "name": "태극 팔찌",
+    "file": "assets/items/zhangsanfeng2_0.png"
+   },
+   {
+    "id": "cheonma2_2",
+    "name": "천마의 비급",
+    "file": "assets/items/cheonma2_2.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank11-A.png",
+  "rank": 11,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "geumsijo2_0",
+    "name": "용을 찢는 발톱",
+    "file": "assets/items/geumsijo2_0.png"
+   },
+   {
+    "id": "hwarin2_0",
+    "name": "화린 뿔창",
+    "file": "assets/items/hwarin2_0.png"
+   },
+   {
+    "id": "imugi2_0",
+    "name": "승천하지 못한 뿔",
+    "file": "assets/items/imugi2_0.png"
+   },
+   {
+    "id": "geumseom2_1",
+    "name": "금전표",
+    "file": "assets/items/geumseom2_1.png"
+   },
+   {
+    "id": "yeonggu2_0",
+    "name": "만년 귀갑",
+    "file": "assets/items/yeonggu2_0.png"
+   },
+   {
+    "id": "ungnyeo2_0",
+    "name": "쑥 화관",
+    "file": "assets/items/ungnyeo2_0.png"
+   },
+   {
+    "id": "yeonggu2_1",
+    "name": "거북 등 투구",
+    "file": "assets/items/yeonggu2_1.png"
+   },
+   {
+    "id": "bingjam2_0",
+    "name": "천잠보의",
+    "file": "assets/items/bingjam2_0.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank11-B.png",
+  "rank": 11,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "imugi2_1",
+    "name": "역린 갑주",
+    "file": "assets/items/imugi2_1.png"
+   },
+   {
+    "id": "chest_tianshan_shoulder",
+    "name": "만년설 여우털 어깨걸이",
+    "file": "assets/items/chest_tianshan_shoulder.png"
+   },
+   {
+    "id": "geumsijo2_1",
+    "name": "금빛 깃 견갑",
+    "file": "assets/items/geumsijo2_1.png"
+   },
+   {
+    "id": "sangun2_0",
+    "name": "산군의 어깨",
+    "file": "assets/items/sangun2_0.png"
+   },
+   {
+    "id": "geumjam2_1",
+    "name": "금사 장갑",
+    "file": "assets/items/geumjam2_1.png"
+   },
+   {
+    "id": "whitetiger_0",
+    "name": "흰 범의 발톱",
+    "file": "assets/items/whitetiger_0.png"
+   },
+   {
+    "id": "azuredragon_0",
+    "name": "청룡의 비늘 허리띠",
+    "file": "assets/items/azuredragon_0.png"
+   },
+   {
+    "id": "sansam2_0",
+    "name": "산삼 뿌리 띠",
+    "file": "assets/items/sansam2_0.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank11-C.png",
+  "rank": 11,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "blacktortoise_0",
+    "name": "뱀이 감긴 각반",
+    "file": "assets/items/blacktortoise_0.png"
+   },
+   {
+    "id": "ungnyeo2_1",
+    "name": "곰 발 각반",
+    "file": "assets/items/ungnyeo2_1.png"
+   },
+   {
+    "id": "hwarin2_1",
+    "name": "불을 밟는 신",
+    "file": "assets/items/hwarin2_1.png"
+   },
+   {
+    "id": "yeongsa2_1",
+    "name": "허물 벗은 신",
+    "file": "assets/items/yeongsa2_1.png"
+   },
+   {
+    "id": "bingjam2_1",
+    "name": "빙잠사 망토",
+    "file": "assets/items/bingjam2_1.png"
+   },
+   {
+    "id": "gumiho2_1",
+    "name": "아홉 꼬리 목도리",
+    "file": "assets/items/gumiho2_1.png"
+   },
+   {
+    "id": "geumjam2_0",
+    "name": "금잠 반지",
+    "file": "assets/items/geumjam2_0.png"
+   },
+   {
+    "id": "vermilionbird_0",
+    "name": "주작의 불씨 반지",
+    "file": "assets/items/vermilionbird_0.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank11-D.png",
+  "rank": 11,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "gumiho2_0",
+    "name": "여우 구슬",
+    "file": "assets/items/gumiho2_0.png"
+   },
+   {
+    "id": "yeongsa2_0",
+    "name": "영사의 내단",
+    "file": "assets/items/yeongsa2_0.png"
+   },
+   {
+    "id": "geumseom2_0",
+    "name": "금섬 팔찌",
+    "file": "assets/items/geumseom2_0.png"
+   },
+   {
+    "id": "sansam2_1",
+    "name": "천년 삼 팔찌",
+    "file": "assets/items/sansam2_1.png"
+   },
+   {
+    "id": "bonghwang2_0",
+    "name": "봉황의 비취",
+    "file": "assets/items/bonghwang2_0.png"
+   },
+   {
+    "id": "bonghwang2_1",
+    "name": "태평의 깃",
+    "file": "assets/items/bonghwang2_1.png"
+   },
+   {
+    "id": "imugi2_2",
+    "name": "이무기의 여의주",
+    "file": "assets/items/imugi2_2.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank12-A.png",
+  "rank": 12,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "sanctdragon2_0",
+    "name": "용의 송곳니 검",
+    "file": "assets/items/sanctdragon2_0.png"
+   },
+   {
+    "id": "unicorn2_0",
+    "name": "일각수의 뿔",
+    "file": "assets/items/unicorn2_0.png"
+   },
+   {
+    "id": "cretanbull_0",
+    "name": "황소 뿔 방패",
+    "file": "assets/items/cretanbull_0.png"
+   },
+   {
+    "id": "cerberus2_0",
+    "name": "세 머리의 투구",
+    "file": "assets/items/cerberus2_0.png"
+   },
+   {
+    "id": "sphinx2_1",
+    "name": "사자의 관",
+    "file": "assets/items/sphinx2_1.png"
+   },
+   {
+    "id": "chest_sanct_armor",
+    "name": "열두 과업의 사자 가죽",
+    "file": "assets/items/chest_sanct_armor.png"
+   },
+   {
+    "id": "geryon_0",
+    "name": "세 몸을 두른 갑주",
+    "file": "assets/items/geryon_0.png"
+   },
+   {
+    "id": "kraken2_1",
+    "name": "흡반 갑피",
+    "file": "assets/items/kraken2_1.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank12-B.png",
+  "rank": 12,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "sanctdragon2_1",
+    "name": "고룡 비늘 갑주",
+    "file": "assets/items/sanctdragon2_1.png"
+   },
+   {
+    "id": "kraken2_0",
+    "name": "거대 촉수",
+    "file": "assets/items/kraken2_0.png"
+   },
+   {
+    "id": "nemeanlion_0",
+    "name": "칼이 들지 않는 갈기",
+    "file": "assets/items/nemeanlion_0.png"
+   },
+   {
+    "id": "hippogriff_0",
+    "name": "그리핀의 앞발",
+    "file": "assets/items/hippogriff_0.png"
+   },
+   {
+    "id": "mares_0",
+    "name": "쇠사슬 고삐",
+    "file": "assets/items/mares_0.png"
+   },
+   {
+    "id": "erymanthianboar_0",
+    "name": "멧돼지 엄니 각반",
+    "file": "assets/items/erymanthianboar_0.png"
+   },
+   {
+    "id": "ceryneianhind_0",
+    "name": "청동 발굽",
+    "file": "assets/items/ceryneianhind_0.png"
+   },
+   {
+    "id": "pegasus2_0",
+    "name": "구름을 딛는 편자",
+    "file": "assets/items/pegasus2_0.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank12-C.png",
+  "rank": 12,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "phoenix2_0",
+    "name": "재에서 난 깃옷",
+    "file": "assets/items/phoenix2_0.png"
+   },
+   {
+    "id": "stymphalianbirds_0",
+    "name": "청동 깃 반지",
+    "file": "assets/items/stymphalianbirds_0.png"
+   },
+   {
+    "id": "ladon_0",
+    "name": "라돈의 비늘 목걸이",
+    "file": "assets/items/ladon_0.png"
+   },
+   {
+    "id": "sphinx2_0",
+    "name": "풀리지 않는 수수께끼",
+    "file": "assets/items/sphinx2_0.png"
+   },
+   {
+    "id": "pegasus2_1",
+    "name": "날개의 고리",
+    "file": "assets/items/pegasus2_1.png"
+   },
+   {
+    "id": "unicorn2_1",
+    "name": "정화의 팔찌",
+    "file": "assets/items/unicorn2_1.png"
+   },
+   {
+    "id": "phoenix2_1",
+    "name": "다시 타오르는 잿불",
+    "file": "assets/items/phoenix2_1.png"
+   },
+   {
+    "id": "sanctdragon2_2",
+    "name": "성역의 수호석",
+    "file": "assets/items/sanctdragon2_2.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank13-A.png",
+  "rank": 13,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "arjuna2_0",
+    "name": "간디바",
+    "file": "assets/items/arjuna2_0.png"
+   },
+   {
+    "id": "chest_elysion_spear",
+    "name": "엘리시온 들꽃 창",
+    "file": "assets/items/chest_elysion_spear.png"
+   },
+   {
+    "id": "heracles2_0",
+    "name": "올리브 몽둥이",
+    "file": "assets/items/heracles2_0.png"
+   },
+   {
+    "id": "siegfried2_0",
+    "name": "마검 그람",
+    "file": "assets/items/siegfried2_0.png"
+   },
+   {
+    "id": "hector2_0",
+    "name": "트로이의 방패",
+    "file": "assets/items/hector2_0.png"
+   },
+   {
+    "id": "perseus2_0",
+    "name": "거울 방패",
+    "file": "assets/items/perseus2_0.png"
+   },
+   {
+    "id": "gilgamesh2_1",
+    "name": "우루크의 왕관",
+    "file": "assets/items/gilgamesh2_1.png"
+   },
+   {
+    "id": "hector2_1",
+    "name": "빛나는 투구",
+    "file": "assets/items/hector2_1.png"
+   },
+   {
+    "id": "achilles2_0",
+    "name": "불멸의 청동 갑주",
+    "file": "assets/items/achilles2_0.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank13-B.png",
+  "rank": 13,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "enkidu2_0",
+    "name": "들짐승의 가죽",
+    "file": "assets/items/enkidu2_0.png"
+   },
+   {
+    "id": "heracles2_1",
+    "name": "네메아 사자의 가죽",
+    "file": "assets/items/heracles2_1.png"
+   },
+   {
+    "id": "gilgamesh2_0",
+    "name": "하늘 황소의 어깨",
+    "file": "assets/items/gilgamesh2_0.png"
+   },
+   {
+    "id": "beowulf2_0",
+    "name": "그렌델의 팔",
+    "file": "assets/items/beowulf2_0.png"
+   },
+   {
+    "id": "odysseus2_0",
+    "name": "열두 도끼를 꿰뚫은 손",
+    "file": "assets/items/odysseus2_0.png"
+   },
+   {
+    "id": "theseus2_1",
+    "name": "미궁의 실 허리띠",
+    "file": "assets/items/theseus2_1.png"
+   },
+   {
+    "id": "cuchulainn2_0",
+    "name": "뒤틀림의 각반",
+    "file": "assets/items/cuchulainn2_0.png"
+   },
+   {
+    "id": "enkidu2_1",
+    "name": "야생의 각반",
+    "file": "assets/items/enkidu2_1.png"
+   },
+   {
+    "id": "achilles2_1",
+    "name": "테티스가 잡았던 발목",
+    "file": "assets/items/achilles2_1.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank13-C.png",
+  "rank": 13,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "atalanta2_0",
+    "name": "멈추지 않는 발",
+    "file": "assets/items/atalanta2_0.png"
+   },
+   {
+    "id": "arjuna2_1",
+    "name": "전차병의 망토",
+    "file": "assets/items/arjuna2_1.png"
+   },
+   {
+    "id": "perseus2_1",
+    "name": "보이지 않는 망토",
+    "file": "assets/items/perseus2_1.png"
+   },
+   {
+    "id": "atalanta2_1",
+    "name": "황금 사과",
+    "file": "assets/items/atalanta2_1.png"
+   },
+   {
+    "id": "theseus2_0",
+    "name": "아리아드네의 실타래",
+    "file": "assets/items/theseus2_0.png"
+   },
+   {
+    "id": "beowulf2_1",
+    "name": "흐룬팅의 고리",
+    "file": "assets/items/beowulf2_1.png"
+   },
+   {
+    "id": "cuchulainn2_1",
+    "name": "뒤틀림의 팔찌",
+    "file": "assets/items/cuchulainn2_1.png"
+   },
+   {
+    "id": "heracles2_2",
+    "name": "네메아를 꺾은 주먹",
+    "file": "assets/items/heracles2_2.png"
+   },
+   {
+    "id": "siegfried2_1",
+    "name": "파프니르의 피",
+    "file": "assets/items/siegfried2_1.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank14-A.png",
+  "rank": 14,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "cherub2_0",
+    "name": "두루 도는 불칼",
+    "file": "assets/items/cherub2_0.png"
+   },
+   {
+    "id": "michael2_0",
+    "name": "용을 떨어뜨린 검",
+    "file": "assets/items/michael2_0.png"
+   },
+   {
+    "id": "powerangel2_0",
+    "name": "악을 쫓는 창",
+    "file": "assets/items/powerangel2_0.png"
+   },
+   {
+    "id": "gabriel2_0",
+    "name": "마지막 나팔",
+    "file": "assets/items/gabriel2_0.png"
+   },
+   {
+    "id": "trumpetangel2_0",
+    "name": "첫째 나팔",
+    "file": "assets/items/trumpetangel2_0.png"
+   },
+   {
+    "id": "principality2_0",
+    "name": "나라를 맡은 관",
+    "file": "assets/items/principality2_0.png"
+   },
+   {
+    "id": "throneangel2_1",
+    "name": "눈으로 가득한 관",
+    "file": "assets/items/throneangel2_1.png"
+   },
+   {
+    "id": "dominion2_0",
+    "name": "다스림의 흉갑",
+    "file": "assets/items/dominion2_0.png"
+   },
+   {
+    "id": "michael2_1",
+    "name": "천군의 갑주",
+    "file": "assets/items/michael2_1.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank14-B.png",
+  "rank": 14,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "cherub2_1",
+    "name": "네 얼굴의 견갑",
+    "file": "assets/items/cherub2_1.png"
+   },
+   {
+    "id": "powerangel2_1",
+    "name": "능천사의 견갑",
+    "file": "assets/items/powerangel2_1.png"
+   },
+   {
+    "id": "uriel_0",
+    "name": "불꽃을 쥔 손",
+    "file": "assets/items/uriel_0.png"
+   },
+   {
+    "id": "virtueangel2_1",
+    "name": "기적을 행하는 손",
+    "file": "assets/items/virtueangel2_1.png"
+   },
+   {
+    "id": "principality2_1",
+    "name": "홀을 찬 띠",
+    "file": "assets/items/principality2_1.png"
+   },
+   {
+    "id": "remiel_0",
+    "name": "일으켜 세우는 각반",
+    "file": "assets/items/remiel_0.png"
+   },
+   {
+    "id": "throneangel2_0",
+    "name": "바퀴 속의 바퀴",
+    "file": "assets/items/throneangel2_0.png"
+   },
+   {
+    "id": "sariel_0",
+    "name": "달의 길을 걷는 신",
+    "file": "assets/items/sariel_0.png"
+   },
+   {
+    "id": "trumpetangel2_1",
+    "name": "구름 디딤 신",
+    "file": "assets/items/trumpetangel2_1.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank14-C.png",
+  "rank": 14,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "chest_heaven_cloak",
+    "name": "일곱째 하늘의 깃털 외투",
+    "file": "assets/items/chest_heaven_cloak.png"
+   },
+   {
+    "id": "guardianangel2_0",
+    "name": "깃털 한 장의 망토",
+    "file": "assets/items/guardianangel2_0.png"
+   },
+   {
+    "id": "seraph2_0",
+    "name": "여섯 날개",
+    "file": "assets/items/seraph2_0.png"
+   },
+   {
+    "id": "guardianangel2_1",
+    "name": "지켜보는 반지",
+    "file": "assets/items/guardianangel2_1.png"
+   },
+   {
+    "id": "dominion2_1",
+    "name": "주권의 목걸이",
+    "file": "assets/items/dominion2_1.png"
+   },
+   {
+    "id": "raphael2_0",
+    "name": "토비트의 물고기",
+    "file": "assets/items/raphael2_0.png"
+   },
+   {
+    "id": "raguel_0",
+    "name": "빛을 다스리는 팔찌",
+    "file": "assets/items/raguel_0.png"
+   },
+   {
+    "id": "virtueangel2_0",
+    "name": "기적의 팔찌",
+    "file": "assets/items/virtueangel2_0.png"
+   },
+   {
+    "id": "michael2_2",
+    "name": "미카엘의 저울",
+    "file": "assets/items/michael2_2.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank15-A.png",
+  "rank": 15,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "azazel2_0",
+    "name": "처음 벼린 칼",
+    "file": "assets/items/azazel2_0.png"
+   },
+   {
+    "id": "lucifer2_0",
+    "name": "새벽별의 검",
+    "file": "assets/items/lucifer2_0.png"
+   },
+   {
+    "id": "baphomet2_0",
+    "name": "염소 머리 우상",
+    "file": "assets/items/baphomet2_0.png"
+   },
+   {
+    "id": "paimon2_0",
+    "name": "모든 학문의 책",
+    "file": "assets/items/paimon2_0.png"
+   },
+   {
+    "id": "beelzebub2_0",
+    "name": "파리 떼의 관",
+    "file": "assets/items/beelzebub2_0.png"
+   },
+   {
+    "id": "moloch2_0",
+    "name": "황소 머리 투구",
+    "file": "assets/items/moloch2_0.png"
+   },
+   {
+    "id": "beelzebub2_1",
+    "name": "파리 날개 갑의",
+    "file": "assets/items/beelzebub2_1.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank15-B.png",
+  "rank": 15,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "legion2_0",
+    "name": "이천 마리 돼지가죽",
+    "file": "assets/items/legion2_0.png"
+   },
+   {
+    "id": "azazel2_1",
+    "name": "감시자의 견갑",
+    "file": "assets/items/azazel2_1.png"
+   },
+   {
+    "id": "purson_0",
+    "name": "곰을 탄 왕의 견갑",
+    "file": "assets/items/purson_0.png"
+   },
+   {
+    "id": "bael_0",
+    "name": "보이지 않게 하는 손",
+    "file": "assets/items/bael_0.png"
+   },
+   {
+    "id": "chest_cocytus_gloves",
+    "name": "코키토스 서리 장갑",
+    "file": "assets/items/chest_cocytus_gloves.png"
+   },
+   {
+    "id": "moloch2_1",
+    "name": "제단 불에 그을린 손",
+    "file": "assets/items/moloch2_1.png"
+   },
+   {
+    "id": "astaroth2_1",
+    "name": "독사 허리띠",
+    "file": "assets/items/astaroth2_1.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank15-C.png",
+  "rank": 15,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "zagan_0",
+    "name": "쇠를 금화로 바꾸는 띠",
+    "file": "assets/items/zagan_0.png"
+   },
+   {
+    "id": "belial2_0",
+    "name": "불의 전차 각반",
+    "file": "assets/items/belial2_0.png"
+   },
+   {
+    "id": "vine_0",
+    "name": "탑을 허무는 각반",
+    "file": "assets/items/vine_0.png"
+   },
+   {
+    "id": "astaroth2_0",
+    "name": "독사를 탄 신",
+    "file": "assets/items/astaroth2_0.png"
+   },
+   {
+    "id": "beleth_0",
+    "name": "창백한 말의 박차",
+    "file": "assets/items/beleth_0.png"
+   },
+   {
+    "id": "lucifer2_1",
+    "name": "빛을 잃은 여섯 날개",
+    "file": "assets/items/lucifer2_1.png"
+   },
+   {
+    "id": "mephisto2_1",
+    "name": "진홍 외투",
+    "file": "assets/items/mephisto2_1.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank15-D.png",
+  "rank": 15,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "asmodeus2_0",
+    "name": "솔로몬의 반지",
+    "file": "assets/items/asmodeus2_0.png"
+   },
+   {
+    "id": "legion2_1",
+    "name": "많은 이름의 반지",
+    "file": "assets/items/legion2_1.png"
+   },
+   {
+    "id": "balam_0",
+    "name": "앞일을 말하는 목걸이",
+    "file": "assets/items/balam_0.png"
+   },
+   {
+    "id": "mephisto2_0",
+    "name": "피로 쓴 계약서",
+    "file": "assets/items/mephisto2_0.png"
+   },
+   {
+    "id": "baphomet2_1",
+    "name": "녹이고 굳히는 팔찌",
+    "file": "assets/items/baphomet2_1.png"
+   },
+   {
+    "id": "lilith2_0",
+    "name": "첫 아내의 팔찌",
+    "file": "assets/items/lilith2_0.png"
+   },
+   {
+    "id": "lucifer2_2",
+    "name": "새벽별 조각",
+    "file": "assets/items/lucifer2_2.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank16-A.png",
+  "rank": 16,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "hades2_0",
+    "name": "명계의 이지창",
+    "file": "assets/items/hades2_0.png"
+   },
+   {
+    "id": "poseidon2_0",
+    "name": "삼지창",
+    "file": "assets/items/poseidon2_0.png"
+   },
+   {
+    "id": "thor2_0",
+    "name": "묠니르",
+    "file": "assets/items/thor2_0.png"
+   },
+   {
+    "id": "athena_0",
+    "name": "고르곤의 머리를 단 방패",
+    "file": "assets/items/athena_0.png"
+   },
+   {
+    "id": "loki2_0",
+    "name": "거짓의 단검",
+    "file": "assets/items/loki2_0.png"
+   },
+   {
+    "id": "anubis2_1",
+    "name": "재칼의 가면",
+    "file": "assets/items/anubis2_1.png"
+   },
+   {
+    "id": "hades2_1",
+    "name": "보이지 않게 하는 투구",
+    "file": "assets/items/hades2_1.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank16-B.png",
+  "rank": 16,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "ares2_0",
+    "name": "전화(戰禍)의 갑주",
+    "file": "assets/items/ares2_0.png"
+   },
+   {
+    "id": "dionysus_0",
+    "name": "표범 가죽 옷",
+    "file": "assets/items/dionysus_0.png"
+   },
+   {
+    "id": "anubis2_0",
+    "name": "방부사의 어깨띠",
+    "file": "assets/items/anubis2_0.png"
+   },
+   {
+    "id": "hera_0",
+    "name": "공작 깃 견갑",
+    "file": "assets/items/hera_0.png"
+   },
+   {
+    "id": "apollo_0",
+    "name": "리라를 켜는 손",
+    "file": "assets/items/apollo_0.png"
+   },
+   {
+    "id": "hephaestus_0",
+    "name": "불에 그을린 대장장이 손",
+    "file": "assets/items/hephaestus_0.png"
+   },
+   {
+    "id": "aphrodite_0",
+    "name": "케스토스",
+    "file": "assets/items/aphrodite_0.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank16-C.png",
+  "rank": 16,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "bastet2_1",
+    "name": "소리 없는 각반",
+    "file": "assets/items/bastet2_1.png"
+   },
+   {
+    "id": "demeter_0",
+    "name": "보리 이삭을 엮은 각반",
+    "file": "assets/items/demeter_0.png"
+   },
+   {
+    "id": "artemis2_0",
+    "name": "사슴가죽 신",
+    "file": "assets/items/artemis2_0.png"
+   },
+   {
+    "id": "amaterasu2_0",
+    "name": "하늘 옷",
+    "file": "assets/items/amaterasu2_0.png"
+   },
+   {
+    "id": "susanoo2_0",
+    "name": "폭풍의 겉옷",
+    "file": "assets/items/susanoo2_0.png"
+   },
+   {
+    "id": "amaterasu2_1",
+    "name": "야사카니의 곡옥",
+    "file": "assets/items/amaterasu2_1.png"
+   },
+   {
+    "id": "bastet2_0",
+    "name": "고양이의 눈",
+    "file": "assets/items/bastet2_0.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank16-D.png",
+  "rank": 16,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "hades2_2",
+    "name": "케르베로스의 사슬",
+    "file": "assets/items/hades2_2.png"
+   },
+   {
+    "id": "isis2_0",
+    "name": "앙크",
+    "file": "assets/items/isis2_0.png"
+   },
+   {
+    "id": "chest_yggdrasil_bracelet",
+    "name": "세계수 가지 팔찌",
+    "file": "assets/items/chest_yggdrasil_bracelet.png"
+   },
+   {
+    "id": "loki2_1",
+    "name": "뒤바뀐 반지",
+    "file": "assets/items/loki2_1.png"
+   },
+   {
+    "id": "susanoo2_1",
+    "name": "폭풍 팔찌",
+    "file": "assets/items/susanoo2_1.png"
+   },
+   {
+    "id": "hermes2_0",
+    "name": "전령의 날개",
+    "file": "assets/items/hermes2_0.png"
+   },
+   {
+    "id": "thor2_1",
+    "name": "메긴교르드의 고리",
+    "file": "assets/items/thor2_1.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank17-A.png",
+  "rank": 17,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "fenrir_0",
+    "name": "신을 삼킬 송곳니",
+    "file": "assets/items/fenrir_0.png"
+   },
+   {
+    "id": "orochi_0",
+    "name": "꼬리에서 나온 구사나기",
+    "file": "assets/items/orochi_0.png"
+   },
+   {
+    "id": "titanmyth2_0",
+    "name": "산을 깎은 방패",
+    "file": "assets/items/titanmyth2_0.png"
+   },
+   {
+    "id": "apophis_1",
+    "name": "밤을 삼키는 뱀 머리",
+    "file": "assets/items/apophis_1.png"
+   },
+   {
+    "id": "chest_primordial_helm",
+    "name": "태초의 소라 투구",
+    "file": "assets/items/chest_primordial_helm.png"
+   },
+   {
+    "id": "typhon_0",
+    "name": "백 개의 뱀 머리 투구",
+    "file": "assets/items/typhon_0.png"
+   },
+   {
+    "id": "tiamat_0",
+    "name": "갈라진 바다의 갑주",
+    "file": "assets/items/tiamat_0.png"
+   },
+   {
+    "id": "vritra_0",
+    "name": "물을 가둔 비늘",
+    "file": "assets/items/vritra_0.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank17-B.png",
+  "rank": 17,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "leviathan2_0",
+    "name": "해일의 지느러미",
+    "file": "assets/items/leviathan2_0.png"
+   },
+   {
+    "id": "ymir_0",
+    "name": "산맥이 된 어깨",
+    "file": "assets/items/ymir_0.png"
+   },
+   {
+    "id": "typhon_1",
+    "name": "제우스의 힘줄을 끊은 손",
+    "file": "assets/items/typhon_1.png"
+   },
+   {
+    "id": "vritra_1",
+    "name": "강을 막은 발톱",
+    "file": "assets/items/vritra_1.png"
+   },
+   {
+    "id": "jormungandr_0",
+    "name": "세계를 감은 비늘 띠",
+    "file": "assets/items/jormungandr_0.png"
+   },
+   {
+    "id": "behemoth2_0",
+    "name": "대지의 각반",
+    "file": "assets/items/behemoth2_0.png"
+   },
+   {
+    "id": "titanmyth2_1",
+    "name": "거인의 각반",
+    "file": "assets/items/titanmyth2_1.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank17-C.png",
+  "rank": 17,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "ziz2_0",
+    "name": "하늘 덮는 신",
+    "file": "assets/items/ziz2_0.png"
+   },
+   {
+    "id": "apophis_0",
+    "name": "해를 가리는 비늘 망토",
+    "file": "assets/items/apophis_0.png"
+   },
+   {
+    "id": "jormungandr_1",
+    "name": "제 꼬리를 문 고리",
+    "file": "assets/items/jormungandr_1.png"
+   },
+   {
+    "id": "tiamat_1",
+    "name": "운명의 서판",
+    "file": "assets/items/tiamat_1.png"
+   },
+   {
+    "id": "ymir_1",
+    "name": "서리 거인의 심장",
+    "file": "assets/items/ymir_1.png"
+   },
+   {
+    "id": "fenrir_1",
+    "name": "글레이프니르 족쇄",
+    "file": "assets/items/fenrir_1.png"
+   },
+   {
+    "id": "tiamat_2",
+    "name": "열한 괴물의 팔찌",
+    "file": "assets/items/tiamat_2.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank18-A.png",
+  "rank": 18,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "indra2_0",
+    "name": "금강저 바즈라",
+    "file": "assets/items/indra2_0.png"
+   },
+   {
+    "id": "odin2_0",
+    "name": "빗나가지 않는 창 궁니르",
+    "file": "assets/items/odin2_0.png"
+   },
+   {
+    "id": "zeus2_0",
+    "name": "케라우노스",
+    "file": "assets/items/zeus2_0.png"
+   },
+   {
+    "id": "osiris2_0",
+    "name": "갈고리 홀",
+    "file": "assets/items/osiris2_0.png"
+   },
+   {
+    "id": "vishnu2_0",
+    "name": "수다르샤나 원반",
+    "file": "assets/items/vishnu2_0.png"
+   },
+   {
+    "id": "zeus2_1",
+    "name": "아이기스",
+    "file": "assets/items/zeus2_1.png"
+   },
+   {
+    "id": "hwanin2_0",
+    "name": "천부인의 관",
+    "file": "assets/items/hwanin2_0.png"
+   },
+   {
+    "id": "indra2_1",
+    "name": "천 개의 눈",
+    "file": "assets/items/indra2_1.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank18-B.png",
+  "rank": 18,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "ra2_0",
+    "name": "황금 태양원반",
+    "file": "assets/items/ra2_0.png"
+   },
+   {
+    "id": "izanagi2_0",
+    "name": "황천의 견갑",
+    "file": "assets/items/izanagi2_0.png"
+   },
+   {
+    "id": "brahma_0",
+    "name": "네 팔의 장갑",
+    "file": "assets/items/brahma_0.png"
+   },
+   {
+    "id": "osiris2_1",
+    "name": "아마포 허리띠",
+    "file": "assets/items/osiris2_1.png"
+   },
+   {
+    "id": "quetzalcoatl2_1",
+    "name": "깃털 각반",
+    "file": "assets/items/quetzalcoatl2_1.png"
+   },
+   {
+    "id": "quetzalcoatl2_0",
+    "name": "창공을 딛는 신",
+    "file": "assets/items/quetzalcoatl2_0.png"
+   },
+   {
+    "id": "jadeemperor2_0",
+    "name": "자미원의 곤룡포",
+    "file": "assets/items/jadeemperor2_0.png"
+   },
+   {
+    "id": "odin2_1",
+    "name": "회색 나그네의 망토",
+    "file": "assets/items/odin2_1.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank18-C.png",
+  "rank": 18,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "chest_olympus_ring",
+    "name": "월계수 반지",
+    "file": "assets/items/chest_olympus_ring.png"
+   },
+   {
+    "id": "jadeemperor2_1",
+    "name": "옥새",
+    "file": "assets/items/jadeemperor2_1.png"
+   },
+   {
+    "id": "ra2_1",
+    "name": "우라에우스의 뱀",
+    "file": "assets/items/ra2_1.png"
+   },
+   {
+    "id": "hwanin2_1",
+    "name": "신단수의 가지",
+    "file": "assets/items/hwanin2_1.png"
+   },
+   {
+    "id": "zeus2_2",
+    "name": "올림포스의 인장",
+    "file": "assets/items/zeus2_2.png"
+   },
+   {
+    "id": "ahuramazda2_0",
+    "name": "진리의 고리",
+    "file": "assets/items/ahuramazda2_0.png"
+   },
+   {
+    "id": "izanagi2_1",
+    "name": "황천의 복숭아",
+    "file": "assets/items/izanagi2_1.png"
+   },
+   {
+    "id": "shiva2_0",
+    "name": "시바의 셋째 눈",
+    "file": "assets/items/shiva2_0.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank19-A.png",
+  "rank": 19,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "cthugha_0",
+    "name": "포말하우트의 불꽃",
+    "file": "assets/items/cthugha_0.png"
+   },
+   {
+    "id": "cthulhu2_0",
+    "name": "르뤼에의 촉수",
+    "file": "assets/items/cthulhu2_0.png"
+   },
+   {
+    "id": "migo_0",
+    "name": "뇌를 담은 원통",
+    "file": "assets/items/migo_0.png"
+   },
+   {
+    "id": "glaaki2_0",
+    "name": "녹슨 관",
+    "file": "assets/items/glaaki2_0.png"
+   },
+   {
+    "id": "cthulhu2_1",
+    "name": "심해의 갑각",
+    "file": "assets/items/cthulhu2_1.png"
+   },
+   {
+    "id": "shoggoth_0",
+    "name": "형체 없는 원형질 갑옷",
+    "file": "assets/items/shoggoth_0.png"
+   },
+   {
+    "id": "chaugnar2_0",
+    "name": "상아 어깨뼈",
+    "file": "assets/items/chaugnar2_0.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank19-B.png",
+  "rank": 19,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "dagon2_0",
+    "name": "물갈퀴 장갑",
+    "file": "assets/items/dagon2_0.png"
+   },
+   {
+    "id": "shoggoth_1",
+    "name": "테켈리리 하고 우는 손",
+    "file": "assets/items/shoggoth_1.png"
+   },
+   {
+    "id": "atlachnacha_1",
+    "name": "심연에 걸친 실",
+    "file": "assets/items/atlachnacha_1.png"
+   },
+   {
+    "id": "yig2_0",
+    "name": "방울뱀 허리띠",
+    "file": "assets/items/yig2_0.png"
+   },
+   {
+    "id": "glaaki2_1",
+    "name": "호수 바닥의 각반",
+    "file": "assets/items/glaaki2_1.png"
+   },
+   {
+    "id": "ithaqua2_0",
+    "name": "눈을 밟지 않는 신",
+    "file": "assets/items/ithaqua2_0.png"
+   },
+   {
+    "id": "hastur2_0",
+    "name": "누더기 황의",
+    "file": "assets/items/hastur2_0.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank19-C.png",
+  "rank": 19,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "ithaqua2_1",
+    "name": "바람의 망토",
+    "file": "assets/items/ithaqua2_1.png"
+   },
+   {
+    "id": "yig2_1",
+    "name": "저주의 고리",
+    "file": "assets/items/yig2_1.png"
+   },
+   {
+    "id": "atlachnacha_0",
+    "name": "거미줄에 걸린 꿈",
+    "file": "assets/items/atlachnacha_0.png"
+   },
+   {
+    "id": "chest_rlyeh_necklace",
+    "name": "가라앉은 도시의 산호 목걸이",
+    "file": "assets/items/chest_rlyeh_necklace.png"
+   },
+   {
+    "id": "chaugnar2_1",
+    "name": "상아 팔찌",
+    "file": "assets/items/chaugnar2_1.png"
+   },
+   {
+    "id": "tsathoggua2_0",
+    "name": "잠의 팔찌",
+    "file": "assets/items/tsathoggua2_0.png"
+   },
+   {
+    "id": "cthulhu2_2",
+    "name": "잠든 신의 우상",
+    "file": "assets/items/cthulhu2_2.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank20-A.png",
+  "rank": 20,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "azathoth2_0",
+    "name": "만물을 가르는 칼날",
+    "file": "assets/items/azathoth2_0.png"
+   },
+   {
+    "id": "chest_chaos_blade",
+    "name": "혼돈 속에서 건진 칼",
+    "file": "assets/items/chest_chaos_blade.png"
+   },
+   {
+    "id": "voidlordmyth2_0",
+    "name": "공허의 낫",
+    "file": "assets/items/voidlordmyth2_0.png"
+   },
+   {
+    "id": "daoloth_1",
+    "name": "찢어진 장막",
+    "file": "assets/items/daoloth_1.png"
+   },
+   {
+    "id": "pipers_0",
+    "name": "멈추지 않는 피리",
+    "file": "assets/items/pipers_0.png"
+   },
+   {
+    "id": "nyarlathotep2_1",
+    "name": "천 개째의 가면",
+    "file": "assets/items/nyarlathotep2_1.png"
+   },
+   {
+    "id": "shubniggurath2_0",
+    "name": "뿔난 관",
+    "file": "assets/items/shubniggurath2_0.png"
+   },
+   {
+    "id": "abhoth2_0",
+    "name": "끓는 진흙 갑주",
+    "file": "assets/items/abhoth2_0.png"
+   },
+   {
+    "id": "azathoth2_1",
+    "name": "무(無)의 갑주",
+    "file": "assets/items/azathoth2_1.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank20-B.png",
+  "rank": 20,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "daoloth_0",
+    "name": "장막을 찢는 견갑",
+    "file": "assets/items/daoloth_0.png"
+   },
+   {
+    "id": "ghroth_0",
+    "name": "떠도는 별의 견갑",
+    "file": "assets/items/ghroth_0.png"
+   },
+   {
+    "id": "tulzscha_1",
+    "name": "불꽃으로 춤추는 손",
+    "file": "assets/items/tulzscha_1.png"
+   },
+   {
+    "id": "ubbosathla_1",
+    "name": "모든 것을 빚은 손",
+    "file": "assets/items/ubbosathla_1.png"
+   },
+   {
+    "id": "ubbosathla_0",
+    "name": "처음이자 끝인 진흙 띠",
+    "file": "assets/items/ubbosathla_0.png"
+   },
+   {
+    "id": "shubniggurath2_1",
+    "name": "검은 털 각반",
+    "file": "assets/items/shubniggurath2_1.png"
+   },
+   {
+    "id": "abhoth2_1",
+    "name": "녹아내리는 신",
+    "file": "assets/items/abhoth2_1.png"
+   },
+   {
+    "id": "ghroth_1",
+    "name": "별을 깨우며 걷는 신",
+    "file": "assets/items/ghroth_1.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank20-C.png",
+  "rank": 20,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "nyarlathotep2_0",
+    "name": "검은 파라오의 의복",
+    "file": "assets/items/nyarlathotep2_0.png"
+   },
+   {
+    "id": "yibbtstll_0",
+    "name": "시간을 덮는 망토",
+    "file": "assets/items/yibbtstll_0.png"
+   },
+   {
+    "id": "tulzscha_0",
+    "name": "초록 불꽃의 반지",
+    "file": "assets/items/tulzscha_0.png"
+   },
+   {
+    "id": "yogsothoth2_0",
+    "name": "모든 문의 열쇠",
+    "file": "assets/items/yogsothoth2_0.png"
+   },
+   {
+    "id": "azathoth2_2",
+    "name": "백치의 왕관",
+    "file": "assets/items/azathoth2_2.png"
+   },
+   {
+    "id": "yogsothoth2_1",
+    "name": "구체 속의 구체",
+    "file": "assets/items/yogsothoth2_1.png"
+   },
+   {
+    "id": "voidlordmyth2_1",
+    "name": "빈 고리",
+    "file": "assets/items/voidlordmyth2_1.png"
+   },
+   {
+    "id": "yibbtstll_1",
+    "name": "시간을 세는 팔찌",
+    "file": "assets/items/yibbtstll_1.png"
+   }
+  ]
+ }
+]

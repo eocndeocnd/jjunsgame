@@ -1,6 +1,6 @@
 // 명령줄 도구 — Node 가 있을 때만 씁니다 (없으면 같은 일을 하는 tools/*.html 을 브라우저로 여세요).
 //
-//   node tools/cli.js images      그림 목록(design/images/*)을 다시 뽑는다
+//   node tools/cli.js images      그림 목록(design/images/*)과 장비 그림 프롬프트 묶음(design/images/prompts/*)을 다시 뽑는다
 //   node tools/cli.js check-ids   전리품 번호가 몰래 바뀌지 않았는지 검사한다 (build.py 가 자동으로 부릅니다)
 //   node tools/cli.js snapshot    전리품 번호표(tools/item-snapshot.json)를 지금 상태로 갱신한다 — 의도한 변경 뒤에만
 //   node tools/cli.js check-loot  전리품이 고르게 퍼져 있는지 검사한다 (build.py 가 자동으로 부릅니다)
@@ -29,7 +29,12 @@ if (cmd === 'images') {
   const out = require('./image-manifest.js').build(data, text);
   write('design/images/image-manifest.json', out.json);
   write('design/images/IMAGE_GUIDE.md', out.md);
-  console.log(`그림 목록을 다시 뽑았습니다 — 몬스터 ${out.counts.monsters} · 전리품 ${out.counts.items}`);
+  // 장비 그림 프롬프트 묶음 — 이미지 AI 에 붙여 넣을 것 (격마다 한 파일, 한 장에 9개까지). 예전에 뽑은 격 파일은 지우고 새로 씁니다
+  const batches = require('./prompt-batches.js').build(JSON.parse(out.json), f => fs.existsSync(path.join(ROOT, f)));
+  const dir = path.join(ROOT, 'design/images/prompts');
+  if (fs.existsSync(dir)) for (const f of fs.readdirSync(dir)) if (/^rank\d+\.md$/.test(f)) fs.unlinkSync(path.join(dir, f));
+  for (const [name, text] of Object.entries(batches.files)) write(`design/images/prompts/${name}`, text);
+  console.log(`그림 목록을 다시 뽑았습니다 — 몬스터 ${out.counts.monsters} · 전리품 ${out.counts.items} (프롬프트 묶음: 장비 ${batches.items}개 · 시트 ${batches.sheets}장)`);
 } else if (cmd === 'check-ids' || cmd === 'snapshot') {
   const { data } = loadData();
   const ids = require('./id-check.js');
