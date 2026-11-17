@@ -9,6 +9,11 @@
 ```text
 Make ONE square image, 1024x1024: a sprite sheet of 8 separate game item icons in a 3x3 grid.
 
+HARD RULES — breaking any of these makes the image unusable:
+1. NO TEXT ANYWHERE. Do not write item names, type names, captions, labels or numbers — not in Korean, not in English.
+2. NO LINES. No grid lines, no cell borders, no frames, no dividers between items.
+3. The whole background is one flat magenta (#FF00FF). Items float on it with empty space around each one.
+
 STYLE — the same for every icon:
 - 16-bit pixel art, crisp 1px dark outline, limited color palette, flat shading with one highlight
 - one object per icon, a simple bold silhouette that still reads at 64 px
@@ -17,7 +22,7 @@ STYLE — the same for every icon:
 BACKGROUND: one flat solid magenta (#FF00FF) everywhere. No gradient, no checkerboard, no floor.
 Do not use magenta or hot pink on the items themselves.
 
-LAYOUT: 3 columns x 3 rows of equal square cells. Exactly one item per cell, centered, filling about 70% of its cell,
+LAYOUT: an invisible 3 x 3 grid of equal square cells (do not draw it). Exactly one item per cell, centered, filling about 70% of its cell,
 never touching the cell edges. Fill the cells left to right, top to bottom, in the order listed. Leave the last 1 cell empty (plain magenta).
 
 TIER LOOK: mid-tier gear — solid forged metal, good leather, small magic stones. Cleaner shapes, a little shine, at most a faint glow.
@@ -26,7 +31,7 @@ FRAMING BY TYPE:
 - WEAPON: whole weapon, diagonal, tip or head toward the upper right
 - OFF-HAND (shield, book, lantern, orb ...): front view, slightly tilted
 
-ITEMS — the names are Korean. Draw what each name describes; never write the name in the image.
+ITEMS — the names below are for you to read, NOT to write. Draw what each name describes. Never put any of these words in the image.
 If a name describes a different kind of object than its type, draw the object from the name.
 1. WEAPON 「서약의 대검」 — loot from the monster 「데스 나이트」. more refined and menacing; mood: sturdy, protective.
 2. WEAPON 「전도 합금 창」 — near-future manufactured hunter gear made by human technology — new, clean metal, thin glowing lines. plain look; mood: heavy, blunt, massive. Hint (Korean): 몬스터 핵에서 뽑은 선이 심으로 들어 있다.
@@ -56,6 +61,11 @@ If a name describes a different kind of object than its type, draw the object fr
 ```text
 Make ONE square image, 1024x1024: a sprite sheet of 8 separate game item icons in a 3x3 grid.
 
+HARD RULES — breaking any of these makes the image unusable:
+1. NO TEXT ANYWHERE. Do not write item names, type names, captions, labels or numbers — not in Korean, not in English.
+2. NO LINES. No grid lines, no cell borders, no frames, no dividers between items.
+3. The whole background is one flat magenta (#FF00FF). Items float on it with empty space around each one.
+
 STYLE — the same for every icon:
 - 16-bit pixel art, crisp 1px dark outline, limited color palette, flat shading with one highlight
 - one object per icon, a simple bold silhouette that still reads at 64 px
@@ -64,7 +74,7 @@ STYLE — the same for every icon:
 BACKGROUND: one flat solid magenta (#FF00FF) everywhere. No gradient, no checkerboard, no floor.
 Do not use magenta or hot pink on the items themselves.
 
-LAYOUT: 3 columns x 3 rows of equal square cells. Exactly one item per cell, centered, filling about 70% of its cell,
+LAYOUT: an invisible 3 x 3 grid of equal square cells (do not draw it). Exactly one item per cell, centered, filling about 70% of its cell,
 never touching the cell edges. Fill the cells left to right, top to bottom, in the order listed. Leave the last 1 cell empty (plain magenta).
 
 TIER LOOK: mid-tier gear — solid forged metal, good leather, small magic stones. Cleaner shapes, a little shine, at most a faint glow.
@@ -74,7 +84,7 @@ FRAMING BY TYPE:
 - BODY ARMOR / CLOTHING: front view, torso piece only, empty (no body inside)
 - SHOULDER GUARD: one pauldron or a matching pair, 3/4 view
 
-ITEMS — the names are Korean. Draw what each name describes; never write the name in the image.
+ITEMS — the names below are for you to read, NOT to write. Draw what each name describes. Never put any of these words in the image.
 If a name describes a different kind of object than its type, draw the object from the name.
 1. HEADGEAR 「통곡의 두건」 — loot from the monster 「밴시」. plain look; mood: aggressive, sharp.
 2. HEADGEAR 「학자의 관」 — loot from the monster 「리치」. more refined and menacing; mood: pointed, piercing.
@@ -104,6 +114,11 @@ If a name describes a different kind of object than its type, draw the object fr
 ```text
 Make ONE square image, 1024x1024: a sprite sheet of 8 separate game item icons in a 3x3 grid.
 
+HARD RULES — breaking any of these makes the image unusable:
+1. NO TEXT ANYWHERE. Do not write item names, type names, captions, labels or numbers — not in Korean, not in English.
+2. NO LINES. No grid lines, no cell borders, no frames, no dividers between items.
+3. The whole background is one flat magenta (#FF00FF). Items float on it with empty space around each one.
+
 STYLE — the same for every icon:
 - 16-bit pixel art, crisp 1px dark outline, limited color palette, flat shading with one highlight
 - one object per icon, a simple bold silhouette that still reads at 64 px
@@ -112,7 +127,7 @@ STYLE — the same for every icon:
 BACKGROUND: one flat solid magenta (#FF00FF) everywhere. No gradient, no checkerboard, no floor.
 Do not use magenta or hot pink on the items themselves.
 
-LAYOUT: 3 columns x 3 rows of equal square cells. Exactly one item per cell, centered, filling about 70% of its cell,
+LAYOUT: an invisible 3 x 3 grid of equal square cells (do not draw it). Exactly one item per cell, centered, filling about 70% of its cell,
 never touching the cell edges. Fill the cells left to right, top to bottom, in the order listed. Leave the last 1 cell empty (plain magenta).
 
 TIER LOOK: mid-tier gear — solid forged metal, good leather, small magic stones. Cleaner shapes, a little shine, at most a faint glow.
@@ -124,7 +139,7 @@ FRAMING BY TYPE:
 - BOOTS / SHOES: a pair, side view facing right
 - CLOAK / CAPE: front view, hanging open, empty (no body inside)
 
-ITEMS — the names are Korean. Draw what each name describes; never write the name in the image.
+ITEMS — the names below are for you to read, NOT to write. Draw what each name describes. Never put any of these words in the image.
 If a name describes a different kind of object than its type, draw the object from the name.
 1. GLOVES / GAUNTLETS 「갈퀴손」 — loot from the monster 「구울」. plain look; mood: sinister, a touch of blood red.
 2. BELT / SASH 「수의 허리끈」 — loot from the monster 「구울」. plain look; mood: sinister, a touch of blood red.
@@ -154,6 +169,11 @@ If a name describes a different kind of object than its type, draw the object fr
 ```text
 Make ONE square image, 1024x1024: a sprite sheet of 7 separate game item icons in a 3x3 grid.
 
+HARD RULES — breaking any of these makes the image unusable:
+1. NO TEXT ANYWHERE. Do not write item names, type names, captions, labels or numbers — not in Korean, not in English.
+2. NO LINES. No grid lines, no cell borders, no frames, no dividers between items.
+3. The whole background is one flat magenta (#FF00FF). Items float on it with empty space around each one.
+
 STYLE — the same for every icon:
 - 16-bit pixel art, crisp 1px dark outline, limited color palette, flat shading with one highlight
 - one object per icon, a simple bold silhouette that still reads at 64 px
@@ -162,7 +182,7 @@ STYLE — the same for every icon:
 BACKGROUND: one flat solid magenta (#FF00FF) everywhere. No gradient, no checkerboard, no floor.
 Do not use magenta or hot pink on the items themselves.
 
-LAYOUT: 3 columns x 3 rows of equal square cells. Exactly one item per cell, centered, filling about 70% of its cell,
+LAYOUT: an invisible 3 x 3 grid of equal square cells (do not draw it). Exactly one item per cell, centered, filling about 70% of its cell,
 never touching the cell edges. Fill the cells left to right, top to bottom, in the order listed. Leave the last 2 cells empty (plain magenta).
 
 TIER LOOK: mid-tier gear — solid forged metal, good leather, small magic stones. Cleaner shapes, a little shine, at most a faint glow.
@@ -172,7 +192,7 @@ FRAMING BY TYPE:
 - RING: single ring, 3/4 view so the band is visible
 - NECKLACE / AMULET: chain in a loop, pendant at the bottom center
 
-ITEMS — the names are Korean. Draw what each name describes; never write the name in the image.
+ITEMS — the names below are for you to read, NOT to write. Draw what each name describes. Never put any of these words in the image.
 If a name describes a different kind of object than its type, draw the object from the name.
 1. CLOAK / CAPE 「안개 수의」 — loot from the monster 「레이스」. plain look; mood: light, slim, built for speed.
 2. RING 「피로 쓴 서명」 — loot from the monster 「데몬 로드」. plain look; mood: heavy, blunt, massive.
@@ -200,6 +220,11 @@ If a name describes a different kind of object than its type, draw the object fr
 ```text
 Make ONE square image, 1024x1024: a sprite sheet of 7 separate game item icons in a 3x3 grid.
 
+HARD RULES — breaking any of these makes the image unusable:
+1. NO TEXT ANYWHERE. Do not write item names, type names, captions, labels or numbers — not in Korean, not in English.
+2. NO LINES. No grid lines, no cell borders, no frames, no dividers between items.
+3. The whole background is one flat magenta (#FF00FF). Items float on it with empty space around each one.
+
 STYLE — the same for every icon:
 - 16-bit pixel art, crisp 1px dark outline, limited color palette, flat shading with one highlight
 - one object per icon, a simple bold silhouette that still reads at 64 px
@@ -208,7 +233,7 @@ STYLE — the same for every icon:
 BACKGROUND: one flat solid magenta (#FF00FF) everywhere. No gradient, no checkerboard, no floor.
 Do not use magenta or hot pink on the items themselves.
 
-LAYOUT: 3 columns x 3 rows of equal square cells. Exactly one item per cell, centered, filling about 70% of its cell,
+LAYOUT: an invisible 3 x 3 grid of equal square cells (do not draw it). Exactly one item per cell, centered, filling about 70% of its cell,
 never touching the cell edges. Fill the cells left to right, top to bottom, in the order listed. Leave the last 2 cells empty (plain magenta).
 
 TIER LOOK: mid-tier gear — solid forged metal, good leather, small magic stones. Cleaner shapes, a little shine, at most a faint glow.
@@ -217,7 +242,7 @@ FRAMING BY TYPE:
 - BRACELET / BANGLE / WRISTWATCH: single band, 3/4 view
 - SMALL PRECIOUS OBJECT (gem or relic): single small object, 3/4 view
 
-ITEMS — the names are Korean. Draw what each name describes; never write the name in the image.
+ITEMS — the names below are for you to read, NOT to write. Draw what each name describes. Never put any of these words in the image.
 If a name describes a different kind of object than its type, draw the object from the name.
 1. BRACELET / BANGLE / WRISTWATCH 「예고의 고리」 — loot from the monster 「밴시」. plain look; mood: aggressive, sharp.
 2. BRACELET / BANGLE / WRISTWATCH 「멈춘 손목시계」 — a modern everyday item left behind by someone who came before — worn and used; do not hint whose it was. plain look; mood: light, slim, built for speed. Hint (Korean): 바늘은 새벽 네 시 십 분에서 움직이지 않는다.
@@ -246,6 +271,11 @@ If a name describes a different kind of object than its type, draw the object fr
 
 ```text
 Make ONE square image, 1024x1024: a single game item icon.
+
+HARD RULES — breaking any of these makes the image unusable:
+1. NO TEXT ANYWHERE. Do not write item names, type names, captions, labels or numbers — not in Korean, not in English.
+2. NO LINES. No grid lines, no cell borders, no frames, no dividers between items.
+3. The whole background is one flat magenta (#FF00FF). Items float on it with empty space around each one.
 
 STYLE — the same for every icon:
 - 16-bit pixel art, crisp 1px dark outline, limited color palette, flat shading with one highlight

@@ -43,6 +43,14 @@ const MOOD_EN = { '흉포': 'aggressive, sharp', '수호': 'sturdy, protective',
                   '관통': 'pointed, piercing', '반격': 'spiked, thorny', '행운': 'a lucky charm, a hint of gold', '성장': 'modest, well used',
                   '분쇄': 'heavy, blunt, massive', '보호': 'reinforced, built to last' };
 
+// 맨 앞에 못 박는 규칙 — 제미나이가 한 대화에서 오래 이어 뽑으면 칸 테두리 · 이름 글자를 그려 넣기 시작했습니다 (4격, 2026-11-17)
+const HARD_RULES = [
+  'HARD RULES — breaking any of these makes the image unusable:',
+  '1. NO TEXT ANYWHERE. Do not write item names, type names, captions, labels or numbers — not in Korean, not in English.',
+  '2. NO LINES. No grid lines, no cell borders, no frames, no dividers between items.',
+  '3. The whole background is one flat magenta (#FF00FF). Items float on it with empty space around each one.'
+].join('\n');
+
 const STYLE = [
   'STYLE — the same for every icon:',
   '- 16-bit pixel art, crisp 1px dark outline, limited color palette, flat shading with one highlight',
@@ -78,9 +86,11 @@ function sheetPrompt(items, rank) {
   return [
     `Make ONE square image, 1024x1024: a sprite sheet of ${items.length} separate game item icons in a 3x3 grid.`,
     '',
+    HARD_RULES,
+    '',
     STYLE,
     '',
-    'LAYOUT: 3 columns x 3 rows of equal square cells. Exactly one item per cell, centered, filling about 70% of its cell,',
+    'LAYOUT: an invisible 3 x 3 grid of equal square cells (do not draw it). Exactly one item per cell, centered, filling about 70% of its cell,',
     'never touching the cell edges. Fill the cells left to right, top to bottom, in the order listed.'
       + (empty ? ` Leave the last ${empty} cell${empty > 1 ? 's' : ''} empty (plain magenta).` : ''),
     '',
@@ -89,7 +99,7 @@ function sheetPrompt(items, rank) {
     'FRAMING BY TYPE:',
     ...slots.map(s => `- ${SLOT_EN[s][0]}: ${SLOT_EN[s][1]}`),
     '',
-    'ITEMS — the names are Korean. Draw what each name describes; never write the name in the image.',
+    'ITEMS — the names below are for you to read, NOT to write. Draw what each name describes. Never put any of these words in the image.',
     'If a name describes a different kind of object than its type, draw the object from the name.',
     ...items.map((it, k) => `${k + 1}. ${itemLine(it, false)}`)
   ].join('\n');
@@ -98,6 +108,8 @@ function sheetPrompt(items, rank) {
 function singleHead(rank) {
   return [
     'Make ONE square image, 1024x1024: a single game item icon.',
+    '',
+    HARD_RULES,
     '',
     STYLE,
     '',
@@ -198,7 +210,9 @@ function build(manifest, exists = () => false) {
     '2. 나온 그림을 봅니다 — 3×3 으로 나뉘었나 · 배경이 한 가지 자홍색인가 · 글자가 없나 · 도트 그림인가.',
     '   안 맞으면 그 대화에서 고쳐 달라고 하거나 다시 뽑습니다. 계속 안 되면 그 파일 아래 「하나씩 뽑기」를 씁니다.',
     '3. 시트 위에 적힌 이름(`design/images/sheets/rank01-A.png`)으로 저장합니다.',
-    '4. 같은 대화에서 다음 시트를 이어 보내면 화풍이 덜 흔들립니다.',
+    '4. **격 파일 하나마다 새 대화창**에서 시작하세요. 한 대화에서 오래 이어 뽑으면 칸 테두리 · 이름 글자를 그려 넣기 시작합니다 (4격에서 그랬음).',
+    '   그 격 안의 시트 2~4장은 같은 대화에서 이어 보내도 됩니다 — 화풍이 덜 흔들립니다.',
+    '5. 글자나 테두리가 나오면 저장하지 말고, 「글자와 선을 빼고 다시」라고 하거나 새 대화에서 다시 뽑으세요. 자르는 도구가 조금은 지우지만, 장비 위에 겹친 글자는 못 지웁니다.',
     '',
     '## 프롬프트에 이미 들어 있는 규칙',
     '',

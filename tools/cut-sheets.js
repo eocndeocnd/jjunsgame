@@ -119,6 +119,31 @@ function removeMark(img) {
   return best;
 }
 
+// 칸 테두리 지우기 — 이미지 AI 가 칸마다 선을 그어 오는 일이 있습니다. 선이 모든 칸을 하나로 이어 버려서, 칸 경계 근처에서
+// 위에서 아래까지(또는 왼쪽에서 오른쪽까지) 거의 다 배경이 아닌 줄을 찾아 배경색으로 칠합니다. 선이 없으면 아무것도 안 함. 지운 줄 수
+function removeGridLines(img, cols, rows) {
+  // 배경색 — 자홍빛(빨강 · 파랑이 높고 초록이 낮은) 픽셀의 중앙값
+  const rs = [], gs = [], bs = [];
+  for (let i = 0; i < img.px.length; i += 4 * 97) { const r = img.px[i], g = img.px[i + 1], b = img.px[i + 2]; if (r > 170 && b > 170 && g < 110) { rs.push(r); gs.push(g); bs.push(b); } }
+  if (!rs.length) return 0;
+  const med = a => a.sort((x, y) => x - y)[a.length >> 1], key = [med(rs), med(gs), med(bs)];
+  const isBg = i => Math.hypot(img.px[i] - key[0], img.px[i + 1] - key[1], img.px[i + 2] - key[2]) <= SOFT;
+  const paint = i => { img.px[i] = key[0]; img.px[i + 1] = key[1]; img.px[i + 2] = key[2]; };
+  let n = 0;
+  const near = (v, size, parts) => { for (let k = 0; k <= parts; k++) if (Math.abs(v - k * size / parts) <= 14) return true; return false; };
+  for (let x = 0; x < img.w; x++) {
+    if (!near(x, img.w, cols)) continue;
+    let fg = 0; for (let y = 0; y < img.h; y++) if (!isBg((y * img.w + x) * 4)) fg++;
+    if (fg > img.h * 0.6) { for (let y = 0; y < img.h; y++) paint((y * img.w + x) * 4); n++; }
+  }
+  for (let y = 0; y < img.h; y++) {
+    if (!near(y, img.h, rows)) continue;
+    let fg = 0; for (let x = 0; x < img.w; x++) if (!isBg((y * img.w + x) * 4)) fg++;
+    if (fg > img.w * 0.6) { for (let x = 0; x < img.w; x++) paint((y * img.w + x) * 4); n++; }
+  }
+  return n;
+}
+
 // ---------- 한 칸 ----------
 // 칸(x0, y0, cw, ch) → 배경을 걷어낸 RGBA (칸 크기)
 function keyCell(img, x0, y0, cw, chh) {
@@ -178,9 +203,13 @@ function splitSheet(img, cols, rows) {
     list = list.filter(q => q.length >= big * SMALL_PART);
     // 가장 큰 덩어리보다 통째로 아래에 있는 작은 조각(그 크기의 1/4 미만)도 버림 — 장비 밑에 써 넣은 이름은 글자가 붙어 커지기도 해서
     const main = list.find(q => q.length === big);
+    const topOf = q => { let t = Infinity; for (const j of q) t = Math.min(t, (j / img.w) | 0); return t; };
     if (main) {
-      const bottom = Math.max(...main.map(j => (j / img.w) | 0));
-      list = list.filter(q => q === main || q.length >= big / 4 || Math.min(...q.map(j => (j / img.w) | 0)) < bottom - 4);
+      let bottom = 0; for (const j of main) bottom = Math.max(bottom, (j / img.w) | 0);   // (펼쳐 넘기면 큰 덩어리에서 넘침)
+      const botOf = q => { let b = 0; for (const j of q) b = Math.max(b, (j / img.w) | 0); return b; };
+      let top = Infinity; for (const j of main) top = Math.min(top, (j / img.w) | 0);
+      // 위쪽도 — 칸 위에 써 넣은 부위 이름 · 장비 이름
+      list = list.filter(q => q === main || q.length >= big / 4 || (topOf(q) < bottom - 4 && botOf(q) > top + 4));
     }
     if (!list.length) return null;
     let x0 = img.w, y0 = img.h, x1 = 0, y1 = 0;
@@ -248,6 +277,8 @@ if (require.main === module) {
     const img = readSheet(file), [cols, rows] = sh.grid;
     const mark = removeMark(img);
     if (mark) console.log(`  ${sh.sheet} — 제미나이 표시를 걷어냄 (오른쪽 아래, 맞음 ${mark.score.toFixed(2)})`);
+    const lines = removeGridLines(img, cols, rows);
+    if (lines) console.log(`  ${sh.sheet} — 칸 테두리 선 ${lines}줄을 지움`);
     const cells = splitSheet(img, cols, rows);
     sh.cells.forEach((c, k) => {
       const out = path.join(ROOT, c.file);
