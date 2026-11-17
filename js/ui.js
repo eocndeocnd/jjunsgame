@@ -3023,7 +3023,7 @@ function renderTitle() {
   for (const b of document.querySelectorAll('[data-wipe]')) {
     b.addEventListener('click', () => {
       const n = Number(b.dataset.wipe);
-      if (!confirm(`저장 ${n}을(를) 지웁니다. 전리품도 전부 사라집니다. 되돌릴 수 없습니다.`)) return;
+      if (!armTwice(b, '정말 지운다')) return;
       wipeSlot(n);
       renderTitle();
     });
@@ -3111,8 +3111,8 @@ function openImport(n) {
 
     const incoming = summaryText(summarizeMeta(meta));
     const had = slotSummary(n);
-    if (had && !confirm(`저장 ${n}의 기록(${summaryText(had)})을 지우고\n가져온 기록(${incoming})으로 바꿉니다. 계속할까요?`)) {
-      saveStatus('가져오지 않았습니다.');
+    if (had && !armTwice($('saveImport'), '덮어쓴다')) {
+      saveStatus(`저장 ${n}의 기록(${summaryText(had)})을 지우고 가져온 기록(${incoming})으로 바꿉니다. 맞으면 한 번 더 누르세요.`, 'warn');
       return;
     }
     importSave(n, meta);
@@ -3120,6 +3120,23 @@ function openImport(n) {
     saveStatus(`가져왔습니다 — ${incoming}`, 'ok');
     setTimeout(closeSaveModal, 1200);
   });
+}
+
+// 되돌릴 수 없는 단추는 두 번 누르게 합니다 — 처음 누르면 글자가 바뀌고 빨개지며, 4초 안에 한 번 더 눌러야 true.
+// 브라우저 확인 창(confirm)은 쓰지 않습니다 — 앱 안 브라우저 등에서는 창 없이 곧바로 「취소」가 돼서 단추가 안 먹는 것처럼 보였음.
+function armTwice(b, label) {
+  if (b.dataset.armed) { delete b.dataset.armed; return true; }
+  const was = b.textContent;
+  b.dataset.armed = '1';
+  b.textContent = label;
+  b.classList.add('armed');
+  setTimeout(() => {
+    if (!b.dataset.armed) return;
+    delete b.dataset.armed;
+    b.textContent = was;
+    b.classList.remove('armed');
+  }, 4000);
+  return false;
 }
 
 function enterGame(slot, fresh) {
