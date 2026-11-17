@@ -1854,6 +1854,10 @@ body.test-mode::after {
 .talk-face .hero-sprite { width: 36px; height: 45px; }
 #talk[data-who="me"] .tut-body { color: var(--text); }
 #talk[data-who="guide"] .talk-head .tut-step { color: var(--accent); }
+/* 돈 · 강화석 픽셀 그림 — 글자 높이에 맞춰, 흐리지 않게 (ui.js 의 pxIcon) */
+/* 그림 한 칸 = 화면 1px 그대로 (늘이면 칸 크기가 들쭉날쭉해져서) — 돈 16×10 · 강화석 12×12 */
+.px-ic { display: inline-block; height: 12px; width: auto; vertical-align: -2px; margin-right: 3px; image-rendering: pixelated; }
+.px-ic.px-won { height: 10px; vertical-align: -1px; }
 .guide-eye { display: inline-block; width: 40px; height: 40px; background-size: 100% 100%; image-rendering: pixelated; }
 .guide-eye.bob { animation: eye-bob 1.8s ease-in-out infinite; }
 @keyframes eye-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }

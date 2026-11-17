@@ -363,7 +363,7 @@ function renderRecords() {
     ${record('빼앗은 격', `${m.bossesBeaten.length}/${known}`, bm > 1.01 ? 'boost' : '')}
     ${bm > 1.01 ? record('영구 경험치', `×${bm.toFixed(1)}`, 'boost') : ''}
     ${record('골드', fmt(num(m.gold)))}
-    ${m.cityOpen ? record('돈', fmtWon(num(m.won))) : ''}
+    ${m.cityOpen ? record('돈', pxIcon('won') + fmtWon(num(m.won))) : ''}
     ${record('전리품', `${ownedIds().length}/${knownItems().length}`)}
     ${record('도감 완성', `${completedRanks()}/${known}`, completedRanks() ? 'boost' : '')}
     ${m.cleared ? record('', '클리어', 'cleared') : ''}
@@ -704,7 +704,7 @@ function renderHud(zone) {
       const on = isSetActive(n);
       return `<button class="hud-set ${on ? 'on' : ''}" data-jset="${n}" ${on ? 'disabled' : ''} title="세트 ${n + 1}">${n + 1}</button>`;
     }).join('')}</div>
-    ${inTown() ? `<span class="hud-chip hud-glass hud-won" title="가진 돈 — 도시에서 씁니다">${fmtWon(num(State.meta.won))}</span>` : ''}
+    ${inTown() ? `<span class="hud-chip hud-glass hud-won" title="가진 돈 — 도시에서 씁니다">${pxIcon('won')}${fmtWon(num(State.meta.won))}</span>` : ''}
     <button class="hud-chip hud-glass" id="rosterBtn" title="이 지역에 있는 것">도감 ${run.zoneIndex + 1} / ${knownZoneCount()}</button>
     ${run.unspent > 0 ? '<button class="hud-chip hud-glass ready" id="jAllocBtn">스탯 분배<span class="alloc-pip on"></span></button>' : ''}`;
   // 지역 이름 — 게임에 들어선 뒤 처음 그릴 때와, 다른 지역이나 지역이 없는 지도(문의 광장)에 들어설 때
@@ -1414,7 +1414,7 @@ function dropCard(d, i, veiled) {
                <span class="res-name">${d.item.grade !== 'normal' ? `<span class="grade-tag ${d.item.grade}">${KINDS[d.item.grade].name}</span>` : ''}${d.item.name}</span>
                <span class="res-meta">
                  <span class="res-slot">${SLOT_NAMES[d.item.slot]}</span>
-                 <span class="res-tag">${d.isNew ? '새로 얻음' : `분해 · 강화석 +${fmt(d.stones)}`}</span>
+                 <span class="res-tag">${d.isNew ? '새로 얻음' : `분해 · ${pxIcon('stone')}강화석 +${fmt(d.stones)}`}</span>
                  ${d.autoWorn ? '<span class="res-tag worn-now">바로 착용</span>' : ''}
                </span>
                ${d.isNew && !d.autoWorn ? dropWear(d.item) : ''}
@@ -1429,7 +1429,7 @@ function showChest(r) {
   chestShown = r;
   const lines = [];
   if (r.gold) lines.push(row('골드', `+${fmt(r.gold)}`));
-  if (r.stones) lines.push(row('강화석', `+${fmt(r.stones.n)}`, SLOT_NAMES[r.stones.slot]));
+  if (r.stones) lines.push(row(`${pxIcon('stone')}강화석`, `+${fmt(r.stones.n)}`, SLOT_NAMES[r.stones.slot]));
   $('chestBody').innerHTML = `
     <div class="res-lines">${lines.join('')}</div>
     ${r.drop ? `<div class="res-drop-list" style="grid-template-columns:minmax(0, 1fr)">${dropCard(r.drop, 0, false)}</div>` : ''}
@@ -2155,7 +2155,7 @@ function dollEnhCell(slotId, style) {
   const st = stonesOf(slotId);
   const ready = canEnhance(slotId);
   const fx = dollFx && dollFx.slot === slotId ? dollFx : null;
-  const sub = nx ? `${fmt(st)}/${fmt(nx.cost)} · ${Math.round(enhanceChance(slotId) * 100)}%` : '끝까지 올랐다';
+  const sub = nx ? `${pxIcon('stone')}${fmt(st)}/${fmt(nx.cost)} · ${Math.round(enhanceChance(slotId) * 100)}%` : '끝까지 올랐다';
   return `
     <button class="doll-slot enh-cell ${item ? 'worn' : 'empty'} ${ready ? 'ready' : ''} ${nx ? '' : 'maxed'} ${fx ? (fx.success ? 'fx-ok' : 'fx-fail') : ''}"
             data-enhslot="${slotId}" style="${style}" ${ready ? '' : 'disabled'}>
@@ -2295,7 +2295,7 @@ function specialPanel(slot) {
   return `<div class="enh-panel sp-panel ${open ? '' : 'locked'}">
     <div class="enh-head"><span class="enh-title">${SLOT_NAMES[slot]}${open ? '' : ' · 닫혀 있음'}</span>
       <span class="enh-now">${specialOpenCount()}/${SPECIAL_SLOT_MAX} 열림</span></div>
-    <div class="enh-info"><span>특수장비 강화석 <b>${fmt(stonesOf('special'))}</b></span></div>
+    <div class="enh-info"><span>특수장비 ${pxIcon('stone')}강화석 <b>${fmt(stonesOf('special'))}</b></span></div>
   </div>`;
 }
 
@@ -2512,11 +2512,11 @@ function renderSwap() {
     return `<button class="swap-row ${s === to ? 'to' : ''} ${s === swapFrom ? 'from' : ''} ${canEnhance(s) ? 'ready' : ''}" data-swapto="${s}">
       <span class="swap-ic">${item ? itemArt(item) : ''}</span>
       <span class="swap-k">${SLOT_NAMES[s]} <b>+${enhanceLevel(s)}</b></span>
-      <span class="swap-n">${fmt(stonesOf(s))}${n ? ` / ${fmt(n.cost)}` : ' · 최대'}</span>
+      <span class="swap-n">${pxIcon('stone')}${fmt(stonesOf(s))}${n ? ` / ${fmt(n.cost)}` : ' · 최대'}</span>
     </button>`;
   }).join('') + `<div class="swap-row sp ${swapFrom === 'special' ? 'from' : ''}">
       <span class="swap-ic">✦</span><span class="swap-k">${SLOT_NAMES.special}</span>
-      <span class="swap-n">${fmt(stonesOf('special'))}</span></div>`;
+      <span class="swap-n">${pxIcon('stone')}${fmt(stonesOf('special'))}</span></div>`;
 
   $('swapBody').innerHTML = pick + `<div class="swap-list">${rows}</div>`;
 
@@ -2622,7 +2622,7 @@ function renderShop() {
   const gold = num(dept ? State.meta.won : State.meta.gold);
   const cost = n => dept ? fmtWon(n) : `${fmt(n)} 골드`;
   $('shopTitle').textContent = dept ? `헌터백화점 · ${DEPT_SECTIONS[shopKind].name}` : '떠돌이 상인';
-  $('shopGold').textContent = dept ? `돈 ${fmtWon(gold)}` : `골드 ${fmt(gold)}`;
+  $('shopGold').innerHTML = dept ? `${pxIcon('won')}돈 ${fmtWon(gold)}` : `골드 ${fmt(gold)}`;
   // 물건 한 줄
   const card = item => {
     const can = gold >= item.price;
@@ -2656,7 +2656,7 @@ function renderShop() {
   const nx = nextEnhance(shopSlot);
   const stones = `
     <div class="shop-stones">
-      <div class="swap-head">강화석</div>
+      <div class="swap-head">${pxIcon('stone')}강화석</div>
       <select class="swap-from" id="shopSlot">${SLOT_IDS.map(s =>
         `<option value="${s}" ${s === shopSlot ? 'selected' : ''}>${SLOT_NAMES[s]} +${enhanceLevel(s)} · 강화석 ${fmt(stonesOf(s))}${nextEnhance(s) ? ` / ${fmt(nextEnhance(s).cost)}` : ' · 최대'}</option>`).join('')}</select>
       <div class="shop-packs">${STONE_PACKS.map(n => {
@@ -2686,7 +2686,7 @@ function renderShop() {
 function renderMatShop() {
   const won = num(State.meta.won);      // 도시의 돈 — 판 값도 만드는 값도 원
   $('shopTitle').textContent = `헌터백화점 · ${DEPT_SECTIONS.mats.name}`;
-  $('shopGold').textContent = `돈 ${fmtWon(won)}`;
+  $('shopGold').innerHTML = `${pxIcon('won')}돈 ${fmtWon(won)}`;
   const cores = Object.values(CORES).filter(c => matsOf(c.id) > 0);
   const coreSum = cores.reduce((s, c) => s + c.sell * matsOf(c.id), 0);
   const coreBlock = cores.length ? `
@@ -3184,11 +3184,50 @@ const GUIDE_EYE = [
 const GUIDE_PAL = { o: '#2a1a10', w: '#f4ecd8', s: '#c4b69c', I: '#783e12', i: '#d68c2e', p: '#120a06', h: '#ffffff' };
 let guideEyeSrc = null;
 function guideEye(cls = '') {
-  if (!guideEyeSrc) {
-    const rects = GUIDE_EYE.flatMap((row, y) => [...row].map((c, x) => GUIDE_PAL[c] ? `<rect x="${x}" y="${y}" width="1" height="1" fill="${GUIDE_PAL[c]}"/>` : '')).join('');
-    guideEyeSrc = 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" shape-rendering="crispEdges">${rects}</svg>`);
-  }
+  if (!guideEyeSrc) guideEyeSrc = pixelSprite(GUIDE_EYE, GUIDE_PAL);
   return `<span class="guide-eye ${cls}" style="background-image:url('${guideEyeSrc}')"></span>`;
+}
+
+// 글자 그림(한 글자 = 한 칸, 팔레트에 없는 글자는 빈칸)을 SVG 데이터 주소로 — 눈동자 · 돈 · 강화석이 씁니다
+function pixelSprite(rows, pal) {
+  const w = rows[0].length, h = rows.length;
+  const rects = rows.flatMap((row, y) => [...row].map((c, x) => pal[c] ? `<rect x="${x}" y="${y}" width="1" height="1" fill="${pal[c]}"/>` : '')).join('');
+  return 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" shape-rendering="crispEdges">${rects}</svg>`);
+}
+
+// 돈(원) — 초록 지폐 16×10 · 강화석 — 보랏빛 결정 12×12. 글자 옆에 글자 크기로 붙습니다 (pxIcon)
+const PIXEL_ICONS = {
+  won: { pal: { o: '#1f3a22', l: '#c9eaa8', g: '#79b862', d: '#4c8a40', c: '#2f5f2a', w: '#eef8dc' }, rows: [
+    'oooooooooooooooo',
+    'olllllllllllllgo',
+    'olggggggggggggdo',
+    'olgdggwwwwggdgdo',
+    'olggggwccwggggdo',
+    'olggggwccwggggdo',
+    'olgdggwwwwggdgdo',
+    'olggggggggggggdo',
+    'ogdddddddddddddo',
+    'oooooooooooooooo'] },
+  stone: { pal: { o: '#1d1840', h: '#ece8ff', b: '#9a90f2', a: '#6253d6', d: '#3b2f9e' }, rows: [
+    '....oooo....',
+    '...ohhbbo...',
+    '..ohhbbaao..',
+    '.ohhbbbaaao.',
+    'ohbbbbaaaado',
+    'obbbbbaaaddo',
+    'obbbbaaaaddo',
+    '.obbbaaaddo.',
+    '..obbaaddo..',
+    '...obaddo...',
+    '....oddo....',
+    '.....oo.....'] }
+};
+const pixelIconSrc = {};
+function pxIcon(name) {
+  const def = PIXEL_ICONS[name];
+  if (!def) return '';
+  const src = pixelIconSrc[name] || (pixelIconSrc[name] = pixelSprite(def.rows, def.pal));
+  return `<img class="px-ic px-${name}" src="${src}" alt="" aria-hidden="true">`;
 }
 
 // 주인공의 이름 — 정하기 전에는 「나」
