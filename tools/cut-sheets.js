@@ -19,6 +19,7 @@ const zlib = require('zlib');
 
 const ROOT = path.join(__dirname, '..');
 const OUT = 256, FIT = 230;          // 그림 크기 · 그 안에서 물건이 차지할 최대 변
+const SMALL_PART = 0.04;     // 칸에서 가장 큰 덩어리의 이만큼보다 작은 조각은 버림 (글자 · 부스러기)
 const CLEAR = 70, SOFT = 150;        // 배경색과의 거리 — CLEAR 아래는 투명, SOFT 아래는 반투명(가장자리)
 
 // ---------- PNG 읽기 · 쓰기 ----------
@@ -171,6 +172,16 @@ function splitSheet(img, cols, rows) {
     groups[r * cols + c].push(q);
   }
   return groups.map(list => {
+    // 한 칸에서 가장 큰 덩어리의 SMALL_PART 배보다 작은 조각은 버립니다 — 이미지 AI 가 장비 밑에 써 넣은 글자(이름) · 부스러기.
+    // 짝으로 그린 장갑 · 신발처럼 큰 덩어리 둘은 그대로 남습니다
+    const big = Math.max(0, ...list.map(q => q.length));
+    list = list.filter(q => q.length >= big * SMALL_PART);
+    // 가장 큰 덩어리보다 통째로 아래에 있는 작은 조각(그 크기의 1/4 미만)도 버림 — 장비 밑에 써 넣은 이름은 글자가 붙어 커지기도 해서
+    const main = list.find(q => q.length === big);
+    if (main) {
+      const bottom = Math.max(...main.map(j => (j / img.w) | 0));
+      list = list.filter(q => q === main || q.length >= big / 4 || Math.min(...q.map(j => (j / img.w) | 0)) < bottom - 4);
+    }
     if (!list.length) return null;
     let x0 = img.w, y0 = img.h, x1 = 0, y1 = 0;
     for (const q of list) for (const j of q) { const x = j % img.w, y = (j / img.w) | 0; x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }

@@ -42,15 +42,15 @@ If a name describes a different kind of object than its type, draw the object fr
 
 | 칸 | 장비 | 부위 | 나온 곳 | 잘라서 둘 곳 |
 |---|---|---|---|---|
-| 1 | 진동 칼날 | 무기 | 헌터백화점 | `assets/items/dept_vibro.png` |
-| 2 | 왕의 세검 | 무기 | 몰락한 왕 | `assets/items/fallenking_0.png` |
-| 3 | 아홉 머리의 이빨 | 무기 | 히드라 | `assets/items/hydra_0.png` |
-| 4 | 미궁의 전투도끼 | 무기 | 미노타우로스 | `assets/items/minotaur_0.png` |
-| 5 | 충격 흡수 방패 | 보조무기 | 헌터백화점 | `assets/items/dept_damper.png` |
-| 6 | 강철 방패 | 보조무기 | 아이언 골렘 | `assets/items/irongolem_0.png` |
-| 7 | 물에 잠긴 왕관 | 투구 | 보물상자 | `assets/items/chest_ruins_crown.png` |
-| 8 | 빈 투구 | 투구 | 다크 나이트 | `assets/items/darkknight_2.png` |
-| 9 | 녹슨 왕관 | 투구 | 몰락한 왕 | `assets/items/fallenking_1.png` |
+| 1 | 진동 칼날 | 무기 | 헌터백화점 | `assets/items/dept_vibro.png` ✅ |
+| 2 | 왕의 세검 | 무기 | 몰락한 왕 | `assets/items/fallenking_0.png` ✅ |
+| 3 | 아홉 머리의 이빨 | 무기 | 히드라 | `assets/items/hydra_0.png` ✅ |
+| 4 | 미궁의 전투도끼 | 무기 | 미노타우로스 | `assets/items/minotaur_0.png` ✅ |
+| 5 | 충격 흡수 방패 | 보조무기 | 헌터백화점 | `assets/items/dept_damper.png` ✅ |
+| 6 | 강철 방패 | 보조무기 | 아이언 골렘 | `assets/items/irongolem_0.png` ✅ |
+| 7 | 물에 잠긴 왕관 | 투구 | 보물상자 | `assets/items/chest_ruins_crown.png` ✅ |
+| 8 | 빈 투구 | 투구 | 다크 나이트 | `assets/items/darkknight_2.png` ✅ |
+| 9 | 녹슨 왕관 | 투구 | 몰락한 왕 | `assets/items/fallenking_1.png` ✅ |
 
 ## 시트 3-B — 갑옷 · 어깨 · 장갑 · 허리띠 · 각반 (9개)
 
@@ -94,15 +94,15 @@ If a name describes a different kind of object than its type, draw the object fr
 
 | 칸 | 장비 | 부위 | 나온 곳 | 잘라서 둘 곳 |
 |---|---|---|---|---|
-| 1 | 깃털 흉갑 | 갑옷 | 그리핀 로드 | `assets/items/griffinlord_1.png` |
-| 2 | 재생하는 비늘 | 갑옷 | 히드라 | `assets/items/hydra_1.png` |
-| 3 | 세 짐승의 어깨 | 어깨 | 키메라 | `assets/items/chimera_0.png` |
-| 4 | 흑철 견갑 | 어깨 | 다크 나이트 | `assets/items/darkknight_0.png` |
-| 5 | 무쇠 손 | 장갑 | 아이언 골렘 | `assets/items/irongolem_2.png` |
-| 6 | 미궁의 허리띠 | 허리띠 | 미노타우로스 | `assets/items/minotaur_2.png` |
-| 7 | 화강암 띠 | 허리띠 | 스톤 골렘 | `assets/items/stonegolem_2.png` |
-| 8 | 석화 방지 각반 | 각반 | 코카트리스 | `assets/items/cockatrice_0.png` |
-| 9 | 돌기둥 각반 | 각반 | 스톤 골렘 | `assets/items/stonegolem_1.png` |
+| 1 | 깃털 흉갑 | 갑옷 | 그리핀 로드 | `assets/items/griffinlord_1.png` ✅ |
+| 2 | 재생하는 비늘 | 갑옷 | 히드라 | `assets/items/hydra_1.png` ✅ |
+| 3 | 세 짐승의 어깨 | 어깨 | 키메라 | `assets/items/chimera_0.png` ✅ |
+| 4 | 흑철 견갑 | 어깨 | 다크 나이트 | `assets/items/darkknight_0.png` ✅ |
+| 5 | 무쇠 손 | 장갑 | 아이언 골렘 | `assets/items/irongolem_2.png` ✅ |
+| 6 | 미궁의 허리띠 | 허리띠 | 미노타우로스 | `assets/items/minotaur_2.png` ✅ |
+| 7 | 화강암 띠 | 허리띠 | 스톤 골렘 | `assets/items/stonegolem_2.png` ✅ |
+| 8 | 석화 방지 각반 | 각반 | 코카트리스 | `assets/items/cockatrice_0.png` ✅ |
+| 9 | 돌기둥 각반 | 각반 | 스톤 골렘 | `assets/items/stonegolem_1.png` ✅ |
 
 ## 시트 3-C — 신발 · 망토 · 반지 · 목걸이 · 팔찌 (9개)
 
@@ -146,15 +146,15 @@ If a name describes a different kind of object than its type, draw the object fr
 
 | 칸 | 장비 | 부위 | 나온 곳 | 잘라서 둘 곳 |
 |---|---|---|---|---|
-| 1 | 창공의 발톱 | 신발 | 그리핀 로드 | `assets/items/griffinlord_0.png` |
-| 2 | 날개막 신 | 신발 | 와이번 | `assets/items/wyvern_0.png` |
-| 3 | 만티코어 망토 | 망토 | 만티코어 | `assets/items/manticore_2.png` |
-| 4 | 와이번 가죽 망토 | 망토 | 와이번 | `assets/items/wyvern_2.png` |
-| 5 | 여왕의 깃털 | 반지 | 하피 퀸 | `assets/items/harpyqueen_0.png` |
-| 6 | 만티코어의 송곳니 | 반지 | 만티코어 | `assets/items/manticore_1.png` |
-| 7 | 뒤섞인 심장 | 목걸이 | 키메라 | `assets/items/chimera_1.png` |
-| 8 | 무너진 옥새 | 목걸이 | 몰락한 왕 | `assets/items/fallenking_2.png` |
-| 9 | 여왕의 팔찌 | 팔찌 | 하피 퀸 | `assets/items/harpyqueen_2.png` |
+| 1 | 창공의 발톱 | 신발 | 그리핀 로드 | `assets/items/griffinlord_0.png` ✅ |
+| 2 | 날개막 신 | 신발 | 와이번 | `assets/items/wyvern_0.png` ✅ |
+| 3 | 만티코어 망토 | 망토 | 만티코어 | `assets/items/manticore_2.png` ✅ |
+| 4 | 와이번 가죽 망토 | 망토 | 와이번 | `assets/items/wyvern_2.png` ✅ |
+| 5 | 여왕의 깃털 | 반지 | 하피 퀸 | `assets/items/harpyqueen_0.png` ✅ |
+| 6 | 만티코어의 송곳니 | 반지 | 만티코어 | `assets/items/manticore_1.png` ✅ |
+| 7 | 뒤섞인 심장 | 목걸이 | 키메라 | `assets/items/chimera_1.png` ✅ |
+| 8 | 무너진 옥새 | 목걸이 | 몰락한 왕 | `assets/items/fallenking_2.png` ✅ |
+| 9 | 여왕의 팔찌 | 팔찌 | 하피 퀸 | `assets/items/harpyqueen_2.png` ✅ |
 
 ## 하나씩 뽑기 (시트가 잘 안 될 때)
 
