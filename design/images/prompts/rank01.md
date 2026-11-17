@@ -94,15 +94,15 @@ If a name describes a different kind of object than its type, draw the object fr
 
 | 칸 | 장비 | 부위 | 나온 곳 | 잘라서 둘 곳 |
 |---|---|---|---|---|
-| 1 | 고철 판금 | 갑옷 | 던전 가디언 | `assets/items/dungeonguardian_1.png` |
-| 2 | 전리품 누더기 | 갑옷 | 고블린 족장 | `assets/items/goblinchief_1.png` |
-| 3 | 썩은 가죽 | 갑옷 | 좀비 | `assets/items/zombie_0.png` |
-| 4 | 족장의 어깨뼈 | 어깨 | 고블린 족장 | `assets/items/goblinchief_0.png` |
-| 5 | 갈비뼈 견갑 | 어깨 | 스켈레톤 | `assets/items/skeleton_0.png` |
-| 6 | 늑대발 장갑 | 장갑 | 다크 울프 | `assets/items/darkwolf_2.png` |
-| 7 | 이빨 달린 상자 | 장갑 | 미믹 | `assets/items/mimic_0.png` |
-| 8 | 코볼트 허리끈 | 허리띠 | 코볼트 | `assets/items/kobold_2.png` |
-| 9 | 비늘 각반 | 각반 | 코볼트 | `assets/items/kobold_1.png` |
+| 1 | 고철 판금 | 갑옷 | 던전 가디언 | `assets/items/dungeonguardian_1.png` ✅ |
+| 2 | 전리품 누더기 | 갑옷 | 고블린 족장 | `assets/items/goblinchief_1.png` ✅ |
+| 3 | 썩은 가죽 | 갑옷 | 좀비 | `assets/items/zombie_0.png` ✅ |
+| 4 | 족장의 어깨뼈 | 어깨 | 고블린 족장 | `assets/items/goblinchief_0.png` ✅ |
+| 5 | 갈비뼈 견갑 | 어깨 | 스켈레톤 | `assets/items/skeleton_0.png` ✅ |
+| 6 | 늑대발 장갑 | 장갑 | 다크 울프 | `assets/items/darkwolf_2.png` ✅ |
+| 7 | 이빨 달린 상자 | 장갑 | 미믹 | `assets/items/mimic_0.png` ✅ |
+| 8 | 코볼트 허리끈 | 허리띠 | 코볼트 | `assets/items/kobold_2.png` ✅ |
+| 9 | 비늘 각반 | 각반 | 코볼트 | `assets/items/kobold_1.png` ✅ |
 
 ## 시트 1-C — 각반 · 신발 · 망토 · 반지 · 목걸이 · 팔찌 (9개)
 
@@ -147,15 +147,15 @@ If a name describes a different kind of object than its type, draw the object fr
 
 | 칸 | 장비 | 부위 | 나온 곳 | 잘라서 둘 곳 |
 |---|---|---|---|---|
-| 1 | 무거운 발 | 각반 | 좀비 | `assets/items/zombie_1.png` |
-| 2 | 발자국 없는 신 | 신발 | 다크 울프 | `assets/items/darkwolf_1.png` |
-| 3 | 쥐가죽 신 | 신발 | 자이언트 랫 | `assets/items/giantrat_0.png` |
-| 4 | 박쥐날개 망토 | 망토 | 임프 | `assets/items/imp_2.png` |
-| 5 | 독니 반지 | 반지 | 자이언트 스파이더 | `assets/items/cavespider_1.png` |
-| 6 | 이빨 목걸이 | 반지 | 자이언트 랫 | `assets/items/giantrat_1.png` |
-| 7 | 지하수로의 열쇠 | 목걸이 | 던전 가디언 | `assets/items/dungeonguardian_2.png` |
-| 8 | 가짜 금화 | 목걸이 | 미믹 | `assets/items/mimic_1.png` |
-| 9 | 거미줄 팔찌 | 팔찌 | 자이언트 스파이더 | `assets/items/cavespider_2.png` |
+| 1 | 무거운 발 | 각반 | 좀비 | `assets/items/zombie_1.png` ✅ |
+| 2 | 발자국 없는 신 | 신발 | 다크 울프 | `assets/items/darkwolf_1.png` ✅ |
+| 3 | 쥐가죽 신 | 신발 | 자이언트 랫 | `assets/items/giantrat_0.png` ✅ |
+| 4 | 박쥐날개 망토 | 망토 | 임프 | `assets/items/imp_2.png` ✅ |
+| 5 | 독니 반지 | 반지 | 자이언트 스파이더 | `assets/items/cavespider_1.png` ✅ |
+| 6 | 이빨 목걸이 | 반지 | 자이언트 랫 | `assets/items/giantrat_1.png` ✅ |
+| 7 | 지하수로의 열쇠 | 목걸이 | 던전 가디언 | `assets/items/dungeonguardian_2.png` ✅ |
+| 8 | 가짜 금화 | 목걸이 | 미믹 | `assets/items/mimic_1.png` ✅ |
+| 9 | 거미줄 팔찌 | 팔찌 | 자이언트 스파이더 | `assets/items/cavespider_2.png` ✅ |
 
 ## 하나씩 뽑기 (시트가 잘 안 될 때)
 

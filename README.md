@@ -589,7 +589,7 @@ Resolute Hero RPG 와 Inflation RPG 를 모티브로 한 로그라이트 오토�
 - `prompts/` — **장비 그림을 이미지 AI 로 뽑을 때 붙여 넣는 프롬프트 묶음** (`tools/prompt-batches.js` — 그림 목록을 뽑을 때 같이 나옵니다).
   한 번에 다 만들지 않게 격마다 한 파일(`rank01.md` …), 한 장에 9개까지(3×3 시트 — 모두 70장), 차수는 1~3격 → 4~6격 → … 순입니다 (`prompts/README.md`).
   배경은 자홍색 한 가지로 뽑아 나중에 걷어냅니다. 뽑은 시트는 `design/images/sheets/rank01-A.png` 처럼 저장하고 `node tools/cut-sheets.js` 로 자릅니다
-  (칸마다 배경을 걷어내 `assets/items/<id>.png` 256×256 투명 — 어느 칸이 어느 장비인지는 `prompts/sheets.json`). 자르면 `js/itemart.js`(그림 있는 장비 목록)도 다시 써서, 그림이 있는 장비는 이모티콘 대신 그 그림이 뜹니다 (`ui.js` 의 `itemArt`).
+  (webp 도 읽음 · 제미나이의 반짝이 표시는 장비 위에 있어도 걷어냄 · 물건 덩어리마다 가운데가 든 칸으로 나눔 · 칸마다 배경을 걷어내 `assets/items/<id>.png` 256×256 투명 — 어느 칸이 어느 장비인지는 `prompts/sheets.json`). 자르면 `js/itemart.js`(그림 있는 장비 목록)도 다시 써서, 그림이 있는 장비는 이모티콘 대신 그 그림이 뜹니다 (`ui.js` 의 `itemArt`).
   한 파일 빌드(`jjunsgame.html`)에도 그림이 통째로 들어갑니다 — 그림 하나에 약 80KB라, 549개를 다 넣으면 수십 MB가 됩니다 (그때 줄이는 법을 정함).
 
 저장 경로 약속: 몬스터 `assets/monsters/<id>.png` · 전리품 `assets/items/<id>.png`. 파일을 넣으면 이모티콘 대신 그림이 뜨도록 연결하는 작업이 따로 필요합니다 (아직 안 했습니다).

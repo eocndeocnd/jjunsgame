@@ -211,7 +211,7 @@ function build(manifest, exists = () => false) {
     '## 자르기',
     '',
     '- 시트를 저장했으면 `node tools/cut-sheets.js` — 칸마다 잘라 배경을 걷어내고 `assets/items/<id>.png` (256×256 · 투명)로 만듭니다.',
-    '  이미 있는 그림은 건너뜁니다 (다시 자르려면 `--force`). 시트는 PNG 로 저장하세요 (webp 는 못 읽음).',
+    '  이미 있는 그림은 건너뜁니다 (다시 자르려면 `--force`). webp 도 읽고(Windows), 제미나이의 반짝이 표시는 장비 위에 있어도 걷어냅니다.',
     '- 자르면 `js/itemart.js` 도 다시 써서, 게임에서 그 장비는 이모티콘 대신 그림이 뜹니다.',
     ''
   ].join('\n');

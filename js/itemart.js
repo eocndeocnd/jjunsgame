@@ -1,13 +1,31 @@
 // 자동으로 만든 파일입니다 (node tools/cut-sheets.js) — 손으로 고치지 마세요.
 // 그림이 있는 장비 → 그림 경로. 여기 없는 장비는 이모티콘(fromIcon)으로 그립니다 (ui.js 의 itemArt).
 const ITEM_ART = {
+  'cavespider_1': 'assets/items/cavespider_1.png',
+  'cavespider_2': 'assets/items/cavespider_2.png',
   'chest_sewer_lamp': 'assets/items/chest_sewer_lamp.png',
+  'darkwolf_1': 'assets/items/darkwolf_1.png',
+  'darkwolf_2': 'assets/items/darkwolf_2.png',
   'dept_buckler': 'assets/items/dept_buckler.png',
   'dept_knife': 'assets/items/dept_knife.png',
   'dungeonguardian_0': 'assets/items/dungeonguardian_0.png',
+  'dungeonguardian_1': 'assets/items/dungeonguardian_1.png',
+  'dungeonguardian_2': 'assets/items/dungeonguardian_2.png',
+  'giantrat_0': 'assets/items/giantrat_0.png',
+  'giantrat_1': 'assets/items/giantrat_1.png',
   'goblin_0': 'assets/items/goblin_0.png',
   'goblin_1': 'assets/items/goblin_1.png',
+  'goblinchief_0': 'assets/items/goblinchief_0.png',
+  'goblinchief_1': 'assets/items/goblinchief_1.png',
   'imp_0': 'assets/items/imp_0.png',
+  'imp_2': 'assets/items/imp_2.png',
+  'kobold_1': 'assets/items/kobold_1.png',
+  'kobold_2': 'assets/items/kobold_2.png',
+  'mimic_0': 'assets/items/mimic_0.png',
+  'mimic_1': 'assets/items/mimic_1.png',
+  'skeleton_0': 'assets/items/skeleton_0.png',
   'skeleton_1': 'assets/items/skeleton_1.png',
-  'slime_0': 'assets/items/slime_0.png'
+  'slime_0': 'assets/items/slime_0.png',
+  'zombie_0': 'assets/items/zombie_0.png',
+  'zombie_1': 'assets/items/zombie_1.png'
 };

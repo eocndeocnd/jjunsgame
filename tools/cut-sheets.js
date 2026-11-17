@@ -5,10 +5,12 @@
 //    node tools/cut-sheets.js --force    이미 있는 그림도 다시 자름
 //    node tools/cut-sheets.js --preview <out.png>   자른 것을 어두운 · 밝은 바탕에 늘어놓은 확인용 그림도 만듦
 //
+//  · 칸 선으로 자르지 않고 물건 덩어리의 가운데가 든 칸으로 나눕니다 (옆 칸으로 넘어간 끝도 제 물건과 같이)
 //  · 어느 칸이 어느 장비인지는 design/images/prompts/sheets.json (node tools/cli.js images 가 뽑음)
 //  · 배경은 자홍색(#FF00FF) — 칸 네 귀퉁이에서 실제 배경색을 재서 걷어내고, 가장자리는 배경색을 빼서 분홍 테가 남지 않게 합니다
 //  · 물건만 잘라 256×256 가운데에 (여백 약 10%). 줄일 때는 넓이 평균 — 도트가 뭉개지지 않게 정수 배 근처면 그 배로
-//  · 시트는 PNG(8비트, 인터레이스 없음)만 — webp 면 PNG 로 다시 저장해 넣으세요. 패키지 없이 Node 만으로 돕니다.
+//  · 시트는 PNG(8비트, 인터레이스 없음). webp 는 Windows 의 그림 변환기로 바꿔 읽습니다. 패키지 없이 Node 만으로 돕니다.
+//  · 제미나이의 반짝이 표시(오른쪽 아래)는 덮인 정도(tools/gemini-mark.json)로 거꾸로 풀어 걷어냅니다 — 장비 위에 겹쳐도 원래 색으로
 // ============================================================
 'use strict';
 const fs = require('fs');
@@ -65,6 +67,57 @@ function writePng(file, { w, h, px }) {
     chunk('IHDR', ihdr), chunk('IDAT', zlib.deflateSync(raw, { level: 9 })), chunk('IEND', Buffer.alloc(0))]));
 }
 
+// 시트 읽기 — PNG 는 바로, webp(이름만 .png 인 것 포함)는 Windows 의 그림 변환기(WIC)로 PNG 로 바꿔서 읽습니다
+function readSheet(file) {
+  const head = fs.readFileSync(file).subarray(0, 4).toString('ascii');
+  if (head !== 'RIFF') return readPng(file);
+  if (process.platform !== 'win32') throw new Error(`${file} — webp 입니다. PNG 로 다시 저장해 넣으세요`);
+  const tmp = path.join(require('os').tmpdir(), `jjunsgame-sheet-${process.pid}.png`);
+  const ps = [
+    'Add-Type -AssemblyName PresentationCore',
+    `$fs = [IO.File]::OpenRead('${file.replace(/'/g, "''")}')`,
+    '$d = [Windows.Media.Imaging.BitmapDecoder]::Create($fs, 0, [Windows.Media.Imaging.BitmapCacheOption]::OnLoad); $fs.Close()',
+    '$c = New-Object Windows.Media.Imaging.FormatConvertedBitmap($d.Frames[0], [Windows.Media.PixelFormats]::Bgra32, $null, 0)',
+    '$e = New-Object Windows.Media.Imaging.PngBitmapEncoder; $e.Frames.Add([Windows.Media.Imaging.BitmapFrame]::Create($c))',
+    `$o = [IO.File]::Create('${tmp}'); $e.Save($o); $o.Close()`
+  ].join('; ');
+  require('child_process').execFileSync('powershell', ['-NoProfile', '-Command', ps], { stdio: 'pipe' });
+  try { return readPng(tmp); } finally { fs.unlinkSync(tmp); }
+}
+
+// 제미나이 표시(오른쪽 아래의 반짝이)를 걷어냅니다 — 흰색을 반투명하게 덮어 그린 것이라, 덮인 정도(tools/gemini-mark.json)를 알면 거꾸로 풀 수 있습니다.
+// 장비 위에 겹쳐도 원래 색이 돌아옵니다. 자리는 그림 크기에 따라 조금씩 달라서 오른쪽 아래 근처에서 모양이 가장 잘 맞는 곳을 찾습니다. 못 찾으면 그대로.
+function removeMark(img) {
+  const f = path.join(__dirname, 'gemini-mark.json');
+  if (!fs.existsSync(f)) return null;
+  const m = JSON.parse(fs.readFileSync(f, 'utf8')), S = m.size, A = Buffer.from(m.alpha, 'base64');
+  const lum = (x, y) => { const i = (y * img.w + x) * 4; return img.px[i] * 0.3 + img.px[i + 1] * 0.59 + img.px[i + 2] * 0.11; };
+  let ma = 0; for (const a of A) ma += a; ma /= A.length;
+  let va = 0; for (const a of A) va += (a - ma) ** 2;
+  // 표시 가운데는 오른쪽 · 아래에서 약 120px (1024 · 1408 그림에서 잰 값) — 그 둘레 ±40px 에서 찾음
+  const px0 = img.w - 120, py0 = img.h - 120;
+  let best = null;
+  for (let cy = py0 - 40; cy <= py0 + 40; cy++) for (let cx = px0 - 40; cx <= px0 + 40; cx++) {
+    const x0 = cx - (S >> 1), y0 = cy - (S >> 1);
+    if (x0 < 0 || y0 < 0 || x0 + S > img.w || y0 + S > img.h) continue;
+    let ml = 0;
+    for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) ml += lum(x0 + x, y0 + y);
+    ml /= S * S;
+    let cov = 0, vl = 0;
+    for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) { const d = lum(x0 + x, y0 + y) - ml; cov += d * (A[y * S + x] - ma); vl += d * d; }
+    const score = cov / Math.sqrt(va * vl || 1);
+    if (!best || score > best.score) best = { score, x0, y0 };
+  }
+  if (!best || best.score < 0.35) return null;
+  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+    const a = A[y * S + x] / 255;
+    if (a <= 0) continue;
+    const i = ((best.y0 + y) * img.w + best.x0 + x) * 4;
+    for (let k = 0; k < 3; k++) img.px[i + k] = Math.max(0, Math.min(255, Math.round((img.px[i + k] - a * 255) / (1 - a))));
+  }
+  return best;
+}
+
 // ---------- 한 칸 ----------
 // 칸(x0, y0, cw, ch) → 배경을 걷어낸 RGBA (칸 크기)
 function keyCell(img, x0, y0, cw, chh) {
@@ -87,7 +140,7 @@ function keyCell(img, x0, y0, cw, chh) {
     out[o] = un(r, 0); out[o + 1] = un(g, 1); out[o + 2] = un(b, 2); out[o + 3] = Math.round(a * 255);
   }
   // 작은 티끌(이웃과 이어지지 않은 30픽셀 미만 덩어리)은 지움
-  const seen = new Uint8Array(cw * chh);
+  const seen = new Uint8Array(cw * chh), comps = [];
   for (let s = 0; s < cw * chh; s++) {
     if (seen[s] || !out[s * 4 + 3]) continue;
     const q = [s]; seen[s] = 1;
@@ -100,8 +153,34 @@ function keyCell(img, x0, y0, cw, chh) {
       }
     }
     if (q.length < 30) for (const j of q) out[j * 4 + 3] = 0;
+    else comps.push(q);
   }
-  return { w: cw, h: chh, px: out, key };
+  return { w: cw, h: chh, px: out, key, comps };
+}
+
+// 시트를 칸으로 — 칸 선으로 자르지 않고, 물건 덩어리마다 「가운데가 어느 칸에 있나」로 나눕니다.
+// 시트가 정사각이 아니거나 물건이 커서 옆 칸으로 넘어가도, 넘어간 끝이 옆 칸 그림에 묻지 않고 제 물건과 같이 잘립니다.
+// → 칸마다 { w, h, px, edge } (그 칸 덩어리들을 감싸는 네모만큼)
+function splitSheet(img, cols, rows) {
+  const all = keyCell(img, 0, 0, img.w, img.h), cw = img.w / cols, chh = img.h / rows;
+  const groups = Array.from({ length: cols * rows }, () => []);
+  for (const q of all.comps) {
+    let sx = 0, sy = 0;
+    for (const j of q) { sx += j % img.w; sy += (j / img.w) | 0; }
+    const c = Math.min(cols - 1, Math.floor(sx / q.length / cw)), r = Math.min(rows - 1, Math.floor(sy / q.length / chh));
+    groups[r * cols + c].push(q);
+  }
+  return groups.map(list => {
+    if (!list.length) return null;
+    let x0 = img.w, y0 = img.h, x1 = 0, y1 = 0;
+    for (const q of list) for (const j of q) { const x = j % img.w, y = (j / img.w) | 0; x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
+    const w = x1 - x0 + 3, h = y1 - y0 + 3, px = Buffer.alloc(w * h * 4);
+    for (const q of list) for (const j of q) {
+      const x = j % img.w, y = (j / img.w) | 0;
+      all.px.copy(px, ((y - y0 + 1) * w + x - x0 + 1) * 4, j * 4, j * 4 + 4);
+    }
+    return { w, h, px, edge: x0 <= 1 || y0 <= 1 || x1 >= img.w - 2 || y1 >= img.h - 2 };
+  });
 }
 
 // 물건만 잘라 OUT×OUT 가운데에 — 넓이 평균으로 줄임 (알파를 곱한 색으로 섞어 가장자리가 어두워지지 않게)
@@ -125,8 +204,7 @@ function fitIcon(cell) {
     if (!a) continue;
     px[o] = Math.round(r / a); px[o + 1] = Math.round(g / a); px[o + 2] = Math.round(b / a); px[o + 3] = Math.round(a / area * 255);
   }
-  const edge = x0 <= 1 || y0 <= 1 || x1 >= cell.w - 2 || y1 >= cell.h - 2;
-  return { img: { w: OUT, h: OUT, px }, edge, size: [bw, bh] };
+  return { img: { w: OUT, h: OUT, px }, size: [bw, bh] };
 }
 
 // 확인용 — 자른 아이콘을 어두운 줄 · 밝은 줄에 늘어놓음 (128px 로 줄여서)
@@ -156,13 +234,16 @@ if (require.main === module) {
     const file = path.join(ROOT, sh.sheet);
     if (!fs.existsSync(file)) continue;
     sheets++;
-    const img = readPng(file), [cols, rows] = sh.grid, cw = Math.floor(img.w / cols), chh = Math.floor(img.h / rows);
+    const img = readSheet(file), [cols, rows] = sh.grid;
+    const mark = removeMark(img);
+    if (mark) console.log(`  ${sh.sheet} — 제미나이 표시를 걷어냄 (오른쪽 아래, 맞음 ${mark.score.toFixed(2)})`);
+    const cells = splitSheet(img, cols, rows);
     sh.cells.forEach((c, k) => {
       const out = path.join(ROOT, c.file);
       if (fs.existsSync(out) && !force) { skipped++; return; }
-      const cell = keyCell(img, (k % cols) * cw, ((k / cols) | 0) * chh, cw, chh), fit = fitIcon(cell);
-      if (!fit) { console.log(`  ⚠ ${sh.sheet} ${k + 1}칸 (${c.name}) — 비어 있음`); return; }
-      if (fit.edge) console.log(`  ⚠ ${sh.sheet} ${k + 1}칸 (${c.name}) — 물건이 칸 가장자리에 닿음 (옆 칸과 겹쳤을 수 있음)`);
+      const fit = cells[k] && fitIcon(cells[k]);
+      if (!fit) { console.log(`  ⚠ ${sh.sheet} ${k + 1}칸 (${c.name}) — 비어 있음 (물건이 옆 칸 쪽으로 쏠렸거나 하나로 붙었을 수 있음)`); return; }
+      if (cells[k].edge) console.log(`  ⚠ ${sh.sheet} ${k + 1}칸 (${c.name}) — 물건이 시트 가장자리에 닿음 (잘렸을 수 있음)`);
       writePng(out, fit.img);
       made.push(fit.img); cut++;
     });
@@ -185,4 +266,4 @@ function writeArtList() {
   console.log(`js/itemart.js — 그림 있는 장비 ${ids.length}개`);
 }
 
-module.exports = { readPng, writePng, keyCell, fitIcon, writeArtList };
+module.exports = { readPng, readSheet, removeMark, writePng, keyCell, splitSheet, fitIcon, writeArtList };
