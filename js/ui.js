@@ -311,7 +311,7 @@ function renderSettings() {
         <span class="set-name">이 저장을 지웁니다</span>
         <span class="set-desc">되돌릴 수 없다</span>
       </div>
-      <button class="btn tiny danger" id="wipeBtn">초기화</button>
+      <button class="btn tiny danger${wipeArmed ? ' armed' : ''}" id="wipeBtn">${wipeArmed ? '정말 지웁니다' : '초기화'}</button>
     </div>`;
   wireSettingButtons(el);
   const wipe = $('wipeBtn');
@@ -343,6 +343,7 @@ function confirmWipe() {
     return;
   }
   wipeArmed = false;
+  blockSaving();            // 새로고침하며 닫힐 때 「서 있던 칸 저장」이 방금 지운 저장을 다시 쓰지 않게
   wipeSlot(currentSlot);    // 하던 회차까지 같이 지웁니다
   location.reload();
 }
