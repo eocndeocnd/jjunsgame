@@ -235,7 +235,8 @@ const State = {
     weights: defaultWeights(),        // 앞으로 들어올 포인트의 분배 규칙 (자동 분배)
     autoAlloc: false,                 // 자동 분배 — 레벨업 때 비율대로 알아서 찍음. 기본은 직접 분배(꺼짐 — 사용자 결정)
     seen: [],                         // 한 번이라도 마주친 적 id
-    tutorialDone: false,         // 튜토리얼을 봤는가
+    tutorialDone: false,         // 맨 처음 장면(혼잣말 · 길잡이)을 봤는가
+    heroName: '',                // 주인공의 이름 — 첫 회차가 끝나 도시에서 처음 눈을 뜰 때 정합니다 (없으면 「나」)
     sets: [null, null, null],    // 세 벌의 차림. equipped 는 늘 sets[activeSet] 과 같습니다
     activeSet: 0,                // 지금 입고 있는 세트 번호
     settings: defaultSettings(),
@@ -623,6 +624,7 @@ function load() {
     State.meta.settings = { ...defaultSettings(), ...(data.settings || {}) };
     for (const k of FIXED_SETTINGS) State.meta.settings[k] = defaultSettings()[k];
     State.meta.tutorialDone = !!data.tutorialDone;
+    State.meta.heroName = typeof data.heroName === 'string' ? data.heroName.replace(/[<>&"'`\\]/g, '').trim().slice(0, 8) : '';
     // 도시가 생기기 전의 저장본 — 회차를 한 번이라도 끝냈으면(두 번째 회차부터) 도시가 열린 것으로
     State.meta.cityOpen = data.cityOpen === undefined ? num(data.runCount) > 1 : !!data.cityOpen;
     State.meta.namelessMet = !!data.namelessMet;
@@ -685,6 +687,7 @@ function freshMeta() {
     autoAlloc: false,                 // 직접 분배가 기본 (사용자 결정 — 예전 저장본은 저장된 대로)
     seen: [],
     tutorialDone: false,
+    heroName: '',
     sets: [null, null, null],
     activeSet: 0,
     settings: defaultSettings(),

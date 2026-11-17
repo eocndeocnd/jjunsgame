@@ -1847,6 +1847,22 @@ body.test-mode::after {
 .tut-body b { color: var(--text); }
 .tut-actions { display: flex; flex-direction: column; gap: 10px; }
 
+/* 대화창 — 말하는 이의 얼굴(나 · 눈동자 길잡이)과 이름, 이름 정하는 칸 */
+.talk-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.talk-head .tut-step { margin-bottom: 0; font-size: 12px; letter-spacing: 0.08em; color: var(--text-dim); font-weight: 700; }
+.talk-face { width: 44px; height: 46px; flex: none; display: grid; place-items: center; }
+.talk-face .hero-sprite { width: 36px; height: 45px; }
+#talk[data-who="me"] .tut-body { color: var(--text); }
+#talk[data-who="guide"] .talk-head .tut-step { color: var(--accent); }
+.guide-eye { display: inline-block; width: 40px; height: 40px; background-size: 100% 100%; image-rendering: pixelated; }
+.guide-eye.bob { animation: eye-bob 1.8s ease-in-out infinite; }
+@keyframes eye-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+@media (prefers-reduced-motion: reduce) { .guide-eye.bob { animation: none; } }
+.talk-name { display: flex; gap: 8px; margin: -8px 0 18px; }
+.talk-card .hidden { display: none; }   /* 대화창 안의 이름 칸 · 단추 · 얼굴 — 줄마다 켜고 끔 */
+.talk-name input { flex: 1; min-width: 0; font: inherit; font-size: 15px; padding: 8px 10px; border: 2px solid var(--line); background: var(--paper-hi); color: var(--text); }
+.talk-name .btn { white-space: nowrap; }
+
 /* ---------- NEW! 표시 ---------- */
 .new-badge {
   font-size: 10px;

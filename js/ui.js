@@ -43,6 +43,7 @@ function render() {
   renderSwap();
   if (isAdminOpen()) renderAdmin();
   if (window.innerWidth > 860) maybeNamelessTalk();   // 넓은 화면에는 탭이 없습니다
+  maybeCityWake();
 }
 
 // ---------- 벽 너머의 분위기 ----------
@@ -354,6 +355,7 @@ function renderRecords() {
   // 분모는 아는 데까지만 — 마왕 너머가 몇이나 남았는지 숫자로도 새지 않게 (game.js 의 knownZoneCount)
   const known = knownZoneCount();
   $('records').innerHTML = `
+    ${m.heroName ? record('이름', m.heroName) : ''}
     ${record('회차', m.runCount)}
     ${record('최고 레벨', fmtLevel(m.bestLevel))}
     ${record('최심 도달', `${m.bestZone}지역 · ${deepest.name}`)}
@@ -1138,7 +1140,7 @@ function battleCard(b) {
         <div class="portrait bt-hero" id="btHero">${heroSprite()}</div>
       </div>
       <div class="bt-side hero">
-        <div class="bt-top"><span class="bt-name">${activeAvatar() ? `<span class="avatar-tag">${avatarTitle(activeAvatar())}</span>` : ''}나<span class="lv">Lv.${fmtLevel(r.levelBefore || State.run.level)}</span></span>
+        <div class="bt-top"><span class="bt-name">${activeAvatar() ? `<span class="avatar-tag">${avatarTitle(activeAvatar())}</span>` : ''}${heroName()}<span class="lv">Lv.${fmtLevel(r.levelBefore || State.run.level)}</span></span>
           <span class="bt-hp" id="btHeroHp"></span></div>
         <div class="bt-bar"><div class="bt-fill hero" id="btHeroFill"></div></div>
       </div>
@@ -1659,7 +1661,7 @@ function mapPaused() {
   const up = id => { const el = $(id); return !!el && !el.classList.contains('hidden'); };
   return !run || run.over || !!run.encounter || !!run.lastResult || !!battle || fading || !onMapZone()
     || document.body.dataset.tab !== 'journey'   // 메뉴 서랍이 열려 있는 동안
-    || isAnyModalOpen() || up('title') || up('tutorial') || up('talk');
+    || isAnyModalOpen() || up('title') || up('talk');
 }
 
 // 그 지도에서 그 지역의 들머리 — 가장 약한 일반의 구역 들머리(구역 한가운데, map.js 의 areaMid). 첫 지역이거나 지역이 없는 지도(문의 광장)면 그 지도의 시작점.
@@ -1973,7 +1975,7 @@ function spotlightGear(slot) {
 // 「물러선다」와 정예·보스로 향하는 버튼에는 일부러 안 걸었습니다.
 // 그건 고민해서 눌러야 하는 것들이라, 연타로 잘못 누르면 안 되니까요.
 // 싸우는 동안에는 걸리는 버튼이 없어 스페이스가 아무 일도 하지 않습니다 (건너뛰기 없음).
-const PRIMARY_ORDER = ['agOk', 'talkNext', 'tutNext', 'continueBtn', 'engageBtn', 'newRunBtn'];
+const PRIMARY_ORDER = ['agOk', 'talkNext', 'continueBtn', 'engageBtn', 'newRunBtn'];
 
 function primaryButton() {
   if (!$('title').classList.contains('hidden')) return null;   // 초기화면에서는 안 씁니다
@@ -3124,7 +3126,7 @@ function enterGame(slot, fresh) {
   $('title').classList.add('hidden');
   showTab('journey');
   render();
-  if (fresh || !State.meta.tutorialDone) startTutorial();
+  if (fresh || !State.meta.tutorialDone) playOpening();
 }
 
 // ============================================================
@@ -3140,67 +3142,132 @@ const NAMELESS_TALK = [
   '삼은 화신의 이름이 네 이름 앞에 붙는다. 얻는 것도 잃는 것도 한쪽으로 크게 기운다. <b>한 번에 하나</b>만 삼을 수 있고, 싸우는 동안에는 못 바꾼다. 고르는 건 이 창 맨 위의 칸에서 한다.',
   '아직 아무도 너를 고르지 않았으니, 그때까지는 <b>내가 대신 맡아 주지.</b> 이름은 묻지 마라. 없다.'
 ];
-let talkIndex = 0;
-
 function maybeNamelessTalk() {
   const m = State.meta;
   if (!State.run || m.namelessMet || !wallSeen() || wallPending || fightLocked()) return;
-  if (!$('title').classList.contains('hidden') || !$('tutorial').classList.contains('hidden')) return;
-  const talk = $('talk');
-  if (!talk || !talk.classList.contains('hidden')) return;
+  if (!$('title').classList.contains('hidden') || isTalkOpen()) return;
   if ((m.avatars || []).length) { m.namelessMet = true; save(); return; }   // 이미 곁에 누가 있다
-  talkIndex = 0;
-  talk.classList.remove('hidden');
+  playTalk(NAMELESS_TALK.map(text => ({ who: 'nameless', text })), () => { meetNameless(); Sound.play('equip'); }, { end: '…알겠다' });
+}
+
+// ============================================================
+//  대화창 — 주인공의 혼잣말 · 눈동자 길잡이 · 무명의 화신
+// ============================================================
+// 줄 하나 = { who: 'me' | 'guide' | 'nameless', text: 글 또는 글을 돌려주는 함수, ask: 'name' (이름을 묻는 줄) }.
+// 길잡이는 눈동자입니다 (docs/CITY-PLAN.md — 1-라). 누가 보냈는지는 말하지 않고, 이름도 「???」 입니다.
+
+// 눈동자 길잡이 — 16×16 도트. 글자 하나가 한 칸 (o 테두리 · w 흰자 · s 그늘 · I · i 홍채 · p 눈동자 · h 빛)
+const GUIDE_EYE = [
+  '................', '.....oooooo.....', '...oowwwwwwoo...', '..owwwwwwwwwwo..',
+  '..owwwwoooowwo..', '.owwwwoIIIIowwo.', '.owwwoIiiiiIowo.', '.owwwoIiphpIoso.',
+  '.owwwoIipppIoso.', '.owwwoIiiiiIoso.', '.owwwwoIIIIosso.', '..owwwwoooosso..',
+  '..owwwwsssssso..', '...oowsssssoo...', '.....oooooo.....', '................'
+];
+const GUIDE_PAL = { o: '#2a1a10', w: '#f4ecd8', s: '#c4b69c', I: '#783e12', i: '#d68c2e', p: '#120a06', h: '#ffffff' };
+let guideEyeSrc = null;
+function guideEye(cls = '') {
+  if (!guideEyeSrc) {
+    const rects = GUIDE_EYE.flatMap((row, y) => [...row].map((c, x) => GUIDE_PAL[c] ? `<rect x="${x}" y="${y}" width="1" height="1" fill="${GUIDE_PAL[c]}"/>` : '')).join('');
+    guideEyeSrc = 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" shape-rendering="crispEdges">${rects}</svg>`);
+  }
+  return `<span class="guide-eye ${cls}" style="background-image:url('${guideEyeSrc}')"></span>`;
+}
+
+// 주인공의 이름 — 정하기 전에는 「나」
+function heroName() { return State.meta.heroName || '나'; }
+
+const TALK_WHO = { me: () => heroName(), guide: () => '???', nameless: () => '무명의 화신' };
+let talkScript = [], talkIndex = 0, talkDone = null, talkOpts = {};
+function isTalkOpen() { const t = $('talk'); return !!t && !t.classList.contains('hidden'); }
+// 대사를 차례로 보여 줍니다. 다 보면 done(). opts.skip — 건너뛰기 단추(이름을 묻는 줄은 건너뛰지 않음), opts.end — 마지막 단추 글
+function playTalk(script, done, opts = {}) {
+  talkScript = script; talkIndex = 0; talkDone = done || null; talkOpts = opts;
+  $('talk').classList.remove('hidden');
   renderTalk();
 }
 function renderTalk() {
-  $('talkBody').innerHTML = NAMELESS_TALK[talkIndex];
-  $('talkNext').innerHTML = (talkIndex === NAMELESS_TALK.length - 1 ? '…알겠다' : '다음') + KEY_HINT;
+  const line = talkScript[talkIndex], last = talkIndex === talkScript.length - 1, ask = line.ask === 'name';
+  $('talk').dataset.who = line.who;
+  $('talkWho').textContent = TALK_WHO[line.who]();
+  $('talkFace').innerHTML = line.who === 'guide' ? guideEye('bob') : line.who === 'me' ? heroSprite() : '';
+  $('talkFace').classList.toggle('hidden', line.who === 'nameless');
+  $('talkBody').innerHTML = typeof line.text === 'function' ? line.text() : line.text;
+  $('talkName').classList.toggle('hidden', !ask);
+  $('talkNext').classList.toggle('hidden', ask);
+  $('talkSkip').classList.toggle('hidden', !talkOpts.skip || ask);
+  if (ask) {
+    const inp = $('talkNameInput');
+    inp.value = State.meta.heroName || '';
+    checkName();
+    setTimeout(() => inp.focus(), 60);
+  } else {
+    $('talkNext').innerHTML = (last ? (talkOpts.end || '알겠다') : '다음') + KEY_HINT;
+  }
 }
 function nextTalk() {
-  if (talkIndex < NAMELESS_TALK.length - 1) { talkIndex++; renderTalk(); return; }
+  if (talkScript[talkIndex] && talkScript[talkIndex].ask) return;
+  if (talkIndex < talkScript.length - 1) { talkIndex++; renderTalk(); return; }
+  endTalk();
+}
+function endTalk() {
   $('talk').classList.add('hidden');
-  meetNameless();
-  Sound.play('equip');
+  const done = talkDone;
+  talkDone = null;
+  if (done) done();
   render();
 }
-
-// ============================================================
-//  튜토리얼 — 짧게. 나머지는 해보면서 알게 되는 게 낫습니다.
-// ============================================================
-const TUTORIAL = [
-  { t: '격이 무너져도 남는 것',
-    b: '에너지가 떨어지면 레벨은 1로 돌아갑니다. 하지만 <b>빼앗은 전리품은 영원히 남습니다.</b> 다음 여정은 더 강한 몸으로 시작합니다.' },
-  { t: '길 끝에는 누가 서 있다',
-    b: '지도를 걷다가 <b>몬스터에 닿으면 싸움</b>이 됩니다 (폰은 아래 조이스틱, 키보드는 방향키). 보자마자 쫓아오는 놈도, 달아나는 놈도 있습니다. <b>정예와 보스는 정해진 자리</b>에 서 있고, 한 여정에 한 번만 만날 수 있습니다. 대신 좋은 것을 남깁니다.' },
-  { t: '이길 수 있을 것 같나',
-    b: '싸우기 전에 <b>이길 만한지 예감</b>이 듭니다 — 「잡기 쉬울 것 같다」부터 「불가능할 것 같다」까지. 에너지는 <b>맞설 때만</b> 듭니다 — 물러서면 그대로입니다. 정예와 보스 앞에서도 물러설 수 있지만, <b>먼저 덤벼든 몬스터</b> 앞에서는 물러설 수 없습니다.' },
-  { t: '같은 것이 또 나오면',
-    b: '이미 가진 전리품은 <b>자동으로 분해되어 그 부위의 강화석</b>이 됩니다. 강화석으로 부위를 강화하면 그 칸에 무엇을 끼든 강해집니다. 높이 올릴수록 실패하기 쉽습니다.' }
-];
-
-let tutIndex = 0;
-
-function startTutorial() {
-  tutIndex = 0;
-  $('tutorial').classList.remove('hidden');
-  renderTutorial();
+function skipTalk() {
+  const k = talkScript.findIndex((l, i) => i > talkIndex && l.ask);
+  if (k >= 0) { talkIndex = k; renderTalk(); return; }
+  endTalk();
 }
-
-function renderTutorial() {
-  const step = TUTORIAL[tutIndex];
-  $('tutStep').textContent = `${tutIndex + 1} / ${TUTORIAL.length}`;
-  $('tutTitle').textContent = step.t;
-  $('tutBody').innerHTML = step.b;
-  $('tutNext').innerHTML = (tutIndex === TUTORIAL.length - 1 ? '시작한다' : '다음') + KEY_HINT;
-}
-
-function endTutorial() {
-  $('tutorial').classList.add('hidden');
-  State.meta.tutorialDone = true;
+// 이름 — 1~8글자. 꺾쇠 · 따옴표처럼 화면을 깨뜨릴 수 있는 글자는 뺍니다
+function cleanName(s) { return String(s || '').replace(/[<>&"'`\\]/g, '').trim().slice(0, 8); }
+function checkName() { $('talkNameOk').disabled = !cleanName($('talkNameInput').value); }
+function submitName() {
+  const n = cleanName($('talkNameInput').value);
+  if (!n) return;
+  State.meta.heroName = n;
   save();
+  Sound.play('commit');
+  if (talkIndex < talkScript.length - 1) { talkIndex++; renderTalk(); } else endTalk();
 }
 
+// ---------- 맨 처음 — 혼잣말과 눈동자 길잡이 (설명 카드 넉 장을 대신합니다) ----------
+const OPENING = [
+  { who: 'me', text: '게이트 뒷정리. 헌터들이 다 털고 나간 자리에서 부스러기를 줍는 일이다. 등록증도 없는 사람한테 들어오는 일은 그런 것뿐이다.' },
+  { who: 'me', text: '그날은 달랐다. 닫히던 게이트에서 무언가 쏟아져 나왔고, 다들 반대로 뛰었다. …나는 왜인지 그쪽으로 뛰어들었다.' },
+  { who: 'me', text: '눈을 뜨니 축축한 수로다. 하수구라기엔 너무 넓고, 너무 조용하다.' },
+  { who: 'guide', text: '어, 일어났네? 여기 떨어지는 것들은 대개 다시 안 일어나는데.' },
+  { who: 'guide', text: '겁먹지 마, 난 안 물어. 여기서 오래 굴러다녀서 길은 좀 알아. 따라오면서 들어.' },
+  { who: 'guide', text: '걷다가 <b>몬스터에 닿으면 싸움</b>이야. 폰은 아래 조이스틱, 키보드는 방향키. 보자마자 쫓아오는 놈도, 달아나는 놈도 있어. <b>정예랑 보스는 정해진 자리</b>에 서 있고, 한 번 들어와서는 한 번만 만나. 대신 좋은 걸 남기지.' },
+  { who: 'guide', text: '맞서기 전에 <b>이길 만한지 예감</b>이 와. 에너지는 <b>맞설 때만</b> 줄어 — 물러서면 그대로야. 근데 <b>먼저 덤벼든 놈</b>한테서는 못 물러서.' },
+  { who: 'guide', text: '에너지가 다하면 쓰러져. 몸은 처음으로 돌아가지만, <b>빼앗은 건 그대로 남아.</b> 다음엔 더 센 채로 시작하는 거지.' },
+  { who: 'guide', text: '같은 걸 또 주우면 저절로 부서져서 <b>그 부위의 강화석</b>이 돼. 강화석으로 그 칸을 올리면, 거기에 뭘 끼든 세져.' },
+  { who: 'me', text: '…말하는 눈알한테 길을 배우게 될 줄은 몰랐다.' }
+];
+function playOpening() {
+  playTalk(OPENING, () => { State.meta.tutorialDone = true; save(); }, { skip: true, end: '가 본다' });
+}
+
+// ---------- 도시에서 처음 눈을 뜰 때 — 이상한 느낌과 이름 (docs/CITY-PLAN.md 1-라) ----------
+// 첫 회차가 끝난 뒤, 도시(옛 동네)에 처음 서면 한 번. 이름을 정하기 전까지는 도시에 설 때마다 다시 뜹니다
+const CITY_WAKE = [
+  { who: 'me', text: '…천장이다. 우리 집 천장.' },
+  { who: 'me', text: '분명히 쓰러졌는데, 몸은 멀쩡하다. 주머니에는 거기서 주운 것들이 그대로 들어 있다.' },
+  { who: 'me', text: '이상한 기분이다. 무언가가 나를 붙잡아 이쪽으로 밀어 올린 것 같은. …기분 탓이겠지.' },
+  { who: 'guide', text: '여기가 네가 사는 데구나. 시끄럽고 밝네. …아 참, 너 이름이 뭐였지?' },
+  { who: 'guide', ask: 'name', text: '이름 정도는 알아야 부르지.' },
+  { who: 'guide', text: () => `<b>${heroName()}</b>. 좋아, 기억해 둘게.` },
+  { who: 'guide', text: '가져온 <b>핵이랑 가죽</b>은 저쪽 큰 도시의 <b>헌터백화점 재료 창구</b>에서 돈으로 바꿔 줄 거야. 돈이 생기면 장비도 사고.' },
+  { who: 'guide', text: '그리고 다시 들어가는 길은 — 골목 안의 그 이상한 게이트. 너한테만 보일걸.' }
+];
+function maybeCityWake() {
+  const m = State.meta, run = State.run;
+  if (!run || run.over || !m.cityOpen || m.heroName || battle || fightLocked() || !inTown()) return;
+  if (!$('title').classList.contains('hidden') || isTalkOpen() || isAnyModalOpen()) return;
+  playTalk(CITY_WAKE, null);
+}
 // ============================================================
 //  관리자 — 왼쪽 위 이름표(제목 명패)를 빠르게 다섯 번 누르면 열립니다
 // ============================================================
@@ -3456,13 +3523,11 @@ function init() {
 
   const ago = $('agOk');
   if (ago) ago.addEventListener('click', () => $('avatarGain').classList.add('hidden'));
-  const tn = $('talkNext');
-  if (tn) tn.addEventListener('click', nextTalk);   // 옛 html 과 섞여 받아도 초기화면이 죽지 않게
-  $('tutNext').addEventListener('click', () => {
-    if (tutIndex < TUTORIAL.length - 1) { tutIndex++; renderTutorial(); }
-    else endTutorial();
-  });
-  $('tutSkip').addEventListener('click', endTutorial);
+  $('talkNext').addEventListener('click', nextTalk);
+  $('talkSkip').addEventListener('click', skipTalk);
+  $('talkNameOk').addEventListener('click', submitName);
+  $('talkNameInput').addEventListener('input', checkName);
+  $('talkNameInput').addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); submitName(); } });
 
   // 아직 슬롯을 고르지 않았으므로 빈 상태로 한 번 그려두고 초기화면을 띄웁니다
   startRun();
