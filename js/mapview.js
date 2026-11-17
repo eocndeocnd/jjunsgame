@@ -155,7 +155,21 @@ const MapView = (function () {
       ctx.fillStyle = '#1c1007';
       ctx.fillRect(0, 0, cw, ch);
       // 카메라는 보이는 내 자리를 따라갑니다 — 기기 픽셀에 맞춰 반올림해 칸 사이에 틈이 안 생기게
-      const ox = Math.round((cw / 2 - (gp.x + 0.5) * T) * dpr) / dpr, oy = Math.round((ch / 2 - (gp.y + 0.5) * T) * dpr) / dpr;
+      // 걸을 수 있는 네모(지도 속성 walk — 옛 동네 · 헌터들의 도시)가 있으면, 그 바깥(못 가는 곳)은 화면의 1/4 까지만 보이게 카메라를 멈춥니다.
+      // 거기서부터는 화면은 서고 나만 걸어갑니다 — 가장자리 통로까지 가는 동안 못 가는 바깥이 반 화면이나 보이지 않게 (사용자 결정)
+      let cx = cw / 2 - (gp.x + 0.5) * T, cy = ch / 2 - (gp.y + 0.5) * T;
+      if (m.props.walk) {
+        const [bx, by, bw, bh] = String(m.props.walk).split(',').map(Number);
+        const hold = (c, view, a, b, mapLen) => {
+          // c — 지도 왼쪽(위쪽) 끝이 화면의 어디에 오나. 바깥은 view/4 까지, 지도 밖(빈 어둠)은 보이지 않게
+          let lo = view - view / 4 - b * T, hi = view / 4 - a * T;
+          lo = Math.max(lo, view - mapLen * T); hi = Math.min(hi, 0);
+          return lo > hi ? (lo + hi) / 2 : Math.min(hi, Math.max(lo, c));   // 화면이 걸을 곳보다 넓으면 가운데에
+        };
+        cx = hold(cx, cw, bx, bx + bw, m.w);
+        cy = hold(cy, ch, by, by + bh, m.h);
+      }
+      const ox = Math.round(cx * dpr) / dpr, oy = Math.round(cy * dpr) / dpr;
       const bob = g => -Math.abs(Math.sin(g.phase)) * T * 0.08;
       const x0 = Math.max(0, Math.floor(-ox / T)), y0 = Math.max(0, Math.floor(-oy / T));
       const x1 = Math.min(m.w, Math.ceil((cw - ox) / T)), y1 = Math.min(m.h, Math.ceil((ch - oy) / T));

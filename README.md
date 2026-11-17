@@ -121,6 +121,7 @@ Resolute Hero RPG 와 Inflation RPG 를 모티브로 한 로그라이트 오토�
   `DEPT`(백화점 안 — 가구 · 점원 · 위 벽의 구역, `deptInterior` 가 뽑음. 가구가 가운데 통로를 막거나 갇힌 칸이 생기면 뽑을 때 멈춤),
   그림은 `js/mapart.js` 의 `cityGround` · `cityBuilding` · `drawRift` · 가게 안은 `storeWall` · `storeFloor` · `storeProp`(지도 속성 `store`).
   걷는 곳 바깥에도 거리를 이어 그려 화면 가장자리가 까맣지 않게 하고, 걷지는 못하게 막았습니다 (지도 속성 `walk`).
+  카메라는 그 바깥(못 가는 곳)이 **화면의 1/4 까지만** 보이면 멈추고, 거기서부터는 나만 가장자리 통로까지 걸어갑니다 (`mapview.js` 의 `draw`, 사용자 결정).
 
 ### 예감 — 승률은 숫자로 보여주지 않습니다
 
