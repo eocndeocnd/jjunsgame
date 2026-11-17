@@ -113,7 +113,7 @@ assert "--bg:" in html, "치명적: 색 변수가 사라졌습니다"
 # 멀쩡히 뜨는데 게임만 안 돌아서, 브라우저 콘솔을 보기 전에는 모릅니다.
 import shutil, subprocess
 JS_CHECK = ("js/backdrop.js", "js/sound.js", "js/fx.js", "js/data.js", "js/game.js",
-            "js/maps.js", "js/map.js", "js/mapview.js", "js/ui.js")
+            "js/maps.js", "js/map.js", "js/mapview.js", "js/itemart.js", "js/ui.js")
 _node = shutil.which("node")
 if _node:
     for f in JS_CHECK:

@@ -212,7 +212,7 @@ function build(manifest, exists = () => false) {
     '',
     '- 시트를 저장했으면 `node tools/cut-sheets.js` — 칸마다 잘라 배경을 걷어내고 `assets/items/<id>.png` (256×256 · 투명)로 만듭니다.',
     '  이미 있는 그림은 건너뜁니다 (다시 자르려면 `--force`). 시트는 PNG 로 저장하세요 (webp 는 못 읽음).',
-    '- 아직 안 만든 것: 그림 파일이 있으면 게임에서 이모티콘 대신 그 그림이 뜨게 하는 연결.',
+    '- 자르면 `js/itemart.js` 도 다시 써서, 게임에서 그 장비는 이모티콘 대신 그림이 뜹니다.',
     ''
   ].join('\n');
   files['sheets.json'] = JSON.stringify(sheetIndex, null, 1) + '\n';

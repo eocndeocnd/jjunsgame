@@ -12,6 +12,13 @@ function fightLocked() {
   return !!((State.run && State.run.encounter) || battle);
 }
 
+// 장비 아이콘 — 그림(assets/items/<id>.png, js/itemart.js 의 목록)이 있으면 그림, 없으면 이모티콘.
+// 그림은 글자 크기(1em)에 맞춰 이모티콘이 있던 자리 그대로 들어갑니다 (css 의 .item-img)
+function itemArt(item) {
+  const src = item && typeof ITEM_ART !== 'undefined' && ITEM_ART[item.id];
+  return src ? `<img class="item-img" src="${src}" alt="" draggable="false">` : (item ? item.fromIcon : '');
+}
+
 function render() {
   const locked = fightLocked();
   document.body.classList.toggle('fight-locked', locked);
@@ -847,7 +854,7 @@ function rosterDrops(foe) {
   return `<span class="r-drops">${matChip}${table.map(it => {
     const have = owns(it.id);
     return `<span class="rd ${have ? 'have' : 'miss'}" title="${SLOT_NAMES[it.slot]} · ${have ? it.name : '아직 못 얻음'}">
-              <span class="rd-ic">${have ? it.fromIcon : '?'}</span>
+              <span class="rd-ic">${have ? itemArt(it) : '?'}</span>
               <span class="rd-k">${SLOT_NAMES[it.slot]}</span>
             </span>`;
   }).join('')}</span>`;
@@ -1399,7 +1406,7 @@ function resultCard(r, run) {
 function dropCard(d, i, veiled) {
   return `
            <div class="res-drop ${veiled ? 'veiled' : ''} ${d.isNew ? 'is-new' : 'is-stone'}" data-drop="${i}">
-             <span class="res-art ${d.item.grade !== 'normal' ? `g-${d.item.grade}` : ''}"><span class="res-art-ic">${d.item.fromIcon}</span></span>
+             <span class="res-art ${d.item.grade !== 'normal' ? `g-${d.item.grade}` : ''}"><span class="res-art-ic">${itemArt(d.item)}</span></span>
              <span class="res-body">
                <span class="res-name">${d.item.grade !== 'normal' ? `<span class="grade-tag ${d.item.grade}">${KINDS[d.item.grade].name}</span>` : ''}${d.item.name}</span>
                <span class="res-meta">
@@ -1525,7 +1532,7 @@ function dropStrip(foe) {
           const have = owns(it.id);
           return `
             <div class="ed-item ${have ? 'have' : 'miss'}">
-              <span class="ed-ic">${have ? it.fromIcon : '?'}</span>
+              <span class="ed-ic">${have ? itemArt(it) : '?'}</span>
               <span class="ed-name">${have ? it.name : '????'}</span>
             </div>`;
         }).join('')}
@@ -2123,7 +2130,7 @@ function dollCell(slotId, style) {
     <button class="doll-slot ${selectedSlot === slotId ? 'sel' : ''} ${item ? 'worn' : 'empty'}"
             data-slot="${slotId}" style="${style}" title="${s.name}">
       ${nf ? `<span class="new-dot">${nf}</span>` : ''}
-      <span class="doll-icw"><span class="doll-ic">${item ? item.fromIcon : ''}</span>${enh}</span>
+      <span class="doll-icw"><span class="doll-ic">${item ? itemArt(item) : ''}</span>${enh}</span>
       <span class="doll-txt">
         <span class="doll-item">${item ? item.name : '비어 있음'}</span>
       </span>
@@ -2150,7 +2157,7 @@ function dollEnhCell(slotId, style) {
     <button class="doll-slot enh-cell ${item ? 'worn' : 'empty'} ${ready ? 'ready' : ''} ${nx ? '' : 'maxed'} ${fx ? (fx.success ? 'fx-ok' : 'fx-fail') : ''}"
             data-enhslot="${slotId}" style="${style}" ${ready ? '' : 'disabled'}>
       ${fx ? `<span class="enh-float">${fx.success ? `성공 +${fx.level}` : '실패'}</span>` : ''}
-      <span class="doll-icw"><span class="doll-ic">${item ? item.fromIcon : ''}</span>${lv > 0 || nx ? `<span class="doll-badge">+${lv}</span>` : ''}</span>
+      <span class="doll-icw"><span class="doll-ic">${item ? itemArt(item) : ''}</span>${lv > 0 || nx ? `<span class="doll-badge">+${lv}</span>` : ''}</span>
       <span class="doll-txt">
         <span class="doll-k">${nx ? `<em>▶</em> +${lv + 1}` : '최대'}</span>
         <span class="doll-item">${sub}</span>
@@ -2247,7 +2254,7 @@ function renderSpecialSlots() {
       const item = getItem(State.meta.equipped[id]);
       return `<button class="sp-slot ${selectedSlot === id ? 'sel' : ''} ${item ? 'worn' : 'empty'}" data-slot="${id}">
                 ${i === 0 && nf ? `<span class="new-dot">${nf}</span>` : ''}
-                <span class="sp-ic">${item ? item.fromIcon : ''}</span>
+                <span class="sp-ic">${item ? itemArt(item) : ''}</span>
                 <span class="sp-item">${item ? item.name : '비어 있음'}</span>
               </button>`;
     }).join('')}</div>`;
@@ -2301,7 +2308,7 @@ function renderGear() {
   const wornItem = wornId ? getItem(wornId) : null;
   $('equipDetail').innerHTML = (special ? specialPanel(selectedSlot) : '') + (wornItem
     ? `<div class="worn-card">
-         <span class="worn-icon">${wornItem.fromIcon}</span>
+         <span class="worn-icon">${itemArt(wornItem)}</span>
          <div class="worn-body">
            <div class="worn-name">${itemTag(wornItem)}${wornItem.name}</div>
            <div class="worn-stats">${itemStatText(wornItem) || '—'}</div>
@@ -2366,7 +2373,7 @@ function renderGear() {
     const where = at && !on ? `<div class="inv-where">${SLOT_NAMES[at]}에 끼움</div>` : '';
     return `
       <div class="inv-item ${on ? 'on' : ''} ${fresh ? 'fresh' : ''} ${wearable ? 'pick' : ''}" ${wearable ? `data-equip="${item.id}"` : ''}>
-        <span class="inv-art">${item.fromIcon}</span>
+        <span class="inv-art">${itemArt(item)}</span>
         <div class="inv-body">
           <div class="inv-head">
             ${fresh ? '<span class="new-badge">NEW</span>' : ''}${itemTag(item)}${item.grade !== 'normal' ? `<span class="grade-tag ${item.grade}">${KINDS[item.grade].name}</span>` : ''}
@@ -2500,7 +2507,7 @@ function renderSwap() {
     const n = nextEnhance(s);
     const item = getItem(State.meta.equipped[s]);
     return `<button class="swap-row ${s === to ? 'to' : ''} ${s === swapFrom ? 'from' : ''} ${canEnhance(s) ? 'ready' : ''}" data-swapto="${s}">
-      <span class="swap-ic">${item ? item.fromIcon : ''}</span>
+      <span class="swap-ic">${item ? itemArt(item) : ''}</span>
       <span class="swap-k">${SLOT_NAMES[s]} <b>+${enhanceLevel(s)}</b></span>
       <span class="swap-n">${fmt(stonesOf(s))}${n ? ` / ${fmt(n.cost)}` : ' · 최대'}</span>
     </button>`;
@@ -2621,7 +2628,7 @@ function renderShop() {
     const spec = itemSpecialText(item);
     return `
       <div class="inv-item ware${coming ? ' coming' : ''}">
-        <span class="inv-art">${item.fromIcon}</span>
+        <span class="inv-art">${itemArt(item)}</span>
         <div class="inv-body">
           <div class="inv-head">${itemTag(item)}<span class="inv-name">${item.name}</span></div>
           <div class="inv-stats">${SLOT_NAMES[item.slot]} · ${itemStatText(item) || '—'}${spec ? ` <span class="inv-spec">${spec}</span>` : ''}</div>
@@ -2712,7 +2719,7 @@ function renderMatShop() {
         : `<button class="btn primary" data-craft="${item.id}" ${have >= c.n && won >= c.won ? '' : 'disabled'}><b>만든다</b><span>재료 ${c.n}개 · ${fmtWon(c.won)}</span></button>`;
       return `
       <div class="inv-item ware${owned ? ' made' : ''}">
-        <span class="inv-art">${item.fromIcon}</span>
+        <span class="inv-art">${itemArt(item)}</span>
         <div class="inv-body">
           <div class="inv-head">${itemTag(item)}<span class="inv-name">${item.name}</span>${owned ? '<span class="mat-have">가짐</span>' : ''}</div>
           <div class="inv-stats">${SLOT_NAMES[item.slot]} · ${itemStatText(item) || '—'}${spec ? ` <span class="inv-spec">${spec}</span>` : ''}</div>
@@ -2770,7 +2777,7 @@ function openBuy(id) {
   ].join('');
   $('buyBody').innerHTML = `
     <div class="buy-item">
-      <span class="inv-art">${item.fromIcon}</span>
+      <span class="inv-art">${itemArt(item)}</span>
       <div>
         <div class="inv-head">${itemTag(item)}<span class="inv-name">${item.name}</span></div>
         <div class="buy-slot">${SLOT_NAMES[item.slot]}</div>
@@ -2806,7 +2813,7 @@ function askWear(id) {
   buyId = id;
   $('buyBody').innerHTML = `
     <div class="buy-item">
-      <span class="inv-art">${item.fromIcon}</span>
+      <span class="inv-art">${itemArt(item)}</span>
       <div>
         <div class="inv-head">${itemTag(item)}<span class="inv-name">${item.name}</span></div>
         <div class="buy-slot">${SLOT_NAMES[item.slot]} — 샀다</div>

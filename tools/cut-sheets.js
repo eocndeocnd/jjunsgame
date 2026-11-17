@@ -168,7 +168,21 @@ if (require.main === module) {
     });
   }
   if (pv && made.length) preview(pv, made);
+  writeArtList();
   console.log(`시트 ${sheets}장 → 장비 그림 ${cut}개를 잘랐습니다${skipped ? ` (이미 있어 건너뜀 ${skipped}개 — 다시 자르려면 --force)` : ''}`);
 }
 
-module.exports = { readPng, writePng, keyCell, fitIcon };
+// 게임이 읽는 그림 목록 — assets/items 에 그림이 있는 장비 id → 경로 (js/itemart.js, 자동 생성).
+// 경로를 글자 그대로 적어 두면 한 파일 빌드(build.py)가 그림을 data: 주소로 바꿔 넣습니다.
+function writeArtList() {
+  const dir = path.join(ROOT, 'assets/items');
+  const ids = fs.existsSync(dir) ? fs.readdirSync(dir).filter(f => /\.png$/.test(f)).map(f => f.slice(0, -4)).sort() : [];
+  const body = ids.map(id => `  '${id}': 'assets/items/${id}.png'`).join(',\n');
+  fs.writeFileSync(path.join(ROOT, 'js/itemart.js'),
+    '// 자동으로 만든 파일입니다 (node tools/cut-sheets.js) — 손으로 고치지 마세요.\n'
+    + '// 그림이 있는 장비 → 그림 경로. 여기 없는 장비는 이모티콘(fromIcon)으로 그립니다 (ui.js 의 itemArt).\n'
+    + `const ITEM_ART = {\n${body}\n};\n`, 'utf8');
+  console.log(`js/itemart.js — 그림 있는 장비 ${ids.length}개`);
+}
+
+module.exports = { readPng, writePng, keyCell, fitIcon, writeArtList };
