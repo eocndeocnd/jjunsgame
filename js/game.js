@@ -39,7 +39,13 @@ function migrateRunLayout(d) {
     d.onBoss = false;
     d.aura = null;
   }
-  d.v = RUN_SAVE_VERSION;
+  d.v = 2;
+}
+// v2 → v3 — 포인트를 1/5 로 줄이고 한 점의 값을 5배로 바꾼 것 (data.js 의 POINTS_PER_LEVEL). 찍은 것 · 안 찍은 것 모두 5로 나눕니다 — 힘은 그대로
+function migrateRunPoints(d) {
+  if (d.spent && typeof d.spent === 'object') for (const k of Object.keys(d.spent)) d.spent[k] = Math.round((Number(d.spent[k]) || 0) / 5);
+  d.unspent = Math.round((Number(d.unspent) || 0) / 5);
+  d.v = 3;
 }
 
 // 각 슬롯에 뭐가 들었는지 — 초기화면에 보여줄 요약
@@ -237,6 +243,8 @@ const State = {
     seen: [],                         // 한 번이라도 마주친 적 id
     tutorialDone: false,         // 맨 처음 장면(혼잣말 · 길잡이)을 봤는가
     heroName: '',                // 주인공의 이름 — 첫 회차가 끝나 도시에서 처음 눈을 뜰 때 정합니다 (없으면 「나」)
+    hunterGrade: 0,              // 헌터 등급 — 0 미등록 · 1~7 = F~S (data.js 의 HUNTER_GRADES). 헌터 협회 시험으로 오르고 내려가지 않음
+    testedRun: 0,                // 등록 시험을 본 회차 — 한 회차에 한 번
     sets: [null, null, null],    // 세 벌의 차림. equipped 는 늘 sets[activeSet] 과 같습니다
     activeSet: 0,                // 지금 입고 있는 세트 번호
     settings: defaultSettings(),
@@ -460,14 +468,30 @@ function commitPoints() {
   const pool = run.unspent;
   if (pool <= 0 || sum <= 0) return 0;
 
-  let used = 0, topKey = STAT_KEYS[0], topW = -1;
+  // 나눠떨어지지 않은 몫(소수점)은 버리지 않고 run.allocFrac 에 남겨 다음번에 더합니다.
+  // 레벨 하나에 2점뿐이라, 예전처럼 나머지를 비중이 큰 쪽에 몰면 1:1:1:1:1 이어도 늘 한 스탯에만 들어갑니다.
+  const frac = run.allocFrac = { ...emptySpent(), ...(run.allocFrac || {}) };
+  const want = {};
+  let used = 0;
   for (const k of STAT_KEYS) {
-    const give = Math.floor(pool * w[k] / sum);
+    want[k] = w[k] > 0 ? pool * w[k] / sum + frac[k] : 0;
+    const give = Math.floor(want[k]);
     run.spent[k] += give;
     used += give;
-    if (w[k] > topW) { topW = w[k]; topKey = k; }
+    frac[k] = want[k] - give;
   }
-  run.spent[topKey] += pool - used;   // 나눠떨어지지 않은 나머지는 비중이 큰 쪽으로
+  // 아직 남은 점은 몫이 가장 많이 남은 쪽부터 하나씩 (그만큼 몫에서 뺍니다) — 스탯마다 한 번까지만 돕니다.
+  // 레벨이 9천조(2^53)를 넘으면 +1 이 숫자를 바꾸지 못해서, 「남은 게 없을 때까지」 세면 끝나지 않습니다 (시뮬에서 Lv.3.8경에 멈췄음).
+  // 그런 큰 수에서 어긋난 몫은 몫이 가장 많이 남은 쪽에 한꺼번에 넣습니다.
+  const order = STAT_KEYS.filter(k => w[k] > 0).sort((a, b) => frac[b] - frac[a]);
+  let left = pool - used;
+  for (const k of order) {
+    if (left < 1) break;
+    run.spent[k] += 1;
+    frac[k] -= 1;
+    left -= 1;
+  }
+  if (left > 0) run.spent[order[0]] += left;
   run.unspent = 0;
   save();
   return pool;
@@ -542,7 +566,7 @@ function save() {
 // 저장되므로, 다시 열면 결과를 닫은 자리(갈림길)에서 이어집니다 — 진 판을 되돌릴 수 없습니다.
 // 마주한 상대와 그 기운은 그대로 돌아옵니다 — 다시 열어서 다른 상대를 뽑을 수도 없습니다.
 // 끝난 회차도 저장해 둡니다. 다시 열면 끝 화면이 뜨고, 거기서 새 회차를 시작합니다.
-const RUN_SAVE_VERSION = 2;   // 2 — 격 재편 뒤의 지역 번호 (1 은 불러올 때 옮깁니다)
+const RUN_SAVE_VERSION = 3;   // 2 — 격 재편 뒤의 지역 번호 (1 은 불러올 때 옮깁니다) · 3 — 포인트 1/5 (2 는 불러올 때 옮깁니다)
 
 // 지도의 몬스터 — 회차에 한 번 정해지고(기운도) 멀리 가도 그대로, 잡으면 그 구역에 새로 섭니다 (js/map.js).
 // 회차에는 몬스터 · 구역 · 칸 · 기운 id 만 적습니다. 지금 걷는 지도의 몬스터는 ui.js 가 liveMapMobs 로 알려 줍니다.
@@ -569,6 +593,7 @@ function loadRun() {
     if (!raw) return false;
     const d = JSON.parse(raw);
     if (d && d.v === 1) migrateRunLayout(d);
+    if (d && d.v === 2) migrateRunPoints(d);
     if (!d || d.v !== RUN_SAVE_VERSION || !ZONES[d.zoneIndex]) return false;
     if (d.encounter && !getEnemy(d.encounter)) return false;
 
@@ -625,6 +650,8 @@ function load() {
     for (const k of FIXED_SETTINGS) State.meta.settings[k] = defaultSettings()[k];
     State.meta.tutorialDone = !!data.tutorialDone;
     State.meta.heroName = typeof data.heroName === 'string' ? data.heroName.replace(/[<>&"'`\\]/g, '').trim().slice(0, 8) : '';
+    State.meta.hunterGrade = Math.max(0, Math.min(HUNTER_GRADES.length, Math.floor(num(data.hunterGrade))));
+    State.meta.testedRun = Math.max(0, Math.floor(num(data.testedRun)));
     // 도시가 생기기 전의 저장본 — 회차를 한 번이라도 끝냈으면(두 번째 회차부터) 도시가 열린 것으로
     State.meta.cityOpen = data.cityOpen === undefined ? num(data.runCount) > 1 : !!data.cityOpen;
     State.meta.namelessMet = !!data.namelessMet;
@@ -688,6 +715,8 @@ function freshMeta() {
     seen: [],
     tutorialDone: false,
     heroName: '',
+    hunterGrade: 0,
+    testedRun: 0,
     sets: [null, null, null],
     activeSet: 0,
     settings: defaultSettings(),
@@ -1312,9 +1341,33 @@ function deptWares(section) {
   return ITEMS.filter(i => i.store === section && i.rank.n <= r && !owns(i.id));
 }
 // 산다 — 도시가 열린 뒤, 들어와 있는 것만. 성공하면 true. (어느 지도에 서 있는지는 묻지 않습니다 — 창은 점원에게 닿아야 열립니다)
+// ---------- 헌터 협회 — 등록 · 등급 시험 (docs/CITY-PLAN.md 3) ----------
+function hunterGrade() { return num(State.meta.hunterGrade); }
+function gradeName(g = hunterGrade()) { return g > 0 ? HUNTER_GRADES[g - 1].id : ''; }
+// 시험은 도시에서 · 한 회차에 한 번 (진 싸움을 다시 굴려 보지 못하게)
+function canTakeTest() { return !!State.meta.cityOpen && !!State.run && !State.run.over && num(State.meta.testedRun) !== State.meta.runCount; }
+// 지금의 나(도시의 Lv.1 그대로 — 사용자 결정)로 F 시험관부터 차례로 싸웁니다. 지면 거기서 멈추고, 이긴 데까지가 등급 (내려가지는 않음)
+function takeHunterTest(rng = Math.random) {
+  if (!canTakeTest()) return null;
+  const hero = heroStats(), bouts = [];
+  let passed = 0;
+  for (let g = 1; g <= HUNTER_GRADES.length; g++) {
+    const r = simulateBattle(hero, examinerStats(g), rng);
+    bouts.push({ g, win: !!r.win, turns: r.turns });
+    if (!r.win) break;
+    passed = g;
+  }
+  const before = hunterGrade();
+  State.meta.hunterGrade = Math.max(before, passed);
+  State.meta.testedRun = State.meta.runCount;
+  if (State.meta.hunterGrade > before) pushLog('drop', before ? `헌터 등급이 ${gradeName(before)}급에서 ${gradeName()}급으로 올랐다.` : `${gradeName()}급 헌터로 등록했다.`);
+  save();
+  return { bouts, passed, before, grade: State.meta.hunterGrade };
+}
+
 function buyDept(id) {
   const it = getItem(id);
-  if (!State.meta.cityOpen || !it || !it.store || owns(id) || it.rank.n > deptOpenRank()) return false;
+  if (!State.meta.cityOpen || !hunterGrade() || !it || !it.store || owns(id) || it.rank.n > deptOpenRank()) return false;   // 사려면 헌터 등록부터
   if (num(State.meta.won) < it.price) return false;      // 도시는 돈(원)으로 — 골드는 받지 않습니다
   State.meta.won -= it.price;
   State.meta.owned[id] = 1;
@@ -1699,7 +1752,7 @@ function rollMats(enemyId, auraMult = 1) {
 // 만든다: 아직 없는 장비 — 재료 n개 + 돈
 function craftItem(id) {
   const it = getItem(id), c = it && it.craft;
-  if (!State.meta.cityOpen || !c || owns(id) || matsOf(c.mat) < c.n || num(State.meta.won) < c.won) return null;
+  if (!State.meta.cityOpen || !hunterGrade() || !c || owns(id) || matsOf(c.mat) < c.n || num(State.meta.won) < c.won) return null;   // 만들려면 헌터 등록부터
   State.meta.mats[c.mat] = matsOf(c.mat) - c.n;
   State.meta.won -= c.won;
   State.meta.owned[id] = 1;

@@ -357,6 +357,7 @@ function renderRecords() {
   const known = knownZoneCount();
   $('records').innerHTML = `
     ${m.heroName ? record('이름', m.heroName) : ''}
+    ${m.cityOpen ? record('헌터 등급', hunterGrade() ? `${gradeName()}급` : '미등록') : ''}
     ${record('회차', m.runCount)}
     ${record('최고 레벨', fmtLevel(m.bestLevel))}
     ${record('최심 도달', `${m.bestZone}지역 · ${deepest.name}`)}
@@ -1832,7 +1833,10 @@ function mapMarks() {
   const z = m && ZONES[m.zone];
   const spot = z && npcs.find(n => n.name === 'merchant' && n.zone === z.id);
   if (spot) out.push({ x: spot.x, y: spot.y, icon: '🎒', label: '상인' });
-  for (const n of npcs) if (n.shop && DEPT_SECTIONS[n.shop]) out.push({ x: n.x, y: n.y, icon: DEPT_SECTIONS[n.shop].icon, label: n.label || DEPT_SECTIONS[n.shop].name });
+  for (const n of npcs) {
+    const sec = n.shop && (DEPT_SECTIONS[n.shop] || CLERK_DESKS[n.shop]);
+    if (sec) out.push({ x: n.x, y: n.y, icon: sec.icon, label: n.label || sec.name });
+  }
   return out;
 }
 
@@ -2575,10 +2579,11 @@ let shopKind = 'merchant';   // 'merchant' 또는 백화점 매장 이름
 let shopSay = '';            // 점원의 한마디 — 창을 열 때 한 번 고릅니다 (사고 나서 다시 그려도 그대로)
 const isDeptShop = () => shopKind !== 'merchant';
 // 지금 연 상점이 아직 그 자리에 있나 (상인이 떠났거나 도시가 아니면 닫습니다)
-function shopHere() { return isDeptShop() ? !!State.meta.cityOpen && !!DEPT_SECTIONS[shopKind] : merchantHere(); }
+function shopHere() { return shopKind === 'assoc' ? !!State.meta.cityOpen : isDeptShop() ? !!State.meta.cityOpen && !!DEPT_SECTIONS[shopKind] : merchantHere(); }
 // 점원은 등록증도 없는 손님을 수상쩍어하지만 묻지 않습니다
 const CLERK_TALK = {
-  first: ['「헌터 등록증은… 아, 됐어요. 묻지 않을게요.」', '「처음 뵙는 분인데 손이… 아니에요. 천천히 보세요.」'],
+  noLicense: ['「헌터 등록증 먼저 보여 주시겠어요? …없으시면 팔 수가 없어요. 협회는 길 건너 큰 건물이에요.」', '「등록 안 된 분께는 무기를 못 팔아요. 규정이라서요. 협회에서 시험부터 보고 오세요.」'],
+  first: ['「등록증 확인했습니다. …갓 등록하신 분 손이 이렇게 거칠던가요? 아니에요, 천천히 보세요.」', '「처음 뵙는 분인데 손이… 아니에요. 천천히 보세요.」'],
   again: ['「지난번 건 잘 쓰셨어요? …어디서 쓰셨는지는 안 물어볼게요.」', '「또 오셨네요. 협회엔 말 안 했어요. 말할 것도 없고요.」'],
   empty: ['「지금 있는 건 다 가져가셨어요. 새 물건이 들어오면… 또 오시겠죠.」']
 };
@@ -2593,6 +2598,8 @@ function clerkLine(kind) {
     const any = Object.keys(State.meta.mats || {}).some(id => matsOf(id) > 0), made = ITEMS.some(i => i.craft && owns(i.id));
     return pick(!any ? MAT_TALK.none : made ? MAT_TALK.again : MAT_TALK.first);
   }
+  if (kind === 'assoc') return pick(!hunterGrade() ? ASSOC_TALK.none : canTakeTest() ? ASSOC_TALK.again : ASSOC_TALK.done);
+  if (!hunterGrade()) return pick(CLERK_TALK.noLicense);
   const owned = ITEMS.some(i => i.store === kind && owns(i.id));
   return pick(!deptWares(kind).length ? CLERK_TALK.empty : owned ? CLERK_TALK.again : CLERK_TALK.first);
 }
@@ -2600,6 +2607,7 @@ function openShop(kind = 'merchant') {
   shopKind = kind;
   if (!shopHere()) return;
   shopSay = isDeptShop() ? clerkLine(kind) : '';
+  assocResult = null;
   shopSlot = SLOT_IDS.includes(selectedSlot) ? selectedSlot : SLOT_IDS[0];
   $('shopModal').classList.remove('hidden');
   renderShop();
@@ -2616,6 +2624,7 @@ function isShopOpen() {
 function renderShop() {
   if (!isShopOpen()) return;
   if (!shopHere()) { closeShop(); return; }
+  if (shopKind === 'assoc') { renderAssoc(); return; }
   if (shopKind === 'mats') { renderMatShop(); return; }
   const dept = isDeptShop();
   // 지갑 — 백화점(도시)은 돈(원), 떠돌이 상인(그 공간)은 골드
@@ -2625,7 +2634,7 @@ function renderShop() {
   $('shopGold').innerHTML = dept ? `${pxIcon('won')}돈 ${fmtWon(gold)}` : `골드 ${fmt(gold)}`;
   // 물건 한 줄
   const card = item => {
-    const can = gold >= item.price;
+    const can = gold >= item.price && (!dept || hunterGrade() > 0);   // 백화점은 헌터 등록부터
     const worn = getItem(State.meta.equipped[item.slot]);
     const diff = itemDiffText(item, worn, slotMult(item.slot));
     const spec = itemSpecialText(item);
@@ -2648,6 +2657,7 @@ function renderShop() {
   const cards = list.map(card).join('');
   if (dept) {
     $('shopBody').innerHTML = `<div class="shop-say">${DEPT_SECTIONS[shopKind].icon} ${shopSay}</div>`
+      + (hunterGrade() ? '' : '<div class="license-note">🪪 헌터 등록증이 있어야 살 수 있다 — 헌터들의 도시 위쪽 가운데, <b>헌터 협회</b>에서 시험을 본다</div>')
       + (cards ? `<div class="inventory shop-wares">${cards}</div>` : '<div class="adm-note">지금 들어와 있는 물건은 모두 샀다</div>');
     for (const b of document.querySelectorAll('[data-buy]')) b.addEventListener('click', () => openBuy(b.dataset.buy));
     return;
@@ -2683,6 +2693,47 @@ function renderShop() {
 // 아직 없는 장비는 「만든다」(재료 + 돈 — 만들면 「지금 낄까요?」), 이미 가진 장비는 「강화석」(재료 → 그 부위 강화석 — 예전에 겹쳐 주웠을 때와 같은 양).
 // 보이는 재료는 한 번이라도 손에 넣어 본 것 — 가진 것이 있거나, 그 재료로 만든 장비가 있는 것 (아직 못 본 몬스터의 재료는 숨김)
 // 맨 위는 핵 — 모든 몬스터가 남기는 팔 것 (격마다 한 가지). 가진 격만 한 줄씩, 「모두 판다」 한 번으로 다 팝니다. 만드는 데는 쓰지 않습니다.
+// ---------- 헌터 협회 · 등록 창구 (상점 창을 같이 씀 — shopKind 'assoc') ----------
+// 지금의 나(도시의 Lv.1 그대로)로 F 시험관부터 차례로 싸워, 이긴 데까지가 등급. 회차에 한 번 · 내려가지 않음 (game.js 의 takeHunterTest)
+const CLERK_DESKS = { assoc: { name: '등록 창구', icon: '🧑‍💼' } };   // 백화점 매장이 아닌 창구 — 지도 위 이름표
+const ASSOC_TALK = {
+  none: ['「신규 등록이세요? 시험은 간단해요. 시험관과 한 번씩 붙어 보시면 돼요. F급부터요.」', '「등록증 없이 게이트 근처를 돌아다니시면 곤란해요. …시험 보시게요?」'],
+  again: ['「재심사요? 좋아요. 지난번보다 나아지셨는지 볼까요.」', '「등급은 한 번 받으면 안 내려가요. 부담 없이 보세요.」'],
+  done: ['「오늘 심사는 끝났어요. 다음에 다시 오세요. …다음 게이트 다녀오시고요.」']
+};
+let assocResult = null;     // 이번에 본 시험 — 창을 다시 열면 비웁니다
+function renderAssoc() {
+  $('shopTitle').textContent = '헌터 협회 · 등록 창구';
+  $('shopGold').innerHTML = hunterGrade() ? `🪪 ${gradeName()}급 헌터` : '🪪 미등록';
+  const can = canTakeTest(), r = assocResult;
+  const ladder = HUNTER_GRADES.map((g, i) => {
+    const n = i + 1, bout = r && r.bouts.find(b => b.g === n);
+    const cls = n <= hunterGrade() ? 'have' : '', res = bout ? (bout.win ? 'win' : 'lose') : '';
+    return `<div class="grade-row ${cls} ${res}">
+      <span class="grade-id">${g.id}</span>
+      <span class="grade-k">${g.id}급 시험관 <small>Lv.${fmtLevel(g.level)}</small></span>
+      <span class="grade-r">${bout ? (bout.win ? `이김 · ${bout.turns}턴` : `짐 · ${bout.turns}턴`) : n <= hunterGrade() ? '통과' : ''}</span>
+    </div>`;
+  }).join('');
+  const head = !r ? '' : r.grade > r.before
+    ? `<div class="assoc-result up">${r.before ? `등급이 올랐다 — <b>${gradeName(r.before)}급 → ${gradeName(r.grade)}급</b>` : `<b>${gradeName(r.grade)}급 헌터</b>로 등록했다! 이제 백화점에서 살 수 있다`}</div>`
+    : r.grade ? `<div class="assoc-result">그대로 <b>${gradeName(r.grade)}급</b> — 더 세져서 다시 오자</div>`
+    : `<div class="assoc-result down">불합격 — F급 시험관도 못 이겼다. 장비를 갖추고 강해져서 다시 오자</div>`;
+  $('shopBody').innerHTML = `<div class="shop-say">${CLERK_DESKS.assoc.icon} ${shopSay}</div>
+    ${head}
+    <div class="grade-ladder">${ladder}</div>
+    <p class="hint">지금 그대로(도시의 Lv.${fmtLevel(State.run ? State.run.level : 1)}) 시험관과 F급부터 차례로 싸운다 — 지면 거기서 끝, 이긴 데까지가 등급.<br>등급은 내려가지 않는다 · 시험은 회차마다 한 번</p>
+    <div class="assoc-actions"><button class="btn primary" id="assocTestBtn" ${can ? '' : 'disabled'}>${can ? (hunterGrade() ? '재심사를 받는다' : '시험을 본다') : '이번 회차엔 이미 봤다'}</button></div>`;
+  const b = $('assocTestBtn');
+  if (b) b.addEventListener('click', () => {
+    const res = takeHunterTest();
+    if (!res) return;
+    assocResult = res;
+    Sound.play(res.grade > res.before ? 'rankUp' : res.grade ? 'equip' : 'retreat');
+    render();
+  });
+}
+
 function renderMatShop() {
   const won = num(State.meta.won);      // 도시의 돈 — 판 값도 만드는 값도 원
   $('shopTitle').textContent = `헌터백화점 · ${DEPT_SECTIONS.mats.name}`;
@@ -2712,7 +2763,7 @@ function renderMatShop() {
       const spec = itemSpecialText(item);
       const act = owned
         ? `<button class="btn" data-matstone="${item.id}" ${have >= c.n ? '' : 'disabled'}><b>강화석 +${fmt(matStoneYield(item))}</b><span>재료 ${c.n}개</span></button>`
-        : `<button class="btn primary" data-craft="${item.id}" ${have >= c.n && won >= c.won ? '' : 'disabled'}><b>만든다</b><span>재료 ${c.n}개 · ${fmtWon(c.won)}</span></button>`;
+        : `<button class="btn primary" data-craft="${item.id}" ${have >= c.n && won >= c.won && hunterGrade() ? '' : 'disabled'}><b>만든다</b><span>재료 ${c.n}개 · ${fmtWon(c.won)}</span></button>`;
       return `
       <div class="inv-item ware${owned ? ' made' : ''}">
         <span class="inv-art">${itemArt(item)}</span>
@@ -2737,6 +2788,7 @@ function renderMatShop() {
     </div>`;
   }).join('');
   $('shopBody').innerHTML = `<div class="shop-say">${DEPT_SECTIONS.mats.icon} ${shopSay}</div>`
+    + (hunterGrade() ? '' : '<div class="license-note">🪪 만들기는 헌터 등록증이 있어야 한다 — 팔기 · 강화석으로 바꾸기는 그대로</div>')
     + coreBlock
     + (blocks || (coreBlock ? '' : '<div class="adm-note">가져온 것이 없다 — 몬스터를 꺾으면 핵이, 장비를 지니지 않는 짐승을 꺾으면 재료도 나온다</div>'));
   const all = $('sellCoresBtn');
@@ -3316,7 +3368,8 @@ const CITY_WAKE = [
   { who: 'guide', text: '여기가 네가 사는 데구나. 시끄럽고 밝네. …아 참, 너 이름이 뭐였지?' },
   { who: 'guide', ask: 'name', text: '이름 정도는 알아야 부르지.' },
   { who: 'guide', text: () => `<b>${heroName()}</b>. 좋아, 기억해 둘게.` },
-  { who: 'guide', text: '가져온 <b>핵이랑 가죽</b>은 저쪽 큰 도시의 <b>헌터백화점 재료 창구</b>에서 돈으로 바꿔 줄 거야. 돈이 생기면 장비도 사고.' },
+  { who: 'guide', text: '가져온 <b>핵이랑 가죽</b>은 저쪽 큰 도시의 <b>헌터백화점 재료 창구</b>에서 돈으로 바꿔 줄 거야.' },
+  { who: 'guide', text: '장비를 사려면 <b>헌터 등록증</b>이 있어야 한대. 도시 위쪽 큰 건물 — <b>헌터 협회</b>에서 시험을 보면 돼. 지금 그대로 싸워서.' },
   { who: 'guide', text: '그리고 다시 들어가는 길은 — 골목 안의 그 이상한 게이트. 너한테만 보일걸.' }
 ];
 function maybeCityWake() {

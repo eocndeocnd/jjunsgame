@@ -1214,7 +1214,7 @@ const CITY = {
     ['bar', -1, 20, 1, 4], ['bar', 46, 20, 1, 4], ['bar', -1, 38, 1, 4], ['bar', 46, 38, 1, 4]
   ],
   buildings: [
-    { kind: 'hq', x: 13, y: 1, w: 20, h: 13, door: { x: 21, w: 4, name: 'association', label: '헌터 협회' } },
+    { kind: 'hq', x: 13, y: 1, w: 20, h: 13, door: { x: 21, w: 4, name: 'association', label: '헌터 협회', to: 'assoc.out' } },   // 안은 ASSOC (1층 로비 — 등록 창구)
     { kind: 'guild', tone: 0, x: 2, y: 5, w: 8, h: 9, door: { x: 5, w: 2, name: 'guild1', label: '불꽃 길드' } },      // 길드 이름은 가칭 (나중에 다시 정함)
     { kind: 'guild', tone: 1, x: 36, y: 5, w: 8, h: 9, door: { x: 39, w: 2, name: 'guild2', label: '파도 길드' } },
     { kind: 'dept', x: 4, y: 28, w: 12, h: 8, door: { x: 8, w: 4, name: 'dept', label: '헌터백화점', to: 'dept.out' } },   // 안은 DEPT (1층)
@@ -1310,10 +1310,10 @@ const DEPT = {
   clerks: [{ x: 4, y: 0, shop: 'weapon', label: '무기 매장' }, { x: 16, y: 0, shop: 'mats', label: '재료 창구' }],
   signs: [{ name: 'floor2', x: 9, y: 0, w: 3, label: '2층 방어구 매장 · 준비 중' }]
 };
-function deptInterior() {
-  const D = DEPT, TOP = 3, SIDE = 2, BOTTOM = 2, AISLE = 3;
+function storeInterior(D) {
+  const TOP = 3, SIDE = 2, BOTTOM = 2, AISLE = 3;
   const W = D.w + SIDE * 2, H = TOP + D.h + BOTTOM, cx = W >> 1;
-  if (D.w % 2 === 0) throw new Error('헌터백화점 — 바닥 폭은 홀수여야 통로가 가운데에 맞음');
+  if (D.w % 2 === 0) throw new Error(`${D.title} — 바닥 폭은 홀수여야 통로가 가운데에 맞음`);
   const tiles = new Uint8Array(W * H).fill(WALL), lk = new Uint8Array(W * H).fill(look(OL.TILES, CITY_BIO));
   const at = (x, y) => (y + TOP) * W + x + SIDE, inFloor = (x, y) => x >= 0 && y >= 0 && x < D.w && y < D.h;
   for (let y = 0; y < D.h; y++) for (let x = 0; x < D.w; x++) tiles[at(x, y)] = FLOOR;
@@ -1325,8 +1325,8 @@ function deptInterior() {
     const w = p.w || 1, h = p.h || 1;
     for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
       const x = p.x + i, y = p.y + j;
-      if (!inFloor(x, y) || tiles[at(x, y)] !== FLOOR) throw new Error(`헌터백화점 — ${p.kind} (${x}, ${y}) 자리가 빈 바닥이 아님`);
-      if (y > 0 && x >= a0 && x < a0 + AISLE) throw new Error(`헌터백화점 — ${p.kind} (${x}, ${y}) 이(가) 가운데 통로를 막음`);
+      if (!inFloor(x, y) || tiles[at(x, y)] !== FLOOR) throw new Error(`${D.title} — ${p.kind} (${x}, ${y}) 자리가 빈 바닥이 아님`);
+      if (y > 0 && x >= a0 && x < a0 + AISLE) throw new Error(`${D.title} — ${p.kind} (${x}, ${y}) 이(가) 가운데 통로를 막음`);
       tiles[at(x, y)] = WALL; lk[at(x, y)] = look(BUILD, CITY_BIO);
     }
     blds.push({ x: p.x + SIDE, y: p.y + TOP, w, h, kind: p.kind, tone: p.tone });
@@ -1339,7 +1339,7 @@ function deptInterior() {
   const start = { name: 'start', x: out.x + (out.w >> 1), y: out.y - 1 };
   const npcs = [start];
   for (const c of D.clerks) {
-    if (!inFloor(c.x, c.y) || tiles[at(c.x, c.y)] !== FLOOR) throw new Error(`헌터백화점 — 점원 (${c.x}, ${c.y}) 자리가 빈 바닥이 아님`);
+    if (!inFloor(c.x, c.y) || tiles[at(c.x, c.y)] !== FLOOR) throw new Error(`${D.title} — 점원 (${c.x}, ${c.y}) 자리가 빈 바닥이 아님`);
     npcs.push({ name: 'clerk', x: c.x + SIDE, y: c.y + TOP, shop: c.shop, label: c.label });
   }
   // 들어선 자리에서 걸어서 — 모든 빈 바닥에 닿고(갇힌 칸 없음), 점원마다 곁에 설 수 있어야 함 (점원 칸은 막힌 칸)
@@ -1350,19 +1350,37 @@ function deptInterior() {
     if (j < 0 || j >= W * H || seen[j] || tiles[j] !== FLOOR || blocked.has(j) || (Math.abs(d) === 1 && ((j / W) | 0) !== ((q[n] / W) | 0))) continue;
     seen[j] = 1; q.push(j);
   }
-  for (let y = 0; y < D.h; y++) for (let x = 0; x < D.w; x++) if (tiles[at(x, y)] === FLOOR && !blocked.has(at(x, y)) && !seen[at(x, y)]) throw new Error(`헌터백화점 — (${x}, ${y}) 에 걸어서 못 감`);
-  for (const c of D.clerks) if (![1, -1, W, -W].some(d => seen[at(c.x, c.y) + d])) throw new Error(`헌터백화점 — 점원 (${c.x}, ${c.y}) 곁에 설 자리가 없음`);
+  for (let y = 0; y < D.h; y++) for (let x = 0; x < D.w; x++) if (tiles[at(x, y)] === FLOOR && !blocked.has(at(x, y)) && !seen[at(x, y)]) throw new Error(`${D.title} — (${x}, ${y}) 에 걸어서 못 감`);
+  for (const c of D.clerks) if (![1, -1, W, -W].some(d => seen[at(c.x, c.y) + d])) throw new Error(`${D.title} — 점원 (${c.x}, ${c.y}) 곁에 설 자리가 없음`);
   return buildTmj({ w: W, h: H, tiles, look: lk, ports, npcs,
-    props: { title: D.title, interior: true, store: true, blds: JSON.stringify(blds), wall: JSON.stringify(D.wall.map(s => ({ x: s.x + SIDE, w: s.w, kind: s.kind }))) } });
+    props: { title: D.title, interior: true, store: true, ...(D.theme ? { theme: D.theme } : {}), blds: JSON.stringify(blds), wall: JSON.stringify(D.wall.map(s => ({ x: s.x + SIDE, w: s.w, kind: s.kind }))) } });
 }
+
+const deptInterior = () => storeInterior(DEPT);
+
+// ---------- 헌터 협회 안 — 1층 로비 (docs/CITY-PLAN.md 3) ----------
+// 위 벽에 왼쪽부터 의뢰 게시판 · 협회 문장 · 의뢰 게시판. 그 앞줄 가운데에 등록 창구(계산대 둘 사이에 직원), 양옆으로 화분 · 기다리는 긴 의자.
+// 가게 안과 같은 틀(storeInterior)에 빛깔만 협회(theme 'hq' — 남색 · 청록 · 은빛, 그림은 js/mapart.js 의 STC_HQ)
+const ASSOC = {
+  title: '헌터 협회 1층', w: 17, h: 10, to: 'city.association', theme: 'hq',
+  wall: [{ x: 1, w: 5, kind: 'board' }, { x: 6, w: 5, kind: 'crest' }, { x: 11, w: 5, kind: 'board' }],
+  props: [
+    { kind: 'counter', x: 5, y: 0, w: 3 }, { kind: 'counter', x: 9, y: 0, w: 3 },          // 등록 창구 계산대 — 사이 (8, 0) 에 직원
+    { kind: 'plant', x: 0, y: 0, w: 1 }, { kind: 'plant', x: 16, y: 0, w: 1 }, { kind: 'plant', x: 0, y: 9, w: 1 }, { kind: 'plant', x: 16, y: 9, w: 1 },
+    { kind: 'bench', x: 1, y: 4, w: 3 }, { kind: 'bench', x: 13, y: 4, w: 3 }, { kind: 'bench', x: 1, y: 7, w: 3 }, { kind: 'bench', x: 13, y: 7, w: 3 }
+  ],
+  clerks: [{ x: 8, y: 0, shop: 'assoc', label: '등록 창구' }],
+  signs: []
+};
+const assocInterior = () => storeInterior(ASSOC);
 
 // 뽑을 지도 전부 — { 파일 이름: 만드는 함수 }
 function allMaps(data) {
-  const out = { sewer: sewer(data), overworld: overworld(data), hub: hub(data), oldtown: oldtown(), city: city(), dept: deptInterior() };
+  const out = { sewer: sewer(data), overworld: overworld(data), hub: hub(data), oldtown: oldtown(), city: city(), dept: deptInterior(), assoc: assocInterior() };
   for (const s of SECRET_ROOMS) out[s.id] = secretRoom(data, s);
   for (const b of BUILDINGS) out[b.id] = buildingInterior(data, b);
   REALMS.forEach((r, i) => { out[r.name] = realm(data, r, i); });
   return out;
 }
 
-module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, looksPng, encodePng, generate, sewer, overworld, hub, oldtown, city, deptInterior, OLDTOWN, CITY, DEPT, CITY_BIO, secretRoom, buildingInterior, allMaps, layoutFromPlan, HUB_DOORS, REALMS, SEWER, SECRET_ROOMS, BUILDINGS, BUILD, DOORWAY, CARPET, RUIN };
+module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, looksPng, encodePng, generate, sewer, overworld, hub, oldtown, city, deptInterior, assocInterior, storeInterior, OLDTOWN, CITY, DEPT, ASSOC, CITY_BIO, secretRoom, buildingInterior, allMaps, layoutFromPlan, HUB_DOORS, REALMS, SEWER, SECRET_ROOMS, BUILDINGS, BUILD, DOORWAY, CARPET, RUIN };

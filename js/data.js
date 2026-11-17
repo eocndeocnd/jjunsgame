@@ -232,18 +232,20 @@ function heroBaseStats(level) {
 }
 
 // ---------- 스탯 분배 ----------
-// 레벨당 10 포인트. 레벨이 억 단위까지 가므로 포인트도 수십억이 됩니다
+// 레벨당 2 포인트. 레벨이 억 단위까지 가므로 포인트도 수억이 됩니다
 // (Inflation RPG 에서 한 번에 수천 포인트씩 찍는 그 감각).
 //
 // **한 번 찍은 건 그대로 남습니다.** 비율은 "앞으로 들어올 포인트를 어떻게
 // 나눌지" 를 정하는 규칙일 뿐이고, 이미 찍힌 스탯을 건드리지 않습니다.
 // 레벨업으로 새 포인트가 생기면 그때 그 비율대로 들어갑니다.
-const POINTS_PER_LEVEL = 10;
+// 예전엔 레벨당 10 포인트 · 한 점에 생명 3.6 · 공격 0.64 · 방어 0.40 · 민첩 0.52 · 행운 0.32 — 한 점을 찍어도 +0 으로 보였습니다.
+// 「한 점에 적어도 1」(사용자 결정, 2026-11-18) — 포인트를 1/5 로 줄이고 한 점의 값을 5배로. 레벨당 오르는 양은 그대로라 밸런스는 같습니다.
+const POINTS_PER_LEVEL = 2;
 
-// 포인트 하나가 주는 양. 네 곳에 고르게 찍으면 예전 곡선과 정확히 같아집니다
+// 포인트 하나가 주는 양 — 가장 작은 행운도 1.6. 네 곳에 고르게 찍으면 예전 곡선과 정확히 같아집니다
 // (생명 18L · 공격 3.2L · 방어 2.0L · 민첩 2.6L).
 // 한 곳에 몰면 그 스탯만 최대 4배까지 갑니다 — 대신 나머지는 절반만 남습니다.
-const POINT_VALUE = { life: 3.6, damage: 0.64, defense: 0.40, dex: 0.52, luck: 0.32 };
+const POINT_VALUE = { life: 18, damage: 3.2, defense: 2.0, dex: 2.6, luck: 1.6 };
 
 const STAT_KEYS = ['life', 'damage', 'defense', 'dex', 'luck'];
 
@@ -2380,6 +2382,19 @@ for (const [id, name, slot, icon, r, arch, note, gold] of MERCHANT_WARES) {
 //   [id, 이름, 부위, 아이콘, 격, 성격, 상품 설명 한 줄]
 //   성능은 그 격 지역의 가장 센 일반 몬스터 것의 DEPT_GRADE 배 (정예 1.4 · 보스 1.8 보다 아래 — 사서 뚫되 잡아서 얻는 것이 더 좋게),
 //   값은 priceFor(격, DEPT_PRICE) × WON_SCALE 원. store 는 매장 이름 (지금은 weapon 하나).
+// ---------- 헌터 등급 (도시 3 — 헌터 협회) ----------
+// 등록 시험: 도시의 Lv.1 그대로(사용자 결정) 시험관과 F 부터 차례로 싸워, 이긴 데까지가 등급. 한 회차에 한 번 · 등급은 내려가지 않음.
+// 등록(F 이상)해야 헌터백화점에서 사고 만들 수 있습니다 (팔기 · 강화석으로 바꾸기는 등록 없이도 — 사용자 결정).
+// 시험관 = enemyStats(level). level 은 「그 격 보스를 처음 꺾은 바로 다음 회차의 Lv.1 영웅」이 85% 이기는 레벨 —
+// 시뮬 시드 6개 중 두 번째로 약한 영웅에 맞춤 (2026-11-18 · 시드별 85% 레벨: F 9~24 · E 94~169 · D 541~1,204 · C 2,903~5,955 ·
+// B 4.0만~8.1만 · A 50만~75만 · S 529만~2,699만). 격 하나에 한 등급 (사용자 결정). S 위(8~20격)는 나중에 이어 붙입니다.
+const HUNTER_GRADES = [
+  { id: 'F', rank: 1, level: 10 }, { id: 'E', rank: 2, level: 100 }, { id: 'D', rank: 3, level: 650 },
+  { id: 'C', rank: 4, level: 3800 }, { id: 'B', rank: 5, level: 43000 }, { id: 'A', rank: 6, level: 500000 },
+  { id: 'S', rank: 7, level: 9600000 }
+];
+function examinerStats(g) { return enemyStats(HUNTER_GRADES[g - 1].level); }
+
 const DEPT_ID = 'dept';
 const DEPT_GRADE = 1.2;
 const DEPT_SECTIONS = { weapon: { name: '무기 매장', icon: '🧑‍💼' }, mats: { name: '재료 창구', icon: '🧑‍🔧' } };   // mats — 재료로 만들기 · 바꾸기 · 팔기 (MATERIALS)

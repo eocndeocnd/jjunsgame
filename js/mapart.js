@@ -503,12 +503,20 @@
   // ---------- 가게 안 (지도 속성 store — 헌터백화점 1층, tools/map-gen.js 의 DEPT) ----------
   // 바깥 백화점과 같은 빛깔 — 상아색 벽 · 금테 · 포도주색, 거기에 청록 빛줄. 위 벽(세 칸 높이)은 지도 속성 wall 의 구역마다 다르게:
   //   rack 무기 진열 벽 · esc 2층으로 가는 에스컬레이터 · mats 재료 창구(선반에 재료가 놓인 창 셋). 가구(blds 의 kind)는 storeProp 이 칸 안에 납작하게 (윗면 + 앞면)
-  const STC = {
+  const STC_DEPT = {
     ivory: ['#ece6d8', '#e4ddcd', '#f3eee2', '#d8d0bf'], seam: '#c9c0ad', dark: ['#3b3542', '#342f3b', '#443d4c', '#2a2630'],
     carpet: ['#6f1a26', '#661722', '#7a2030', '#59131d'],
     gold: '#c9a24a', goldDim: '#8a6d2c', wine: '#6f1a26', red: '#b0202e', glow: '#62e6ee', line: '#12141a', wall: '#ebe4d4', velvet: '#2a1c26',
     steel: ['#dfe6ee', '#aeb8c4', '#ffffff', '#7d8794']
   };
+  // 헌터 협회 안 (지도 속성 theme 'hq') — 바깥 협회와 같은 빛깔: 흰 돌 · 남색 깔개 · 은빛 테 · 청록 빛줄. 이름은 그대로 두고 값만 바꿔 씁니다 (gold 자리 = 은빛)
+  const STC_HQ = {
+    ivory: ['#dfe6ee', '#d6dee8', '#e8eef4', '#c9d2de'], seam: '#b4bfcd', dark: ['#1d2533', '#19202c', '#222b3a', '#141a24'],
+    carpet: ['#1f3a61', '#1b3456', '#24426c', '#172d4b'],
+    gold: '#a9e4f2', goldDim: '#5b8aa0', wine: '#1f3a61', red: '#2c7fb8', glow: '#62e6ee', line: '#0b0f16', wall: '#dfe6ee', velvet: '#16263f',
+    steel: ['#dfe6ee', '#aeb8c4', '#ffffff', '#7d8794']
+  };
+  let STC = STC_DEPT;                                                              // 덩어리를 그릴 때마다 그 지도의 것으로 (chunk)
   const STORE_KINDS = { counter: 1, case: 1, rope: 1, plant: 1, bench: 1 };
   const storeZones = (m, A) => A.storeZones || (A.storeZones = JSON.parse((m.props && m.props.wall) || '[]'));
   // 큰 상아색 판 — 서른두 점마다 줄눈, 은은한 결, 군데군데 비스듬한 윤
@@ -612,6 +620,38 @@
         if (Math.floor(Math.sqrt(sy + 1) * 2.4) !== step) c = c3('#8d939f');        // 디딤판 앞 모서리
         if (ax < 0.6) c = mul(c, 0.8);
         return mix(c, c3('#fff3cf'), sy / 39 * 0.28);                               // 위층에서 내려오는 빛
+      }
+      if (z.kind === 'board') {                                                     // 의뢰 게시판 — 은빛 테 안의 코르크 판에 의뢰 종이가 핀으로 꽂힘 (협회)
+        if (zx < 3 || zx >= ZW - 3 || fy < 6 || fy > 39) return wall;
+        if (zx === 3 || zx === ZW - 4 || fy === 6 || fy === 39) return c3(STC.gold);
+        if (fy === 7) return c3(STC.glow);
+        const ix = zx - 6, iy = fy - 10, col = Math.floor(ix / 15), row = Math.floor(iy / 14);
+        const px = ix - col * 15, py = iy - row * 14, h = hash(col, row, 385 + z.x);
+        const ox = (h * 3) | 0, oy = (hash(col, row, 386 + z.x) * 2) | 0;
+        if (ix >= 0 && iy >= 0 && col < Math.floor((ZW - 12) / 15) && row < 2 && h > 0.12) {
+          const qx = px - ox, qy = py - oy;
+          if (qx >= 0 && qx < 11 && qy >= 0 && qy < 11) {
+            if (qy === 0 && (qx === 5)) return c3(h < 0.5 ? '#e0524a' : STC.glow);   // 핀
+            const paper = c3(['#f4f1e8', '#e9f2f6', '#f6ecd2', '#eef0f2'][(h * 4) | 0]);
+            if (qy >= 3 && qy <= 8 && qx >= 2 && qx <= 8 && qy % 2 === 1) return mix(paper, c3('#4a5568'), qx > 6 && qy === 7 ? 0.2 : 0.55);   // 글줄
+            if (qy === 10 || qx === 10) return mul(paper, 0.82);
+            return paper;
+          }
+        }
+        return mix(c3('#8a6a42'), c3('#a7845a'), hash(zx >> 1, fy >> 1, 387) * 0.6);   // 코르크
+      }
+      if (z.kind === 'crest') {                                                     // 협회 문장 — 남색 판 위 방패(흰 테 · H), 양옆으로 흐르는 청록 빛줄
+        const mx = zx - ZW / 2 + 0.5, sy = fy - 5;
+        const half = y => (y < 0 || y >= 34 ? -1 : y < 19 ? 15 : 15 - (y - 19) * 1.0);
+        const ax = Math.abs(mx);
+        if (ax <= half(sy)) {
+          if (ax > half(sy) - 2 || sy < 2 || ax > half(sy + 2)) return c3('#eafcff');
+          if ((ax >= 4.5 && ax <= 6.5 && sy >= 7 && sy <= 23) || (ax <= 6.5 && sy >= 14 && sy <= 16)) return c3('#eafcff');
+          return c3('#0f1f38');
+        }
+        if (fy >= 3 && fy < 41 && (ax === 20.5 || ax === 21.5)) return ax === 20.5 ? mix(c3(STC.glow), WHITE, 0.4) : c3(STC.glow);
+        if (zx >= 2 && zx < ZW - 2 && fy >= 3 && fy < 41) return mix(c3('#16263f'), c3(STC.glow), 0.05 + 0.08 * (1 - Math.abs(fy - 22) / 22));
+        return wall;
       }
       if (z.kind === 'mats') {                                                      // 재료 창구 — 금테 창 셋, 말아 올린 셔터 아래로 따뜻한 불빛 · 선반마다 재료(가죽 · 깃털 · 돌조각 · 비늘 …)
         const ix = zx - 5, k = Math.floor(ix / 35), wx = ix - k * 35;
@@ -2010,6 +2050,7 @@
 
   // 덩어리 하나 (CH×CH 칸) — 캔버스에 한 번 그려 둠. 용암이 있으면 용암 점만 칠한 빛 판(.glow)도 — 움직이는 것(liveGround)이 일렁이게 얹음
   function chunk(m, cx, cy) {
+    STC = m.props && m.props.theme === 'hq' ? STC_HQ : STC_DEPT;                  // 가게 안의 빛깔 — 헌터백화점 · 헌터 협회
     const w = Math.min(CH, m.w - cx * CH), h = Math.min(CH, m.h - cy * CH), pw = w * P;
     const cv = document.createElement('canvas');
     cv.width = pw; cv.height = h * P;

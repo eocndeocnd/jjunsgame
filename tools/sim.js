@@ -97,6 +97,7 @@ function simChooseAvatar() {
 // 도시에서는 돈(원)만 씁니다 — 돈은 핵을 판 것뿐이고, 싸워서 번 골드는 여기서 못 씁니다 (떠돌이 상인은 시뮬이 들르지 않습니다).
 function simShop() {
   if (!SIM.SHOP || typeof deptWares !== 'function' || !State.meta.cityOpen) return 0;
+  if (typeof takeHunterTest === 'function') takeHunterTest();   // 회차마다 협회 시험부터 — 등록해야 사고 만들 수 있음
   let bought = 0;
   if (typeof sellAllCores === 'function') sellAllCores();   // 핵은 모두 팝니다 — 그 돈으로 만들고 삽니다
   if (typeof craftItem === 'function') {

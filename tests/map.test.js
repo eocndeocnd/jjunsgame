@@ -1092,7 +1092,7 @@ test('도시 — 옛 동네(집 앞에서 시작 · 골목 막다른 곳의 이�
   const oldBlds = checkTown(old, dOld), cityBlds = checkTown(city, dCity);
   assert.deepEqual(old.ports.filter(q => q.door).map(q => q.name).sort(), ['blackmarket', 'home', 'myguild']);
   assert.deepEqual(city.ports.filter(q => q.door).map(q => q.name).sort(), ['association', 'dept', 'guild1', 'guild2', 'guild3', 'guild4']);
-  assert.deepEqual(city.ports.filter(q => q.door && q.to).map(q => q.name), ['dept'], '지금 열린 문은 헌터백화점뿐');
+  assert.deepEqual(city.ports.filter(q => q.door && q.to).map(q => q.name).sort(), ['association', 'dept'], '지금 열린 문은 헌터 협회 · 헌터백화점');
   assert.ok(!old.ports.some(q => q.door && q.to), '옛 동네의 문은 아직 다 닫힘');
   const area = b => b.w * b.h, hq = cityBlds.find(b => b.kind === 'hq');
   assert.ok(cityBlds.every(b => b === hq || area(b) < area(hq)), '헌터 협회가 가장 큰 건물');
@@ -1185,7 +1185,7 @@ function loadGame(saves = {}) {
 const slotKey = n => `jjunsgame.rpg.v3.slot${n}`;
 
 test('돈(원) — 도시는 돈으로 사고판다: 핵 · 재료를 판 값은 돈, 백화점 · 만들기는 돈으로 (골드로는 못 삼)', () => {
-  const run = loadGame({ [slotKey(1)]: JSON.stringify({ runCount: 5, cityOpen: true, won: 0, gold: 5000000, owned: {}, mats: { core1: 200, giantrat: 3 } }) });
+  const run = loadGame({ [slotKey(1)]: JSON.stringify({ runCount: 5, cityOpen: true, hunterGrade: 1, won: 0, gold: 5000000, owned: {}, mats: { core1: 200, giantrat: 3 } }) });
   const r = run(`
     currentSlot = 1; blockSaving(); load();
     const craft = ITEMS.find(i => i.craft && i.craft.mat === 'giantrat');
@@ -1234,4 +1234,76 @@ test('돈 표기 — 5,000원 · 30만 원 · 123.4만 원 · 1.234억 원 (큰 
   const run = loadGame();
   const r = run(`return [0, 5000, 10000, 18000, 300000, 1234000, 7430000, 99999000, 123400000, 56780000000000, -270000].map(fmtWon);`);
   assert.deepEqual(r, ['0원', '5,000원', '1만 원', '1.8만 원', '30만 원', '123.4만 원', '743만 원', '9,999만 원', '1.234억 원', '56.78조 원', '-27만 원']);
+});
+
+test('스탯 포인트 — 한 점만 찍어도 적어도 1 · 자동 분배는 2점씩 들어와도 비율대로 · 하던 회차는 포인트를 5로 나눠 옮김', () => {
+  const run = loadGame();
+  const r = run(`
+    const out = { each: STAT_KEYS.map(k => POINT_VALUE[k]) };
+    currentSlot = 0; State.meta = freshMeta(); startRun(); State.run.unspent = 0;
+    // 1:1:1:1:1 로 레벨 하나(2점)씩 100번 — 한 스탯에 몰리지 않고 고르게 (각 40)
+    setWeights(1, 1, 1, 1, 1);
+    for (let i = 0; i < 100; i++) { State.run.unspent += POINTS_PER_LEVEL; commitPoints(); }
+    out.even = STAT_KEYS.map(k => State.run.spent[k]);
+    // 2:1 — 3점이 들어오면 2:1
+    State.meta = freshMeta(); startRun(); State.run.unspent = 0;
+    setWeights(2, 1, 0, 0, 0);
+    for (let i = 0; i < 30; i++) { State.run.unspent += 1; commitPoints(); }
+    out.twoOne = [State.run.spent.life, State.run.spent.damage, State.run.spent.defense];
+    // 9천조(2^53)를 넘는 포인트도 멈추지 않고 다 들어감 (시뮬에서 Lv.3.8경에 멈췄던 것)
+    setWeights(1, 1, 1, 1, 1); State.run.unspent = 7.6e16 + 3; commitPoints();
+    out.huge = State.run.unspent === 0 && STAT_KEYS.every(k => State.run.spent[k] > 1e16);
+    return out;
+  `);
+  assert.ok(r.each.every(v => v >= 1), '한 점이 1보다 작은 스탯이 있음: ' + r.each);
+  assert.deepEqual(r.even, [40, 40, 40, 40, 40]);
+  assert.deepEqual(r.twoOne, [20, 10, 0]);
+  assert.ok(r.huge, '아주 큰 포인트도 끝까지 나눔');
+
+  // 예전(v2) 회차 — 레벨당 10점일 때 찍은 생명 500 · 안 찍은 23 → 100 · 5 (힘은 그대로: 500×3.6 = 100×18)
+  const runKey = 'jjunsgame.rpg.v3.slot1.run';
+  const old = { v: 2, zoneIndex: 0, level: 50, xp: 0, energy: 20, unspent: 23, spent: { life: 500, damage: 0, defense: 0, dex: 0, luck: 0 } };
+  const load = loadGame({ [slotKey(1)]: JSON.stringify({ runCount: 3 }), [runKey]: JSON.stringify(old) });
+  const m = load(`currentSlot = 1; blockSaving(); load(); return [loadRun(), State.run.spent.life, State.run.unspent, allocatedStats().life];`);
+  assert.deepEqual(m, [true, 100, 5, 1800]);
+});
+
+test('헌터 협회 — 등록해야 백화점에서 삼 · 시험은 회차에 한 번 · F 부터 이긴 데까지가 등급, 내려가지 않음 · 시험관은 등급마다 세짐', () => {
+  const run = loadGame({ [slotKey(1)]: JSON.stringify({ runCount: 3, cityOpen: true, won: 999999999, owned: {} }) });
+  const r = run(`
+    currentSlot = 1; blockSaving(); load(); startRun();
+    const out = { grade0: hunterGrade(), buy0: buyDept('dept_knife') };
+    // 아주 센 나 — 다 이김 (S)
+    const strong = { ...heroStats(), life: 1e12, damage: 1e11, defense: 1e10, dex: 1e10 };
+    const _hs = heroStats; heroStats = () => strong;
+    const t1 = takeHunterTest();
+    out.t1 = [t1.passed, t1.grade, t1.bouts.length, gradeName()];
+    out.again = takeHunterTest();                       // 같은 회차엔 다시 못 봄
+    // 다음 회차 — 아주 약한 나: 다 짐, 등급은 그대로
+    State.meta.runCount++; heroStats = () => ({ ..._hs(), life: 1, damage: 1 });
+    const t2 = takeHunterTest();
+    out.t2 = [t2.passed, t2.grade, t2.bouts.length];
+    heroStats = _hs;
+    out.buy1 = buyDept('dept_knife');
+    out.lv = HUNTER_GRADES.map(g => g.level);
+    out.ex = HUNTER_GRADES.map((g, i) => examinerStats(i + 1).life);
+    return out;
+  `);
+  assert.equal(r.grade0, 0);
+  assert.equal(r.buy0, false, '등록 전에는 못 삼');
+  assert.deepEqual(r.t1, [7, 7, 7, 'S']);
+  assert.equal(r.again, null);
+  assert.deepEqual(r.t2, [0, 7, 1]);
+  assert.equal(r.buy1, true);
+  for (let i = 1; i < r.lv.length; i++) assert.ok(r.lv[i] > r.lv[i - 1] && r.ex[i] > r.ex[i - 1]);
+});
+
+test('헌터 협회 안 — 도시의 협회 문으로 들어가면 1층 로비, 등록 창구 직원(assoc), 나가면 협회 문 앞', () => {
+  const city = loadMap('city'), assoc = loadMap('assoc');
+  const door = city.ports.find(p => p.name === 'association'), out = assoc.ports.find(p => p.name === 'out');
+  assert.equal(door.to, 'assoc.out');
+  assert.equal(out.to, 'city.association');
+  assert.equal(assoc.props.theme, 'hq');
+  const desk = assoc.npcs.filter(n => n.shop);
+  assert.deepEqual(desk.map(n => n.shop), ['assoc']);
 });

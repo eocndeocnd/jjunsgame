@@ -1858,6 +1858,20 @@ body.test-mode::after {
 /* 그림 한 칸 = 화면 1px 그대로 (늘이면 칸 크기가 들쭉날쭉해져서) — 돈 16×10 · 강화석 12×12 */
 .px-ic { display: inline-block; height: 12px; width: auto; vertical-align: -2px; margin-right: 3px; image-rendering: pixelated; }
 .px-ic.px-won { height: 10px; vertical-align: -1px; }
+/* 헌터 협회 · 등록 창구 — 등급 사다리 (ui.js 의 renderAssoc) · 백화점의 등록증 안내 */
+.license-note { margin: 0 0 10px; padding: 8px 10px; border: 2px dashed var(--line); font-size: 12px; line-height: 1.5; background: var(--paper-hi); }
+.grade-ladder { display: flex; flex-direction: column-reverse; gap: 4px; margin: 10px 0; }
+.grade-row { display: grid; grid-template-columns: 28px 1fr auto; align-items: center; gap: 8px; padding: 5px 8px; border: 2px solid var(--line); background: var(--paper-hi); font-size: 12px; }
+.grade-row .grade-id { font-weight: 700; text-align: center; font-size: 14px; }
+.grade-row small { color: var(--text-dim); font-size: 10px; }
+.grade-row .grade-r { font-size: 11px; white-space: nowrap; }
+.grade-row.have { background: #dff3f7; }
+.grade-row.win .grade-r { color: #1f7a4a; font-weight: 700; }
+.grade-row.lose .grade-r { color: #b0202e; font-weight: 700; }
+.assoc-result { margin: 8px 0; padding: 8px 10px; border: 2px solid var(--line); font-size: 13px; text-align: center; background: var(--paper-hi); }
+.assoc-result.up { background: #fff3cf; }
+.assoc-result.down { color: #7a1a22; }
+.assoc-actions { display: flex; justify-content: center; margin-top: 8px; }
 .guide-eye { display: inline-block; width: 40px; height: 40px; background-size: 100% 100%; image-rendering: pixelated; }
 .guide-eye.bob { animation: eye-bob 1.8s ease-in-out infinite; }
 @keyframes eye-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
