@@ -42,15 +42,15 @@ If a name describes a different kind of object than its type, draw the object fr
 
 | 칸 | 장비 | 부위 | 나온 곳 | 잘라서 둘 곳 |
 |---|---|---|---|---|
-| 1 | 보급형 합금 단검 | 무기 | 헌터백화점 | `assets/items/dept_knife.png` |
-| 2 | 수호자의 대검 | 무기 | 던전 가디언 | `assets/items/dungeonguardian_0.png` |
-| 3 | 고블린 손도끼 | 무기 | 고블린 | `assets/items/goblin_0.png` |
-| 4 | 녹슨 단검 | 무기 | 슬라임 | `assets/items/slime_0.png` |
-| 5 | 꺼지지 않는 수로 등 | 보조무기 | 보물상자 | `assets/items/chest_sewer_lamp.png` |
-| 6 | 폴리카보네이트 방패 | 보조무기 | 헌터백화점 | `assets/items/dept_buckler.png` |
-| 7 | 작은 삼지창 | 보조무기 | 임프 | `assets/items/imp_0.png` |
-| 8 | 찌그러진 투구 | 투구 | 고블린 | `assets/items/goblin_1.png` |
-| 9 | 해골 투구 | 투구 | 스켈레톤 | `assets/items/skeleton_1.png` |
+| 1 | 보급형 합금 단검 | 무기 | 헌터백화점 | `assets/items/dept_knife.png` ✅ |
+| 2 | 수호자의 대검 | 무기 | 던전 가디언 | `assets/items/dungeonguardian_0.png` ✅ |
+| 3 | 고블린 손도끼 | 무기 | 고블린 | `assets/items/goblin_0.png` ✅ |
+| 4 | 녹슨 단검 | 무기 | 슬라임 | `assets/items/slime_0.png` ✅ |
+| 5 | 꺼지지 않는 수로 등 | 보조무기 | 보물상자 | `assets/items/chest_sewer_lamp.png` ✅ |
+| 6 | 폴리카보네이트 방패 | 보조무기 | 헌터백화점 | `assets/items/dept_buckler.png` ✅ |
+| 7 | 작은 삼지창 | 보조무기 | 임프 | `assets/items/imp_0.png` ✅ |
+| 8 | 찌그러진 투구 | 투구 | 고블린 | `assets/items/goblin_1.png` ✅ |
+| 9 | 해골 투구 | 투구 | 스켈레톤 | `assets/items/skeleton_1.png` ✅ |
 
 ## 시트 1-B — 갑옷 · 어깨 · 장갑 · 허리띠 · 각반 (9개)
 
