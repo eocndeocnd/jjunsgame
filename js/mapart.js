@@ -1501,10 +1501,11 @@
     dept:   { F: 84 },
     guild:  { F: 90, cut: 6 },
     tower:  { F: 96, cut: 5 },
-    villa:  { F: 36, old: true, roof: '#6f9a78', wall: '#a35f48', trim: '#e3ddd2' },   // 빨간 벽돌 빌라 — 초록 방수 옥상 · 1층은 필로티
-    shabby: { F: 46, old: true, roof: '#7d786f', wall: '#8d8679', trim: '#a39c8f' },   // 허름한 빈 건물 — 막아 둔 창 · 녹 · 「임대」
-    store:  { F: 32, old: true, roof: '#938d83', wall: '#bdb6a8', trim: '#d8d2c4' },   // 낡은 가게 — 네온 간판
-    back:   { F: 22, old: true, roof: '#8a867e', wall: '#8f8b84', trim: '#a8a49c' }    // 낡은 뒤 건물
+    // 옛 동네 건물은 벽면을 조금 높이고 깊이를 줄여 옥상이 덜 보이게 (2026-11-18 사용자 결정)
+    villa:  { F: 50, old: true, roof: '#6f9a78', wall: '#a35f48', trim: '#e3ddd2' },   // 빨간 벽돌 빌라 — 초록 방수 옥상 · 1층은 필로티
+    shabby: { F: 58, old: true, roof: '#7d786f', wall: '#8d8679', trim: '#a39c8f' },   // 허름한 빈 건물 — 막아 둔 창 · 녹 · 「임대」
+    store:  { F: 44, old: true, roof: '#938d83', wall: '#bdb6a8', trim: '#d8d2c4' },   // 낡은 가게 — 네온 간판
+    back:   { F: 32, old: true, roof: '#8a867e', wall: '#8f8b84', trim: '#a8a49c' }    // 낡은 뒤 건물
   };
   // 빛깔 — 유리 · 더 밝은 유리 · 빛 띠 · 불 켜진 창 · 옥상. 길드 넷(붉은 불꽃 · 푸른 파도 · 금빛 왕관 · 보랏빛 달) · 둘레의 빌딩 셋 · 협회
   const GUILD_TONE = [
@@ -1653,12 +1654,14 @@
     return c;
   }
   // 유리 벽면의 바탕 — 세로 창살 · 층 줄 · 비친 하늘 · 군데군데 불 켜진 창
-  function glassWall(T, fx, fy, seed) {
-    if (fx % 8 === 0) return mul(c3(T.glass), 0.72);
+  // pw — 유리 한 칸의 너비(점). 둘레 빌딩은 14 (7칸 = 112점에 8칸 — 한 줄에 반복되는 창 8개 이하, 사용자 결정), 길드는 8 그대로
+  function glassWall(T, fx, fy, seed, pw = 8) {
+    const gx = Math.floor(fx / pw);
+    if (fx % pw === 0) return mul(c3(T.glass), 0.72);
     if (fy % 7 === 3) return mul(c3(T.glass), 0.8);
-    let c = c3(((fx >> 3) + ((fy / 7) | 0)) % 5 === 0 ? T.glass2 : T.glass);
+    let c = c3((gx + ((fy / 7) | 0)) % 5 === 0 ? T.glass2 : T.glass);
     if ((((fx * 0.6 + fy) % 46) + 46) % 46 < 7) c = mix(c, c3(T.light), 0.22);
-    if (hash(fx >> 3, (fy / 7) | 0, seed) < 0.16) c = mix(c, c3(T.light), 0.55);
+    if (hash(gx, (fy / 7) | 0, seed) < 0.16) c = mix(c, c3(T.light), 0.55);
     return c;
   }
   // 빛나는 문 — 틀과 가운데 이음은 빛 띠, 안은 환한 유리
@@ -1689,7 +1692,7 @@
         return emblemAt((B.tone || 0) % 4, ex, ey, k) ? mix(c3(T.accent), WHITE, 0.35) : c3('#0e1016');
       }
     }
-    return glassWall(T, fx, fy, 350 + B.x0 * 3 + B.y0);
+    return glassWall(T, fx, fy, 350 + B.x0 * 3 + B.y0, B.kind === 'tower' ? 14 : 8);
   }
   // 헌터 협회 — 가운데 탑엔 위에서 아래로 흐르는 빛줄과 방패 문장(H), 양 날개엔 가로 빛 띠, 아래는 넓은 계단과 환한 문
   function hqFace(B, G, fx, fy, F) {

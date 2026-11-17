@@ -1167,35 +1167,39 @@ const CITY_BIO = 10;                                         // 도시 — 그�
 //   door { x, w, name, label } — 아래 줄의 문 (지금은 모두 닫혀 있음 — 안은 다음 조각들). annex — 골목 끝에 덧붙인 채 (옆 건물과 붙어도 됨)
 // 나무 [x, y] — 잔디 · 광장 곁의 것은 벚나무가 섞임 (그림이 고름). 기둥 [x, y] — 몬스터 핵으로 빛나는 가로등
 // edges — 지도 가장자리 통로 { name, x, y, w, h, to, label, arrive } (넘어가면 to 의 같은 이름 통로 안쪽 — arrive 쪽 — 에 섬)
+// 크기 규칙 (2026-11-18 사용자 결정 — 「건물이 크고 반복적」): 길드 · 헌터 협회 말고는 한 줄에 반복되는 창이 8개 이하가 되게 가로를 줄이고
+//   (빌라 · 가게 · 빈 건물 7칸 · 백화점 12칸 · 둘레 빌딩 7칸), 옥상이 덜 보이게 깊이(h)를 줄임. 창 간격은 js/mapart.js 의 oldFace · deptFace · glassWall.
 const OLDTOWN = {
   title: '옛 동네', base: 'old',
-  w: 44, h: 17, pad: { t: 6, b: 6, l: 9, r: 9 },
+  w: 44, h: 13, pad: { t: 6, b: 6, l: 9, r: 9 },
   ground: [],
   buildings: [
-    // 위 줄 — 문은 가운데 골목길(y 8 ~ 10)을 봄
-    { kind: 'villa', roof: 'tank', x: 2, y: 0, w: 7, h: 8, door: { x: 5, w: 1, name: 'home', label: '집' } },
-    { kind: 'shabby', x: 11, y: 0, w: 9, h: 8, door: { x: 14, w: 2, name: 'myguild', label: '빈 건물' } },             // 나중에 사들여 내 길드로 키울 곳
-    { kind: 'store', x: 22, y: 0, w: 6, h: 8 },
+    // 위 줄 — 문은 가운데 골목길(y 5 ~ 7)을 봄
+    { kind: 'villa', roof: 'tank', x: 2, y: 0, w: 7, h: 5, door: { x: 5, w: 1, name: 'home', label: '집' } },
+    { kind: 'shabby', x: 11, y: 0, w: 7, h: 5, door: { x: 13, w: 2, name: 'myguild', label: '빈 건물' } },             // 나중에 사들여 내 길드로 키울 곳
+    { kind: 'store', x: 21, y: 0, w: 6, h: 5 },
     { kind: 'back', annex: true, x: 28, y: 0, w: 2, h: 2, door: { x: 28, w: 2, name: 'blackmarket' } },               // 암시장이 들어설 골목 — 닫힌 셔터 (이름표 없음)
-    { kind: 'villa', x: 30, y: 0, w: 6, h: 8 },
+    { kind: 'villa', x: 30, y: 0, w: 6, h: 5 },
     { kind: 'back', annex: true, x: 36, y: 0, w: 2, h: 2 },                                                             // 이상한 게이트가 이 벽 앞에 섬
-    { kind: 'store', x: 38, y: 0, w: 6, h: 8 },
+    { kind: 'store', x: 38, y: 0, w: 6, h: 5 },
     // 아래 줄
-    { kind: 'villa', roof: 'tank', x: 1, y: 11, w: 9, h: 6 }, { kind: 'back', x: 12, y: 11, w: 9, h: 6 },
-    { kind: 'store', x: 23, y: 11, w: 8, h: 6 }, { kind: 'villa', x: 33, y: 11, w: 11, h: 6 },
+    { kind: 'villa', roof: 'tank', x: 1, y: 8, w: 7, h: 5 }, { kind: 'back', x: 10, y: 8, w: 7, h: 5 },
+    { kind: 'store', x: 20, y: 8, w: 7, h: 5 }, { kind: 'villa', x: 29, y: 8, w: 7, h: 5 }, { kind: 'store', x: 38, y: 8, w: 6, h: 5 },
     // 둘레 — 오른쪽 가운데는 골목길이 화면 밖으로 이어져 보이게 비움
-    { kind: 'back', x: -8, y: -6, w: 9, h: 5 }, { kind: 'villa', x: 3, y: -6, w: 10, h: 5 }, { kind: 'store', x: 15, y: -6, w: 10, h: 5 },
-    { kind: 'back', x: 27, y: -6, w: 8, h: 5 }, { kind: 'villa', x: 37, y: -6, w: 8, h: 5 }, { kind: 'back', x: 47, y: -6, w: 6, h: 5 },
-    { kind: 'store', x: -8, y: 0, w: 7, h: 8 }, { kind: 'villa', x: -8, y: 9, w: 7, h: 8 },
-    { kind: 'back', x: 46, y: 0, w: 7, h: 7 }, { kind: 'store', x: 46, y: 12, w: 7, h: 5 },
-    { kind: 'villa', x: -8, y: 18, w: 10, h: 5 }, { kind: 'back', x: 4, y: 18, w: 11, h: 5 }, { kind: 'store', x: 17, y: 18, w: 10, h: 5 },
-    { kind: 'villa', x: 29, y: 18, w: 9, h: 5 }, { kind: 'back', x: 40, y: 18, w: 13, h: 5 }
+    { kind: 'back', x: -8, y: -5, w: 7, h: 4 }, { kind: 'villa', x: 1, y: -5, w: 7, h: 4 }, { kind: 'store', x: 10, y: -5, w: 7, h: 4 },
+    { kind: 'back', x: 19, y: -5, w: 7, h: 4 }, { kind: 'villa', x: 28, y: -5, w: 7, h: 4 }, { kind: 'store', x: 37, y: -5, w: 7, h: 4 },
+    { kind: 'back', x: 46, y: -5, w: 7, h: 4 },
+    { kind: 'store', x: -8, y: 0, w: 7, h: 5 }, { kind: 'villa', x: -8, y: 8, w: 7, h: 5 },
+    { kind: 'back', x: 46, y: 0, w: 7, h: 5 }, { kind: 'store', x: 46, y: 9, w: 7, h: 4 },
+    { kind: 'villa', x: -8, y: 14, w: 7, h: 4 }, { kind: 'back', x: 1, y: 14, w: 7, h: 4 }, { kind: 'store', x: 10, y: 14, w: 7, h: 4 },
+    { kind: 'villa', x: 19, y: 14, w: 7, h: 4 }, { kind: 'back', x: 28, y: 14, w: 7, h: 4 }, { kind: 'store', x: 37, y: 14, w: 7, h: 4 },
+    { kind: 'villa', x: 46, y: 14, w: 7, h: 4 }
   ],
-  trees: [[21, 15], [32, 15]],
+  trees: [[18, 12], [37, 12]],
   pylons: [],
-  start: [5, 8],                                             // 집 문 앞 골목길
+  start: [5, 5],                                             // 집 문 앞 골목길
   gate: [36, 2],                                             // 이상한 게이트 — 골목 막다른 곳 (두 칸 폭)
-  edges: [{ name: 'city', x: 43, y: 8, w: 1, h: 3, to: 'city.oldtown', label: '헌터들의 도시 →', arrive: 'left' }]
+  edges: [{ name: 'city', x: 43, y: 5, w: 1, h: 3, to: 'city.oldtown', label: '헌터들의 도시 →', arrive: 'left' }]
 };
 const CITY = {
   title: '헌터들의 도시', base: 'pave',
@@ -1213,17 +1217,20 @@ const CITY = {
     { kind: 'hq', x: 13, y: 1, w: 20, h: 13, door: { x: 21, w: 4, name: 'association', label: '헌터 협회' } },
     { kind: 'guild', tone: 0, x: 2, y: 5, w: 8, h: 9, door: { x: 5, w: 2, name: 'guild1', label: '불꽃 길드' } },      // 길드 이름은 가칭 (나중에 다시 정함)
     { kind: 'guild', tone: 1, x: 36, y: 5, w: 8, h: 9, door: { x: 39, w: 2, name: 'guild2', label: '파도 길드' } },
-    { kind: 'dept', x: 2, y: 27, w: 16, h: 9, door: { x: 8, w: 4, name: 'dept', label: '헌터백화점', to: 'dept.out' } },   // 안은 DEPT (1층)
+    { kind: 'dept', x: 4, y: 28, w: 12, h: 8, door: { x: 8, w: 4, name: 'dept', label: '헌터백화점', to: 'dept.out' } },   // 안은 DEPT (1층)
     { kind: 'guild', tone: 2, x: 27, y: 27, w: 8, h: 9, door: { x: 30, w: 2, name: 'guild3', label: '왕관 길드' } },
     { kind: 'guild', tone: 3, x: 37, y: 27, w: 8, h: 9, door: { x: 40, w: 2, name: 'guild4', label: '달 길드' } },
     // 둘레 — 걷지 못하는 곳의 빌딩들 (왼쪽 둘째 길 아래는 옛 동네로 가는 보도가 이어져 보이게 비움)
-    { kind: 'tower', tone: 0, x: -8, y: -6, w: 7, h: 5 }, { kind: 'tower', tone: 1, x: 1, y: -6, w: 9, h: 5 }, { kind: 'tower', tone: 2, x: 12, y: -6, w: 9, h: 5 },
-    { kind: 'tower', tone: 0, x: 24, y: -6, w: 10, h: 5 }, { kind: 'tower', tone: 1, x: 36, y: -6, w: 9, h: 5 }, { kind: 'tower', tone: 2, x: 47, y: -6, w: 7, h: 5 },
-    { kind: 'tower', tone: 2, x: -8, y: 2, w: 7, h: 16 }, { kind: 'tower', tone: 0, x: 47, y: 2, w: 7, h: 16 },
-    { kind: 'tower', tone: 1, x: -8, y: 27, w: 7, h: 9 }, { kind: 'tower', tone: 2, x: 47, y: 27, w: 7, h: 9 },
-    { kind: 'tower', tone: 0, x: -8, y: 46, w: 7, h: 6 }, { kind: 'tower', tone: 1, x: 47, y: 44, w: 7, h: 8 },
-    { kind: 'tower', tone: 2, x: -8, y: 54, w: 10, h: 5 }, { kind: 'tower', tone: 0, x: 4, y: 54, w: 12, h: 5 }, { kind: 'tower', tone: 1, x: 18, y: 54, w: 10, h: 5 },
-    { kind: 'tower', tone: 2, x: 30, y: 54, w: 12, h: 5 }, { kind: 'tower', tone: 0, x: 44, y: 54, w: 10, h: 5 }
+    { kind: 'tower', tone: 0, x: -8, y: -6, w: 7, h: 5 }, { kind: 'tower', tone: 1, x: 1, y: -6, w: 7, h: 5 }, { kind: 'tower', tone: 2, x: 10, y: -6, w: 7, h: 5 },
+    { kind: 'tower', tone: 0, x: 19, y: -6, w: 7, h: 5 }, { kind: 'tower', tone: 1, x: 28, y: -6, w: 7, h: 5 }, { kind: 'tower', tone: 2, x: 37, y: -6, w: 7, h: 5 },
+    { kind: 'tower', tone: 0, x: 46, y: -6, w: 7, h: 5 },
+    { kind: 'tower', tone: 2, x: -8, y: 2, w: 7, h: 7 }, { kind: 'tower', tone: 1, x: -8, y: 11, w: 7, h: 7 },
+    { kind: 'tower', tone: 0, x: 47, y: 2, w: 7, h: 7 }, { kind: 'tower', tone: 2, x: 47, y: 11, w: 7, h: 7 },
+    { kind: 'tower', tone: 1, x: -8, y: 28, w: 7, h: 7 }, { kind: 'tower', tone: 2, x: 47, y: 28, w: 7, h: 7 },
+    { kind: 'tower', tone: 0, x: -8, y: 46, w: 7, h: 6 }, { kind: 'tower', tone: 1, x: 47, y: 45, w: 7, h: 7 },
+    { kind: 'tower', tone: 2, x: -8, y: 54, w: 7, h: 5 }, { kind: 'tower', tone: 0, x: 1, y: 54, w: 7, h: 5 }, { kind: 'tower', tone: 1, x: 10, y: 54, w: 7, h: 5 },
+    { kind: 'tower', tone: 2, x: 19, y: 54, w: 7, h: 5 }, { kind: 'tower', tone: 0, x: 28, y: 54, w: 7, h: 5 }, { kind: 'tower', tone: 1, x: 37, y: 54, w: 7, h: 5 },
+    { kind: 'tower', tone: 2, x: 46, y: 54, w: 7, h: 5 }
   ],
   trees: [[11, 3], [11, 6], [11, 9], [11, 12], [34, 3], [34, 6], [34, 9], [34, 12], [3, 2], [7, 2], [38, 2], [42, 2],
           [4, 26], [9, 26], [14, 26], [29, 26], [34, 26], [39, 26], [43, 26], [18, 29], [18, 33], [35, 30], [36, 33]],
