@@ -2859,12 +2859,8 @@ body.meeting .enc-portrait .portrait-ic { font-size: clamp(90px, 34vw, 190px); }
 .fade.on { opacity: 1; pointer-events: auto; transition-duration: .24s; }
 @media (prefers-reduced-motion: reduce) { .fade { transition-duration: .1s; } }
 
-/* 헌터백화점의 매장 (상점 창을 같이 씀) — 점원의 한마디 · 「입고 예정」 물건은 흐리게 */
+/* 헌터백화점의 매장 (상점 창을 같이 씀) — 점원의 한마디 */
 .shop-say { margin: 0 0 10px; padding: 8px 10px; background: var(--paper-hi); border: 2px solid var(--line); font-size: 12px; line-height: 1.5; }
-.shop-soon-head { margin: 14px 0 6px; font-size: 11px; font-weight: 700; color: var(--text-dim); }
-.inv-item.ware.coming { opacity: 0.55; filter: saturate(0.5); }
-.ware-soon { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 6px 8px; border: 2px dashed var(--line); font-size: 11px; font-weight: 700; white-space: nowrap; }
-.ware-soon small { font-size: 10px; font-weight: 400; opacity: 0.85; }
 
 /* 재료 창구 (헌터백화점 1층) — 재료마다 한 묶음: 머리(이름 · 가진 수 · 팔기), 아래에 그 재료로 만드는 장비 */
 .mat-block { margin-top: 12px; }

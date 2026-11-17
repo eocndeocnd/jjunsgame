@@ -1308,11 +1308,6 @@ function deptWares(section) {
   const r = deptOpenRank();
   return ITEMS.filter(i => i.store === section && i.rank.n <= r && !owns(i.id));
 }
-// 다음에 들어올 것 — 한 격 위 (「입고 예정」으로 흐리게 보여 줍니다). 끝까지 들어왔으면 빈 목록
-function deptComing(section) {
-  const r = deptOpenRank() + 1;
-  return ITEMS.filter(i => i.store === section && i.rank.n === r);
-}
 // 산다 — 도시가 열린 뒤, 들어와 있는 것만. 성공하면 true. (어느 지도에 서 있는지는 묻지 않습니다 — 창은 점원에게 닿아야 열립니다)
 function buyDept(id) {
   const it = getItem(id);

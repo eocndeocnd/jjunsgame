@@ -155,11 +155,18 @@ const MapView = (function () {
       ctx.fillStyle = '#1c1007';
       ctx.fillRect(0, 0, cw, ch);
       // 카메라는 보이는 내 자리를 따라갑니다 — 기기 픽셀에 맞춰 반올림해 칸 사이에 틈이 안 생기게
-      // 걸을 수 있는 네모(지도 속성 walk — 옛 동네 · 헌터들의 도시)가 있으면, 그 바깥(못 가는 곳)은 화면의 1/4 까지만 보이게 카메라를 멈춥니다.
+      // 걸을 수 있는 네모(지도 속성 walk — 옛 동네 · 헌터들의 도시, 가게 안은 아래에서 잼)가 있으면, 그 바깥(못 가는 곳)은 화면의 1/4 까지만 보이게 카메라를 멈춥니다.
       // 거기서부터는 화면은 서고 나만 걸어갑니다 — 가장자리 통로까지 가는 동안 못 가는 바깥이 반 화면이나 보이지 않게 (사용자 결정)
       let cx = cw / 2 - (gp.x + 0.5) * T, cy = ch / 2 - (gp.y + 0.5) * T;
-      if (m.props.walk) {
-        const [bx, by, bw, bh] = String(m.props.walk).split(',').map(Number);
+      // 가게 안(지도 속성 store — 헌터백화점)은 walk 가 없어서, 걸을 수 있는 칸을 감싸는 네모를 한 번 재서 씁니다 (벽 · 진열대 바깥이 못 가는 곳)
+      if (!m.props.walk && m.props.store && !m.walkBox) {
+        let x0 = m.w, y0 = m.h, x1 = -1, y1 = -1;
+        for (let y = 0; y < m.h; y++) for (let x = 0; x < m.w; x++) if (!m.solid[y * m.w + x]) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
+        if (x1 >= 0) m.walkBox = [x0, y0, x1 - x0 + 1, y1 - y0 + 1];
+      }
+      const box = m.props.walk ? String(m.props.walk).split(',').map(Number) : m.walkBox;
+      if (box) {
+        const [bx, by, bw, bh] = box;
         const hold = (c, view, a, b, mapLen) => {
           // c — 지도 왼쪽(위쪽) 끝이 화면의 어디에 오나. 바깥은 view/4 까지, 지도 밖(빈 어둠)은 보이지 않게
           let lo = view - view / 4 - b * T, hi = view / 4 - a * T;

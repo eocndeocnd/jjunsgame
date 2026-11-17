@@ -2566,7 +2566,7 @@ function isSlotModalOpen() {
 
 // ---------- 상점 창 — 떠돌이 상인 · 헌터백화점의 매장이 같이 씁니다 ----------
 // 떠돌이 상인: 소지품 셋까지 + 강화석 (부위를 고르고 10 · 100 · 1,000개 묶음으로. 어느 지역에서든 같은 상인, 같은 값).
-// 헌터백화점(shopKind 가 매장 이름 — data.js 의 DEPT_SECTIONS): 점원의 한마디 · 들어와 있는 물건 · 흐리게 「입고 예정」(한 격 위). 강화석은 안 팝니다.
+// 헌터백화점(shopKind 가 매장 이름 — data.js 의 DEPT_SECTIONS): 점원의 한마디 · 들어와 있는 물건. 다음 격 물건은 들어오기 전까지 보여 주지 않습니다 (사용자 결정). 강화석은 안 팝니다.
 let shopSlot = null;   // 강화석을 살 부위. 창을 열 때 지금 고른 부위로 맞춥니다
 let shopKind = 'merchant';   // 'merchant' 또는 백화점 매장 이름
 let shopSay = '';            // 점원의 한마디 — 창을 열 때 한 번 고릅니다 (사고 나서 다시 그려도 그대로)
@@ -2620,14 +2620,14 @@ function renderShop() {
   const cost = n => dept ? fmtWon(n) : `${fmt(n)} 골드`;
   $('shopTitle').textContent = dept ? `헌터백화점 · ${DEPT_SECTIONS[shopKind].name}` : '떠돌이 상인';
   $('shopGold').textContent = dept ? `돈 ${fmtWon(gold)}` : `골드 ${fmt(gold)}`;
-  // 물건 한 줄 — coming 이면 「입고 예정」(흐리게, 살 수 없음)
-  const card = (item, coming) => {
+  // 물건 한 줄
+  const card = item => {
     const can = gold >= item.price;
     const worn = getItem(State.meta.equipped[item.slot]);
     const diff = itemDiffText(item, worn, slotMult(item.slot));
     const spec = itemSpecialText(item);
     return `
-      <div class="inv-item ware${coming ? ' coming' : ''}">
+      <div class="inv-item ware">
         <span class="inv-art">${itemArt(item)}</span>
         <div class="inv-body">
           <div class="inv-head">${itemTag(item)}<span class="inv-name">${item.name}</span></div>
@@ -2635,24 +2635,17 @@ function renderShop() {
           ${diff ? `<div class="inv-diff">${diff}</div>` : ''}
           ${item.note ? `<div class="inv-note">${item.note}</div>` : ''}
         </div>
-        <div class="inv-act">${coming
-          ? `<span class="ware-soon">입고 예정<small>${cost(item.price)}</small></span>`
-          : `<button class="btn" data-buy="${item.id}" ${can ? '' : 'disabled'}>${cost(item.price)}</button>`}</div>
+        <div class="inv-act"><button class="btn" data-buy="${item.id}" ${can ? '' : 'disabled'}>${cost(item.price)}</button></div>
       </div>`;
   };
   // 산 물건은 상점에서 사라집니다
   const list = dept
     ? deptWares(shopKind).sort((a, b) => a.rank.n - b.rank.n || SLOT_IDS.indexOf(a.slot) - SLOT_IDS.indexOf(b.slot))
     : State.run.merchant.wares.map(getItem).filter(i => i && !State.run.merchant.bought.includes(i.id) && !owns(i.id));
-  const cards = list.map(i => card(i, false)).join('');
+  const cards = list.map(card).join('');
   if (dept) {
-    const soon = deptComing(shopKind);
-    const next = soon.length ? `
-      <div class="shop-soon-head">다음에 들어올 물건 — 제${soon[0].rank.n - 1}격의 보스를 꺾으면</div>
-      <div class="inventory shop-wares">${soon.map(i => card(i, true)).join('')}</div>` : '';
     $('shopBody').innerHTML = `<div class="shop-say">${DEPT_SECTIONS[shopKind].icon} ${shopSay}</div>`
-      + (cards ? `<div class="inventory shop-wares">${cards}</div>` : '<div class="adm-note">지금 들어와 있는 물건은 모두 샀다</div>')
-      + next;
+      + (cards ? `<div class="inventory shop-wares">${cards}</div>` : '<div class="adm-note">지금 들어와 있는 물건은 모두 샀다</div>');
     for (const b of document.querySelectorAll('[data-buy]')) b.addEventListener('click', () => openBuy(b.dataset.buy));
     return;
   }

@@ -2875,12 +2875,8 @@ body.meeting .enc-portrait .portrait-ic { font-size: clamp(90px, 34vw, 190px); }
 .fade.on { opacity: 1; pointer-events: auto; transition-duration: .24s; }
 @media (prefers-reduced-motion: reduce) { .fade { transition-duration: .1s; } }
 
-/* 헌터백화점의 매장 (상점 창을 같이 씀) — 점원의 한마디 · 「입고 예정」 물건은 흐리게 */
+/* 헌터백화점의 매장 (상점 창을 같이 씀) — 점원의 한마디 */
 .shop-say { margin: 0 0 10px; padding: 8px 10px; background: var(--paper-hi); border: 2px solid var(--line); font-size: 12px; line-height: 1.5; }
-.shop-soon-head { margin: 14px 0 6px; font-size: 11px; font-weight: 700; color: var(--text-dim); }
-.inv-item.ware.coming { opacity: 0.55; filter: saturate(0.5); }
-.ware-soon { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 6px 8px; border: 2px dashed var(--line); font-size: 11px; font-weight: 700; white-space: nowrap; }
-.ware-soon small { font-size: 10px; font-weight: 400; opacity: 0.85; }
 
 /* 재료 창구 (헌터백화점 1층) — 재료마다 한 묶음: 머리(이름 · 가진 수 · 팔기), 아래에 그 재료로 만드는 장비 */
 .mat-block { margin-top: 12px; }
@@ -8889,11 +8885,6 @@ function deptWares(section) {
   const r = deptOpenRank();
   return ITEMS.filter(i => i.store === section && i.rank.n <= r && !owns(i.id));
 }
-// 다음에 들어올 것 — 한 격 위 (「입고 예정」으로 흐리게 보여 줍니다). 끝까지 들어왔으면 빈 목록
-function deptComing(section) {
-  const r = deptOpenRank() + 1;
-  return ITEMS.filter(i => i.store === section && i.rank.n === r);
-}
 // 산다 — 도시가 열린 뒤, 들어와 있는 것만. 성공하면 true. (어느 지도에 서 있는지는 묻지 않습니다 — 창은 점원에게 닿아야 열립니다)
 function buyDept(id) {
   const it = getItem(id);
@@ -12747,11 +12738,18 @@ const MapView = (function () {
       ctx.fillStyle = '#1c1007';
       ctx.fillRect(0, 0, cw, ch);
       // 카메라는 보이는 내 자리를 따라갑니다 — 기기 픽셀에 맞춰 반올림해 칸 사이에 틈이 안 생기게
-      // 걸을 수 있는 네모(지도 속성 walk — 옛 동네 · 헌터들의 도시)가 있으면, 그 바깥(못 가는 곳)은 화면의 1/4 까지만 보이게 카메라를 멈춥니다.
+      // 걸을 수 있는 네모(지도 속성 walk — 옛 동네 · 헌터들의 도시, 가게 안은 아래에서 잼)가 있으면, 그 바깥(못 가는 곳)은 화면의 1/4 까지만 보이게 카메라를 멈춥니다.
       // 거기서부터는 화면은 서고 나만 걸어갑니다 — 가장자리 통로까지 가는 동안 못 가는 바깥이 반 화면이나 보이지 않게 (사용자 결정)
       let cx = cw / 2 - (gp.x + 0.5) * T, cy = ch / 2 - (gp.y + 0.5) * T;
-      if (m.props.walk) {
-        const [bx, by, bw, bh] = String(m.props.walk).split(',').map(Number);
+      // 가게 안(지도 속성 store — 헌터백화점)은 walk 가 없어서, 걸을 수 있는 칸을 감싸는 네모를 한 번 재서 씁니다 (벽 · 진열대 바깥이 못 가는 곳)
+      if (!m.props.walk && m.props.store && !m.walkBox) {
+        let x0 = m.w, y0 = m.h, x1 = -1, y1 = -1;
+        for (let y = 0; y < m.h; y++) for (let x = 0; x < m.w; x++) if (!m.solid[y * m.w + x]) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
+        if (x1 >= 0) m.walkBox = [x0, y0, x1 - x0 + 1, y1 - y0 + 1];
+      }
+      const box = m.props.walk ? String(m.props.walk).split(',').map(Number) : m.walkBox;
+      if (box) {
+        const [bx, by, bw, bh] = box;
         const hold = (c, view, a, b, mapLen) => {
           // c — 지도 왼쪽(위쪽) 끝이 화면의 어디에 오나. 바깥은 view/4 까지, 지도 밖(빈 어둠)은 보이지 않게
           let lo = view - view / 4 - b * T, hi = view / 4 - a * T;
@@ -15721,7 +15719,7 @@ function isSlotModalOpen() {
 
 // ---------- 상점 창 — 떠돌이 상인 · 헌터백화점의 매장이 같이 씁니다 ----------
 // 떠돌이 상인: 소지품 셋까지 + 강화석 (부위를 고르고 10 · 100 · 1,000개 묶음으로. 어느 지역에서든 같은 상인, 같은 값).
-// 헌터백화점(shopKind 가 매장 이름 — data.js 의 DEPT_SECTIONS): 점원의 한마디 · 들어와 있는 물건 · 흐리게 「입고 예정」(한 격 위). 강화석은 안 팝니다.
+// 헌터백화점(shopKind 가 매장 이름 — data.js 의 DEPT_SECTIONS): 점원의 한마디 · 들어와 있는 물건. 다음 격 물건은 들어오기 전까지 보여 주지 않습니다 (사용자 결정). 강화석은 안 팝니다.
 let shopSlot = null;   // 강화석을 살 부위. 창을 열 때 지금 고른 부위로 맞춥니다
 let shopKind = 'merchant';   // 'merchant' 또는 백화점 매장 이름
 let shopSay = '';            // 점원의 한마디 — 창을 열 때 한 번 고릅니다 (사고 나서 다시 그려도 그대로)
@@ -15775,14 +15773,14 @@ function renderShop() {
   const cost = n => dept ? fmtWon(n) : `${fmt(n)} 골드`;
   $('shopTitle').textContent = dept ? `헌터백화점 · ${DEPT_SECTIONS[shopKind].name}` : '떠돌이 상인';
   $('shopGold').textContent = dept ? `돈 ${fmtWon(gold)}` : `골드 ${fmt(gold)}`;
-  // 물건 한 줄 — coming 이면 「입고 예정」(흐리게, 살 수 없음)
-  const card = (item, coming) => {
+  // 물건 한 줄
+  const card = item => {
     const can = gold >= item.price;
     const worn = getItem(State.meta.equipped[item.slot]);
     const diff = itemDiffText(item, worn, slotMult(item.slot));
     const spec = itemSpecialText(item);
     return `
-      <div class="inv-item ware${coming ? ' coming' : ''}">
+      <div class="inv-item ware">
         <span class="inv-art">${itemArt(item)}</span>
         <div class="inv-body">
           <div class="inv-head">${itemTag(item)}<span class="inv-name">${item.name}</span></div>
@@ -15790,24 +15788,17 @@ function renderShop() {
           ${diff ? `<div class="inv-diff">${diff}</div>` : ''}
           ${item.note ? `<div class="inv-note">${item.note}</div>` : ''}
         </div>
-        <div class="inv-act">${coming
-          ? `<span class="ware-soon">입고 예정<small>${cost(item.price)}</small></span>`
-          : `<button class="btn" data-buy="${item.id}" ${can ? '' : 'disabled'}>${cost(item.price)}</button>`}</div>
+        <div class="inv-act"><button class="btn" data-buy="${item.id}" ${can ? '' : 'disabled'}>${cost(item.price)}</button></div>
       </div>`;
   };
   // 산 물건은 상점에서 사라집니다
   const list = dept
     ? deptWares(shopKind).sort((a, b) => a.rank.n - b.rank.n || SLOT_IDS.indexOf(a.slot) - SLOT_IDS.indexOf(b.slot))
     : State.run.merchant.wares.map(getItem).filter(i => i && !State.run.merchant.bought.includes(i.id) && !owns(i.id));
-  const cards = list.map(i => card(i, false)).join('');
+  const cards = list.map(card).join('');
   if (dept) {
-    const soon = deptComing(shopKind);
-    const next = soon.length ? `
-      <div class="shop-soon-head">다음에 들어올 물건 — 제${soon[0].rank.n - 1}격의 보스를 꺾으면</div>
-      <div class="inventory shop-wares">${soon.map(i => card(i, true)).join('')}</div>` : '';
     $('shopBody').innerHTML = `<div class="shop-say">${DEPT_SECTIONS[shopKind].icon} ${shopSay}</div>`
-      + (cards ? `<div class="inventory shop-wares">${cards}</div>` : '<div class="adm-note">지금 들어와 있는 물건은 모두 샀다</div>')
-      + next;
+      + (cards ? `<div class="inventory shop-wares">${cards}</div>` : '<div class="adm-note">지금 들어와 있는 물건은 모두 샀다</div>');
     for (const b of document.querySelectorAll('[data-buy]')) b.addEventListener('click', () => openBuy(b.dataset.buy));
     return;
   }
