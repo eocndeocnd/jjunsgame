@@ -1156,7 +1156,7 @@
       const n = buildings.length;
       for (let y = b.y; y < b.y + b.h; y++) for (let x = b.x; x < b.x + b.w; x++) bAt[y * m.w + x] = n;
       const door = (m.ports || []).find(p => p.door && p.x >= b.x && p.x < b.x + b.w && p.y >= b.y && p.y < b.y + b.h);
-      buildings.push({ x0: b.x, y0: b.y, w: b.w, h: b.h, door, kind: b.kind, roof: b.roof, tone: b.tone, G: null });
+      buildings.push({ x0: b.x, y0: b.y, w: b.w, h: b.h, door, kind: b.kind, roof: b.roof, tone: b.tone, v: b.v, roofOnly: !!b.roofOnly, G: null });
     }
     for (let k = 0; k < m.w * m.h; k++) {
       if ((m.look[k] & 15) !== BUILD || bAt[k] >= 0) continue;
@@ -1431,6 +1431,12 @@
   }
   function asphalt(X, Y) {
     const c = shadeOf(CYC.asphalt, fbm(X * 0.04, Y * 0.04, 301) * 0.7 + hash(X, Y, 302) * 0.3);
+    // 맨홀 — 드문드문 한 칸 가운데, 테 두른 둥근 뚜껑에 격자 (빛 도는 도시라 테에 청록이 살짝)
+    const tx = X >> 4, ty = Y >> 4;
+    if (hash(tx, ty, 496) < 0.012) {
+      const r = Math.hypot((X & 15) - 7.5, (Y & 15) - 7.5);
+      if (r < 5.6) return r > 4.6 ? c3('#1a1c20') : r > 4 ? mix(c3('#5d636c'), c3(CYC.glow), 0.25) : ((X + Y) & 3) === 0 ? c3('#3c4048') : c3('#4c515a');
+    }
     return hash(X, Y, 303) < 0.02 ? c3('#42454d') : c;
   }
   // 찻길 무늬 — 가장자리를 따라 흐르는 빛 띠 · 가운데 흰 두 줄 · 흰 점선 차선, 횡단보도는 길을 가로지르는 굵은 줄(양끝은 빛). 네거리 한가운데는 무늬 없음
@@ -1445,6 +1451,17 @@
     }
     const mid = Wd >> 1;
     if (a === mid - 2 || a === mid + 1) return c3(CYC.paint);
+    // 차선마다 아홉 칸에 한 번 — 가는 쪽을 가리키는 화살표 (오른쪽 통행: 가로는 아래 차선이 오른쪽 · 세로는 왼쪽 차선이 아래로). 오래돼 조금 닳음
+    if (Wd >= 4 * P) {
+      const lc = a < mid ? Wd >> 2 : Wd - (Wd >> 2), v = a - lc, dir = horiz ? (a < mid ? -1 : 1) : (a < mid ? 1 : -1);
+      const cell = Math.floor(along / P), ua = ((along % (P * 9)) + P * 9) % (P * 9) - P * 4;
+      if (ua >= 0 && ua < 15 && Math.abs(v + 0.5) <= 5) {
+        const w = dir > 0 ? ua : 14 - ua;
+        if ((w < 9 && (v === -1 || v === 0)) || (w >= 9 && Math.abs(v + 0.5) <= (14 - w) * 0.8)) return mix(c3(CYC.paint), c3(CYC.asphalt[0]), 0.35 + hash(cell, a, 495) * 0.15);
+      }
+    }
+    // 빗물받이 — 연석 바로 안쪽, 여섯 칸에 한 번
+    if ((a === 3 || a === Wd - 4 || a === 4 || a === Wd - 5) && ((along % (P * 6)) + P * 6) % (P * 6) < 7) return ((along & 1) ? c3('#16181c') : c3('#5a5f68'));
     if (Wd >= 4 * P && (a === (Wd >> 2) || a === Wd - (Wd >> 2)) && ((along % 20) + 20) % 20 < 10) return mix(c3(CYC.paint), c3(CYC.asphalt[0]), 0.3);
     if (a === 1 || a === Wd - 2) return c3(CYC.glow);
     if (a === 2 || a === Wd - 3) return mix(c3(CYC.glowDim), c3(CYC.asphalt[0]), 0.45);
@@ -1545,7 +1562,7 @@
     villa:  { F: 50, old: true, roof: '#6f9a78', wall: '#a35f48', trim: '#e3ddd2' },   // 빨간 벽돌 빌라 — 초록 방수 옥상 · 1층은 필로티
     shabby: { F: 58, old: true, roof: '#7d786f', wall: '#8d8679', trim: '#a39c8f' },   // 허름한 빈 건물 — 막아 둔 창 · 녹 · 「임대」
     store:  { F: 44, old: true, roof: '#938d83', wall: '#bdb6a8', trim: '#d8d2c4' },   // 낡은 가게 — 네온 간판
-    back:   { F: 32, old: true, roof: '#8a867e', wall: '#8f8b84', trim: '#a8a49c' }    // 낡은 뒤 건물
+    back:   { F: 44, old: true, roof: '#8a867e', wall: '#8f8b84', trim: '#a8a49c' }    // 낡은 뒤 건물
   };
   // 빛깔 — 유리 · 더 밝은 유리 · 빛 띠 · 불 켜진 창 · 옥상. 길드 넷(붉은 불꽃 · 푸른 파도 · 금빛 왕관 · 보랏빛 달) · 둘레의 빌딩 셋 · 협회
   const GUILD_TONE = [
@@ -1569,7 +1586,7 @@
   ];
   const emblemAt = (n, ix, iy, k) => ix >= 0 && iy >= 0 && ix < 8 * k && iy < 8 * k && EMBLEM[n][(iy / k) | 0][(ix / k) | 0] === '#';
   function cityGeom(B) {
-    const S = CB[B.kind] || CB.back, W = B.w * P, Hh = B.h * P, F = Math.min(S.F, Hh - 14), roofH = Hh - F;
+    const S = CB[B.kind] || CB.back, W = B.w * P, Hh = B.h * P, F = B.roofOnly ? 0 : Math.min(S.F, Hh - 14), roofH = Hh - F;   // roofOnly — 지도 아래 끝의 건물: 옥상만 (벽면은 지도 밖)
     const G = { S, W, Hh, F, roofH, old: !!S.old, cut: S.cut || 0, items: [], tone: null, step: null, mid: null,
       door: B.door ? { x0: (B.door.x - B.x0) * P, x1: (B.door.x - B.x0 + B.door.w) * P } : null };
     if (B.kind === 'hq') {                                                         // 가운데 탑이 양 날개보다 높음
@@ -1579,6 +1596,7 @@
     else if (B.kind === 'tower') G.tone = TOWER_TONE[(B.tone || 0) % 3];
     else if (B.kind === 'dept') G.tone = DEPT_TONE;
     if (!G.old) return G;
+    G.pal = oldPal(B);
     const items = G.items, rnd = n => hash(B.x0 * 7 + n, B.y0 * 13 + n, 340);
     if (B.roof === 'tank') items.push({ type: 'tank', x: W - 19, y: 6, w: 11, h: 13 });
     const free = it => items.every(q => it.x + it.w + 2 < q.x || q.x + q.w + 2 < it.x || it.y + it.h + 2 < q.y || q.y + q.h + 2 < it.y);
@@ -1774,6 +1792,7 @@
   // 헌터백화점 — 금테 두른 상아색 벽, 층마다 따뜻하게 빛나는 진열창(마네킹), 붉은 깃발, 금빛 문장의 간판, 1층 줄무늬 차양과 환한 문
   function deptFace(B, G, fx, fy, F) {
     const W = G.W, door = G.door, cx = door ? Math.round((door.x0 + door.x1) / 2) : W >> 1;
+    const nW = Math.floor((W - 2) / 24), oW = Math.floor((W - (nW * 24 - 4)) / 2), rx = fx - oW, inW = rx >= 0 && rx < nW * 24 - 4;   // 진열창 — 다 들어가는 것만 가운데로 (잘린 창 없게)
     const gold = c3('#c9a24a'), ivory = c3('#ebe4d4');
     if (fy <= 1) return gold;
     if (fy === 2) return mul(ivory, 0.7);
@@ -1798,7 +1817,7 @@
       }
       if (fy < ground + 4) return ((fx >> 2) & 1) ? c3('#b0202e') : c3('#f3ede4');  // 줄무늬 차양
       if (fy === ground + 4) return mul(c3('#3a2c1c'), 0.9);
-      const bx = ((fx - 6) % 24 + 24) % 24;
+      const bx = inW ? ((rx % 24) + 24) % 24 : 21;
       if (bx >= 20) return fy > F - 8 ? mul(ivory, 0.9) : ivory;                    // 창 사이 기둥
       if (bx === 0 || bx === 19 || fy >= F - 5) return gold;
       let c = mix(c3('#ffe9b0'), c3('#f5b860'), (fy - ground) / 29);
@@ -1806,9 +1825,9 @@
       if ((Math.abs(mx) <= 1 && my >= 0 && my <= 1) || (Math.abs(mx) <= 2 && my >= 3 && my <= 12)) c = mix(c, c3('#6a4a2c'), 0.75);
       return c;
     }
-    const fl = (fy - 15) % 20, bx = ((fx - 6) % 24 + 24) % 24;                        // 위 두 층
+    const fl = (fy - 15) % 20, bx = inW ? ((rx % 24) + 24) % 24 : 21;                // 위 두 층
     if (bx >= 20) {                                                                 // 기둥 — 셋에 하나는 붉은 깃발
-      if (Math.floor((fx - 6) / 24) % 3 === 1 && bx >= 21 && bx <= 22 && fy < ground - 3) return fy % 20 === 14 ? gold : c3('#b0202e');
+      if (inW && Math.floor(rx / 24) % 3 === 1 && bx >= 21 && bx <= 22 && fy < ground - 3) return fy % 20 === 14 ? gold : c3('#b0202e');
       return bx === 20 || bx === 23 ? mul(ivory, 0.9) : ivory;
     }
     if (fl < 2 || fl > 17) return fl === 18 ? gold : ivory;                          // 층 사이 띠
@@ -1822,7 +1841,7 @@
   }
   // 옛 동네의 낡은 건물 — 옥상(난간 · 실외기 · 물탱크)과 벽면
   function oldBuilding(B, G, px, py, X, Y) {
-    const S = G.S, W = G.W, F = G.F;
+    const S = G.pal, W = G.W, F = G.F;
     if (py < G.roofH) {
       const roof = c3(S.roof);
       if (py >= G.roofH - 3) return py === G.roofH - 3 ? c3(S.trim) : py === G.roofH - 1 ? mul(c3(S.trim), 0.72) : mul(c3(S.trim), 0.88);
@@ -1844,32 +1863,58 @@
     if (fx <= 1) c = mix(c, WHITE, 0.08); else if (fx >= W - 2) c = mul(c, 0.86);
     return c;
   }
+  // 옛 동네 건물의 빛깔 · 창 모양 — 건물마다 번호 v(tools/map-gen.js 가 종류마다 차례로 매김)로 골라, 한 지도 안의 건물이 모두 다르게 보이게 (사용자 결정)
+  const OLD_PAL = {
+    villa: { wall: [['#a35f48', '#984f3c', '#ad6a52', '#7e4535'], ['#8a5a3c', '#7f5034', '#956445', '#63402a'], ['#c9b28a', '#bea67c', '#d3bd97', '#9c8762'],
+                    ['#9a948c', '#8f8981', '#a59f97', '#726d66'], ['#d8d2c6', '#cdc6b8', '#e2dcd0', '#a9a294']],
+             roof: ['#6f9a78', '#5f86a8', '#8a8a84', '#b5866a'], glass: ['#8db4cc', '#9cc4b8', '#a8b8d8'] },
+    store: { wall: ['#bdb6a8', '#a8b4b8', '#c4b08e', '#b0a0a8', '#a9b39a'],
+             neon: [['#ff4fa3', '#7ef2e0'], ['#ffd23a', '#7cf27e'], ['#ff4a4a', '#f4f4f4'], ['#4aa3ff', '#ffa04a'], ['#c06bff', '#c8ff5a']],
+             awn: ['#7a3a44', '#2f5f7a', '#3f6a3a', '#7a6a2a'], roof: ['#938d83', '#8a9090', '#9a8a78', '#86807a'] },
+    back: { wall: ['#8f8b84', '#7f8a8c', '#9a8f80', '#8a8072', '#a09a90'], roof: ['#8a867e', '#7e8486', '#928a7e', '#857c70', '#9a948a'] }
+  };
+  function oldPal(B) {
+    const S = CB[B.kind] || CB.back, v = B.v | 0, P5 = Math.floor(v / 5);
+    if (B.kind === 'villa') {
+      const w = OLD_PAL.villa.wall[v % 5];
+      return { wall: w[0], bricks: w.slice(0, 3), mortar: w[3], roof: OLD_PAL.villa.roof[(v + P5) % 4], trim: S.trim, win: P5 % 3, glass: OLD_PAL.villa.glass[(v + P5 * 2) % 3] };
+    }
+    if (B.kind === 'store') return { wall: OLD_PAL.store.wall[v % 5], neon: OLD_PAL.store.neon[(v * 2 + P5) % 5], awn: OLD_PAL.store.awn[(v + P5) % 4], roof: OLD_PAL.store.roof[(v + P5 * 3) % 4], trim: S.trim };
+    if (B.kind === 'back') return { wall: OLD_PAL.back.wall[v % 5], roof: OLD_PAL.back.roof[(v + P5 * 2) % 5], trim: S.trim, poster: P5 % 3 === 1, tag: P5 % 3 === 2 };
+    return { wall: S.wall, roof: S.roof, trim: S.trim };
+  }
+  // 창을 줄지어 놓을 때 — 다 들어가는 것만, 가운데로 모아서 (잘린 창이 없게). 첫 창의 왼쪽 끝 · 개수
+  function windowRow(W, ww, pitch, margin) {
+    const n = Math.max(0, Math.floor((W - 2 * margin - ww) / pitch) + 1);
+    return { n, x0: Math.floor((W - ((n - 1) * pitch + ww)) / 2) };
+  }
   function oldFace(B, G, fx, fy, X, Y) {
-    const S = G.S, W = G.W, F = G.F, wall = c3(S.wall), k = B.kind, door = G.door;
+    const S = G.pal, W = G.W, F = G.F, wall = c3(S.wall), k = B.kind, door = G.door;
     const inDoor = door && fx >= door.x0 + 2 && fx < door.x1 - 2;
     const glass = (wx, wy, ww, wh, tint) => {
       if (wx === 0 || wy === 0 || wx === ww - 1 || wy === wh - 1) return c3('#e6e1d7');
       return (wx + wy) % 6 === 0 ? mix(c3(tint), WHITE, 0.55) : wy < 2 ? mul(c3(tint), 0.82) : c3(tint);
     };
-    if (k === 'store') {                                                            // 낡은 가게 — 분홍 · 청록 네온 간판, 차양, 흐린 진열창
+    if (k === 'store') {                                                            // 낡은 가게 — 네온 간판(빛깔은 가게마다), 차양, 흐린 진열창
       const signTop = F - 24, signBot = F - 18, awn = F - 17;
       if (fy >= signTop && fy < signBot) {
-        if (fy === signTop || fy === signBot - 1) return c3('#ff4fa3');
+        if (fy === signTop || fy === signBot - 1) return c3(S.neon[0]);
         const gx = fx % 9, on = hash(Math.floor(fx / 9), B.x0, 355) < 0.75;
-        return on && gx >= 2 && gx <= 6 && (fy - signTop) >= 2 && (fy - signTop) <= 3 ? c3('#7ef2e0') : c3('#241a2c');
+        return on && gx >= 2 && gx <= 6 && (fy - signTop) >= 2 && (fy - signTop) <= 3 ? c3(S.neon[1]) : c3('#241a2c');
       }
-      if (fy >= awn && fy < awn + 3) return ((fx >> 2) & 1) ? c3('#7a3a44') : c3('#cfc6b8');
+      if (fy >= awn && fy < awn + 3) return ((fx >> 2) & 1) ? c3(S.awn) : c3('#cfc6b8');
       if (fy >= awn + 3) {
         if (fy === awn + 3) return c3('#34343c');
         if (fx % 12 === 0) return c3('#2d3a46');
         const c = c3('#4f6878');
         return ((fx + fy * 2) % 22 + 22) % 22 < 4 ? mix(c, WHITE, 0.25) : c;
       }
-      const wx = (fx - 4) % 14, wy = (fy - 4) % 11;
-      if (fx >= 4 && fx <= W - 6 && wx >= 0 && wx < 10 && wy >= 1 && wy < 8) return glass(wx, wy - 1, 10, 7, '#7d9bb0');
+      const R = windowRow(W, 10, 14, 4), rows = signTop >= 12 ? Math.floor((signTop - 12) / 11) + 1 : 0;
+      const ix = fx - R.x0, wx = ((ix % 14) + 14) % 14, wy = (fy - 4) % 11, j = Math.floor((fy - 4) / 11);
+      if (ix >= 0 && ix < R.n * 14 && wx < 10 && fy >= 4 && j < rows && wy >= 1 && wy < 8) return glass(wx, wy - 1, 10, 7, '#7d9bb0');
       return fbm(X * 0.05, Y * 0.05, 356) > 0.6 ? mul(wall, 0.88) : wall;
     }
-    if (k === 'villa') {                                                            // 빨간 벽돌 빌라 — 1층은 필로티(어두운 주차 칸 · 기둥) · 문
+    if (k === 'villa') {                                                            // 빌라 — 1층은 필로티(어두운 주차 칸 · 기둥) · 문, 위층은 벽돌에 창 (창 모양은 셋 중 하나)
       if (fy >= F - 13) {
         if (inDoor) {
           if (fy === F - 13) return c3('#c94b3c');
@@ -1879,10 +1924,23 @@
         return fy === F - 13 ? c3('#1c1b20') : c3('#26252b');
       }
       const row = fy >> 2, off = row & 1 ? 4 : 0;
-      let c = (fy & 3) === 3 || ((fx + off) & 7) === 0 ? c3('#7e4535') : c3(['#a35f48', '#984f3c', '#ad6a52'][(hash((fx + off) >> 3, row, 345) * 3) | 0]);
-      const wx = (fx - 5) % 13, wy = (fy - 3) % 10;
-      if (fx >= 5 && fx <= W - 7 && wx >= 0 && wx < 8 && wy >= 1 && wy < 7) c = wx === 4 ? c3('#e6e1d7') : glass(wx, wy - 1, 8, 6, '#8db4cc');
-      else if (fx >= 5 && wx >= 0 && wx < 8 && wy === 7) c = c3('#d8d2c6');
+      let c = (fy & 3) === 3 || ((fx + off) & 7) === 0 ? c3(S.mortar) : c3(S.bricks[(hash((fx + off) >> 3, row, 345) * 3) | 0]);
+      const ww = S.win === 1 ? 10 : 8, R = windowRow(W, ww, 13, 4), rows = F >= 24 ? Math.floor((F - 24) / 10) + 1 : 0;
+      const ix = fx - R.x0, wx = ((ix % 13) + 13) % 13, wy = (fy - 3) % 10, j = Math.floor((fy - 3) / 10);
+      if (ix < 0 || ix >= R.n * 13 || wx >= ww || fy < 3 || j >= rows) return c;
+      if (S.win === 1) {                                                            // 넓은 창 + 발코니 난간
+        if (wy >= 1 && wy < 6) return glass(wx, wy - 1, 10, 5, S.glass);
+        if (wy === 6) return c3('#3a3a40');
+        if (wy === 7) return wx % 3 === 0 ? c3('#3a3a40') : c;
+        return c;
+      }
+      if (S.win === 2) {                                                            // 작은 창 둘
+        if (wy >= 1 && wy < 7 && (wx < 3 || wx > 4)) return glass(wx < 3 ? wx : wx - 5, wy - 1, 3, 6, S.glass);
+        if (wy === 7 && (wx < 3 || wx > 4)) return c3('#d8d2c6');
+        return c;
+      }
+      if (wy >= 1 && wy < 7) return wx === 4 ? c3('#e6e1d7') : glass(wx, wy - 1, 8, 6, S.glass);
+      if (wy === 7) return c3('#d8d2c6');
       return c;
     }
     if (k === 'shabby') {                                                           // 허름한 빈 건물 — 막아 둔 창 · 깨진 창 · 녹 자국 · 내린 셔터 · 「임대」 종이
@@ -1896,8 +1954,9 @@
       let c = mul(wall, 0.9 + vnoise(X * 0.1, Y * 0.1, 347) * 0.16);
       if (fbm(X * 0.04, Y * 0.04, 348) > 0.58) c = mul(c, 0.84);
       if (hash(fx, 0, 358) < 0.07) c = mix(c, c3('#7a4a2c'), 0.5 * Math.max(0, 1 - fy / (gf * 0.8)));       // 흘러내린 녹
-      const cx = Math.floor((fx - 5) / 13), wx = (fx - 5) % 13, wy = (fy - 4) % 10, cy = Math.floor((fy - 4) / 10), h = hash(cx, cy, 359 + B.x0);
-      if (fx >= 5 && fx <= W - 7 && wx >= 0 && wx < 9 && wy >= 1 && wy < 8) {
+      const R = windowRow(W, 9, 13, 4), rows = gf >= 12 ? Math.floor((gf - 12) / 10) + 1 : 0;
+      const ix = fx - R.x0, cx = Math.floor(ix / 13), wx = ((ix % 13) + 13) % 13, wy = (fy - 4) % 10, cy = Math.floor((fy - 4) / 10), h = hash(cx, cy, 359 + B.x0);
+      if (ix >= 0 && cx < R.n && fy >= 4 && cy < rows && wx < 9 && wy >= 1 && wy < 8) {
         if (wx === 0 || wx === 8 || wy === 1 || wy === 7) return c3('#9a9488');
         if (h < 0.4) return wy % 2 ? c3('#7a5c3c') : c3('#64482c');                 // 판자로 막음
         if (h < 0.65) return (wx * 3 + wy) % 7 === 0 ? c3('#aab4ba') : c3('#1e2026');   // 깨진 창
@@ -1905,12 +1964,24 @@
       }
       return c;
     }
-    // 뒤 건물 — 낡은 벽, 드문드문 작은 창 · 실외기 · 세로 배관. 문이 있으면(암시장이 들어설 자리) 내린 셔터
+    // 뒤 건물 — 낡은 벽, 드문드문 작은 창 · 실외기 · 세로 배관 (어떤 것은 빛바랜 광고지). 문이 있으면(암시장이 들어설 자리) 내린 셔터
     if (door && fx >= door.x0 + 3 && fx < door.x1 - 3 && fy >= 4) return fx === door.x0 + 3 || fx === door.x1 - 4 ? c3('#3c3a40') : fy % 2 ? c3('#5d5a55') : c3('#4c4945');
     if (!door && (fx === (W >> 2) || fx === (W >> 2) + 1)) return fx === (W >> 2) ? c3('#6d6a64') : c3('#8a8780');
-    const cx = Math.floor(fx / 9), cy = Math.floor((fy - 3) / 8), ix = fx % 9, iy = (fy - 3) % 8, h = hash(cx, cy, 346 + B.x0);
-    if (!door && h < 0.22 && ix >= 2 && ix < 7 && iy >= 2 && iy < 6) return ix === 2 || iy === 2 ? c3('#4a5560') : c3('#5c6b78');
-    if (!door && h > 0.86 && ix >= 1 && ix < 8 && iy >= 1 && iy < 7) return iy === 1 ? c3('#e2e0da') : Math.hypot(ix - 3, iy - 4) < 2 ? c3('#5a5852') : c3('#c8c6c0');
+    if (!door && S.poster) {                                                        // 빛바랜 광고지 — 가운데 위, 찢긴 귀퉁이
+      const px0 = (W >> 1) - 7, py0 = 5, qx = fx - px0, qy = fy - py0;
+      if (qx >= 0 && qx < 14 && qy >= 0 && qy < 11 && !(qx > 10 && qy > 7)) {
+        if (qy < 3) return c3('#c46a5a');
+        return (qy % 3 === 1 && qx > 1 && qx < 12) ? c3('#7a6f66') : c3('#e2d8c4');
+      }
+    }
+    if (!door && S.tag && fy > F - 16 && fy < F - 5 && fx > 4 && fx < W - 5) {    // 아래쪽 벽의 낙서 — 굵은 색 줄이 구불구불
+      const wave = Math.sin(fx * 0.35 + B.x0) * 2.2 + Math.sin(fx * 0.9) * 1.1, band = fy - (F - 11) - wave;
+      if (Math.abs(band) < 1.6) return c3(['#e05a9a', '#4ac0e0', '#f0d040'][Math.floor(fx / 11) % 3]);
+    }
+    const nx = Math.floor((W - 2) / 9), ny = Math.max(0, Math.floor((F - 6) / 8)), cx = Math.floor(fx / 9), cy = Math.floor((fy - 3) / 8), ix = fx % 9, iy = (fy - 3) % 8, h = hash(cx, cy, 346 + B.x0);
+    const full = cx < nx && fy >= 3 && cy < ny;                                     // 다 들어가는 칸에만 창 · 실외기
+    if (!door && full && h < 0.22 && ix >= 2 && ix < 7 && iy >= 2 && iy < 6) return ix === 2 || iy === 2 ? c3('#4a5560') : c3('#5c6b78');
+    if (!door && full && h > 0.86 && ix >= 1 && ix < 8 && iy >= 1 && iy < 7) return iy === 1 ? c3('#e2e0da') : Math.hypot(ix - 3, iy - 4) < 2 ? c3('#5a5852') : c3('#c8c6c0');
     let c = mul(wall, 0.92 + vnoise(X * 0.1, Y * 0.1, 347) * 0.14);
     if (fbm(X * 0.04, Y * 0.04, 348) > 0.62) c = mul(c, 0.86);
     return c;
@@ -2319,8 +2390,145 @@
     [[1, -5], [0, -4], [1, -4], [-1, -3], [0, -3], [1, -3], [-1, -2], [0, -2], [1, -2], [2, -2], [-1, -1], [0, -1], [1, -1]],
     [[-1, -5], [-1, -4], [0, -4], [-1, -3], [0, -3], [1, -3], [-2, -2], [-1, -2], [0, -2], [1, -2], [-1, -1], [0, -1], [1, -1]]
   ];
+  // ---------- 도시가 살아 있게 (지도 속성 city — 옛 동네 · 헌터들의 도시) ----------
+  // 찻길: 떠서 다니는 차가 차선을 따라 오가고(오른쪽 통행), 가장자리 빛 띠에 빛이 흐름 · 빌딩: 창 몇 개가 켜졌다 꺼짐, 협회 탑의 빛줄이 위에서 아래로 흐름 ·
+  // 옛 동네: 낡은 가게 네온 간판이 가끔 깜빡이고, 빌라 창에 불이 켜졌다 꺼짐. 땅 그림(덩어리)은 그대로 두고 그 위에 덧그립니다.
+  // 찻길 띠 — 가로 띠(위 칸 · 폭)와 세로 띠(왼 칸 · 폭)마다 처음과 끝. 막음 벽(bar)도 찻길로 세어 차는 화면 끝까지 지나감
+  function cityLanes(m, A) {
+    if (A.lanes) return A.lanes;
+    const W = m.w, H = m.h, rd = k => ROADISH(m.look[k] & 15) && (m.look[k] >> 4) === CITY;
+    const run = (k, dx, dy) => { let x = k % W, y = (k / W) | 0, n = 0; while (x >= 0 && y >= 0 && x < W && y < H && rd(y * W + x)) { n++; x += dx; y += dy; } return n; };
+    const bands = new Map();
+    for (let k = 0; k < W * H; k++) {
+      if (!rd(k) || (m.look[k] & 15) === COBBLE) continue;
+      const x = k % W, y = (k / W) | 0;
+      const up = run(k, 0, -1) - 1, down = run(k, 0, 1) - 1, left = run(k, -1, 0) - 1, right = run(k, 1, 0) - 1;
+      const vr = up + down + 1, hr = left + right + 1;
+      if (vr <= 6 && hr > vr) { const key = `h${y - up},${vr}`, b = bands.get(key) || { horiz: true, at: y - up, wd: vr, from: x, to: x }; b.from = Math.min(b.from, x); b.to = Math.max(b.to, x); bands.set(key, b); }
+      else if (hr <= 6 && vr > hr) { const key = `v${x - left},${hr}`, b = bands.get(key) || { horiz: false, at: x - left, wd: hr, from: y, to: y }; b.from = Math.min(b.from, y); b.to = Math.max(b.to, y); bands.set(key, b); }
+    }
+    return (A.lanes = [...bands.values()].filter(b => b.to - b.from >= 6));
+  }
+  // 떠서 다니는 차 — 오른쪽을 보는 18 × 10 점 (앞 유리 · 지붕 · 전조등 · 미등 · 밑의 청록 빛). 빛깔 · 방향마다 한 번 그려 둠
+  const CAR_COLORS = ['#e8ecf0', '#2c3440', '#c9353f', '#3a7bd5', '#e0b93a', '#6a4fbf', '#9aa3ad'];
+  const carSprites = {};
+  function carSprite(ci, dir) {                                                   // dir 0 오른쪽 · 1 왼쪽 · 2 아래 · 3 위
+    const key = ci * 4 + dir;
+    if (carSprites[key]) return carSprites[key];
+    const body = c3(CAR_COLORS[ci]), px = [];
+    for (let y = 0; y < 10; y++) for (let x = 0; x < 18; x++) {
+      let c = null;
+      if (y === 9) c = x >= 3 && x <= 14 ? [98, 230, 238, 110] : null;           // 밑의 빛
+      else if (y === 0 || y === 8) c = x >= 2 && x <= 15 ? [17, 20, 24, 255] : null;
+      else if (x === 0 || x === 17) c = y >= 2 && y <= 6 ? [17, 20, 24, 255] : null;
+      else if ((x === 1 || x === 16) && (y === 1 || y === 7)) c = [17, 20, 24, 255];
+      else if (x === 16 && (y === 2 || y === 6)) c = [255, 246, 192, 255];         // 전조등
+      else if (x === 1 && (y === 2 || y === 6)) c = [255, 70, 70, 255];            // 미등
+      else if (x >= 12 && x <= 13 && y >= 2 && y <= 6) c = [159, 216, 240, 255];   // 앞 유리
+      else if (x >= 5 && x <= 11 && y >= 2 && y <= 6) c = y === 2 ? [74, 106, 138, 255] : [26, 42, 58, 255];   // 지붕 유리
+      else if (x >= 3 && x <= 4 && y >= 2 && y <= 6) c = [42, 58, 74, 255];        // 뒷유리
+      else if (x >= 1 && x <= 16 && y >= 1 && y <= 7) c = [...(y === 1 ? mix(body, WHITE, 0.3) : y === 7 ? mul(body, 0.7) : body), 255];
+      if (c) px.push([x, y, c]);
+    }
+    const horiz = dir < 2, cv = document.createElement('canvas');
+    cv.width = horiz ? 18 : 10; cv.height = horiz ? 10 : 18;
+    const g = cv.getContext('2d'), img = g.createImageData(cv.width, cv.height), d = img.data;
+    for (const [x, y, c] of px) {
+      let X = x, Y = y;
+      if (dir === 1) X = 17 - x;
+      else if (dir === 2) { X = 9 - y; Y = x; }                                     // 아래로 — 앞이 아래
+      else if (dir === 3) { X = y; Y = 17 - x; }
+      const i = (Y * cv.width + X) * 4; d[i] = c[0]; d[i + 1] = c[1]; d[i + 2] = c[2]; d[i + 3] = c[3];
+    }
+    g.putImageData(img, 0, 0);
+    return (carSprites[key] = cv);
+  }
+  function liveCity(ctx, m, A, ox, oy, T, x0, y0, x1, y1, t) {
+    const u = T / P, vx0 = x0 * P - 40, vx1 = x1 * P + 40, vy0 = y0 * P - 40, vy1 = y1 * P + 40;
+    ctx.imageSmoothingEnabled = false;
+    for (const [bi, b] of cityLanes(m, A).entries()) {
+      const L = (b.to - b.from + 1) * P, Wd = b.wd * P, base = b.at * P, start = b.from * P;
+      if (b.horiz ? base + Wd < vy0 || base > vy1 : base + Wd < vx0 || base > vx1) continue;
+      // 가장자리 빛 띠에 흐르는 빛 — 위(왼) 띠는 차를 따라 한쪽으로, 아래(오른) 띠는 반대로
+      ctx.fillStyle = 'rgba(220,255,255,0.75)';
+      for (const [line, sgn] of [[1, -1], [Wd - 2, 1]]) {
+        const off = (((sgn * t * 48) % 120) + 120) % 120;
+        for (let p = start - 120 + off; p < start + L; p += 120) {
+          if (p < start - 10) continue;
+          if (b.horiz) ctx.fillRect(ox + p * u, oy + (base + line) * u, 10 * u, u);
+          else ctx.fillRect(ox + (base + line) * u, oy + p * u, u, 10 * u);
+        }
+      }
+      // 차 — 차선마다 몇 대, 저마다 빠르기 · 빛깔. 오른쪽 통행 (가로: 아래 차선이 오른쪽으로 · 세로: 왼쪽 차선이 아래로)
+      const per = Math.max(1, Math.round(L / (P * 7)));
+      for (let lane = 0; lane < 2; lane++) for (let i = 0; i < per; i++) {
+        const h = hash(bi * 7 + lane, i, 470);
+        if (h < 0.3) continue;                                                      // 빈 자리 — 차가 일정하게 늘어서 보이지 않게
+        const speed = 34 + hash(bi, i * 3 + lane, 471) * 40, span = L + 80;
+        const pos = ((h * span + t * speed) % span) - 40;
+        const fwd = b.horiz ? lane === 1 : lane === 0;                              // 오른쪽 · 아래로 가는 차선
+        const along = start + (fwd ? pos : L - pos);
+        const across = base + (lane === 0 ? Wd * 0.25 : Wd * 0.75);
+        const cv = carSprite(((hash(bi, i * 5 + lane, 472) * CAR_COLORS.length) | 0) % CAR_COLORS.length, b.horiz ? (fwd ? 0 : 1) : (fwd ? 2 : 3));
+        const X = b.horiz ? along - 9 : across - 5, Y = b.horiz ? across - 5 : along - 9;
+        if (X > vx1 || X + 18 < vx0 || Y > vy1 || Y + 18 < vy0) continue;
+        // 전조등 빛 — 앞쪽으로 옅게
+        ctx.fillStyle = 'rgba(255,250,210,0.13)';
+        if (b.horiz) ctx.fillRect(ox + (fwd ? X + 18 : X - 12) * u, oy + (Y + 1) * u, 12 * u, 8 * u);
+        else ctx.fillRect(ox + (X + 1) * u, oy + (fwd ? Y + 18 : Y - 12) * u, 8 * u, 12 * u);
+        ctx.drawImage(cv, ox + X * u, oy + Y * u, cv.width * u, cv.height * u);
+      }
+    }
+    // 건물 — 창 몇 개에 불이 켜졌다 꺼짐 · 협회 탑의 빛줄 · 낡은 가게의 네온 깜빡임
+    for (const B of A.buildings) {
+      if (!B.kind || (B.x0 + B.w) * P < vx0 || B.x0 * P > vx1 || (B.y0 + B.h) * P < vy0 || B.y0 * P > vy1) continue;
+      const G = B.G || (B.G = cityGeom(B)), FX = B.x0 * P, FY = B.y0 * P + G.roofH, F = G.F, W = G.W;
+      if (B.kind === 'tower' || B.kind === 'guild') {
+        const pw = B.kind === 'tower' ? 14 : 8, top = F - 16, T2 = G.tone;
+        for (let i = 0; i * pw < W; i++) for (let j = 0; 7 * j + 9 < top; j++) {
+          const hc = hash(B.x0 * 31 + i, B.y0 * 17 + j, 480);
+          if (hc > 0.1) continue;
+          const bt = beat(i + B.x0 * 7, j + B.y0 * 5, 481, t, 7 + hc * 60, 2.5 + hash(i, j, 482) * 3);
+          if (!bt) continue;
+          const cx = i * pw + 1, cy = 7 * j + 4;
+          if (B.kind === 'guild') { const ex = (W >> 1) - 8; if (cx + pw > ex - 4 && cx < ex + 20 && cy < 30) continue; }   // 문장 판 위는 빼고
+          const lc = c3(T2.light);
+          ctx.fillStyle = `rgba(${lc[0]},${lc[1]},${lc[2]},${(0.5 * Math.sin(bt.a * Math.PI)).toFixed(2)})`;
+          ctx.fillRect(ox + (FX + cx) * u, oy + (FY + cy) * u, (pw - 1) * u, 6 * u);
+        }
+      } else if (B.kind === 'hq') {
+        const cx = W >> 1, up = G.step ? G.roofH - G.step(cx) : 0, Y0 = FY - up, len = F - 26;
+        for (let k = 0; k < 2; k++) {
+          const p = ((t * 26 + k * len / 2) % len) | 0;
+          for (let s = 0; s < 10; s++) {
+            const fy = p - s;
+            if (fy < 2 || (fy >= 11 && fy <= 48) || fy >= len) continue;
+            ctx.fillStyle = `rgba(234,252,255,${(0.9 - s * 0.08).toFixed(2)})`;
+            ctx.fillRect(ox + (FX + cx - 1) * u, oy + (Y0 + fy) * u, 3 * u, u);
+          }
+        }
+      } else if (B.kind === 'store' && F > 0) {
+        const bt = beat(B.x0, B.y0, 483, t, 5 + hash(B.x0, B.y0, 484) * 6, 0.7);
+        if (bt && ((t * 18) | 0) % 2 === 0) {                                       // 네온이 잠깐 꺼졌다 켜짐
+          ctx.fillStyle = 'rgba(28,16,36,0.75)';
+          ctx.fillRect(ox + FX * u, oy + (FY + F - 24) * u, W * u, 6 * u);
+        }
+      } else if (B.kind === 'villa' && F > 0) {
+        const ww = G.pal.win === 1 ? 10 : 8, R = windowRow(W, ww, 13, 4), rows = F >= 24 ? Math.floor((F - 24) / 10) + 1 : 0;
+        for (let i = 0; i < R.n; i++) for (let j = 0; j < rows; j++) {
+          const hc = hash(B.x0 * 13 + i, B.y0 * 11 + j, 485);
+          if (hc > 0.3) continue;
+          const bt = beat(i + B.x0 * 3, j + B.y0 * 9, 486, t, 9 + hc * 40, 3 + hash(i, j, 487) * 5);
+          if (!bt) continue;
+          ctx.fillStyle = `rgba(255,214,120,${(0.45 * Math.min(1, Math.sin(bt.a * Math.PI) * 3)).toFixed(2)})`;
+          ctx.fillRect(ox + (FX + R.x0 + 13 * i + 1) * u, oy + (FY + 3 + 10 * j + 2) * u, (ww - 2) * u, 4 * u);
+        }
+      }
+    }
+  }
   function liveGround(ctx, m, ox, oy, T, x0, y0, x1, y1, t) {
     const A = prep(m), u = T / P, dot = (X, Y) => ctx.fillRect(ox + X * u, oy + Y * u, u, u);
+    if (m.props && m.props.city) liveCity(ctx, m, A, ox, oy, T, x0, y0, x1, y1, t);
     // 용암 빛 — 숨 쉬듯 (덩어리마다 용암 점만 칠해 둔 빛 판)
     ctx.globalAlpha = 0.08 + 0.06 * Math.sin(t * 2.1);
     for (let cy = Math.floor(y0 / CH); cy < Math.ceil(y1 / CH); cy++) for (let cx = Math.floor(x0 / CH); cx < Math.ceil(x1 / CH); cx++) {
@@ -2397,6 +2605,16 @@
         const gr = ctx.createRadialGradient(gx, gy, u, gx, gy, 16 * u);
         gr.addColorStop(0, `rgba(120,240,250,${(0.42 * pulse).toFixed(2)})`); gr.addColorStop(1, 'rgba(120,240,250,0)');
         ctx.fillStyle = gr; ctx.fillRect(gx - 16 * u, gy - 16 * u, 32 * u, 32 * u);
+      } else if (tl === TREE && (m.look[k] >> 4) === CITY && treeOf(m, k, x, y)[1] === 'cherry') {
+        // 벚꽃잎 — 나무 위에서 하나씩 떨어져 좌우로 흔들리며 내려앉음 (잎마다 빛깔 · 흔들림이 조금씩 다름)
+        for (let s = 0; s < 3; s++) {
+          const b = beat(x * 3 + s, y, 490, t, 2.6 + hash(x, y, 491 + s) * 2.4, 2.2);
+          if (!b) continue;
+          const q = b.n * 7 + s, X = x * P + 2 + hash(x, y, q + 492) * 12 + Math.sin(t * 2.4 + q) * 3 + b.tau * 4, Y = y * P - 14 + hash(x, y, q + 493) * 6 + b.tau * 11;
+          ctx.fillStyle = `rgba(${hash(x, y, q + 494) < 0.5 ? '255,200,220' : '255,228,238'},${(1 - b.a * 0.6).toFixed(2)})`;
+          dot(X | 0, Y | 0);
+          if (((t * 3 + q) | 0) % 2) dot((X | 0) + 1, Y | 0);                     // 뒤집히며 넓어 보였다 좁아 보였다
+        }
       } else if ((tl === FLOOR || tl === TREE) && (m.look[k] >> 4) === FOREST && hash(x, y, 230) < 1 / 14) {
         // 반딧불 — 숲 위를 천천히 떠돌며 깜빡임 (가운데 한 점 · 둘레 은은한 빛)
         const ph = hash(x, y, 231) * 6.3, sp = 0.4 + hash(x, y, 232) * 0.5, r = 6 + hash(x, y, 233) * 8;
