@@ -110,7 +110,7 @@ If a name describes a different kind of object than its type, draw the object fr
 | 7 | 천 하룻밤의 띠 | 허리띠 | 이름 없는 이야기꾼 | `assets/items/storyteller_2.png` |
 | 8 | 술 호리병 허리띠 | 허리띠 | 장비 | `assets/items/zhangfei_0.png` |
 
-## 시트 7-C — 각반 · 신발 · 망토 · 반지 (8개)
+## 시트 7-C — 각반 · 신발 · 망토 · 반지 · 목걸이 (8개)
 
 저장할 이름: `design/images/sheets/rank07-C.png`
 
@@ -140,36 +140,37 @@ FRAMING BY TYPE:
 - BOOTS / SHOES: a pair, side view facing right
 - CLOAK / CAPE: front view, hanging open, empty (no body inside)
 - RING: single ring, 3/4 view so the band is visible
+- NECKLACE / AMULET: chain in a loop, pendant at the bottom center
 
 ITEMS — the names below are for you to read, NOT to write. Draw what each name describes. Never put any of these words in the image.
 If a name describes a different kind of object than its type, draw the object from the name.
 1. LEG ARMOR 「설계도 각반」 — loot from the monster 「레오나르도 다 빈치」. plain look; mood: light, slim, built for speed.
-2. LEG ARMOR 「그림자 각반」 — loot from the monster 「손자」. more refined and menacing; mood: sturdy, protective.
-3. BOOTS / SHOES 「비행 장치」 — loot from the monster 「레오나르도 다 빈치」. plain look; mood: light, slim, built for speed.
-4. BOOTS / SHOES 「천리마의 등자」 — loot from the monster 「칭기즈 칸」. plain look; mood: light, slim, built for speed.
-5. CLOAK / CAPE 「여행자의 망토」 — loot from the monster 「헤로도토스」. plain look; mood: reinforced, built to last.
-6. CLOAK / CAPE 「이야기꾼의 해진 외투」 — loot from the monster 「이름 없는 이야기꾼」. plain look; mood: a lucky charm, a hint of gold.
-7. RING 「유레카의 원」 — loot from the monster 「아르키메데스」. plain look; mood: modest, well used.
-8. RING 「노장의 깍지」 — loot from the monster 「황충」. more refined and menacing; mood: pointed, piercing.
+2. BOOTS / SHOES 「비행 장치」 — loot from the monster 「레오나르도 다 빈치」. plain look; mood: light, slim, built for speed.
+3. BOOTS / SHOES 「천리마의 등자」 — loot from the monster 「칭기즈 칸」. plain look; mood: light, slim, built for speed.
+4. CLOAK / CAPE 「여행자의 망토」 — loot from the monster 「헤로도토스」. plain look; mood: reinforced, built to last.
+5. CLOAK / CAPE 「이야기꾼의 해진 외투」 — loot from the monster 「이름 없는 이야기꾼」. plain look; mood: a lucky charm, a hint of gold.
+6. RING 「유레카의 원」 — loot from the monster 「아르키메데스」. plain look; mood: modest, well used.
+7. RING 「노장의 깍지」 — loot from the monster 「황충」. more refined and menacing; mood: pointed, piercing.
+8. NECKLACE / AMULET 「재가 되지 않는 심장」 — loot from the monster 「잔 다르크」. plain look; mood: aggressive, sharp.
 ```
 
 | 칸 | 장비 | 부위 | 나온 곳 | 잘라서 둘 곳 |
 |---|---|---|---|---|
 | 1 | 설계도 각반 | 각반 | 레오나르도 다 빈치 | `assets/items/davinci_2.png` |
-| 2 | 그림자 각반 | 각반 | 손자 | `assets/items/sunzi_1.png` |
-| 3 | 비행 장치 | 신발 | 레오나르도 다 빈치 | `assets/items/davinci_1.png` |
-| 4 | 천리마의 등자 | 신발 | 칭기즈 칸 | `assets/items/genghis_1.png` |
-| 5 | 여행자의 망토 | 망토 | 헤로도토스 | `assets/items/herodotos_2.png` |
-| 6 | 이야기꾼의 해진 외투 | 망토 | 이름 없는 이야기꾼 | `assets/items/storyteller_1.png` |
-| 7 | 유레카의 원 | 반지 | 아르키메데스 | `assets/items/archimedes_1.png` |
-| 8 | 노장의 깍지 | 반지 | 황충 | `assets/items/huangzhong_0.png` |
+| 2 | 비행 장치 | 신발 | 레오나르도 다 빈치 | `assets/items/davinci_1.png` |
+| 3 | 천리마의 등자 | 신발 | 칭기즈 칸 | `assets/items/genghis_1.png` |
+| 4 | 여행자의 망토 | 망토 | 헤로도토스 | `assets/items/herodotos_2.png` |
+| 5 | 이야기꾼의 해진 외투 | 망토 | 이름 없는 이야기꾼 | `assets/items/storyteller_1.png` |
+| 6 | 유레카의 원 | 반지 | 아르키메데스 | `assets/items/archimedes_1.png` |
+| 7 | 노장의 깍지 | 반지 | 황충 | `assets/items/huangzhong_0.png` |
+| 8 | 재가 되지 않는 심장 | 목걸이 | 잔 다르크 | `assets/items/joan_2.png` |
 
-## 시트 7-D — 목걸이 · 팔찌 · 특수장비 (8개)
+## 시트 7-D — 목걸이 · 팔찌 · 특수장비 (7개)
 
 저장할 이름: `design/images/sheets/rank07-D.png`
 
 ```text
-Make ONE square image, 1024x1024: a sprite sheet of 8 separate game item icons in a 3x3 grid.
+Make ONE square image, 1024x1024: a sprite sheet of 7 separate game item icons in a 3x3 grid.
 
 HARD RULES — breaking any of these makes the image unusable:
 1. NO TEXT ANYWHERE. Do not write item names, type names, captions, labels or numbers — not in Korean, not in English.
@@ -185,7 +186,7 @@ BACKGROUND: one flat solid magenta (#FF00FF) everywhere. No gradient, no checker
 Do not use magenta or hot pink on the items themselves.
 
 LAYOUT: an invisible 3 x 3 grid of equal square cells (do not draw it). Exactly one item per cell, centered, filling about 70% of its cell,
-never touching the cell edges. Fill the cells left to right, top to bottom, in the order listed. Leave the last 1 cell empty (plain magenta).
+never touching the cell edges. Fill the cells left to right, top to bottom, in the order listed. Leave the last 2 cells empty (plain magenta).
 
 TIER LOOK: high-tier gear — mythic and ornate: gold or silver trim, engraved patterns, gems, a soft glow.
 
@@ -196,26 +197,24 @@ FRAMING BY TYPE:
 
 ITEMS — the names below are for you to read, NOT to write. Draw what each name describes. Never put any of these words in the image.
 If a name describes a different kind of object than its type, draw the object from the name.
-1. NECKLACE / AMULET 「재가 되지 않는 심장」 — loot from the monster 「잔 다르크」. plain look; mood: aggressive, sharp.
-2. NECKLACE / AMULET 「난중일기」 — loot from the monster 「이순신」. the most ornate and imposing piece of this set; mood: sturdy, protective.
-3. BRACELET / BANGLE / WRISTWATCH 「두루마리 끈 팔찌」 — old treasure that was buried in a chest for a long time. plain look; mood: modest, well used.
-4. BRACELET / BANGLE / WRISTWATCH 「천문 팔찌」 — loot from the monster 「히파티아」. plain look; mood: light, slim, built for speed.
-5. BRACELET / BANGLE / WRISTWATCH 「끊어진 족쇄」 — loot from the monster 「스파르타쿠스」. more refined and menacing; mood: heavy, blunt, massive.
-6. SMALL PRECIOUS OBJECT (gem or relic) 「칼로 끊은 매듭」 — loot from the monster 「알렉산드로스」. a small ancient object; plain look.
-7. SMALL PRECIOUS OBJECT (gem or relic) 「에메랄드 서판」 — loot from the monster 「헤르메스 트리스메기스투스」. a small ancient object; mysterious, faintly glowing.
-8. SMALL PRECIOUS OBJECT (gem or relic) 「현자의 돌」 — loot from the monster 「헤르메스 트리스메기스투스」. a small shining stone or crystal; mysterious, faintly glowing.
+1. NECKLACE / AMULET 「난중일기」 — loot from the monster 「이순신」. the most ornate and imposing piece of this set; mood: sturdy, protective.
+2. BRACELET / BANGLE / WRISTWATCH 「두루마리 끈 팔찌」 — old treasure that was buried in a chest for a long time. plain look; mood: modest, well used.
+3. BRACELET / BANGLE / WRISTWATCH 「천문 팔찌」 — loot from the monster 「히파티아」. plain look; mood: light, slim, built for speed.
+4. BRACELET / BANGLE / WRISTWATCH 「끊어진 족쇄」 — loot from the monster 「스파르타쿠스」. more refined and menacing; mood: heavy, blunt, massive.
+5. SMALL PRECIOUS OBJECT (gem or relic) 「칼로 끊은 매듭」 — loot from the monster 「알렉산드로스」. a small ancient object; plain look.
+6. SMALL PRECIOUS OBJECT (gem or relic) 「에메랄드 서판」 — loot from the monster 「헤르메스 트리스메기스투스」. a small ancient object; mysterious, faintly glowing.
+7. SMALL PRECIOUS OBJECT (gem or relic) 「현자의 돌」 — loot from the monster 「헤르메스 트리스메기스투스」. a small shining stone or crystal; mysterious, faintly glowing.
 ```
 
 | 칸 | 장비 | 부위 | 나온 곳 | 잘라서 둘 곳 |
 |---|---|---|---|---|
-| 1 | 재가 되지 않는 심장 | 목걸이 | 잔 다르크 | `assets/items/joan_2.png` |
-| 2 | 난중일기 | 목걸이 | 이순신 | `assets/items/yisunsin_2.png` |
-| 3 | 두루마리 끈 팔찌 | 팔찌 | 보물상자 | `assets/items/chest_library_cord.png` |
-| 4 | 천문 팔찌 | 팔찌 | 히파티아 | `assets/items/hypatia_2.png` |
-| 5 | 끊어진 족쇄 | 팔찌 | 스파르타쿠스 | `assets/items/spartacus_2.png` |
-| 6 | 칼로 끊은 매듭 | 특수장비 | 알렉산드로스 | `assets/items/alexander_4.png` |
-| 7 | 에메랄드 서판 | 특수장비 | 헤르메스 트리스메기스투스 | `assets/items/trismegistus_0.png` |
-| 8 | 현자의 돌 | 특수장비 | 헤르메스 트리스메기스투스 | `assets/items/trismegistus_1.png` |
+| 1 | 난중일기 | 목걸이 | 이순신 | `assets/items/yisunsin_2.png` |
+| 2 | 두루마리 끈 팔찌 | 팔찌 | 보물상자 | `assets/items/chest_library_cord.png` |
+| 3 | 천문 팔찌 | 팔찌 | 히파티아 | `assets/items/hypatia_2.png` |
+| 4 | 끊어진 족쇄 | 팔찌 | 스파르타쿠스 | `assets/items/spartacus_2.png` |
+| 5 | 칼로 끊은 매듭 | 특수장비 | 알렉산드로스 | `assets/items/alexander_4.png` |
+| 6 | 에메랄드 서판 | 특수장비 | 헤르메스 트리스메기스투스 | `assets/items/trismegistus_0.png` |
+| 7 | 현자의 돌 | 특수장비 | 헤르메스 트리스메기스투스 | `assets/items/trismegistus_1.png` |
 
 ## 하나씩 뽑기 (시트가 잘 안 될 때)
 

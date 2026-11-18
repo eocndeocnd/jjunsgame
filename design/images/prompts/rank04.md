@@ -44,13 +44,13 @@ If a name describes a different kind of object than its type, draw the object fr
 
 | 칸 | 장비 | 부위 | 나온 곳 | 잘라서 둘 곳 |
 |---|---|---|---|---|
-| 1 | 열선 대검 | 무기 | 헌터백화점 | `assets/items/dept_heatblade.png` |
-| 2 | 고개를 막은 대검 | 무기 | 거인왕 | `assets/items/giantking_0.png` |
-| 3 | 베틀채 같은 창 | 무기 | 골리앗 | `assets/items/goliath2_0.png` |
-| 4 | 뽑아 든 통바위 | 무기 | 언덕 거인 | `assets/items/hillgiant_0.png` |
-| 5 | 반응 장갑판 | 보조무기 | 헌터백화점 | `assets/items/dept_plate.png` |
-| 6 | 두 머리가 다투는 방패 | 보조무기 | 에틴 | `assets/items/ettin_0.png` |
-| 7 | 아직 켜지는 손전등 | 보조무기 | 떠돌이 상인 | `assets/items/ware_flashlight.png` |
+| 1 | 열선 대검 | 무기 | 헌터백화점 | `assets/items/dept_heatblade.png` ✅ |
+| 2 | 고개를 막은 대검 | 무기 | 거인왕 | `assets/items/giantking_0.png` ✅ |
+| 3 | 베틀채 같은 창 | 무기 | 골리앗 | `assets/items/goliath2_0.png` ✅ |
+| 4 | 뽑아 든 통바위 | 무기 | 언덕 거인 | `assets/items/hillgiant_0.png` ✅ |
+| 5 | 반응 장갑판 | 보조무기 | 헌터백화점 | `assets/items/dept_plate.png` ✅ |
+| 6 | 두 머리가 다투는 방패 | 보조무기 | 에틴 | `assets/items/ettin_0.png` ✅ |
+| 7 | 아직 켜지는 손전등 | 보조무기 | 떠돌이 상인 | `assets/items/ware_flashlight.png` ✅ |
 
 ## 시트 4-B — 투구 · 갑옷 · 어깨 (7개) ✅ 다 자름
 
@@ -95,13 +95,13 @@ If a name describes a different kind of object than its type, draw the object fr
 
 | 칸 | 장비 | 부위 | 나온 곳 | 잘라서 둘 곳 |
 |---|---|---|---|---|
-| 1 | 외눈 투구 | 투구 | 사이클롭스 | `assets/items/cyclops_0.png` |
-| 2 | 산맥의 왕관 | 투구 | 거인왕 | `assets/items/giantking_1.png` |
-| 3 | 이름이 번진 안전모 | 투구 | 떠돌이 상인 | `assets/items/ware_hardhat.png` |
-| 4 | 청동 비늘 갑옷 | 갑옷 | 골리앗 | `assets/items/goliath2_1.png` |
-| 5 | 바위산 갑주 | 갑옷 | 돌 거인 | `assets/items/stonegiant_0.png` |
-| 6 | 구겨진 협회 점퍼 | 갑옷 | 떠돌이 상인 | `assets/items/ware_jacket.png` |
-| 7 | 바위를 지는 어깨받이 | 어깨 | 언덕 거인 | `assets/items/hillgiant_1.png` |
+| 1 | 외눈 투구 | 투구 | 사이클롭스 | `assets/items/cyclops_0.png` ✅ |
+| 2 | 산맥의 왕관 | 투구 | 거인왕 | `assets/items/giantking_1.png` ✅ |
+| 3 | 이름이 번진 안전모 | 투구 | 떠돌이 상인 | `assets/items/ware_hardhat.png` ✅ |
+| 4 | 청동 비늘 갑옷 | 갑옷 | 골리앗 | `assets/items/goliath2_1.png` ✅ |
+| 5 | 바위산 갑주 | 갑옷 | 돌 거인 | `assets/items/stonegiant_0.png` ✅ |
+| 6 | 구겨진 협회 점퍼 | 갑옷 | 떠돌이 상인 | `assets/items/ware_jacket.png` ✅ |
+| 7 | 바위를 지는 어깨받이 | 어깨 | 언덕 거인 | `assets/items/hillgiant_1.png` ✅ |
 
 ## 시트 4-C — 장갑 · 허리띠 · 각반 (7개) ✅ 다 자름
 
@@ -146,13 +146,13 @@ If a name describes a different kind of object than its type, draw the object fr
 
 | 칸 | 장비 | 부위 | 나온 곳 | 잘라서 둘 곳 |
 |---|---|---|---|---|
-| 1 | 거인의 손마디 장갑 | 장갑 | 보물상자 | `assets/items/chest_giant_knuckle.png` |
-| 2 | 벼락을 벼리던 손 | 장갑 | 사이클롭스 | `assets/items/cyclops_1.png` |
-| 3 | 용암을 주무르는 손 | 장갑 | 불의 거인 | `assets/items/firegiant_0.png` |
-| 4 | 한 짝뿐인 작업 장갑 | 장갑 | 떠돌이 상인 | `assets/items/ware_glove.png` |
-| 5 | 둘이 나눠 맨 허리띠 | 허리띠 | 에틴 | `assets/items/ettin_1.png` |
-| 6 | 서리 내린 각반 | 각반 | 서리 거인 | `assets/items/frostgiant_0.png` |
-| 7 | 눈길을 다지는 각반 | 각반 | 털매머드 | `assets/items/mammoth_0.png` |
+| 1 | 거인의 손마디 장갑 | 장갑 | 보물상자 | `assets/items/chest_giant_knuckle.png` ✅ |
+| 2 | 벼락을 벼리던 손 | 장갑 | 사이클롭스 | `assets/items/cyclops_1.png` ✅ |
+| 3 | 용암을 주무르는 손 | 장갑 | 불의 거인 | `assets/items/firegiant_0.png` ✅ |
+| 4 | 한 짝뿐인 작업 장갑 | 장갑 | 떠돌이 상인 | `assets/items/ware_glove.png` ✅ |
+| 5 | 둘이 나눠 맨 허리띠 | 허리띠 | 에틴 | `assets/items/ettin_1.png` ✅ |
+| 6 | 서리 내린 각반 | 각반 | 서리 거인 | `assets/items/frostgiant_0.png` ✅ |
+| 7 | 눈길을 다지는 각반 | 각반 | 털매머드 | `assets/items/mammoth_0.png` ✅ |
 
 ## 시트 4-D — 신발 · 망토 · 반지 · 목걸이 · 팔찌 · 특수장비 (7개)
 

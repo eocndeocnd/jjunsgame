@@ -146,7 +146,7 @@ function build(manifest, exists = () => false, prev = []) {
     const frozen = prev.filter(sh => sh.rank === rank && sh.cells.length && sh.cells.every(c => byId.has(c.id)) && (exists(sh.sheet) || sh.cells.every(c => exists(c.file))))
       .map(sh => ({ file: sh.sheet, list: sh.cells.map(c => byId.get(c.id)), frozen: true }));
     const taken = new Set(frozen.flatMap(sh => sh.list.map(i => i.id)));
-    const rest = items.filter(i => !taken.has(i.id));
+    const rest = items.filter(i => !taken.has(i.id) && !exists(i.file));   // 그림이 이미 있는 장비(다른 시트에서 얻은 것)는 새 시트에서 뺌
     const used = new Set(frozen.map(sh => sh.file));
     let next = 0;
     const shop = rest.filter(i => i.from_monster === '헌터백화점'), other = rest.filter(i => i.from_monster !== '헌터백화점');

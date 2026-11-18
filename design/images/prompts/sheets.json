@@ -868,19 +868,9 @@
     "file": "assets/items/deathknight_1.png"
    },
    {
-    "id": "lichking_1",
-    "name": "불사의 판금",
-    "file": "assets/items/lichking_1.png"
-   },
-   {
     "id": "demonlord_0",
     "name": "계약의 낙인",
     "file": "assets/items/demonlord_0.png"
-   },
-   {
-    "id": "incubus_0",
-    "name": "악몽의 어깨",
-    "file": "assets/items/incubus_0.png"
    },
    {
     "id": "ghoul_0",
@@ -901,6 +891,11 @@
     "id": "balrog_1",
     "name": "용암 정강이",
     "file": "assets/items/balrog_1.png"
+   },
+   {
+    "id": "bonedragon_1",
+    "name": "해골 발톱",
+    "file": "assets/items/bonedragon_1.png"
    }
   ]
  },
@@ -912,11 +907,6 @@
    3
   ],
   "cells": [
-   {
-    "id": "bonedragon_1",
-    "name": "해골 발톱",
-    "file": "assets/items/bonedragon_1.png"
-   },
    {
     "id": "palehorse_0",
     "name": "죽음이 걸친 창백한 망토",
@@ -931,11 +921,6 @@
     "id": "ware_raincoat",
     "name": "찢긴 방수 망토",
     "file": "assets/items/ware_raincoat.png"
-   },
-   {
-    "id": "wraith_0",
-    "name": "안개 수의",
-    "file": "assets/items/wraith_0.png"
    },
    {
     "id": "demonlord_2",
@@ -956,6 +941,11 @@
     "id": "lich_1",
     "name": "성물함",
     "file": "assets/items/lich_1.png"
+   },
+   {
+    "id": "succubus_1",
+    "name": "훔친 꿈",
+    "file": "assets/items/succubus_1.png"
    }
   ]
  },
@@ -967,11 +957,6 @@
    3
   ],
   "cells": [
-   {
-    "id": "succubus_1",
-    "name": "훔친 꿈",
-    "file": "assets/items/succubus_1.png"
-   },
    {
     "id": "ware_tag",
     "name": "번호만 남은 인식표",
@@ -986,11 +971,6 @@
     "id": "ware_watch",
     "name": "멈춘 손목시계",
     "file": "assets/items/ware_watch.png"
-   },
-   {
-    "id": "wraith_1",
-    "name": "원한의 고리",
-    "file": "assets/items/wraith_1.png"
    },
    {
     "id": "lichking_4",
@@ -1088,16 +1068,6 @@
     "file": "assets/items/sinsloth_1.png"
    },
    {
-    "id": "apocalypsebeast_0",
-    "name": "일곱 뿔의 관",
-    "file": "assets/items/apocalypsebeast_0.png"
-   },
-   {
-    "id": "demongeneral_2",
-    "name": "마장의 투구",
-    "file": "assets/items/demongeneral_2.png"
-   },
-   {
     "id": "sinpride_0",
     "name": "오만의 관",
     "file": "assets/items/sinpride_0.png"
@@ -1123,19 +1093,9 @@
     "file": "assets/items/elderdragon_1.png"
    },
    {
-    "id": "sinwrath_0",
-    "name": "분노의 견갑",
-    "file": "assets/items/sinwrath_0.png"
-   },
-   {
     "id": "ware_scarf",
     "name": "색 바랜 목도리",
     "file": "assets/items/ware_scarf.png"
-   },
-   {
-    "id": "demongeneral_3",
-    "name": "마장의 건틀릿",
-    "file": "assets/items/demongeneral_3.png"
    },
    {
     "id": "sinenvy_0",
@@ -1148,11 +1108,6 @@
     "file": "assets/items/singluttony_0.png"
    },
    {
-    "id": "apocalypsebeast_1",
-    "name": "짓밟는 각반",
-    "file": "assets/items/apocalypsebeast_1.png"
-   },
-   {
     "id": "ware_greaves",
     "name": "무릎보호대",
     "file": "assets/items/ware_greaves.png"
@@ -1161,6 +1116,11 @@
     "id": "abysstentacle_1",
     "name": "바닥 없는 신",
     "file": "assets/items/abysstentacle_1.png"
+   },
+   {
+    "id": "sinlust_0",
+    "name": "비단 망토",
+    "file": "assets/items/sinlust_0.png"
    }
   ]
  },
@@ -1172,16 +1132,6 @@
    3
   ],
   "cells": [
-   {
-    "id": "archdemon_2",
-    "name": "군단장의 망토",
-    "file": "assets/items/archdemon_2.png"
-   },
-   {
-    "id": "sinlust_0",
-    "name": "비단 망토",
-    "file": "assets/items/sinlust_0.png"
-   },
    {
     "id": "chest_abyss_ring",
     "name": "왕좌 아래 떨어진 반지",
@@ -1373,11 +1323,6 @@
     "file": "assets/items/davinci_2.png"
    },
    {
-    "id": "sunzi_1",
-    "name": "그림자 각반",
-    "file": "assets/items/sunzi_1.png"
-   },
-   {
     "id": "davinci_1",
     "name": "비행 장치",
     "file": "assets/items/davinci_1.png"
@@ -1406,6 +1351,11 @@
     "id": "huangzhong_0",
     "name": "노장의 깍지",
     "file": "assets/items/huangzhong_0.png"
+   },
+   {
+    "id": "joan_2",
+    "name": "재가 되지 않는 심장",
+    "file": "assets/items/joan_2.png"
    }
   ]
  },
@@ -1417,11 +1367,6 @@
    3
   ],
   "cells": [
-   {
-    "id": "joan_2",
-    "name": "재가 되지 않는 심장",
-    "file": "assets/items/joan_2.png"
-   },
    {
     "id": "yisunsin_2",
     "name": "난중일기",

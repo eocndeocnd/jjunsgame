@@ -212,10 +212,10 @@ If a name describes a different kind of object than its type, draw the object fr
 
 | 칸 | 장비 | 부위 | 나온 곳 | 잘라서 둘 곳 |
 |---|---|---|---|---|
-| 1 | 야간 투시 바이저 | 투구 | 헌터백화점 | `assets/items/dept_helm3.png` |
-| 2 | 세라믹 판 조끼 | 갑옷 | 헌터백화점 | `assets/items/dept_vest3.png` |
-| 3 | 그립 강화 장갑 | 장갑 | 헌터백화점 | `assets/items/dept_glove3.png` |
-| 4 | 접지 부츠 | 신발 | 헌터백화점 | `assets/items/dept_boots3.png` |
+| 1 | 야간 투시 바이저 | 투구 | 헌터백화점 | `assets/items/dept_helm3.png` ✅ |
+| 2 | 세라믹 판 조끼 | 갑옷 | 헌터백화점 | `assets/items/dept_vest3.png` ✅ |
+| 3 | 그립 강화 장갑 | 장갑 | 헌터백화점 | `assets/items/dept_glove3.png` ✅ |
+| 4 | 접지 부츠 | 신발 | 헌터백화점 | `assets/items/dept_boots3.png` ✅ |
 
 ## 하나씩 뽑기 (시트가 잘 안 될 때)
 

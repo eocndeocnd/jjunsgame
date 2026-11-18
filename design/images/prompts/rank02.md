@@ -214,10 +214,10 @@ If a name describes a different kind of object than its type, draw the object fr
 
 | 칸 | 장비 | 부위 | 나온 곳 | 잘라서 둘 곳 |
 |---|---|---|---|---|
-| 1 | 경량 카본 헬멧 | 투구 | 헌터백화점 | `assets/items/dept_helm2.png` |
-| 2 | 방탄 섬유 재킷 | 갑옷 | 헌터백화점 | `assets/items/dept_vest2.png` |
-| 3 | 충격 흡수 장갑 | 장갑 | 헌터백화점 | `assets/items/dept_glove2.png` |
-| 4 | 쿠션 전술화 | 신발 | 헌터백화점 | `assets/items/dept_boots2.png` |
+| 1 | 경량 카본 헬멧 | 투구 | 헌터백화점 | `assets/items/dept_helm2.png` ✅ |
+| 2 | 방탄 섬유 재킷 | 갑옷 | 헌터백화점 | `assets/items/dept_vest2.png` ✅ |
+| 3 | 충격 흡수 장갑 | 장갑 | 헌터백화점 | `assets/items/dept_glove2.png` ✅ |
+| 4 | 쿠션 전술화 | 신발 | 헌터백화점 | `assets/items/dept_boots2.png` ✅ |
 
 ## 하나씩 뽑기 (시트가 잘 안 될 때)
 
