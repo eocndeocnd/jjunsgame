@@ -745,8 +745,9 @@
       if (py < 3 || py > 13) return py === 14 && px > 1 && px < W - 2 ? mul(floor, 0.84) : floor;
       if (px === 0 || px === W - 1 || py === 3 || py === 13) return c3(STC.line);
       if (px <= 2 || px >= W - 3) return c3(STC.gold);
-      if (py >= 11) return c3('#4a0f18');
-      return px % 8 === 4 && py === 7 ? c3('#4a0f18') : mix(c3('#8a2433'), c3(STC.wine), py > 7 ? 0.7 : 0.1);
+      const deep = STC === STC_HQ ? '#0f1f38' : '#4a0f18', soft = STC === STC_HQ ? '#2f5a8a' : '#8a2433';   // 협회는 남색 가죽
+      if (py >= 11) return c3(deep);
+      return px % 8 === 4 && py === 7 ? c3(deep) : mix(c3(soft), c3(STC.wine), py > 7 ? 0.7 : 0.1);
     }
     return floor;
   }
@@ -1505,7 +1506,7 @@
       if (out(1, 0) && lx > 13) return lx === 15 ? c3('#1d4f57') : fence(Y);
       return c;
     }
-    if (e.t === WALL && t !== ROCKY) {                                             // 찻길 끝 막음 — 빛 가림막 (옛 동네 바닥의 막힌 칸은 자잘한 것이 놓인 자리 — 바닥 그대로)
+    if (e.t === WALL && ROADISH(t)) {                                              // 찻길 끝 막음 — 빛 가림막 (보도 · 옛 동네 바닥의 막힌 칸은 자잘한 것이 놓인 자리 — 바닥 그대로)
       let c = asphalt(X, Y);
       const across = tileAt(tx - 1, ty) !== WALL || tileAt(tx + 1, ty) !== WALL;   // 옆이 찻길이면 세로로 선 가림막
       const a = across ? lx : ly, s = across ? Y : X;
@@ -2336,7 +2337,8 @@
   }
 
   // 나무 — 보이는 칸의 나무를 위에서 아래로 (아래 것이 위 것을 가리게). 밑동이 그 칸 아래 가장자리에 닿고, 발밑에 옅은 그림자
-  // ---------- 옛 동네의 자잘한 것 (지도 속성 clutter — tools/map-gen.js 의 OLDTOWN.clutter) ----------
+  // ---------- 거리의 자잘한 것 (지도 속성 clutter — tools/map-gen.js 의 OLDTOWN · CITY 의 clutter) ----------
+  // 헌터들의 도시: 버스 정류장(bus) · 자판기(vend) · 홀로그램 안내판(holo) · 벤치(bench) · 분리수거함(bin) · 볼라드(bollard) · 전기자전거(bikes)
   // 불법주차한 낡은 차(가로 · 세로 두 칸) · 라바콘 · 종량제 봉투 더미 · 스티로폼 화분 · 세워 둔 오토바이. 칸은 막혀 있고(지나갈 수 없음) 그림은 그 칸 안에.
   // 낡은 차 — 빛바랜 칠 · 먼지 · 앞뒤 유리 · 옆 거울 · 바퀴 끝이 살짝 보임. 앞이 오른쪽(가로) · 아래(세로)
   const OLD_CAR = ['#b8b2a6', '#6a7f94', '#8a3a34', '#4f5d48', '#c9a25a', '#9a9aa0'];
@@ -2398,6 +2400,49 @@
       rect(5, 7, 5, 3, c3('#2a2628'));                                                               // 안장
       rect(12, 3, 1, 11, c3('#3a3a40')); put(12, 3, c3('#9aa0a8')); put(12, 13, c3('#9aa0a8'));    // 핸들
       put(14, 8, c3('#f2e6a0'));
+    } else if (it.kind === 'vend') {                                                                // 자판기 — 흰 몸통, 빛나는 화면 · 물건 칸 · 꺼내는 곳
+      rect(2, 14, 12, 2, [0, 0, 0], 60);
+      rect(3, 1, 10, 13, c3('#e8ecf0')); rect(3, 1, 10, 2, c3('#ffffff')); rect(3, 13, 10, 1, c3('#9aa3ad'));
+      rect(4, 4, 6, 6, c3('#1a2433'));
+      for (let y = 0; y < 3; y++) for (let x = 0; x < 3; x++) put(5 + x * 2, 5 + y * 2, c3(['#ff6a6a', '#62e6ee', '#ffd23a', '#7cf27e'][(x + y * 3 + (it.tone | 0)) % 4]));
+      rect(10, 4, 2, 3, c3('#62e6ee')); rect(4, 11, 6, 1, c3('#2a2e36'));
+    } else if (it.kind === 'holo') {                                                                // 홀로그램 안내판 — 어두운 기둥 위로 떠 있는 청록 화면
+      rect(4, 14, 8, 2, [0, 0, 0], 60);
+      rect(6, 9, 4, 6, c3('#232a36')); rect(5, 8, 6, 1, c3('#62e6ee'));
+      for (let y = 1; y < 8; y++) for (let x = 2; x < 14; x++) {
+        const edge = y === 1 || y === 7 || x === 2 || x === 13;
+        put(x, y, edge ? c3('#bff8fc') : (y === 3 || y === 5) && x > 3 && x < 11 + (y === 5 ? -3 : 0) ? c3('#e9fdff') : c3('#62e6ee'), edge ? 230 : 140);
+      }
+    } else if (it.kind === 'bench') {                                                               // 미래형 벤치 — 흰 곡면 의자, 밑에 청록 빛줄
+      rect(1, 12, it.w * P - 2, 2, [0, 0, 0], 60);
+      rect(2, 3, it.w * P - 4, 3, c3('#aab4c0')); rect(2, 6, it.w * P - 4, 4, c3('#e4e9ef')); rect(2, 6, it.w * P - 4, 1, c3('#ffffff'));
+      rect(3, 10, it.w * P - 6, 1, c3('#62e6ee'));
+      rect(4, 10, 2, 2, c3('#5a6270')); rect(it.w * P - 6, 10, 2, 2, c3('#5a6270'));
+    } else if (it.kind === 'bus') {                                                                 // 버스 정류장 — 유리 지붕 · 뒤 유리벽 · 긴 의자 · 끝에 홀로그램 노선 표지
+      const Wp = it.w * P;
+      rect(1, 13, Wp - 2, 3, [0, 0, 0], 50);
+      rect(1, 1, Wp - 2, 3, c3('#9aa6b8')); rect(1, 3, Wp - 2, 1, c3('#62e6ee'));
+      for (let y = 4; y < 12; y++) for (let x = 2; x < Wp - 8; x++) put(x, y, (x + y) % 9 === 0 ? c3('#e9fbfd') : c3('#8fc6dc'), 120);
+      rect(4, 9, Wp - 16, 2, c3('#e4e9ef'));
+      rect(1, 4, 1, 9, c3('#5a6270')); rect(Wp - 8, 4, 1, 9, c3('#5a6270'));
+      rect(Wp - 6, 2, 4, 10, c3('#1a2433')); for (let y = 3; y < 11; y += 2) rect(Wp - 5, y, 2, 1, c3(y % 4 === 1 ? '#ffd23a' : '#62e6ee'));
+    } else if (it.kind === 'bin') {                                                                 // 분리수거함 둘 — 파랑 · 초록 둥근 통, 위에 투입구
+      rect(1, 13, 14, 2, [0, 0, 0], 60);
+      for (const [x0, col] of [[2, '#3a7bd5'], [9, '#3f9a5a']]) {
+        rect(x0, 4, 5, 9, c3(col)); rect(x0, 3, 5, 2, mix(c3(col), WHITE, 0.4)); rect(x0 + 1, 3, 3, 1, c3('#1a1c20'));
+        rect(x0, 12, 5, 1, mul(c3(col), 0.6));
+      }
+    } else if (it.kind === 'bollard') {                                                             // 볼라드 둘 — 낮은 기둥, 위에 청록 빛
+      rect(1, 13, 14, 2, [0, 0, 0], 50);
+      for (const x0 of [3, 10]) { rect(x0, 6, 3, 7, c3('#5a6270')); rect(x0, 5, 3, 2, c3('#62e6ee')); put(x0 + 1, 4, c3('#e9fdff')); }
+    } else if (it.kind === 'bikes') {                                                               // 전기자전거 거치대 — 받침대에 자전거 둘 (가는 몸통 · 둥근 바퀴 · 청록 배터리)
+      const Wp = it.w * P;
+      rect(1, 13, Wp - 2, 2, [0, 0, 0], 50);
+      rect(2, 11, Wp - 4, 1, c3('#9aa3ad'));
+      for (const x0 of [3, 17]) {
+        for (const wx of [x0 + 2, x0 + 10]) for (let a = 0; a < 16; a++) { const t2 = a / 16 * Math.PI * 2; put((wx + Math.cos(t2) * 2.6) | 0, (8 + Math.sin(t2) * 2.6) | 0, c3('#2a2e36')); }
+        rect(x0 + 2, 6, 9, 1, c3(OLD_CAR[((it.tone | 0) + x0) % OLD_CAR.length])); rect(x0 + 5, 5, 3, 2, c3('#62e6ee')); put(x0 + 10, 4, c3('#2a2e36')); put(x0 + 3, 5, c3('#2a2e36'));
+      }
     }
     g.putImageData(img, 0, 0);
     return (clutterSprites[key] = cv);
