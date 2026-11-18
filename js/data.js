@@ -50,6 +50,11 @@ const RULES = {
   // 골드 배수 = 행운 배수(분배) × (1 + 장비의 골드 획득)
   GOLD_BASE: 5,
   GOLD_GROWTH: 1.9,
+  // 패시브의 값 (data.js 의 PASSIVES) = PASSIVE_BASE[격] × 1.9^(격 − 1) × PASSIVE_GROWTH^(그 패시브의 단계) × cost
+  //   PASSIVE_BASE 는 격마다 「그 격 한 판에 번 골드의 중간값」 ÷ 1.9^(격 − 1) — 시뮬 시드 6개, 패시브 없이 (2026-11-18).
+  //   골드는 회차가 끝나면 사라지므로 값이 한 판 벌이를 크게 넘으면 영영 못 삼 — 그래서 「산 것 전부」로 오르지 않고 그 패시브의 단계로만 조금씩 (10단계 ≈ 1.4배)
+  PASSIVE_BASE: [350, 340, 480, 650, 830, 950, 900, 950, 1050, 1200, 1150, 1150, 1150, 1000, 1150, 1200, 1100, 1300, 1050, 850],
+  PASSIVE_GROWTH: 1.04,
   // 떠돌이 상인의 물건 값 = 그 격 일반 화신 한 번 몫의 이만큼 배.
   // 소지품은 4~6격 기준이라 4격 약 2,000 · 5격 약 3,900 · 6격 약 7,400골드 — 몇 회차를 모아야 하나 살 수 있는 값입니다.
   WARE_PRICE: 60,
@@ -2319,6 +2324,20 @@ for (const it of ITEMS) {
 }
 
 // 한 번 이겼을 때 떨어지는 골드 (기운 · 골드 배수를 곱하기 전)
+// ---------- 패시브 — 골드로 사는 영구 능력 (돈과 골드 계획 3번 · 사용자 결정 2026-11-18) ----------
+// 골드는 회차가 끝나면 사라지므로, 그 회차에서 번 골드로 사거나 상인에게 쓰고 나와야 합니다. 한 번 산 단계는 영원히 남습니다.
+// 값 = PASSIVE_BASE[격] × 1.9^(가 본 가장 높은 격 − 1) × PASSIVE_GROWTH^(그 패시브의 단계) × cost (RULES 의 설명)
+//   → 어느 격에서든 「한 판 벌어 하나 살까 말까」 (사용자 결정). PASSIVE_BASE 는 시뮬에서 그 격 한 판 벌이의 중간값에 맞춤.
+const PASSIVES = [
+  { id: 'might',  name: '근력',    icon: '💪', step: 0.04, max: 10, what: '공격력' },
+  { id: 'grit',   name: '맷집',    icon: '🛡️', step: 0.05, max: 10, what: '생명' },
+  { id: 'eye',    name: '눈썰미',  icon: '🔎', step: 0.04, max: 10, what: '경험치' },
+  { id: 'miner',  name: '핵 캐기', icon: '💠', step: 0.10, max: 10, what: '핵' },
+  { id: 'stride', name: '발걸음',  icon: '👟', step: 0.04, max: 5,  what: '이동속도' },
+  { id: 'breath', name: '긴 숨',   icon: '🫁', step: 1,    max: 3,  what: '에너지', flat: true, cost: 1.4 }   // 싸움 한 판을 더 — 가장 세서 값 1.4배(잘 번 판에만) · 단계 셋
+];
+const PASSIVE_BY_ID = Object.fromEntries(PASSIVES.map(p => [p.id, p]));
+
 function goldFor(foe) {
   const r = foe && foe.rank ? foe.rank.n : 1;
   return RULES.GOLD_BASE * Math.pow(RULES.GOLD_GROWTH, r - 1) * KINDS[foe ? foe.kind : 'normal'].gold;

@@ -389,7 +389,7 @@
   // 걷기 — 누른 쪽으로 초당 PLAYER_SPEED 칸, 칸에 매이지 않고. 한 번에 0.2칸 넘게 옮기지 않도록 잘게 나눠, 가로 · 세로를 따로 옮깁니다
   // (그래서 벽에 비스듬히 닿으면 벽을 따라 미끄러짐)
   function walk(w, dt, ev) {
-    const p = w.player, d = RULES.PLAYER_SPEED * Math.min(dt, 0.1), n = Math.max(1, Math.ceil(d / 0.2));
+    const p = w.player, d = RULES.PLAYER_SPEED * (p.speedMul || 1) * Math.min(dt, 0.1), n = Math.max(1, Math.ceil(d / 0.2));   // speedMul — 패시브 「발걸음」 (ui.js 가 넣음)
     for (let i = 0; i < n && p.vec && !w.encounter; i++) {
       const vy = p.vec.y;
       if (slide(w, p.vec.x * d / n, 0, ev, true) === 'stop' || !p.vec) break;

@@ -245,6 +245,7 @@ const State = {
     heroName: '',                // 주인공의 이름 — 첫 회차가 끝나 도시에서 처음 눈을 뜰 때 정합니다 (없으면 「나」)
     hunterGrade: 0,              // 헌터 등급 — 0 미등록 · 1~7 = F~S (data.js 의 HUNTER_GRADES). 헌터 협회 시험으로 오르고 내려가지 않음
     testedRun: 0,                // 등록 시험을 본 회차 — 한 회차에 한 번
+    passives: {},                // 골드로 산 패시브 — id → 단계 (data.js 의 PASSIVES). 영구
     sets: [null, null, null],    // 세 벌의 차림. equipped 는 늘 sets[activeSet] 과 같습니다
     activeSet: 0,                // 지금 입고 있는 세트 번호
     settings: defaultSettings(),
@@ -393,7 +394,7 @@ function bankedEnergy() {
   }, 0);
 }
 
-function startEnergy() { return RULES.START_ENERGY + bankedEnergy(); }
+function startEnergy() { return RULES.START_ENERGY + bankedEnergy() + passiveLevel('breath'); }
 
 // 지금 『격을 삼키는 검』을 들고 있는가
 function hasDevourer() { return State.meta.equipped.weapon === DEVOURER_ID; }
@@ -652,6 +653,8 @@ function load() {
     State.meta.heroName = typeof data.heroName === 'string' ? data.heroName.replace(/[<>&"'`\\]/g, '').trim().slice(0, 8) : '';
     State.meta.hunterGrade = Math.max(0, Math.min(HUNTER_GRADES.length, Math.floor(num(data.hunterGrade))));
     State.meta.testedRun = Math.max(0, Math.floor(num(data.testedRun)));
+    State.meta.passives = {};
+    for (const p of PASSIVES) { const lv = Math.floor(num(data.passives && data.passives[p.id])); if (lv > 0) State.meta.passives[p.id] = Math.min(p.max, lv); }
     // 도시가 생기기 전의 저장본 — 회차를 한 번이라도 끝냈으면(두 번째 회차부터) 도시가 열린 것으로
     State.meta.cityOpen = data.cityOpen === undefined ? num(data.runCount) > 1 : !!data.cityOpen;
     State.meta.namelessMet = !!data.namelessMet;
@@ -717,6 +720,7 @@ function freshMeta() {
     heroName: '',
     hunterGrade: 0,
     testedRun: 0,
+    passives: {},
     sets: [null, null, null],
     activeSet: 0,
     settings: defaultSettings(),
@@ -777,6 +781,9 @@ function heroStats() {
   // 다 모은 격 하나마다 핵심 스탯 전체가 조금씩 — 레벨·분배·장비를 다 합친 뒤에 곱합니다
   const collect = 1 + COLLECTION_BONUS * completedRanks();
   for (const k of STAT_KEYS) total[k] = Math.round(total[k] * collect);
+  // 골드로 산 패시브 — 근력(공격력) · 맷집(생명)
+  total.damage = Math.round(total.damage * passiveMult('might'));
+  total.life = Math.round(total.life * passiveMult('grit'));
   // 삼은 화신 — 다 합친 뒤에 한쪽으로 크게 기울입니다 (data.js 의 avatarProfile)
   const av = activeAvatar();
   total.avatarPower = av && AVATAR_POWERS[av.id] ? av.id : null;   // 보스 화신의 고유 능력 — simulateBattle 이 봅니다
@@ -1017,6 +1024,7 @@ function startRun() {
   State.run = freshRun();
   if (State.meta.cityOpen) State.run.mapId = 'oldtown';   // 도시가 열린 뒤로는 옛 동네의 집 앞에서 — 골목의 이상한 게이트로 그 공간에 들어감
   State.run.merchant = rollMerchant(0);
+  State.run.priceRank = bestRankNow();   // 이번 회차 패시브 값의 눈금
   if (State.meta.autoAlloc) commitPoints();
 
   State.log = [];
@@ -1036,6 +1044,9 @@ function endRun(reason) {
   run.encounter = null;
   if (run.level > State.meta.bestLevel) State.meta.bestLevel = run.level;
   State.meta.cityOpen = true;          // 첫 회차가 끝나면 도시가 열림 — 다음 회차는 도시에서 눈을 뜸
+  // 골드는 그 공간의 화폐 — 회차가 끝나면(쓰러지든 걸어 나오든) 남은 것은 사라집니다 (사용자 결정 — 돈과 골드 계획 3번)
+  run.goldLost = Math.max(0, Math.floor(num(State.meta.gold)));
+  State.meta.gold = 0;
 
   if (run.victory) {
     pushLog('rank', `━━ 여정의 끝 — ${State.meta.runCount}회차에 모든 격을 넘어섰다 ━━`);
@@ -1047,7 +1058,34 @@ function endRun(reason) {
     pushLog('death', `격이 무너졌다 — ${reason}  (${knownRank(r.n) ? `제${r.n}격 ${r.name}` : '???'} · Lv.${fmtLevel(run.level)} · ${run.kills}명을 꺾음)`);
     pushLog('info', '격은 사라졌지만 빼앗은 것은 남는다.');
   }
+  if (run.goldLost > 0) pushLog('info', `남은 골드 ${fmt(run.goldLost)}은(는) 그 공간에 두고 왔다 — 골드는 회차가 끝나면 사라진다.`);
   save();
+}
+
+// ---------- 패시브 — 골드로 사는 영구 능력 (data.js 의 PASSIVES) ----------
+function passiveLevel(id) { return Math.floor(num(State.meta.passives && State.meta.passives[id])); }
+function passiveMult(id) { const p = PASSIVE_BY_ID[id]; return 1 + (p ? p.step * passiveLevel(id) : 0); }
+function passiveTotal() { return PASSIVES.reduce((n, p) => n + passiveLevel(p.id), 0); }
+// 가 본 가장 높은 격 — 값의 눈금 (그 격 한 판 벌이에 맞춤). 회차 안에서는 시작할 때의 격으로 고정 — 새 격에 닿아도 이번 판의 값은 그대로
+function bestRankNow() { const z = ZONES[Math.max(0, Math.min(ZONES.length, State.meta.bestZone) - 1)]; return z ? z.rank : 1; }
+function passiveRank() { return (State.run && State.run.priceRank) || bestRankNow(); }
+function passivePrice(id) {
+  const p = PASSIVE_BY_ID[id];
+  if (!p || passiveLevel(id) >= p.max) return null;
+  const r = passiveRank(), base = RULES.PASSIVE_BASE[Math.min(RULES.PASSIVE_BASE.length, r) - 1];
+  return Math.round(base * Math.pow(RULES.GOLD_GROWTH, r - 1) * Math.pow(RULES.PASSIVE_GROWTH, passiveLevel(id)) * (p.cost || 1));
+}
+// 회차 안에서 언제든 (그 공간에서도 도시에서도) — 산 단계는 영원히
+function buyPassive(id) {
+  const price = passivePrice(id), p = PASSIVE_BY_ID[id];
+  if (price === null || !State.run || State.run.over || num(State.meta.gold) < price) return false;
+  State.meta.gold -= price;
+  if (!State.meta.passives) State.meta.passives = {};
+  State.meta.passives[id] = passiveLevel(id) + 1;
+  if (id === 'breath') State.run.energy += 1;                // 긴 숨 — 이번 회차에도 바로 한 칸
+  pushLog('drop', `패시브 『${p.name}』 ${passiveLevel(id)}단계 — ${p.what} ${p.flat ? `+${passiveLevel(id) * p.step}` : `+${Math.round(passiveLevel(id) * p.step * 100)}%`} (${fmt(price)} 골드)`);
+  save();
+  return true;
 }
 
 // 그 공간에서 스스로 걸어 나옴 — 지하수로 첫 공간의 이상한 게이트 (도시가 열린 뒤에만 있음). 그 회차는 여기서 끝나고, 격은 두고 나옵니다
@@ -1389,6 +1427,7 @@ function openChest(box) {
   State.meta.chestsOpened.push(id);
   const gold = c.gold ? Math.max(1, Math.round(goldFor({ rank: { n: c.rank }, kind: 'normal' }) * c.gold * goldMult())) : 0;
   State.meta.gold = num(State.meta.gold) + gold;
+  run.goldEarned = num(run.goldEarned) + gold;
   let stones = null;
   if (c.stones) {
     const low = Math.min(...SLOT_IDS.map(enhanceLevel));
@@ -1505,7 +1544,7 @@ function engage() {
   const bossM = bossXpMult();
   const gearXp = xpGearMult();
   const rankXp = rankXpMult(enemy.rank ? enemy.rank.n : 1);
-  const xp = Math.round(enemy.xp * gap * auraXp * bossM * gearXp * rankXp);
+  const xp = Math.round(enemy.xp * gap * auraXp * bossM * gearXp * rankXp * passiveMult('eye'));
   const levelBefore = run.level;
   const levelsGained = gainXp(xp);
   const drops = rollDrops(enemy.id, aura ? aura.dropMult : 1);
@@ -1513,6 +1552,7 @@ function engage() {
   // 골드 — 기운이 두른 상대일수록, 행운과 골드 획득 장비가 많을수록. 조금씩 흔들립니다.
   const gold = Math.max(1, Math.round(goldFor(enemy) * (aura ? aura.dropMult : 1) * goldMult() * (0.85 + Math.random() * 0.3)));
   State.meta.gold = num(State.meta.gold) + gold;
+  run.goldEarned = num(run.goldEarned) + gold;
   // 7격부터는 아주 드물게 그 존재가 나를 화신으로 삼습니다 — 처음이면 바로 삼고, 아니면 「나」 창에서 고릅니다
   let avatarGained = null;
   if (canBecomeAvatar(enemy) && !State.meta.avatars.includes(enemy.id) && Math.random() < avatarChance(enemy)) {
@@ -1742,7 +1782,7 @@ function rollMats(enemyId, auraMult = 1) {
   if (!foe) return out;
   const give = (mat, n) => { State.meta.mats[mat.id] = matsOf(mat.id) + n; out.push({ mat, n }); };
   const core = foe.rank && CORES[`core${foe.rank.n}`];
-  if (core) give(core, Math.max(1, Math.round(KINDS[foe.kind].gold * auraMult)));
+  if (core) give(core, Math.max(1, Math.round(KINDS[foe.kind].gold * auraMult * passiveMult('miner'))));
   const mat = MATERIALS[foe.mat];
   if (mat) give(mat, 1 + (Math.random() < dropChanceFor(foe, auraMult) ? 1 : 0));
   return out;

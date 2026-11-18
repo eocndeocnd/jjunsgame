@@ -1859,6 +1859,18 @@ body.test-mode::after {
 .px-ic { display: inline-block; height: 12px; width: auto; vertical-align: -2px; margin-right: 3px; image-rendering: pixelated; }
 .px-ic.px-won { height: 10px; vertical-align: -1px; }
 /* 헌터 협회 · 등록 창구 — 등급 사다리 (ui.js 의 renderAssoc) · 백화점의 등록증 안내 */
+/* 패시브 — 스탯 창 (ui.js 의 renderPassives) */
+.passives { display: flex; flex-direction: column; gap: 6px; }
+.passive-row { display: grid; grid-template-columns: 26px 1fr auto; align-items: center; gap: 8px; padding: 6px 8px; border: 2px solid var(--line); background: var(--paper-hi); }
+.passive-row.has { background: #eef6e8; }
+.passive-ic { font-size: 18px; text-align: center; }
+.passive-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.passive-name { font-weight: 700; font-size: 13px; }
+.passive-name small { font-weight: 400; color: var(--text-dim); font-size: 10px; }
+.passive-eff { font-size: 11px; color: var(--text-dim); }
+.passive-eff b { color: var(--text); }
+.passive-max { font-size: 11px; color: var(--text-dim); white-space: nowrap; }
+.leave-gold { color: #b0202e; font-size: 12px; }
 .license-note { margin: 0 0 10px; padding: 8px 10px; border: 2px dashed var(--line); font-size: 12px; line-height: 1.5; background: var(--paper-hi); }
 .grade-ladder { display: flex; flex-direction: column-reverse; gap: 4px; margin: 10px 0; }
 .grade-row { display: grid; grid-template-columns: 28px 1fr auto; align-items: center; gap: 8px; padding: 5px 8px; border: 2px solid var(--line); background: var(--paper-hi); font-size: 12px; }

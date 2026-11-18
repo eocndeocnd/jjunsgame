@@ -1307,3 +1307,33 @@ test('헌터 협회 안 — 도시의 협회 문으로 들어가면 1층 로비,
   const desk = assoc.npcs.filter(n => n.shop);
   assert.deepEqual(desk.map(n => n.shop), ['assoc']);
 });
+
+test('패시브 — 골드로 사면 영원히 · 값은 이번 회차를 시작할 때의 격 · 회차가 끝나면 골드는 사라짐', () => {
+  const run = loadGame();
+  const r = run(`
+    currentSlot = 0; State.meta = freshMeta(); State.meta.cityOpen = true; startRun();
+    const out = { p0: passivePrice('might'), lv0: passiveLevel('might') };
+    out.noGold = buyPassive('might');
+    State.meta.gold = out.p0;
+    State.run.level = 1000; const life0 = heroStats().damage;
+    out.bought = buyPassive('might');
+    out.after = [passiveLevel('might'), State.meta.gold, heroStats().damage > life0, passivePrice('might') > out.p0];
+    State.meta.gold = 999999999; const e0 = State.run.energy; buyPassive('breath'); out.breath = [passiveLevel('breath'), State.run.energy - e0, startEnergy() - RULES.START_ENERGY];
+    // 회차 도중 새 격에 닿아도 이번 판 값은 그대로
+    const p1 = passivePrice('grit'); State.meta.bestZone = ZONES.findIndex(z => z.rank === 5) + 1; out.sameRun = passivePrice('grit') === p1;
+    State.meta.gold = 1234; endRun('시험'); out.end = [State.meta.gold, State.run.goldLost, passiveLevel('might')];
+    startRun(); out.nextRun = passivePrice('grit') > p1;
+    for (let i = 0; i < 20; i++) { State.meta.gold = 1e15; buyPassive('stride'); }
+    out.max = [passiveLevel('stride'), passivePrice('stride')];
+    return out;
+  `);
+  assert.ok(r.p0 > 0 && r.lv0 === 0);
+  assert.equal(r.noGold, false);
+  assert.equal(r.bought, true);
+  assert.deepEqual(r.after, [1, 0, true, true]);
+  assert.deepEqual(r.breath, [1, 1, 1]);
+  assert.equal(r.sameRun, true);
+  assert.deepEqual(r.end, [0, 1234, 1]);
+  assert.equal(r.nextRun, true);
+  assert.deepEqual(r.max, [5, null]);
+});

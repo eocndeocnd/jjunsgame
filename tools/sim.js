@@ -27,7 +27,8 @@ const SIM = {
   SAMPLES: 120,        // 판단용 승률 추정 횟수 (실제 전투는 한 번만 굴립니다)
   SHOP: true,          // 헌터백화점에서 장비를 사는가 (끄면 사기 전 길이와 견줄 수 있습니다)
   MAX_RUNS: 400,
-  MAX_STEPS: 5000      // 한 회차에서 무한루프 방지
+  MAX_STEPS: 5000,     // 한 회차에서 무한루프 방지
+  PASSIVES: true       // 골드로 패시브를 사는가 (끄면 사기 전과 견줄 수 있습니다)
 };
 
 // 같은 시드면 같은 결과가 나와야 비교가 됩니다. Math.random 을 통째로 바꿔 끼웁니다.
@@ -141,10 +142,20 @@ function simFightPost(foe) {
 }
 
 // 이 회차를 끝까지 둡니다
+// 패시브 — 살 수 있으면 바로, 가장 싼 것부터 (사람도 회차가 끝나면 골드가 사라지니 그 안에 씀)
+function simBuyPassives() {
+  if (typeof buyPassive !== 'function' || !SIM.PASSIVES) return;
+  for (let guard = 0; guard < 60; guard++) {
+    const pick = PASSIVES.map(p => ({ id: p.id, price: passivePrice(p.id) })).filter(x => x.price !== null && x.price <= num(State.meta.gold)).sort((a, b) => a.price - b.price)[0];
+    if (!pick || !buyPassive(pick.id)) break;
+  }
+}
+
 function simPlayRun(stat) {
   const run = State.run;
   for (let step = 0; step < SIM.MAX_STEPS && !run.over; step++) {
     simEnhance();
+    simBuyPassives();
 
     // 1. 길이 열렸고 다음 지역이 감당할 만하면 넘어갑니다
     // (지역을 넘어가는 데는 이제 에너지가 들지 않습니다 — 예전 ZONE_MOVE_COST 가 사라져 시뮬이 넘어가지 못하던 것을 고쳤습니다)

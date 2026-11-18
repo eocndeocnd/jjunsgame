@@ -454,7 +454,36 @@ function unitLabel(n) {
   const big = Math.floor(k / 4);
   return big >= names.length ? `1e${k}` : `${Math.pow(10, k % 4)}${names[big]}`;
 }
+// ---------- 패시브 — 골드로 사는 영구 능력 (data.js 의 PASSIVES · game.js 의 buyPassive) ----------
+// 값은 이번 회차를 시작할 때의 격으로 매김 — 한 판 벌어 하나 살까 말까. 골드는 회차가 끝나면 사라지니 그 안에 씀
+function passiveEffect(p, lv) { return p.flat ? `${p.what} +${lv * p.step}` : `${p.what} +${Math.round(lv * p.step * 100)}%`; }
+function renderPassives() {
+  const el = $('passives');
+  if (!el) return;
+  const gold = num(State.meta.gold), live = State.run && !State.run.over;
+  $('passiveGold').innerHTML = `골드 ${fmt(gold)}`;
+  el.innerHTML = PASSIVES.map(p => {
+    const lv = passiveLevel(p.id), price = passivePrice(p.id), can = live && price !== null && gold >= price;
+    return `
+      <div class="passive-row ${lv ? 'has' : ''}">
+        <span class="passive-ic">${p.icon}</span>
+        <span class="passive-body">
+          <span class="passive-name">${p.name} <small>${lv}/${p.max}</small></span>
+          <span class="passive-eff">${lv ? passiveEffect(p, lv) : `${p.what} 그대로`}${price !== null ? ` → <b>${passiveEffect(p, lv + 1)}</b>` : ''}</span>
+        </span>
+        ${price === null ? '<span class="passive-max">끝까지 올렸다</span>'
+          : `<button class="btn tiny ${can ? 'primary' : ''}" data-passive="${p.id}" ${can ? '' : 'disabled'}>${fmt(price)} 골드</button>`}
+      </div>`;
+  }).join('') + `<p class="hint alloc-note">한 번 산 패시브는 영원히 남는다<br><b>골드는 회차가 끝나면 사라진다</b> — 쓰고 나오자</p>`;
+  for (const b of el.querySelectorAll('[data-passive]')) b.addEventListener('click', () => {
+    if (!buyPassive(b.dataset.passive)) return;
+    Sound.play('rankUp');
+    render();
+  });
+}
+
 function renderAlloc(run) {
+  renderPassives();
   const auto = State.meta.autoAlloc;
   $('pointCount').textContent = run.unspent > 0 ? `${fmt(run.unspent)}P 남음` : '';
   const alloc = allocatedStats();
@@ -706,7 +735,8 @@ function renderHud(zone) {
       const on = isSetActive(n);
       return `<button class="hud-set ${on ? 'on' : ''}" data-jset="${n}" ${on ? 'disabled' : ''} title="세트 ${n + 1}">${n + 1}</button>`;
     }).join('')}</div>
-    ${inTown() ? `<span class="hud-chip hud-glass hud-won" title="가진 돈 — 도시에서 씁니다">${pxIcon('won')}${fmtWon(num(State.meta.won))}</span>` : ''}
+    ${inTown() ? `<span class="hud-chip hud-glass hud-won" title="가진 돈 — 도시에서 씁니다">${pxIcon('won')}${fmtWon(num(State.meta.won))}</span>`
+      : `<button class="hud-chip hud-glass hud-gold ${PASSIVES.some(p => { const c = passivePrice(p.id); return c !== null && num(State.meta.gold) >= c; }) ? 'ready' : ''}" id="hudGoldBtn" title="가진 골드 — 회차가 끝나면 사라집니다. 누르면 패시브">골드 ${fmt(num(State.meta.gold))}</button>`}
     <button class="hud-chip hud-glass" id="rosterBtn" title="이 지역에 있는 것">도감 ${run.zoneIndex + 1} / ${knownZoneCount()}</button>
     ${run.unspent > 0 ? '<button class="hud-chip hud-glass ready" id="jAllocBtn">스탯 분배<span class="alloc-pip on"></span></button>' : ''}`;
   // 지역 이름 — 게임에 들어선 뒤 처음 그릴 때와, 다른 지역이나 지역이 없는 지도(문의 광장)에 들어설 때
@@ -1465,6 +1495,8 @@ function isChestOpen() {
 // 나가면 이번 회차가 끝나므로(game.js 의 leaveSpace) 한 번 묻습니다. 그만두면 그 자리에서 다시 걷습니다
 function askLeave() {
   const m = $('leaveModal');
+  const g = Math.floor(num(State.meta.gold)), lg = $('leaveGold');
+  if (lg) lg.innerHTML = g > 0 ? `가진 <b>골드 ${fmt(g)}</b>은(는) 사라진다 — 패시브를 사고 나가자 (스탯 창)` : '';
   if (m) m.classList.remove('hidden');
 }
 function closeLeave() {
@@ -1846,6 +1878,7 @@ function mapMarks() {
 function renderMapLayer(onMap, frame) {
   document.body.classList.toggle('facing', !!frame);
   if (onMap) syncMap();
+  if (onMap && mapView.world) mapView.world.player.speedMul = passiveMult('stride');   // 패시브 「발걸음」
   // 아무도 마주하지 않으면 창 없이 지도만 — 화신 문이 있으면 위에 작게 (떠돌이 상인은 지도 위 🎒 에 닿으면 상점 — 예전 「들른다」 단추는 뺌)
   const hud = onMap && !frame ? warpButton() : '';
   $('mapOverlay').innerHTML = frame || (hud ? `<div class="map-hud">${hud}</div>` : '');
@@ -1895,6 +1928,7 @@ function wireJourney() {
   }
   on('rosterBtn',    openRosterModal);
   on('jAllocBtn',    openAlloc);       // 「스탯」 칸의 분배판으로
+  on('hudGoldBtn',   () => { if (fightLocked()) return; showTab('stats'); render(); const f = $('passives'); if (f) f.scrollIntoView({ block: 'center', behavior: 'smooth' }); });   // 골드 → 패시브
   const rab = $('rosterAllBtn');
   if (rab && !rab.dataset.wired) {
     rab.dataset.wired = '1';
@@ -3005,6 +3039,7 @@ function renderOverlay() {
     <li><span class="k">꺾은 화신</span><span class="v">${run.kills}</span></li>
     <li><span class="k">전리품</span><span class="v">${ownedIds().length}/${knownItems().length}</span></li>
     <li><span class="k">영구 경험치</span><span class="v">×${bossXpMult().toFixed(1)}</span></li>
+    ${num(run.goldLost) > 0 ? `<li><span class="k">사라진 골드</span><span class="v">${fmt(run.goldLost)}</span></li>` : ''}
   `;
   // 끝을 알리는 소리는 그 회차에 한 번만
   if (soundedOver !== run) {
