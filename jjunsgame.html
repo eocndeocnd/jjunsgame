@@ -2157,12 +2157,12 @@ html:has(body.beyond) { background: #0b0812; }
   left: 50%;
   top: 42%;
   transform: translate(-50%, -50%);
-  font-size: 54px;
   line-height: 1;
   opacity: 0;
-  filter: grayscale(1) brightness(1.4);
   animation: wb-eye 2.4s steps(1) both;
 }
+.wall-break .wb-eye .guide-eye { width: 64px; height: 64px; }   /* 길잡이와 같은 눈동자 (관측자 — 마왕 뒤의 늦은 힌트) */
+.guide-eye.foe-eye { width: 1em; height: 1em; vertical-align: middle; }
 @keyframes wb-eye {
   0%   { opacity: 0; }
   40%  { opacity: 0.8; }
@@ -2173,13 +2173,15 @@ html:has(body.beyond) { background: #0b0812; }
 
 /* 마왕 너머를 본 뒤 — 격이 무너지는 화면 구석에 아주 옅은 눈 하나 */
 .overlay-card.watched::after {
-  content: '👁️';
+  content: '';
   position: absolute;
   right: 12px;
   bottom: 10px;
-  font-size: 13px;
+  width: 16px;
+  height: 16px;
+  background: var(--eye) center / contain no-repeat;
+  image-rendering: pixelated;
   opacity: 0.18;
-  filter: grayscale(1);
   animation: watch-blink 6s steps(1) infinite;
 }
 @keyframes watch-blink { 0%, 92% { opacity: 0.18; } 93%, 95% { opacity: 0; } }
@@ -13558,6 +13560,7 @@ function render() {
   if (isAdminOpen()) renderAdmin();
   if (window.innerWidth > 860) maybeNamelessTalk();   // 넓은 화면에는 탭이 없습니다
   maybeCityWake();
+  maybeGuideNote();
 }
 
 // ---------- 벽 너머의 분위기 ----------
@@ -13595,7 +13598,7 @@ function wallMoment(r) {
     const fx = document.createElement('div');
     fx.className = 'wall-break';
     fx.setAttribute('aria-hidden', 'true');
-    fx.innerHTML = `<div class="wb-flash"></div>${wallCracks()}<div class="wb-dark"></div><div class="wb-eye">👁️</div>`;
+    fx.innerHTML = `<div class="wb-flash"></div>${wallCracks()}<div class="wb-dark"></div><div class="wb-eye">${guideEye()}</div>`;
     document.body.appendChild(fx);
     const stage = document.querySelector('.stage');
     if (stage) stage.animate(
@@ -14295,7 +14298,7 @@ function rosterRow(foe, hero, sims) {
   const seen = isSeen(foe.id);
   return `
     <div class="roster-item ${foe.kind} ${down ? 'down' : ''} ${seen ? '' : 'unseen'}">
-      <span class="r-icon">${seen ? foe.icon : '·'}</span>
+      <span class="r-icon">${seen ? foeIcon(foe) : '·'}</span>
       <span class="r-name">
         ${foe.kind !== 'normal' ? `<span class="grade-tag ${foe.kind}">${KINDS[foe.kind].name}</span>` : ''}
         ${seen ? foe.name : '???'}<span class="lv">Lv.${fmtLevel(foe.level)}</span>
@@ -14652,7 +14655,7 @@ function battleCard(b) {
       </div>
       <div class="bt-arena" id="btArena">
         <span class="bt-speed" id="btSpeed"></span>
-        <div class="portrait bt-foe" id="btFoe"><span class="portrait-ic">${foe.icon}</span></div>
+        <div class="portrait bt-foe" id="btFoe"><span class="portrait-ic">${foeIcon(foe)}</span></div>
         <div class="portrait bt-hero" id="btHero">${heroSprite()}</div>
       </div>
       <div class="bt-side hero">
@@ -14893,7 +14896,7 @@ function resultCard(r, run) {
       <div class="res-head">${r.win ? '승리' : '패배'}</div>
       ${run.over ? '' : `<button id="toAllocBtn" class="btn tiny res-alloc">스탯 분배${run.unspent > 0 ? '<span class="alloc-pip on"></span>' : ''}</button>`}
       <div class="res-foe">
-        <span class="res-icon">${foe.icon}</span>
+        <span class="res-icon">${foeIcon(foe)}</span>
         ${r.aura ? `<span class="aura-tag" style="--aura:${r.aura.color}">${r.aura.name}</span>` : ''}
         ${foe.kind !== 'normal' ? `<span class="grade-tag ${foe.kind}">${K.name}</span>` : ''}
         ${foe.name}<span class="lv">Lv.${fmtLevel(foe.level)}</span>
@@ -15077,7 +15080,7 @@ function encounterCard(foe, hero, aura, noRetreat) {
       </div>
       <!-- 상대와, 그 아래 상대를 마주 본 나 — 싸움 화면(battleCard)과 같은 늘어놓음이라 「맞선다」를 눌러도 튀지 않습니다 -->
       <div class="enc-arena">
-        <div class="portrait enc-portrait"><span class="portrait-ic">${foe.icon}</span></div>
+        <div class="portrait enc-portrait"><span class="portrait-ic">${foeIcon(foe)}</span></div>
         <div class="portrait enc-hero">${heroSprite()}</div>
       </div>
       ${dropStrip(foe)}
@@ -16504,6 +16507,7 @@ function renderOverlay() {
   card.classList.toggle('victory', !!run.victory);
   // 마왕 너머를 본 뒤로는, 격이 무너지는 화면 구석에 눈 하나가 아주 옅게 스칩니다 (말은 없습니다)
   card.classList.toggle('watched', wallSeen() && !run.victory);
+  if (wallSeen()) { guideEye(); card.style.setProperty('--eye', `url("${guideEyeSrc}")`); }
   $('overTitle').textContent = run.victory ? '모든 격을 넘어섰다' : run.walkedOut ? '도시로 나왔다' : '격이 무너졌다';
   // 깼을 때는 제목이 곧 사연이라 아래 줄을 비웁니다 (비면 CSS 가 숨깁니다)
   $('overReason').textContent = run.victory ? '' : run.walkedOut ? '격은 그 공간에 두고 나왔다.' : run.reason;
@@ -16884,13 +16888,35 @@ const CITY_WAKE = [
   { who: 'guide', text: () => `<b>${heroName()}</b>. 좋아, 기억해 둘게.` },
   { who: 'guide', text: '가져온 <b>핵이랑 가죽</b>은 저쪽 큰 도시의 <b>헌터백화점 재료 창구</b>에서 돈으로 바꿔 줄 거야.' },
   { who: 'guide', text: '장비를 사려면 <b>헌터 등록증</b>이 있어야 한대. 도시 위쪽 큰 건물 — <b>헌터 협회</b>에서 시험을 보면 돼. 지금 그대로 싸워서.' },
-  { who: 'guide', text: '그리고 다시 들어가는 길은 — 골목 안의 그 이상한 게이트. 너한테만 보일걸.' }
+  { who: 'guide', text: '그리고 다시 들어가는 길은 — 네 집 바로 옆 틈의 그 이상한 게이트. 너한테만 보일걸.' }
 ];
 function maybeCityWake() {
   const m = State.meta, run = State.run;
   if (!run || run.over || !m.cityOpen || m.heroName || battle || fightLocked() || !inTown()) return;
   if (!$('title').classList.contains('hidden') || isTalkOpen() || isAnyModalOpen()) return;
   playTalk(CITY_WAKE, null);
+}
+
+// 관측자를 그리는 자리 — 길잡이와 같은 눈동자 (사용자 결정: 마왕 뒤의 늦은 힌트). 다른 몬스터는 제 아이콘
+function foeIcon(foe) { return foe && foe.id === 'observer' ? guideEye('foe-eye') : foe.icon; }
+
+// 길잡이의 한마디 — 도시에 섰을 때 새로 열린 것을 한 번씩 (대사는 제안). 본 것은 meta.guideSaw 에 적어 다시 말하지 않습니다
+const GUIDE_NOTES = [
+  { id: 'dept', when: () => deptOpenRank() > 1, key: () => deptOpenRank(),
+    text: () => `백화점에 새 물건이 들어왔대. <b>제${deptOpenRank()}격</b> 것. 보스를 꺾었다는 소문이 벌써 돌았나 봐.` },
+  { id: 'regrade', when: () => hunterGrade() > 0 && hunterGrade() < Math.min(HUNTER_GRADES.length, deptOpenRank() - 1) && canTakeTest(), key: () => deptOpenRank() - 1,
+    text: () => `제${deptOpenRank() - 1}격 보스까지 꺾었는데 아직 <b>${gradeName()}급</b>이야? 협회에서 <b>재심사</b>를 받아 봐.` }
+];
+function maybeGuideNote() {
+  const m = State.meta, run = State.run;
+  if (!run || run.over || !m.cityOpen || !m.heroName || battle || fightLocked() || !inTown()) return;
+  if (!$('title').classList.contains('hidden') || isTalkOpen() || isAnyModalOpen()) return;
+  const saw = m.guideSaw && typeof m.guideSaw === 'object' ? m.guideSaw : (m.guideSaw = {});
+  const note = GUIDE_NOTES.find(n => n.when() && num(saw[n.id]) < n.key());
+  if (!note) return;
+  saw[note.id] = note.key();
+  save();
+  playTalk([{ who: 'guide', text: note.text() }], null, { end: '알았어' });
 }
 // ============================================================
 //  관리자 — 왼쪽 위 이름표(제목 명패)를 빠르게 다섯 번 누르면 열립니다

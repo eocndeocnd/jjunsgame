@@ -2141,12 +2141,12 @@ html:has(body.beyond) { background: #0b0812; }
   left: 50%;
   top: 42%;
   transform: translate(-50%, -50%);
-  font-size: 54px;
   line-height: 1;
   opacity: 0;
-  filter: grayscale(1) brightness(1.4);
   animation: wb-eye 2.4s steps(1) both;
 }
+.wall-break .wb-eye .guide-eye { width: 64px; height: 64px; }   /* 길잡이와 같은 눈동자 (관측자 — 마왕 뒤의 늦은 힌트) */
+.guide-eye.foe-eye { width: 1em; height: 1em; vertical-align: middle; }
 @keyframes wb-eye {
   0%   { opacity: 0; }
   40%  { opacity: 0.8; }
@@ -2157,13 +2157,15 @@ html:has(body.beyond) { background: #0b0812; }
 
 /* 마왕 너머를 본 뒤 — 격이 무너지는 화면 구석에 아주 옅은 눈 하나 */
 .overlay-card.watched::after {
-  content: '👁️';
+  content: '';
   position: absolute;
   right: 12px;
   bottom: 10px;
-  font-size: 13px;
+  width: 16px;
+  height: 16px;
+  background: var(--eye) center / contain no-repeat;
+  image-rendering: pixelated;
   opacity: 0.18;
-  filter: grayscale(1);
   animation: watch-blink 6s steps(1) infinite;
 }
 @keyframes watch-blink { 0%, 92% { opacity: 0.18; } 93%, 95% { opacity: 0; } }
