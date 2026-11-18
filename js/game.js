@@ -163,11 +163,6 @@ function importSave(n, meta) {
   try { localStorage.removeItem(runKey(n)); } catch (e) {}
 }
 
-function hasAnySave() {
-  for (let n = 1; n <= SAVE_SLOTS; n++) if (slotSummary(n)) return true;
-  return false;
-}
-
 // 슬롯을 열고 게임을 시작합니다. fresh 면 그 슬롯을 비우고 새로 시작.
 // 하던 회차가 저장돼 있으면 그 자리에서 이어갑니다.
 function openSlot(n, fresh) {
@@ -542,8 +537,6 @@ function setWeights(...vals) {
   save();
 }
 
-function clearWeights() { setWeights(...STAT_KEYS.map(() => 0)); }
-
 // ---------- 저장 / 불러오기 ----------
 // 관리자 창의 「시험 모드」를 켜면 그 뒤로는 아무것도 저장하지 않습니다 — 다시 불러오면 원래대로.
 let saveBlocked = false;
@@ -743,12 +736,6 @@ function freshMeta() {
     cityOpen: false,                  // 도시가 열렸는가 — 첫 회차가 끝나면 열리고, 그 뒤로 회차는 도시에서 시작합니다 (docs/CITY-PLAN.md)
     layout: LAYOUT_VERSION            // 저장본의 지역 번호 순서 (격 재편 뒤 = 2)
   };
-}
-
-function wipeSave() {
-  if (currentSlot) wipeSlot(currentSlot);
-  State.meta = freshMeta();
-  startRun();
 }
 
 // ---------- 영웅 스탯 계산 ----------
@@ -2071,13 +2058,6 @@ function switchSet(n) {
   save();
 }
 const SET_COUNT = 3;
-
-// 그 세트에 몇 부위가 채워져 있는가. 비어 있으면 0.
-function setFilled(n) {
-  const s = (n === State.meta.activeSet) ? State.meta.equipped : State.meta.sets[n];
-  if (!s) return 0;
-  return ALL_SLOT_IDS.filter(k => owns(s[k]) && isSlotOpen(k)).length;
-}
 
 // 지금 입고 있는 세트인가
 function isSetActive(n) {
