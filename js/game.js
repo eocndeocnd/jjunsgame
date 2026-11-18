@@ -241,7 +241,9 @@ const State = {
     hunterGrade: 0,              // 헌터 등급 — 0 미등록 · 1~7 = F~S (data.js 의 HUNTER_GRADES). 헌터 협회 시험으로 오르고 내려가지 않음
     testedRun: 0,                // 등록 시험을 본 회차 — 한 회차에 한 번
     passives: {},                // 골드로 산 패시브 — id → 단계 (data.js 의 PASSIVES). 영구
-    ally: null,                  // 함께 가는 동료 id (data.js 의 ALLIES) — 제4격 보스 뒤 협회 로비에서
+    ally: null,                  // 그 공간에 함께 가는 동료 id (data.js 의 ALLIES) — 늘 한 명 · 없을 수 있음
+    allies: [],                  // 내 동료 id 들 (이야기로 만난 동료 · 고용한 동료)
+    gates: {},                   // 게이트에 간 동료 — id → { gate: 등급 id, start, end } (ms · 실제 시각)
     sets: [null, null, null],    // 세 벌의 차림. equipped 는 늘 sets[activeSet] 과 같습니다
     activeSet: 0,                // 지금 입고 있는 세트 번호
     settings: defaultSettings(),
@@ -647,7 +649,12 @@ function load() {
     State.meta.heroName = typeof data.heroName === 'string' ? data.heroName.replace(/[<>&"'`\\]/g, '').trim().slice(0, 8) : '';
     State.meta.hunterGrade = Math.max(0, Math.min(HUNTER_GRADES.length, Math.floor(num(data.hunterGrade))));
     State.meta.testedRun = Math.max(0, Math.floor(num(data.testedRun)));
-    State.meta.ally = ALLIES[data.ally] ? data.ally : null;
+    State.meta.allies = [...new Set((Array.isArray(data.allies) ? data.allies : []).concat(data.ally ? [data.ally] : []))].filter(id => ALLIES[id]);
+    State.meta.gates = {};
+    for (const [id, g] of Object.entries(data.gates && typeof data.gates === 'object' ? data.gates : {})) {
+      if (State.meta.allies.includes(id) && g && gateInfo(g.gate) && isFinite(g.start) && isFinite(g.end)) State.meta.gates[id] = { gate: g.gate, start: +g.start, end: +g.end };
+    }
+    State.meta.ally = ALLIES[data.ally] && !State.meta.gates[data.ally] ? data.ally : null;
     State.meta.passives = {};
     for (const p of PASSIVES) { const lv = Math.floor(num(data.passives && data.passives[p.id])); if (lv > 0) State.meta.passives[p.id] = Math.min(p.max, lv); }
     // 도시가 생기기 전의 저장본 — 회차를 한 번이라도 끝냈으면(두 번째 회차부터) 도시가 열린 것으로
@@ -717,6 +724,8 @@ function freshMeta() {
     testedRun: 0,
     passives: {},
     ally: null,
+    allies: [],
+    gates: {},
     sets: [null, null, null],
     activeSet: 0,
     settings: defaultSettings(),
@@ -771,7 +780,10 @@ function heroStats() {
   // 다 모은 격 하나마다 핵심 스탯 전체가 조금씩 — 레벨·분배·장비를 다 합친 뒤에 곱합니다
   const collect = 1 + COLLECTION_BONUS * completedRanks();
   for (const k of STAT_KEYS) total[k] = Math.round(total[k] * collect);
-  total.ally = State.meta.ally && ALLIES[State.meta.ally] ? ALLIES[State.meta.ally].ratio : 0;   // 함께 가는 동료의 추가타
+  // 함께 가는 동료의 능력 — 추가타(ally) · 회복(allyHeal) · 막기(allyGuard) 중 하나
+  total.ally = 0; total.allyHeal = 0; total.allyGuard = 0;
+  const comp = allyNow();
+  if (comp) total[ALLY_KINDS[comp.kind].stat] = allyPower(comp);
   // 골드로 산 패시브 — 근력(공격력) · 맷집(생명)
   total.damage = Math.round(total.damage * passiveMult('might'));
   total.life = Math.round(total.life * passiveMult('grit'));
@@ -825,6 +837,8 @@ function simulateBattle(hero, enemy, rng = Math.random, log = null) {
 
   const hDouble  = num(hero.doubleHit);    // 한 턴에 두 번
   const hAlly    = num(hero.ally);         // 함께 가는 동료 — 내가 움직인 뒤 한 번 더 (내 한 방의 비율)
+  const hAllyHeal  = num(hero.allyHeal);   // 함께 가는 동료 — 내 턴마다 생명의 일부 회복
+  const hAllyGuard = Math.min(0.9, num(hero.allyGuard));   // 함께 가는 동료 — 받는 피해를 줄임
   const hSteal   = num(hero.lifesteal);    // 준 피해의 일부 회복
   const hBlock   = num(hero.block);        // 통째로 흘리기
   const hThorn   = num(hero.reflect);      // 맞은 만큼 되돌리기
@@ -923,6 +937,11 @@ function simulateBattle(hero, enemy, rng = Math.random, log = null) {
         if (foeHp <= 0) return { win: true, turns: turn, heroHpLeft: heroHp };
       } else note('ally', 'miss');
     }
+    if (hAllyHeal > 0 && heroHp < hero.life) {
+      const heal = Math.min(hero.life - heroHp, hero.life * hAllyHeal);
+      heroHp += heal;
+      note('ally', 'heal', heal);
+    }
 
     // ── 화신의 턴 ──
     if (rng() >= fHit) { note('foe', 'miss'); continue; }
@@ -931,6 +950,7 @@ function simulateBattle(hero, enemy, rng = Math.random, log = null) {
     const crit = rng() < fCrit;
     if (crit) inc *= fCritDmg;
     if (P === 'sanctdragon') inc *= 0.7;                                // 천 년의 비늘 — 받는 피해 −30%
+    if (hAllyGuard > 0) inc *= 1 - hAllyGuard;                          // 동료의 막기
     inc = Math.max(1, inc);
 
     // 생존 — 이 한 방에 쓰러질 때마다, 정해진 횟수만큼 (확률 없음)
@@ -974,7 +994,7 @@ function winChance(hero, enemy, samples = 200) {
   const heroDps = Math.max(0.001, expectedTurnDamage(hero, enemy));
   const foeDps  = Math.max(0.001, expectedTurnDamage(enemy, hero));
   const turnsToKill = enemy.life / heroDps;
-  const turnsToDie  = hero.life  / foeDps;
+  const turnsToDie  = hero.life  / Math.max(0.001, foeDps - hero.life * num(hero.allyHeal));   // 동료의 회복만큼 덜 깎임
 
   // 운으로도 못 뒤집을 만큼 차이가 크면 굴리지 않습니다.
   // 크리와 빗나감이 있어서 예전보다 훨씬 넉넉하게(3배) 잡아야 합니다.
@@ -1375,20 +1395,83 @@ function deptOpenRank() {
   return r;
 }
 // 그 매장에 지금 놓인 것 (아직 안 산 것 — 산 물건은 진열대에서 사라집니다)
-// ---------- 동료 (data.js 의 ALLIES) ----------
-// 제4격 보스를 한 번이라도 꺾었고 아직 동료가 없으면, 협회 로비에서 기다림 (ui 의 talk → joinAlly)
-function allyWaiting() {
-  const boss = zoneBoss(ZONES.findIndex(z => z.rank === 4));
-  return !State.meta.ally && !!State.meta.cityOpen && !!boss && State.meta.bossesBeaten.includes(boss.id);
+// ---------- 동료 · 게이트 (data.js 의 ALLIES · gateInfo) ----------
+const rankBossBeaten = r => { const boss = zoneBoss(ZONES.findIndex(z => z.rank === r)); return !!boss && State.meta.bossesBeaten.includes(boss.id); };
+function allyOwned(id) { return (State.meta.allies || []).includes(id); }
+// 제4격 보스를 한 번이라도 꺾었고 아직 하윤을 못 만났으면, 협회 로비에서 기다림 (ui 의 talk → joinAlly)
+function allyWaiting() { return !allyOwned('hayun') && !!State.meta.cityOpen && rankBossBeaten(4); }
+// 동료가 늘어남 — 함께 가는 동료가 없으면 바로 함께 감
+function addAlly(id) {
+  State.meta.allies = (State.meta.allies || []).concat(id);
+  if (!State.meta.ally) State.meta.ally = id;
 }
 function joinAlly(id = 'hayun') {
-  if (!ALLIES[id] || State.meta.ally) return false;
-  State.meta.ally = id;
-  pushLog('drop', `${ALLIES[id].name}${josa(ALLIES[id].name, '이', '가')} 동료가 되었다 — 그 공간에 함께 간다 (${ALLIES[id].what}).`);
+  if (!ALLIES[id] || allyOwned(id)) return false;
+  addAlly(id);
+  pushLog('drop', `${ALLIES[id].name}${josa(ALLIES[id].name, '이', '가')} 동료가 되었다 (${ALLY_KINDS[ALLIES[id].kind].name}).`);
   save();
   return true;
 }
-function allyNow() { return State.meta.ally ? ALLIES[State.meta.ally] : null; }
+function allyNow() { return State.meta.ally && ALLIES[State.meta.ally] ? ALLIES[State.meta.ally] : null; }
+// 때가 되어야 서 있는 창구 · 사람 (지도 — mapview 의 npcHere · ui 의 mapMarks)
+function deskHere(shop) { return shop === 'ally' ? allyWaiting() : shop === 'hire' || shop === 'gate' ? gatesOpen() : true; }
+// 제5격 보스를 한 번이라도 꺾으면 협회의 「동료 모집」 · 「게이트 창구」가 열림
+function gatesOpen() { return !!State.meta.cityOpen && rankBossBeaten(5); }
+// 동료 모집 창구에 서 있는 사람 — 내 등급까지 (고용한 사람도 「함께하는 중」으로 남김)
+// 고용 값 — 이번 회차를 시작할 때의 내 격(동료 등급보다 낮으면 그 격)의 핵 HIRE_CORES 개어치 × 등급마다 +25%.
+// 내 격을 따르는 까닭: 동료 등급의 격으로 매기면 그 무렵엔 이미 훨씬 큰 돈을 벌어 한꺼번에 다 맞음 (시뮬 2026-11-19). 「한 판 벌어 살까 말까」(패시브 · 상인과 같은 원칙)
+function hirePrice(a) {
+  const g = allyGradeN(a), r = Math.min(RANKS.length, Math.max(g, passiveRank()));
+  return Math.round(CORES[`core${r}`].sell * RULES.HIRE_CORES * (1 + 0.25 * (g - 1)));
+}
+function hireList() { return Object.values(ALLIES).filter(a => a.hire && allyGradeN(a) <= hunterGrade()); }
+function hireAlly(id) {
+  const a = ALLIES[id];
+  if (!gatesOpen() || !a || !a.hire || allyOwned(id) || allyGradeN(a) > hunterGrade() || num(State.meta.won) < hirePrice(a)) return false;
+  State.meta.won -= hirePrice(a);
+  addAlly(id);
+  pushLog('drop', `${a.grade}급 헌터 ${a.name}${josa(a.name, '을', '를')} 동료로 맞았다 — ${fmtWon(hirePrice(a))} (${ALLY_KINDS[a.kind].name}).`);
+  save();
+  return true;
+}
+// 함께 갈 동료를 고름 (null — 혼자). 게이트에 간 동료는 못 고름
+function setCompanion(id) {
+  if (id !== null && (!allyOwned(id) || gateOf(id))) return false;
+  State.meta.ally = id;
+  save();
+  return true;
+}
+function gateOf(id) { return (State.meta.gates || {})[id] || null; }
+function gateDone(id, now = Date.now()) { const g = gateOf(id); return !!g && now >= g.end; }
+function gatesDoneCount(now = Date.now()) { return Object.keys(State.meta.gates || {}).filter(id => gateDone(id, now)).length; }
+// 보낸다 — 함께 가는 동료가 아니고, 그 게이트 등급이 동료 등급 이하일 때
+function sendToGate(id, gateId, now = Date.now()) {
+  const a = ALLIES[id], g = gateInfo(gateId);
+  if (!gatesOpen() || !a || !g || !allyOwned(id) || State.meta.ally === id || gateOf(id) || g.rank > allyGradeN(a)) return false;
+  State.meta.gates[id] = { gate: gateId, start: now, end: now + g.ms };
+  pushLog('info', `${a.name}${josa(a.name, '이', '가')} ${gateId}급 게이트에 들어갔다 — ${g.hours}시간 뒤에 돌아온다.`);
+  save();
+  return true;
+}
+// 강화석 n개를 가장 덜 강화된 부위로 (보물상자 · 게이트) — 고른 부위
+function giveStonesLowest(n) {
+  const low = Math.min(...SLOT_IDS.map(enhanceLevel));
+  const pick = SLOT_IDS.filter(s => enhanceLevel(s) === low);
+  const slot = pick[Math.floor(Math.random() * pick.length)];
+  State.meta.stones[slot] = stonesOf(slot) + n;
+  return slot;
+}
+// 받는다 — 다 끝난 게이트의 핵 · 강화석. → { gate, cores, core, stones, slot } 또는 null
+function claimGate(id, now = Date.now()) {
+  if (!gateDone(id, now)) return null;
+  const g = gateInfo(gateOf(id).gate), core = CORES[`core${g.rank}`];
+  delete State.meta.gates[id];
+  State.meta.mats[core.id] = matsOf(core.id) + g.cores;
+  const slot = giveStonesLowest(g.stones);
+  pushLog('drop', `${ALLIES[id].name}${josa(ALLIES[id].name, '이', '가')} ${g.id}급 게이트에서 돌아왔다 — ${core.name} ${fmt(g.cores)}개 · ${SLOT_NAMES[slot]} 강화석 ${fmt(g.stones)}개`);
+  save();
+  return { gate: g, cores: g.cores, core, stones: g.stones, slot };
+}
 
 // 방어구 매장(백화점 2층) — 제1격 보스를 한 번이라도 꺾으면 열림 (도시 계획 2번). 1층 에스컬레이터 문도 이걸 봄 (ui 의 portOpen)
 function armorOpen() { return deptOpenRank() >= 2; }
@@ -1449,13 +1532,7 @@ function openChest(box) {
   State.meta.gold = num(State.meta.gold) + gold;
   run.goldEarned = num(run.goldEarned) + gold;
   let stones = null;
-  if (c.stones) {
-    const low = Math.min(...SLOT_IDS.map(enhanceLevel));
-    const pick = SLOT_IDS.filter(s => enhanceLevel(s) === low);
-    const slot = pick[Math.floor(Math.random() * pick.length)];
-    State.meta.stones[slot] = stonesOf(slot) + c.stones;
-    stones = { slot, n: c.stones };
-  }
+  if (c.stones) stones = { slot: giveStonesLowest(c.stones), n: c.stones };
   let drop = null;
   const it = c.item ? getItem(c.item) : null;
   if (it && owns(it.id)) {                                   // 이미 가졌으면(관리자로 받았던 것 등) 분해 — 전리품과 같게

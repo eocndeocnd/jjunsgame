@@ -71,6 +71,10 @@ const RULES = {
   //   그 문턱만 넘으면 더 싸게 해도 그대로입니다 — 그 뒤로는 돈이 아니라 힘이 발목을 잡습니다.
   DEPT_PRICE: 48,
   ARMOR_PRICE: 24,        // 방어구 매장(백화점 2층) — 그 격의 핵 12개어치, 무기의 절반 (부위가 넷이라 — 사용자 결정 2026-11-18)
+  // 동료 · 게이트 (도시 계획 5번). 시뮬로 한 회차에 그 격의 핵이 30~80개(가운데 50쯤) 모입니다 (2026-11-19).
+  HIRE_CORES: 40,         // 동료 모집 — 이번 회차를 시작할 때 내 격의 핵 40개어치(직접 한 회차 몫쯤) × 등급마다 +25% (F 1배 … S 2.5배 — game.js 의 hirePrice)
+  GATE_CORES: 4,          // 게이트 — 한 시간에 그 게이트 격의 핵 4개 (가장 긴 S급 8시간 = 32개 — 직접 한 회차의 0.6쯤. 게이트 격은 내 격보다 늘 뒤처짐)
+  GATE_STONES: 10,        // 게이트 — 한 시간에 강화석 10 × 격 (가장 덜 강화된 부위로 — 보물상자처럼)
   // 재료 (도시 1-다) — 장비를 떨어뜨릴 리 없는 짐승은 장비 대신 제 재료를 줍니다 (data.js 의 MATERIALS).
   // 한 마리에 1개, 전리품 확률만큼 하나 더 (행운 · 기운이 그대로 듦). 재료 MAT_PER_ITEM 개 = 예전에 그 장비를 한 번 주운 셈:
   //   아직 없는 장비면 돈(그 격 일반 CRAFT_PRICE 마리 몫 × WON_SCALE — 1격 4만 · 2격 8만 원: 그 격의 핵 4개)을 얹어 만들고, 이미 가진 장비면 분해했을 때와 같은 강화석으로 바꿉니다.
@@ -203,7 +207,7 @@ function expectedTurnDamage(a, d) {
   const perSwing = (1 - h) * (1 + c * (critDamage(a.dex) - 1)) + h * HARM_TOUCH_MULT;
   const turns = 1 + Math.min(0.9, num(a.doubleTurn));  // 연속 턴은 한 턴에 움직이는 횟수를 늘립니다
   const ally = num(a.ally) * base * hitChance(a.dex, d.dex) * (1 - Math.min(0.9, num(d.block)));   // 함께 가는 동료의 추가타 (크리 없음)
-  return base * hit * multi * perSwing * turns + ally;
+  return (base * hit * multi * perSwing * turns + ally) * (1 - Math.min(0.9, num(d.allyGuard)));   // 맞는 쪽 동료의 막기
 }
 
 // 일격 한 방의 배수 (원작 Resolute Hero 의 Harm Touch 와 같습니다)
@@ -2341,12 +2345,35 @@ const PASSIVES = [
 ];
 const PASSIVE_BY_ID = Object.fromEntries(PASSIVES.map(p => [p.id, p]));
 
-// ---------- 동료 (도시 계획 4번 — 사용자 결정 2026-11-18) ----------
-// 제4격 보스를 한 번이라도 꺾으면, 도시의 헌터 협회 로비에서 말을 걸어오는 사람. 이야기가 끝나면 그 공간에 함께 감 (함께 가는 동료는 늘 한 명).
-// 능력은 추가타 — 내가 움직인 뒤 한 번 더 때림 (내 한 방 피해의 ratio, 크리 없음, 빗나갈 수 있음). 이름 · 대사는 가칭.
-const ALLIES = {
-  hayun: { id: 'hayun', name: '하윤', grade: 'D', ratio: 0.3, hue: 150, what: '추가타' }
+// ---------- 동료 (도시 계획 4 · 5번 — 사용자 결정 2026-11-18 · 11-19) ----------
+// 이야기로 만나는 동료(story — 하윤: 제4격 보스 뒤 협회 로비에서 말을 걸어옴)와, 제5격 보스 뒤 협회 「동료 모집」 창구에서 돈으로 고용하는 동료(hire — 내 등급까지).
+// 그 공간에 함께 가는 동료는 늘 한 명 — 게이트 창구에서 고름. 함께 가는 동안에는 게이트에 못 감.
+// 능력은 동료마다 셋 중 하나(ALLY_KINDS), 세기는 등급으로. 이름 · 그림(이모지 — 그림이 생기기 전까지) · 대사는 가칭.
+const ALLY_KINDS = {
+  strike: { name: '추가타', stat: 'ally',      base: 0.2,  step: 0.05,  desc: v => `내가 움직인 뒤 한 번 더 — 내 한 방의 ${Math.round(v * 1000) / 10}%` },   // 크리 없음 · 빗나갈 수 있음
+  heal:   { name: '회복',   stat: 'allyHeal',  base: 0.02, step: 0.005, desc: v => `내 턴마다 내 생명의 ${Math.round(v * 1000) / 10}% 회복` },
+  guard:  { name: '막기',   stat: 'allyGuard', base: 0.1,  step: 0.025, desc: v => `내가 받는 피해 −${Math.round(v * 1000) / 10}%` }
 };
+const ALLIES = {
+  hayun:    { id: 'hayun',    name: '하윤', grade: 'D', kind: 'strike', icon: '🥷', story: true },
+  seojin:   { id: 'seojin',   name: '서진', grade: 'F', kind: 'guard',  icon: '💂', hire: true },
+  minjae:   { id: 'minjae',   name: '민재', grade: 'E', kind: 'heal',   icon: '🧑‍⚕️', hire: true },
+  jiu:      { id: 'jiu',      name: '지우', grade: 'D', kind: 'strike', icon: '🧝', hire: true },
+  taeo:     { id: 'taeo',     name: '태오', grade: 'C', kind: 'guard',  icon: '🧔', hire: true },
+  hangyeol: { id: 'hangyeol', name: '한결', grade: 'B', kind: 'heal',   icon: '🧙', hire: true },
+  eunho:    { id: 'eunho',    name: '은호', grade: 'A', kind: 'strike', icon: '🦹', hire: true },
+  rua:      { id: 'rua',      name: '루아', grade: 'S', kind: 'guard',  icon: '🦸', hire: true }
+};
+function allyGradeN(a) { return HUNTER_GRADES.findIndex(g => g.id === a.grade) + 1; }          // F 1 … S 7 (= 그 등급의 격)
+function allyPower(a) { const k = ALLY_KINDS[a.kind]; return Math.round((k.base + k.step * (allyGradeN(a) - 1)) * 1e4) / 1e4; }   // 하윤(D 추가타) 0.3
+function allyWhat(a) { return `${ALLY_KINDS[a.kind].name} — ${ALLY_KINDS[a.kind].desc(allyPower(a))}`; }
+// 게이트 — 등급마다 하나, 동료 등급 이하만. 보내면 실제 시간이 흐른 뒤(게임을 꺼도) 그 격의 핵 · 강화석을 가져옴. 다 끝나도 받을 때까지 그대로 (쌓이지 않음)
+const GATE_HOURS = { F: 1, E: 2, D: 3, C: 4, B: 5, A: 6, S: 8 };   // 사용자 결정 2026-11-19 — 1~8시간
+function gateInfo(id) {
+  const n = HUNTER_GRADES.findIndex(g => g.id === id) + 1, hours = GATE_HOURS[id];
+  if (!n || !hours) return null;
+  return { id, rank: n, hours, ms: hours * 3600e3, cores: Math.round(RULES.GATE_CORES * hours), stones: RULES.GATE_STONES * n * hours };
+}
 
 function goldFor(foe) {
   const r = foe && foe.rank ? foe.rank.n : 1;

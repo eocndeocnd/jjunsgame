@@ -359,7 +359,7 @@ function renderRecords() {
   $('records').innerHTML = `
     ${m.heroName ? record('이름', m.heroName) : ''}
     ${m.cityOpen ? record('헌터 등급', hunterGrade() ? `${gradeName()}급` : '미등록') : ''}
-    ${m.ally && ALLIES[m.ally] ? record('동료', `${ALLIES[m.ally].name} · ${ALLIES[m.ally].what}`) : ''}
+    ${(m.allies || []).length ? record('동료', `${m.allies.length}명 · 함께 감: ${allyNow() ? `${allyNow().name}(${ALLY_KINDS[allyNow().kind].name})` : '없음'}`) : ''}
     ${record('회차', m.runCount)}
     ${record('최고 레벨', fmtLevel(m.bestLevel))}
     ${record('최심 도달', `${m.bestZone}지역 · ${deepest.name}`)}
@@ -1079,7 +1079,7 @@ function battleSound(e) {
       case 'power':   return e.p === 'zeus' || e.p === 'hades' ? 'harm' : 'special';
     }
   } else if (e.who === 'ally') {
-    return e.k === 'hit' ? 'hit' : 'miss';
+    return e.k === 'hit' ? 'hit' : e.k === 'heal' ? 'heal' : 'miss';
   } else {
     switch (e.k) {
       case 'hit':   return e.crit ? 'foeCrit' : 'foeHit';
@@ -1145,7 +1145,7 @@ function battleLine(e, foeName) {
     }
   } else if (e.who === 'ally') {
     const an = (allyNow() || {}).name || '동료';
-    return e.k === 'hit' ? { cls: 'b-hero', text: `${an}의 추가타 — ${foeName}에게 ${v}` } : { cls: 'b-miss', text: `${an}의 공격이 빗나갔다` };
+    return e.k === 'hit' ? { cls: 'b-hero', text: `${an}의 추가타 — ${foeName}에게 ${v}` } : e.k === 'heal' ? { cls: 'b-heal', text: `${an}의 회복 — 생명 +${v}` } : { cls: 'b-miss', text: `${an}의 공격이 빗나갔다` };
   } else {
     switch (e.k) {
       case 'hit':   return { cls: e.crit ? 'b-foecrit' : 'b-foe', text: `${e.crit ? '치명타! ' : ''}${foeName}의 공격 — ${v}` };
@@ -1160,8 +1160,8 @@ function hpPct(hp, max) { return `${Math.max(0, Math.min(100, (hp / Math.max(1, 
 
 // 내 모습 — 지도에서 걷는 그 그림(assets/hero/walk.png)의 뒷모습 서기 칸. 위에 선 상대를 마주 봅니다 (사용자 결정)
 const heroSprite = () => `<span class="portrait-ic hero-sprite" style="background-image:url('${MapView.heroSheet()}')"></span>`;
-// 함께 가는 동료 — 같은 그림을 빛깔만 돌려서 (가칭 — 동료 그림이 생기면 바꿈)
-const allySprite = (id = State.meta.ally || 'hayun') => `<span class="portrait-ic hero-sprite ally-sprite" style="background-image:url('${MapView.heroSheet()}');filter:hue-rotate(${(ALLIES[id] || {}).hue || 150}deg) saturate(1.25)"></span>`;
+// 함께 가는 동료 — 그림이 생기기 전까지 이모지 (data.js 의 ALLIES 의 icon)
+const allySprite = (id = State.meta.ally || 'hayun') => `<span class="ally-sprite">${(ALLIES[id] || {}).icon || '🧑'}</span>`;
 
 // 전투 카드 — 처음 그릴 때. 그다음부터는 paintBattle 이 바 · 숫자 · 줄만 바꿉니다.
 // 위에서부터 상대 체력 · 상대 초상(크게) · 내 초상(작게) · 내 체력 · 기록.
@@ -1318,6 +1318,7 @@ function battleFx(e) {
   } else if (e.who === 'ally') {                          // 함께 가는 동료 — 내 옆에서 한 번 더
     const allyEl = $('btAlly');
     if (e.k === 'hit') { fxLunge(allyEl, -1); fxSprite('hero', 'slash', foeEl, 0.9); fxHit(foeEl, false); fxFloat(foeEl, v, 'ally'); }
+    else if (e.k === 'heal') fxFloat(heroEl, `+${v}`, 'heal');
     else { fxLunge(allyEl, -1); fxFloat(foeEl, '빗나감', 'miss'); }
   } else {
     switch (e.k) {
@@ -1887,7 +1888,7 @@ function mapMarks() {
   const spot = z && npcs.find(n => n.name === 'merchant' && n.zone === z.id);
   if (spot) out.push({ x: spot.x, y: spot.y, icon: '🎒', label: '상인' });
   for (const n of npcs) {
-    if (n.shop === 'ally' && !allyWaiting()) continue;
+    if (!deskHere(n.shop)) continue;
     const sec = n.shop && (DEPT_SECTIONS[n.shop] || CLERK_DESKS[n.shop]);
     if (sec) out.push({ x: n.x, y: n.y, icon: sec.icon, label: n.label || sec.name });
   }
@@ -2635,7 +2636,7 @@ let shopKind = 'merchant';   // 'merchant' 또는 백화점 매장 이름
 let shopSay = '';            // 점원의 한마디 — 창을 열 때 한 번 고릅니다 (사고 나서 다시 그려도 그대로)
 const isDeptShop = () => shopKind !== 'merchant';
 // 지금 연 상점이 아직 그 자리에 있나 (상인이 떠났거나 도시가 아니면 닫습니다)
-function shopHere() { return shopKind === 'assoc' ? !!State.meta.cityOpen : isDeptShop() ? !!State.meta.cityOpen && !!DEPT_SECTIONS[shopKind] : merchantHere(); }
+function shopHere() { return shopKind === 'assoc' ? !!State.meta.cityOpen : shopKind === 'hire' || shopKind === 'gate' ? gatesOpen() : isDeptShop() ? !!State.meta.cityOpen && !!DEPT_SECTIONS[shopKind] : merchantHere(); }
 // 점원은 등록증도 없는 손님을 수상쩍어하지만 묻지 않습니다
 const CLERK_TALK = {
   noLicense: ['「헌터 등록증 먼저 보여 주시겠어요? …없으시면 팔 수가 없어요. 협회는 길 건너 큰 건물이에요.」', '「등록 안 된 분께는 무기를 못 팔아요. 규정이라서요. 협회에서 시험부터 보고 오세요.」'],
@@ -2655,6 +2656,8 @@ function clerkLine(kind) {
     return pick(!any ? MAT_TALK.none : made ? MAT_TALK.again : MAT_TALK.first);
   }
   if (kind === 'assoc') return pick(!hunterGrade() ? ASSOC_TALK.none : canTakeTest() ? ASSOC_TALK.again : ASSOC_TALK.done);
+  if (kind === 'hire') return pick(HIRE_TALK);
+  if (kind === 'gate') return pick(gatesDoneCount() ? GATE_TALK.back : GATE_TALK.idle);
   if (!hunterGrade()) return pick(CLERK_TALK.noLicense);
   const owned = ITEMS.some(i => i.store === kind && owns(i.id));
   return pick(!deptWares(kind).length ? CLERK_TALK.empty : owned ? CLERK_TALK.again : CLERK_TALK.first);
@@ -2681,6 +2684,8 @@ function renderShop() {
   if (!isShopOpen()) return;
   if (!shopHere()) { closeShop(); return; }
   if (shopKind === 'assoc') { renderAssoc(); return; }
+  if (shopKind === 'hire') { renderHire(); return; }
+  if (shopKind === 'gate') { renderGates(); return; }
   if (shopKind === 'mats') { renderMatShop(); return; }
   const dept = isDeptShop();
   // 지갑 — 백화점(도시)은 돈(원), 떠돌이 상인(그 공간)은 골드
@@ -2751,7 +2756,7 @@ function renderShop() {
 // 맨 위는 핵 — 모든 몬스터가 남기는 팔 것 (격마다 한 가지). 가진 격만 한 줄씩, 「모두 판다」 한 번으로 다 팝니다. 만드는 데는 쓰지 않습니다.
 // ---------- 헌터 협회 · 등록 창구 (상점 창을 같이 씀 — shopKind 'assoc') ----------
 // 지금의 나(도시의 Lv.1 그대로)로 F 시험관부터 차례로 싸워, 이긴 데까지가 등급. 회차에 한 번 · 내려가지 않음 (game.js 의 takeHunterTest)
-const CLERK_DESKS = { assoc: { name: '등록 창구', icon: '🧑‍💼' }, ally: { name: '???', icon: '🧍' } };   // 백화점 매장이 아닌 창구 — 지도 위 이름표
+const CLERK_DESKS = { assoc: { name: '등록 창구', icon: '🧑‍💼' }, ally: { name: '???', icon: ALLIES.hayun.icon }, hire: { name: '동료 모집', icon: '👩‍💼' }, gate: { name: '게이트 창구', icon: '🧑‍✈️' } };   // 백화점 매장이 아닌 창구 — 지도 위 이름표
 const ASSOC_TALK = {
   none: ['「신규 등록이세요? 시험은 간단해요. 시험관과 한 번씩 붙어 보시면 돼요. F급부터요.」', '「등록증 없이 게이트 근처를 돌아다니시면 곤란해요. …시험 보시게요?」'],
   again: ['「재심사요? 좋아요. 지난번보다 나아지셨는지 볼까요.」', '「등급은 한 번 받으면 안 내려가요. 부담 없이 보세요.」'],
@@ -2788,6 +2793,80 @@ function renderAssoc() {
     Sound.play(res.grade > res.before ? 'rankUp' : res.grade ? 'equip' : 'retreat');
     render();
   });
+}
+
+// ---------- 헌터 협회 · 동료 모집 · 게이트 창구 (도시 계획 5번 — 제5격 보스 뒤. 상점 창을 같이 씀) ----------
+const HIRE_TALK = ['「동료 찾으세요? 등급에 맞는 분들만 소개해 드려요. 계약금은 한 번이고요.」', '「요즘 혼자 다니는 헌터 드물어요. …혼자서 그만큼 오르신 것도 드물고요.」'];
+const GATE_TALK = {
+  idle: ['「게이트 공략 대행 접수예요. 동료분을 보내 두시면 시간 맞춰 돌아와요.」', '「등급보다 높은 게이트는 접수 못 해 드려요. 규정이에요.」'],
+  back: ['「돌아온 분이 계세요. 전리품 정산해 뒀어요.」']
+};
+const allyName = a => `<b>${a.name}</b> <small>${a.grade}급</small>`;
+function renderHire() {
+  const won = num(State.meta.won);
+  $('shopTitle').textContent = '헌터 협회 · 동료 모집';
+  $('shopGold').innerHTML = `${pxIcon('won')}돈 ${fmtWon(won)}`;
+  const list = hireList();
+  const rows = list.map(a => {
+    const own = allyOwned(a.id), price = hirePrice(a);
+    return `<div class="ally-row${own ? ' own' : ''}">
+      <span class="ally-ic">${a.icon}</span>
+      <div class="ally-body"><div>${allyName(a)}</div><div class="ally-what">${allyWhat(a)}</div></div>
+      ${own ? '<span class="ally-state">동료</span>' : `<button class="btn primary" data-hire="${a.id}" ${won >= price ? '' : 'disabled'}><b>맞는다</b><span>${fmtWon(price)}</span></button>`}
+    </div>`;
+  }).join('');
+  const next = Object.values(ALLIES).find(a => a.hire && allyGradeN(a) === hunterGrade() + 1);
+  $('shopBody').innerHTML = `<div class="shop-say">${CLERK_DESKS.hire.icon} ${shopSay}</div>
+    ${rows || '<p class="hint">아직 소개해 줄 사람이 없다 — 헌터 등록부터.</p>'}
+    <p class="hint">내 등급(${hunterGrade() ? `${gradeName()}급` : '미등록'})까지의 헌터만 와 있다.${next ? ` 재심사로 등급이 오르면 ${next.grade}급 헌터도.` : ''}<br>함께 갈 동료 · 게이트에 보내기는 오른쪽 <b>게이트 창구</b>에서.</p>`;
+  $('shopBody').querySelectorAll('[data-hire]').forEach(b => b.addEventListener('click', () => {
+    if (hireAlly(b.dataset.hire)) Sound.play('rankUp');
+    render();
+  }));
+}
+// 남은 시간 — 「2시간 13분」 · 「40분」 · 「1분 안」
+function timeLeft(ms) {
+  const m = Math.ceil(ms / 60000);
+  return m <= 1 ? '1분 안' : m < 60 ? `${m}분` : `${Math.floor(m / 60)}시간${m % 60 ? ` ${m % 60}분` : ''}`;
+}
+let gateTicker = null;      // 게이트 창이 열려 있는 동안 남은 시간을 다시 그림
+function renderGates() {
+  const now = Date.now(), m = State.meta;
+  $('shopTitle').textContent = '헌터 협회 · 게이트 창구';
+  $('shopGold').innerHTML = `${(m.allies || []).length}명`;
+  const rows = (m.allies || []).map(id => {
+    const a = ALLIES[id], g = gateOf(id);
+    let act;
+    if (g && gateDone(id, now)) act = `<span class="ally-state">${g.gate}급 게이트에서 돌아옴</span><button class="btn primary" data-claim="${id}">받는다</button>`;
+    else if (g) act = `<span class="ally-state">${g.gate}급 게이트 · 남은 ${timeLeft(g.end - now)}</span>`;
+    else if (m.ally === id) act = `<span class="ally-state on">함께 가는 중</span><button class="btn tiny" data-comp="">빼기</button>`;
+    else act = `<button class="btn tiny" data-comp="${id}">함께 간다</button>
+      <span class="gate-btns"><span class="gate-lbl">게이트에 보낸다 →</span>${HUNTER_GRADES.filter((x, i) => i + 1 <= allyGradeN(a)).map(x => {
+        const info = gateInfo(x.id);
+        return `<button class="btn tiny" data-gate="${id}:${x.id}" title="${info.hours}시간 · 제${info.rank}격의 핵 ${info.cores}개 · 강화석 ${fmt(info.stones)}개">${x.id}급 · ${info.hours}시간</button>`;
+      }).join('')}</span>`;
+    return `<div class="ally-row${m.ally === id ? ' own' : ''}">
+      <span class="ally-ic">${a.icon}</span>
+      <div class="ally-body"><div>${allyName(a)}</div><div class="ally-what">${allyWhat(a)}</div><div class="ally-act">${act}</div></div>
+    </div>`;
+  }).join('');
+  const table = HUNTER_GRADES.map(x => { const i = gateInfo(x.id); return `${x.id} ${i.hours}시간 — 제${i.rank}격의 핵 ${i.cores} · 강화석 ${fmt(i.stones)}`; }).join('<br>');
+  $('shopBody').innerHTML = `<div class="shop-say">${CLERK_DESKS.gate.icon} ${shopSay}</div>
+    ${rows || '<p class="hint">아직 동료가 없다 — 왼쪽 <b>동료 모집</b>에서.</p>'}
+    <p class="hint">그 공간에 함께 가는 동료는 한 명 — 함께 가는 동안에는 게이트에 못 간다.<br>게이트는 동료 등급까지 · 게임을 꺼 둬도 시간이 흐른다 · 돌아오면 받을 때까지 기다린다.</p>
+    <details class="gate-table"><summary>게이트마다 걸리는 시간 · 가져오는 것</summary><p class="hint">${table}</p></details>`;
+  const body = $('shopBody');
+  body.querySelectorAll('[data-comp]').forEach(b => b.addEventListener('click', () => { if (setCompanion(b.dataset.comp || null)) Sound.play('equip'); render(); }));
+  body.querySelectorAll('[data-gate]').forEach(b => b.addEventListener('click', () => {
+    const [id, gid] = b.dataset.gate.split(':');
+    if (sendToGate(id, gid)) Sound.play('encounter');
+    render();
+  }));
+  body.querySelectorAll('[data-claim]').forEach(b => b.addEventListener('click', () => { if (claimGate(b.dataset.claim)) Sound.play('drop'); render(); }));
+  if (!gateTicker) gateTicker = setInterval(() => {
+    if (isShopOpen() && shopKind === 'gate') renderShop();
+    else { clearInterval(gateTicker); gateTicker = null; }
+  }, 20000);
 }
 
 function renderMatShop() {
@@ -3356,7 +3435,7 @@ function renderTalk() {
   const line = talkScript[talkIndex], last = talkIndex === talkScript.length - 1, ask = line.ask === 'name';
   $('talk').dataset.who = line.who;
   $('talkWho').textContent = TALK_WHO[line.who]();
-  $('talkFace').innerHTML = line.who === 'guide' ? guideEye('bob') : line.who === 'me' ? heroSprite() : line.who === 'stranger' || line.who === 'ally' ? allySprite() : '';
+  $('talkFace').innerHTML = line.who === 'guide' ? guideEye('bob') : line.who === 'me' ? heroSprite() : line.who === 'stranger' || line.who === 'ally' ? allySprite('hayun') : '';
   $('talkFace').classList.toggle('hidden', line.who === 'nameless');
   $('talkBody').innerHTML = typeof line.text === 'function' ? line.text() : line.text;
   $('talkName').classList.toggle('hidden', !ask);
@@ -3452,6 +3531,10 @@ const ALLY_MEET = [
   { who: 'me', text: '(동료가 생겼다.)' }
 ];
 const GUIDE_NOTES = [
+  { id: 'gates', when: () => gatesOpen(), key: () => 1,
+    text: () => '협회에 창구 둘이 새로 열렸대. 왼쪽은 <b>동료 모집</b>, 오른쪽은 <b>게이트 창구</b> — 동료를 게이트에 보내 두면, 네가 없는 동안에도 벌어 온대.' },
+  { id: 'gateBack', when: () => gatesDoneCount() > 0, key: () => Math.max(...Object.values(State.meta.gates).filter(g => Date.now() >= g.end).map(g => g.end)),
+    text: () => `게이트에 간 동료가 돌아왔어${gatesDoneCount() > 1 ? ` — ${gatesDoneCount()}명` : ''}. 협회 <b>게이트 창구</b>에서 받아.` },
   { id: 'ally', when: () => allyWaiting(), key: () => 1,
     text: () => '협회 로비에 누가 너를 기다리는 것 같아. 아까부터 이쪽을 보고 있던데.' },
   { id: 'armor', when: () => armorOpen(), key: () => 1,

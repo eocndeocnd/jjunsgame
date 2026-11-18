@@ -1316,7 +1316,7 @@ test('헌터 협회 안 — 도시의 협회 문으로 들어가면 1층 로비,
   assert.equal(out.to, 'city.association');
   assert.equal(assoc.props.theme, 'hq');
   const desk = assoc.npcs.filter(n => n.shop);
-  assert.deepEqual(desk.map(n => n.shop), ['assoc', 'ally']);   // ally — 제4격 보스 뒤에만 서 있는 첫 동료
+  assert.deepEqual(desk.map(n => n.shop), ['assoc', 'ally', 'hire', 'gate']);   // ally — 제4격 보스 뒤에만 서 있는 첫 동료 · hire · gate — 제5격 보스 뒤
 });
 
 test('패시브 — 골드로 사면 영원히 · 값은 이번 회차를 시작할 때의 격 · 회차가 끝나면 골드는 사라짐', () => {
@@ -1368,4 +1368,52 @@ test('첫 동료 — 제4격 보스 뒤 협회 로비에서 기다림 · 동료�
   assert.deepEqual(r.join, [true, false, false, 0.3]);
   assert.ok(r.allyHits);
   assert.deepEqual(r.dmg, [true]);
+});
+
+test('동료 여럿 · 게이트 — 제5격 보스 뒤 모집 · 함께 갈 한 명을 고름 · 게이트는 동료 등급까지, 실제 시간이 흐른 뒤 핵 · 강화석', () => {
+  const run = loadGame();
+  const r = run(`
+    currentSlot = 0; State.meta = freshMeta(); State.meta.cityOpen = true; startRun();
+    const beat = n => State.meta.bossesBeaten.push(zoneBoss(ZONES.findIndex(z => z.rank === n)).id);
+    beat(4); joinAlly('hayun');
+    const out = { closed: [gatesOpen(), deskHere('hire'), hireAlly('seojin')] };
+    beat(5); State.meta.hunterGrade = 2;
+    out.list = hireList().map(a => a.id);
+    out.poor = hireAlly('minjae');
+    State.meta.won = 1e12;
+    out.hire = [hireAlly('minjae'), hireAlly('minjae'), hireAlly('jiu'), State.meta.allies.slice(), State.meta.ally];
+    // 함께 가는 동료는 게이트에 못 감 · E급 동료는 D급 게이트에 못 감
+    out.send = [sendToGate('hayun', 'F', 0), sendToGate('minjae', 'D', 0), sendToGate('minjae', 'E', 0), sendToGate('minjae', 'F', 0)];
+    out.comp = [setCompanion('minjae'), setCompanion('hayun'), State.meta.ally];
+    out.stats = [heroStats().ally, heroStats().allyHeal];
+    setCompanion(null); out.alone = [heroStats().ally, heroStats().allyHeal, setCompanion('hayun'), heroStats().ally];
+    const h = 3600e3, c0 = matsOf('core2'), s0 = SLOT_IDS.reduce((t, s) => t + stonesOf(s), 0);
+    out.early = [gateDone('minjae', 2 * h - 1), claimGate('minjae', 2 * h - 1), gatesDoneCount(2 * h)];
+    const got = claimGate('minjae', 50 * h);
+    out.got = [got.cores, matsOf('core2') - c0, SLOT_IDS.reduce((t, s) => t + stonesOf(s), 0) - s0, gateOf('minjae'), claimGate('minjae', 99 * h)];
+    // 막기 · 회복이 싸움에 듦
+    const hero = { ...heroStats(), life: 1000, damage: 1, defense: 0, dex: 50, luck: 0, ally: 0 }, foe = { life: 1e9, damage: 100, defense: 0, dex: 50, luck: 0 };
+    out.guard = expectedTurnDamage(foe, { ...hero, allyGuard: 0.2 }) < expectedTurnDamage(foe, hero);
+    const log = []; simulateBattle({ ...hero, allyHeal: 0.05 }, foe, Math.random, log);
+    out.heal = log.some(e => e.who === 'ally' && e.k === 'heal');
+    // 저장 · 불러오기 — 동료 · 게이트가 남음
+    sendToGate('minjae', 'E', 123);
+    currentSlot = 3; save();
+    State.meta = freshMeta(); load();
+    out.load = [State.meta.allies.length, State.meta.ally, State.meta.gates.minjae && State.meta.gates.minjae.end === 123 + 2 * h];
+    return out;
+  `);
+  assert.deepEqual(r.closed, [false, false, false]);
+  assert.deepEqual(r.list, ['seojin', 'minjae']);
+  assert.equal(r.poor, false);
+  assert.deepEqual(r.hire, [true, false, false, ['hayun', 'minjae'], 'hayun']);
+  assert.deepEqual(r.send, [false, false, true, false]);
+  assert.deepEqual(r.comp, [false, true, 'hayun']);
+  assert.deepEqual(r.stats, [0.3, 0]);
+  assert.deepEqual(r.alone, [0, 0, true, 0.3]);
+  assert.deepEqual(r.early, [false, null, 1]);
+  assert.deepEqual(r.got, [8, 8, 40, null, null]);
+  assert.ok(r.guard);
+  assert.ok(r.heal);
+  assert.deepEqual(r.load, [2, 'hayun', true]);
 });

@@ -74,7 +74,7 @@ function simEnhance() {
 function simPowerVs(foe) {
   const h = heroStats();
   const kill = foe.life / Math.max(1e-9, expectedTurnDamage(h, foe));
-  const die = h.life / Math.max(1e-9, expectedTurnDamage(foe, h));
+  const die = h.life / Math.max(1e-9, expectedTurnDamage(foe, h) - h.life * (h.allyHeal || 0));   // 동료의 회복만큼 덜 깎임
   return die / kill;
 }
 
@@ -121,6 +121,21 @@ function simShop() {
       if (worn && worn.rank.n > it.rank.n) continue;
       if (buyDept(it.id)) bought++;
     }
+  }
+  // 동료 (도시 계획 5번) — 살 것을 다 산 뒤 남은 돈으로 높은 등급부터 맞고, 가장 깊이 닿은 지역의 보스에 가장 센 동료를 데려감.
+  // 게이트는 실제 시간이 걸려서 시뮬은 보내지 않습니다.
+  if (typeof gatesOpen === 'function' && gatesOpen()) {
+    for (const a of hireList().sort((x, y) => allyGradeN(y) - allyGradeN(x))) hireAlly(a.id);
+  }
+  if (typeof setCompanion === 'function' && (State.meta.allies || []).length > 1) {
+    const target = zoneBoss(Math.min(ZONES.length, State.meta.bestZone) - 1);
+    let best = State.meta.ally, bestP = -1;
+    for (const id of State.meta.allies) {
+      if (!setCompanion(id)) continue;
+      const p = simPowerVs(target);
+      if (p > bestP) { bestP = p; best = id; }
+    }
+    setCompanion(best);
   }
   return bought;
 }

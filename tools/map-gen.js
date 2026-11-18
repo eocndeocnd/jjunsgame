@@ -1437,10 +1437,13 @@ const ASSOC = {
   wall: [{ x: 1, w: 5, kind: 'board' }, { x: 6, w: 5, kind: 'crest' }, { x: 11, w: 5, kind: 'board' }],
   props: [
     { kind: 'counter', x: 5, y: 0, w: 3 }, { kind: 'counter', x: 9, y: 0, w: 3 },          // 등록 창구 계산대 — 사이 (8, 0) 에 직원
+    { kind: 'counter', x: 1, y: 0, w: 1 }, { kind: 'counter', x: 3, y: 0, w: 1 },          // 동료 모집 — 사이 (2, 0)
+    { kind: 'counter', x: 13, y: 0, w: 1 }, { kind: 'counter', x: 15, y: 0, w: 1 },        // 게이트 창구 — 사이 (14, 0)
     { kind: 'plant', x: 0, y: 0, w: 1 }, { kind: 'plant', x: 16, y: 0, w: 1 }, { kind: 'plant', x: 0, y: 9, w: 1 }, { kind: 'plant', x: 16, y: 9, w: 1 },
     { kind: 'bench', x: 1, y: 4, w: 3 }, { kind: 'bench', x: 13, y: 4, w: 3 }, { kind: 'bench', x: 1, y: 7, w: 3 }, { kind: 'bench', x: 13, y: 7, w: 3 }
   ],
-  clerks: [{ x: 8, y: 0, shop: 'assoc', label: '등록 창구' }, { x: 12, y: 3, shop: 'ally', label: '???' }],   // ??? — 제4격 보스 뒤에만 서 있는 사람 (첫 동료)
+  clerks: [{ x: 8, y: 0, shop: 'assoc', label: '등록 창구' }, { x: 12, y: 3, shop: 'ally', label: '???' },   // ??? — 제4격 보스 뒤에만 서 있는 사람 (첫 동료)
+           { x: 2, y: 0, shop: 'hire', label: '동료 모집' }, { x: 14, y: 0, shop: 'gate', label: '게이트 창구' }],   // 제5격 보스 뒤에 열림 (game.js 의 deskHere)
   signs: []
 };
 const assocInterior = () => storeInterior(ASSOC);
