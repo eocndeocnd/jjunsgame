@@ -3671,7 +3671,7 @@ const GUIDE_NOTES = [
   { id: 'armor', when: () => armorOpen(), key: () => 1,
     text: () => '백화점 <b>2층</b>이 열렸대. 1층 에스컬레이터 위 — <b>방어구 매장</b>. 투구 · 갑옷 · 장갑 · 신발이래.' },
   { id: 'dept', when: () => deptOpenRank() > 1, key: () => deptOpenRank(),
-    text: () => `백화점에 새 물건이 들어왔대. <b>제${deptOpenRank()}격</b> 것. 보스를 꺾었다는 소문이 벌써 돌았나 봐.` },
+    text: () => `시간이 좀 지나서 그런지, 백화점에 새 물건이 들어왔대. <b>제${deptOpenRank()}격</b> 것.` },   // 백화점은 내가 몇 격을 꺾었는지 모름 — 그냥 시간이 지나 물건이 바뀐 것 (사용자 결정 2026-11-19)
   { id: 'regrade', when: () => hunterGrade() > 0 && hunterGrade() < Math.min(HUNTER_GRADES.length, deptOpenRank() - 1) && canTakeTest(), key: () => deptOpenRank() - 1,
     text: () => `제${deptOpenRank() - 1}격 보스까지 꺾었는데 아직 <b>${gradeName()}급</b>이야? 협회에서 <b>재심사</b>를 받아 봐.` }
 ];
