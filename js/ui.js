@@ -1846,6 +1846,9 @@ function onMapEvents(evs) {
       Sound.play('encounter');
       openShop();
       changed = true;
+    } else if (e.type === 'shop' && e.npc.shop === 'bed') {   // 우리 집 침대 — 혼잣말 한마디 (분위기만)
+      if (!isTalkOpen()) playTalk([{ who: 'me', text: homeLine() }], null, { end: '일어난다' });
+      changed = true;
     } else if (e.type === 'shop' && e.npc.shop === 'ally') {
       if (allyWaiting() && !isTalkOpen()) playTalk(ALLY_MEET, () => { if (joinAlly('hayun')) Sound.play('rankUp'); render(); }, { end: '같이 가자' });
       changed = true;
@@ -2779,7 +2782,7 @@ function renderShop() {
 // 맨 위는 핵 — 모든 몬스터가 남기는 팔 것 (격마다 한 가지). 가진 격만 한 줄씩, 「모두 판다」 한 번으로 다 팝니다. 만드는 데는 쓰지 않습니다.
 // ---------- 헌터 협회 · 등록 창구 (상점 창을 같이 씀 — shopKind 'assoc') ----------
 // 지금의 나(도시의 Lv.1 그대로)로 F 시험관부터 차례로 싸워, 이긴 데까지가 등급. 회차에 한 번 · 내려가지 않음 (game.js 의 takeHunterTest)
-const CLERK_DESKS = { assoc: { name: '등록 창구', icon: '🧑‍💼' }, ally: { name: '???', icon: ALLIES.hayun.icon }, hire: { name: '동료 모집', icon: '👩‍💼' }, gate: { name: '게이트 창구', icon: '🧑‍✈️' }, guild: { name: '길드 장부', icon: '📒' } };   // 백화점 매장이 아닌 창구 — 지도 위 이름표
+const CLERK_DESKS = { assoc: { name: '등록 창구', icon: '🧑‍💼' }, ally: { name: '???', icon: ALLIES.hayun.icon }, hire: { name: '동료 모집', icon: '👩‍💼' }, gate: { name: '게이트 창구', icon: '🧑‍✈️' }, guild: { name: '길드 장부', icon: '📒' }, bed: { name: '침대', icon: '💤' } };   // 백화점 매장이 아닌 창구 — 지도 위 이름표
 const ASSOC_TALK = {
   none: ['「신규 등록이세요? 시험은 간단해요. 시험관과 한 번씩 붙어 보시면 돼요. F급부터요.」', '「등록증 없이 게이트 근처를 돌아다니시면 곤란해요. …시험 보시게요?」'],
   again: ['「재심사요? 좋아요. 지난번보다 나아지셨는지 볼까요.」', '「등급은 한 번 받으면 안 내려가요. 부담 없이 보세요.」'],
@@ -2908,6 +2911,21 @@ const GUILD_NAME_TALK = [
   { who: 'guide', ask: 'guild', text: '간판에 걸 이름은 있어야지. 뭐라고 할래?' },
   { who: 'me', text: () => `(오늘부터 「${(State.meta.guild && State.meta.guild.name) || '내 길드'}」.)` }
 ];
+// 우리 집 침대에 앉으면 — 그때그때의 나에 맞는 혼잣말 하나 (사용자 결정 2026-11-19 — 집은 분위기만). 대사는 제안
+function homeLine() {
+  const m = State.meta, g = hunterGrade(), pick = a => a[Math.floor(Math.random() * a.length)];
+  const lines = [
+    '(…천장이다. 우리 집 천장. 여기서 눈을 뜨는 것도 이제 익숙하다.)',
+    '(침대가 삐걱거린다. 이사는… 나중에 생각하자.)',
+    '(냉장고엔 물 한 병. 그 공간에서는 배도 안 고프다. 이상한 일이다.)',
+    '(창밖으로 옛 동네 지붕들. 저 너머엔 빛나는 도시가 있다.)'
+  ];
+  if (g) lines.push(`(${gradeName()}급 헌터라니. 얼마 전까지 등록증도 없었는데.)`);
+  if ((m.allies || []).length) lines.push(`(동료가 ${m.allies.length}명. 이 방에 다 모이면 앉을 데도 없겠다.)`);
+  if (m.guild) lines.push(`(「${m.guild.name || '내 길드'}」. 길드는 커지는데 집은 그대로다.)`);
+  if (num(m.won) > 1e8) lines.push('(통장에 0이 너무 많다. …그래도 이 방이 편하다.)');
+  return pick(lines);
+}
 // 4단계 — 길드가 미래 도시 가운데 빈터의 새 건물로 (사용자 결정 2026-11-19). 옛 동네 건물은 「옛 사무실」로 남음
 const GUILD_MOVE_TALK = [
   { who: 'guide', text: '…이제 옛 동네엔 다 안 들어가겠다. 도시 한가운데 가림막 친 빈터 있지? 거기에 새로 지었대.' },

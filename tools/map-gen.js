@@ -1178,7 +1178,7 @@ const OLDTOWN = {
   // 옥상은 대부분 정사각형(가로 4칸 · 깊이 7칸) — 직사각형 옥상은 위 줄 오른쪽 끝 한 채만. 생김새는 종류마다 매기는 번호 v 로 모두 다르게 (js/mapart.js 의 oldPal)
   buildings: [
     // 위 줄 — 문은 가운데 골목길(y 7 ~ 9)을 봄
-    { kind: 'villa', roof: 'tank', x: 2, y: 0, w: 4, h: 7, door: { x: 3, w: 1, name: 'home', label: '집' } },
+    { kind: 'villa', roof: 'tank', x: 2, y: 0, w: 4, h: 7, door: { x: 3, w: 1, name: 'home', label: '집', to: 'home.out' } },   // 안은 HOME (원룸)
     { kind: 'back', annex: true, x: 6, y: 0, w: 2, h: 2 },                                                              // 집 바로 옆 틈 — 이상한 게이트가 이 벽 앞에 섬 (사용자 결정)
     { kind: 'shabby', x: 8, y: 0, w: 4, h: 7, door: { x: 9, w: 2, name: 'myguild', label: '빈 건물', to: 'guild.out', unlock: 'guild' } },   // 사들여 내 길드로 키울 곳 (도시 계획 6번 — 1~3단계. 4단계부터는 미래 도시로 옮기고 「옛 사무실」 — 그림은 mapart)
     { kind: 'store', x: 13, y: 0, w: 4, h: 7 },
@@ -1200,12 +1200,12 @@ const OLDTOWN = {
   // 자잘한 것 (사용자 결정 2026-11-18) — 막힌 칸 · 그림은 js/mapart.js 의 clutterSprite. 길을 막아 갇히는 칸이 생기면 뽑을 때 멈춤
   //   car 불법주차한 낡은 차(가로 w2 · 세로 h2 — tone 빛깔) · cone 라바콘 · trash 종량제 봉투 · planter 스티로폼 화분 · scooter 오토바이
   clutter: [
-    { kind: 'car', x: 14, y: 9, w: 2, h: 1, tone: 0 }, { kind: 'cone', x: 16, y: 9 },
+    { kind: 'car', x: 14, y: 8, w: 2, h: 1, tone: 0 }, { kind: 'cone', x: 16, y: 8 },   // 골목 가운데 줄 — 아래 줄은 아래 건물의 옥상 밑 (over)
     { kind: 'car', x: 17, y: 12, w: 1, h: 2, tone: 3 },
     { kind: 'cone', x: 12, y: 0 }, { kind: 'cone', x: 6, y: 10 },
     { kind: 'trash', x: 18, y: 5 }, { kind: 'trash', x: 0, y: 16 },
     { kind: 'planter', x: 1, y: 6 }, { kind: 'planter', x: 18, y: 16 },
-    { kind: 'scooter', x: 20, y: 9, tone: 1 }
+    { kind: 'scooter', x: 20, y: 8, tone: 1 }
   ],
   trees: [[11, 16]],
   pylons: [],
@@ -1329,6 +1329,23 @@ function townMap(C, name) {
     }
     for (let y = 0; y < C.h; y++) for (let x = 0; x < C.w; x++) if (open(at(x, y)) && !seen[at(x, y)]) throw new Error(`${name} — (${x}, ${y}) 에 걸어서 못 감`);
   }
+  // 건물을 당겨 길을 좁힘 (사용자 결정 2026-11-19) — 뒤(북쪽) 두 줄이 걷는 맨땅인 건물은 옥상을 한 칸 그 위로 늘림 (over).
+  // 그 칸은 그대로 걸을 수 있고, 그림은 나보다 위에 그려 지나갈 때만 반투명 (mapart 의 drawOver). 벽면도 한 칸 높여(f + 1) 옥상은 정사각형 그대로
+  const busy = new Set();
+  for (const p of ports) for (let j = 0; j < (p.h || 1); j++) for (let i = 0; i < p.w; i++) busy.add((p.y + j) * W + p.x + i);
+  for (const [x, y] of spots) busy.add(at(x, y));
+  C.buildings.forEach((b, i) => {
+    if (b.annex || b.roofOnly || b.overLot || b.noOver) return;
+    let ok = true;
+    for (let x = b.x; x < b.x + b.w && ok; x++) {                                  // 바로 뒤 줄은 빈 맨땅, 그 뒤 줄은 건물만 아니면 (길이 한 줄은 보이게)
+      const k = at(x, b.y - 1), k2 = at(x, b.y - 2);
+      if (!inWalk(x, b.y - 2) || tiles[k] !== FLOOR || owner[k] >= 0 || busy.has(k) || owner[k2] >= 0) ok = false;
+    }
+    if (!ok) return;
+    const B = blds[i];
+    B.y -= 1; B.h += 1; B.over = 1;
+    if (B.f !== undefined) B.f += 1;
+  });
   // 이상한 게이트 — 나에게만 보임 (그림은 mapview 의 rift). 들어가면 지하수로 첫 공간의 같은 게이트 앞
   if (C.gate) ports.push({ name: 'gate', x: C.gate[0] + PD.l, y: C.gate[1] + PD.t, w: 2, h: 1, to: 'sewer.city', rift: true });
   // 지도 가장자리 통로 — 그리지 않고 이름표만 (mapview 의 edge). 넘어가면 그 지도의 같은 이름 통로 안쪽(arrive 쪽)에 섬
@@ -1477,6 +1494,21 @@ const GUILD = {
   signs: []
 };
 const guildInterior = () => storeInterior(GUILD);
+// ---------- 우리 집 — 빨간 벽돌 빌라의 원룸 (사용자 결정 2026-11-19 — 분위기만, 이사는 나중에) ----------
+// 위 벽에 창 둘(밖으로 옛 동네 지붕 · 하늘). 왼쪽 위 침대 · 오른쪽 위 책상 · 오른쪽 냉장고. 침대 곁에 닿으면 혼잣말 (ui 의 HOME_LINES)
+const HOME = {
+  title: '우리 집', w: 9, h: 6, to: 'oldtown.home', theme: 'home',
+  wall: [{ x: 0, w: 3, kind: 'window' }, { x: 6, w: 3, kind: 'window' }],
+  props: [
+    { kind: 'bed', x: 0, y: 0, w: 2, h: 3 },
+    { kind: 'desk', x: 7, y: 0, w: 2 },
+    { kind: 'fridge', x: 8, y: 3, w: 1, h: 2 },
+    { kind: 'plant', x: 0, y: 5, w: 1 }
+  ],
+  clerks: [{ x: 2, y: 1, shop: 'bed', label: '침대' }],
+  signs: []
+};
+const homeInterior = () => storeInterior(HOME);
 // 4단계부터 — 미래 도시 가운데 빈터의 새 건물 안. 더 넓게, 기둥 · 의자를 더 (자리는 그대로 다섯)
 const GUILD2 = {
   title: '내 길드', w: 21, h: 12, to: 'city.myguild2', theme: 'guild',
@@ -1497,11 +1529,11 @@ const guild2Interior = () => storeInterior(GUILD2);
 
 // 뽑을 지도 전부 — { 파일 이름: 만드는 함수 }
 function allMaps(data) {
-  const out = { sewer: sewer(data), overworld: overworld(data), hub: hub(data), oldtown: oldtown(), city: city(), dept: deptInterior(), dept2: dept2Interior(), assoc: assocInterior(), guild: guildInterior(), guild2: guild2Interior() };
+  const out = { sewer: sewer(data), overworld: overworld(data), hub: hub(data), oldtown: oldtown(), city: city(), dept: deptInterior(), dept2: dept2Interior(), assoc: assocInterior(), guild: guildInterior(), guild2: guild2Interior(), home: homeInterior() };
   for (const s of SECRET_ROOMS) out[s.id] = secretRoom(data, s);
   for (const b of BUILDINGS) out[b.id] = buildingInterior(data, b);
   REALMS.forEach((r, i) => { out[r.name] = realm(data, r, i); });
   return out;
 }
 
-module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, looksPng, encodePng, generate, sewer, overworld, hub, oldtown, city, deptInterior, dept2Interior, assocInterior, guildInterior, guild2Interior, storeInterior, OLDTOWN, CITY, DEPT, DEPT2, ASSOC, GUILD, GUILD2, CITY_BIO, secretRoom, buildingInterior, allMaps, layoutFromPlan, HUB_DOORS, REALMS, SEWER, SECRET_ROOMS, BUILDINGS, BUILD, DOORWAY, CARPET, RUIN };
+module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, looksPng, encodePng, generate, sewer, overworld, hub, oldtown, city, deptInterior, dept2Interior, assocInterior, guildInterior, guild2Interior, homeInterior, storeInterior, OLDTOWN, CITY, DEPT, DEPT2, ASSOC, GUILD, GUILD2, HOME, CITY_BIO, secretRoom, buildingInterior, allMaps, layoutFromPlan, HUB_DOORS, REALMS, SEWER, SECRET_ROOMS, BUILDINGS, BUILD, DOORWAY, CARPET, RUIN };
