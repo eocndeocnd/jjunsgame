@@ -172,7 +172,7 @@ If a name describes a different kind of object than its type, draw the object fr
 | 8 | 가짜 금화 | 목걸이 | 미믹 | `assets/items/mimic_1.png` ✅ |
 | 9 | 거미줄 팔찌 | 팔찌 | 자이언트 스파이더 | `assets/items/cavespider_2.png` ✅ |
 
-## 시트 1-D — 투구 · 갑옷 · 장갑 · 신발 (4개)
+## 시트 1-D — 투구 · 갑옷 · 장갑 · 신발 (4개) ✅ 다 자름
 
 저장할 이름: `design/images/sheets/rank01-D.png`
 

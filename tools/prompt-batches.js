@@ -132,8 +132,9 @@ function chunk(list) {
 }
 
 // manifest — image-manifest.json 을 읽은 것. exists(path) — 그 그림 파일이 이미 있나 (진행 표시용).
-// prev — 예전 sheets.json. 칸 그림을 다 잘라 둔 시트는 **얼려서** 그대로 둡니다 (칸 → 장비 대응이 밀리지 않게 — 장비가 늘어도
-//   이미 만든 시트를 다시 자를 수 있게). 그 격에 새로 생긴 장비는 다음 글자의 새 시트로 (예: 1~3격에 방어구가 생겨 rank01-D).
+// prev — 예전 sheets.json. **시트 그림을 이미 만들었거나(시트 파일이 있음) 칸 그림을 다 잘라 둔 시트는 얼려서** 그대로 둡니다
+//   (칸 → 장비 대응이 밀리지 않게 — 장비가 늘어도 이미 만든 시트를 그대로 자를 수 있게).
+//   남은 장비는 다음 글자의 새 시트로 — 가게 물건(헌터백화점)은 따로 모아서 (예: 1~3격의 방어구 rank01-D, 4격은 rank04-E).
 // → { files: { 'README.md': 글, 'rank01.md': 글, …, 'sheets.json': 글 }, sheets: 장 수, items: 개수 }
 function build(manifest, exists = () => false, prev = []) {
   const files = {}, sheetIndex = [], rows = [];
@@ -142,13 +143,14 @@ function build(manifest, exists = () => false, prev = []) {
     const items = manifest.items.filter(i => i.rank === rank)
       .sort((a, b) => SLOT_ORDER.indexOf(a.slot) - SLOT_ORDER.indexOf(b.slot) || (a.id < b.id ? -1 : 1));
     const byId = new Map(items.map(i => [i.id, i]));
-    const frozen = prev.filter(sh => sh.rank === rank && sh.cells.length && sh.cells.every(c => byId.has(c.id) && exists(c.file)))
+    const frozen = prev.filter(sh => sh.rank === rank && sh.cells.length && sh.cells.every(c => byId.has(c.id)) && (exists(sh.sheet) || sh.cells.every(c => exists(c.file))))
       .map(sh => ({ file: sh.sheet, list: sh.cells.map(c => byId.get(c.id)), frozen: true }));
     const taken = new Set(frozen.flatMap(sh => sh.list.map(i => i.id)));
     const rest = items.filter(i => !taken.has(i.id));
     const used = new Set(frozen.map(sh => sh.file));
     let next = 0;
-    const fresh = (rest.length ? chunk(rest) : []).map(list => {
+    const shop = rest.filter(i => i.from_monster === '헌터백화점'), other = rest.filter(i => i.from_monster !== '헌터백화점');
+    const fresh = [...(other.length ? chunk(other) : []), ...(shop.length ? chunk(shop) : [])].map(list => {
       let file;
       do file = `design/images/sheets/rank${pad(rank)}-${String.fromCharCode(65 + next++)}.png`; while (used.has(file));
       return { file, list, frozen: false };

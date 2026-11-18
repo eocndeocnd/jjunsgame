@@ -11,6 +11,7 @@
 //  · 물건만 잘라 256×256 가운데에 (여백 약 10%). 줄일 때는 넓이 평균 — 도트가 뭉개지지 않게 정수 배 근처면 그 배로
 //  · 게임에 넣을 때는 128×128 로 줄이고 색을 256가지 이하로 모아 팔레트 PNG 로 (한 장 약 8KB — writeIcon, 사용자 결정 2026-11-18)
 //    node tools/cut-sheets.js --shrink   이미 있는 큰 그림(예전 256 RGBA)을 한 번에 줄임
+//    node tools/cut-sheets.js --only rank01-D,rank04-A   고른 시트만 자름
 //  · 시트는 PNG(8비트, 인터레이스 없음). webp 는 Windows 의 그림 변환기로 바꿔 읽습니다. 패키지 없이 Node 만으로 돕니다.
 //  · 제미나이의 반짝이 표시(오른쪽 아래)는 덮인 정도(tools/gemini-mark.json)로 거꾸로 풀어 걷어냅니다 — 장비 위에 겹쳐도 원래 색으로
 // ============================================================
@@ -351,11 +352,14 @@ if (require.main === module) {
     process.exit(0);
   }
   const index = JSON.parse(fs.readFileSync(path.join(ROOT, 'design/images/prompts/sheets.json'), 'utf8'));
+  // --only rank01-D,rank04-A — 고른 시트만 (폴더에 예전 시트가 남아 있을 때)
+  const only = args.includes('--only') ? args[args.indexOf('--only') + 1].split(',').map(s => s.trim()) : null;
   const made = [];
   let cut = 0, skipped = 0, sheets = 0;
   for (const sh of index) {
     const file = path.join(ROOT, sh.sheet);
     if (!fs.existsSync(file)) continue;
+    if (only && !only.includes(path.basename(sh.sheet, '.png'))) continue;
     sheets++;
     const img = readSheet(file), [cols, rows] = sh.grid;
     const mark = removeMark(img);

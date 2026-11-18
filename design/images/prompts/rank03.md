@@ -171,7 +171,7 @@ If a name describes a different kind of object than its type, draw the object fr
 | 8 | 무너진 옥새 | 목걸이 | 몰락한 왕 | `assets/items/fallenking_2.png` ✅ |
 | 9 | 여왕의 팔찌 | 팔찌 | 하피 퀸 | `assets/items/harpyqueen_2.png` ✅ |
 
-## 시트 3-D — 투구 · 갑옷 · 장갑 · 신발 (4개)
+## 시트 3-D — 투구 · 갑옷 · 장갑 · 신발 (4개) ✅ 다 자름
 
 저장할 이름: `design/images/sheets/rank03-D.png`
 

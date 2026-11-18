@@ -173,7 +173,7 @@ If a name describes a different kind of object than its type, draw the object fr
 | 8 | 석화의 팔찌 | 팔찌 | 바실리스크 | `assets/items/basilisk_2.png` ✅ |
 | 9 | 돌 팔찌 | 팔찌 | 가고일 | `assets/items/gargoyle_2.png` ✅ |
 
-## 시트 2-D — 투구 · 갑옷 · 장갑 · 신발 (4개)
+## 시트 2-D — 투구 · 갑옷 · 장갑 · 신발 (4개) ✅ 다 자름
 
 저장할 이름: `design/images/sheets/rank02-D.png`
 

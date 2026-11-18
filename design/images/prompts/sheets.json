@@ -626,11 +626,6 @@
     "id": "ware_flashlight",
     "name": "아직 켜지는 손전등",
     "file": "assets/items/ware_flashlight.png"
-   },
-   {
-    "id": "cyclops_0",
-    "name": "외눈 투구",
-    "file": "assets/items/cyclops_0.png"
    }
   ]
  },
@@ -643,9 +638,9 @@
   ],
   "cells": [
    {
-    "id": "dept_helm4",
-    "name": "열 차단 헬멧",
-    "file": "assets/items/dept_helm4.png"
+    "id": "cyclops_0",
+    "name": "외눈 투구",
+    "file": "assets/items/cyclops_0.png"
    },
    {
     "id": "giantking_1",
@@ -656,11 +651,6 @@
     "id": "ware_hardhat",
     "name": "이름이 번진 안전모",
     "file": "assets/items/ware_hardhat.png"
-   },
-   {
-    "id": "dept_vest4",
-    "name": "냉각 슈트",
-    "file": "assets/items/dept_vest4.png"
    },
    {
     "id": "goliath2_1",
@@ -703,11 +693,6 @@
     "file": "assets/items/cyclops_1.png"
    },
    {
-    "id": "dept_glove4",
-    "name": "전도 장갑",
-    "file": "assets/items/dept_glove4.png"
-   },
-   {
     "id": "firegiant_0",
     "name": "용암을 주무르는 손",
     "file": "assets/items/firegiant_0.png"
@@ -742,11 +727,6 @@
    3
   ],
   "cells": [
-   {
-    "id": "dept_boots4",
-    "name": "자세 제어 부츠",
-    "file": "assets/items/dept_boots4.png"
-   },
    {
     "id": "ware_boots",
     "name": "끈이 해진 등산화",
@@ -785,6 +765,36 @@
   ]
  },
  {
+  "sheet": "design/images/sheets/rank04-E.png",
+  "rank": 4,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "dept_helm4",
+    "name": "열 차단 헬멧",
+    "file": "assets/items/dept_helm4.png"
+   },
+   {
+    "id": "dept_vest4",
+    "name": "냉각 슈트",
+    "file": "assets/items/dept_vest4.png"
+   },
+   {
+    "id": "dept_glove4",
+    "name": "전도 장갑",
+    "file": "assets/items/dept_glove4.png"
+   },
+   {
+    "id": "dept_boots4",
+    "name": "자세 제어 부츠",
+    "file": "assets/items/dept_boots4.png"
+   }
+  ]
+ },
+ {
   "sheet": "design/images/sheets/rank05-A.png",
   "rank": 5,
   "grid": [
@@ -796,11 +806,6 @@
     "id": "deathknight_0",
     "name": "서약의 대검",
     "file": "assets/items/deathknight_0.png"
-   },
-   {
-    "id": "dept_lance",
-    "name": "전도 합금 창",
-    "file": "assets/items/dept_lance.png"
    },
    {
     "id": "lichking_0",
@@ -823,11 +828,6 @@
     "file": "assets/items/blackhorse_0.png"
    },
    {
-    "id": "dept_field",
-    "name": "휴대용 역장기",
-    "file": "assets/items/dept_field.png"
-   },
-   {
     "id": "ware_sign",
     "name": "방패 대신 든 표지판",
     "file": "assets/items/ware_sign.png"
@@ -836,6 +836,16 @@
     "id": "banshee_0",
     "name": "통곡의 두건",
     "file": "assets/items/banshee_0.png"
+   },
+   {
+    "id": "lich_2",
+    "name": "학자의 관",
+    "file": "assets/items/lich_2.png"
+   },
+   {
+    "id": "whitehorse_0",
+    "name": "승리의 면류관",
+    "file": "assets/items/whitehorse_0.png"
    }
   ]
  },
@@ -848,21 +858,6 @@
   ],
   "cells": [
    {
-    "id": "dept_helm5",
-    "name": "센서 일체형 헬멧",
-    "file": "assets/items/dept_helm5.png"
-   },
-   {
-    "id": "lich_2",
-    "name": "학자의 관",
-    "file": "assets/items/lich_2.png"
-   },
-   {
-    "id": "whitehorse_0",
-    "name": "승리의 면류관",
-    "file": "assets/items/whitehorse_0.png"
-   },
-   {
     "id": "bonedragon_0",
     "name": "뼈 갑주",
     "file": "assets/items/bonedragon_0.png"
@@ -871,11 +866,6 @@
     "id": "deathknight_1",
     "name": "사자의 판금",
     "file": "assets/items/deathknight_1.png"
-   },
-   {
-    "id": "dept_vest5",
-    "name": "핵 섬유 갑옷",
-    "file": "assets/items/dept_vest5.png"
    },
    {
     "id": "lichking_1",
@@ -891,21 +881,6 @@
     "id": "incubus_0",
     "name": "악몽의 어깨",
     "file": "assets/items/incubus_0.png"
-   }
-  ]
- },
- {
-  "sheet": "design/images/sheets/rank05-C.png",
-  "rank": 5,
-  "grid": [
-   3,
-   3
-  ],
-  "cells": [
-   {
-    "id": "dept_glove5",
-    "name": "외골격 장갑",
-    "file": "assets/items/dept_glove5.png"
    },
    {
     "id": "ghoul_0",
@@ -926,32 +901,27 @@
     "id": "balrog_1",
     "name": "용암 정강이",
     "file": "assets/items/balrog_1.png"
-   },
-   {
-    "id": "bonedragon_1",
-    "name": "해골 발톱",
-    "file": "assets/items/bonedragon_1.png"
-   },
-   {
-    "id": "dept_boots5",
-    "name": "추진 보조 부츠",
-    "file": "assets/items/dept_boots5.png"
-   },
-   {
-    "id": "palehorse_0",
-    "name": "죽음이 걸친 창백한 망토",
-    "file": "assets/items/palehorse_0.png"
    }
   ]
  },
  {
-  "sheet": "design/images/sheets/rank05-D.png",
+  "sheet": "design/images/sheets/rank05-C.png",
   "rank": 5,
   "grid": [
    3,
    3
   ],
   "cells": [
+   {
+    "id": "bonedragon_1",
+    "name": "해골 발톱",
+    "file": "assets/items/bonedragon_1.png"
+   },
+   {
+    "id": "palehorse_0",
+    "name": "죽음이 걸친 창백한 망토",
+    "file": "assets/items/palehorse_0.png"
+   },
    {
     "id": "vampire_1",
     "name": "귀족의 망토",
@@ -986,22 +956,22 @@
     "id": "lich_1",
     "name": "성물함",
     "file": "assets/items/lich_1.png"
-   },
-   {
-    "id": "succubus_1",
-    "name": "훔친 꿈",
-    "file": "assets/items/succubus_1.png"
    }
   ]
  },
  {
-  "sheet": "design/images/sheets/rank05-E.png",
+  "sheet": "design/images/sheets/rank05-D.png",
   "rank": 5,
   "grid": [
    3,
    3
   ],
   "cells": [
+   {
+    "id": "succubus_1",
+    "name": "훔친 꿈",
+    "file": "assets/items/succubus_1.png"
+   },
    {
     "id": "ware_tag",
     "name": "번호만 남은 인식표",
@@ -1045,6 +1015,46 @@
   ]
  },
  {
+  "sheet": "design/images/sheets/rank05-E.png",
+  "rank": 5,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "dept_lance",
+    "name": "전도 합금 창",
+    "file": "assets/items/dept_lance.png"
+   },
+   {
+    "id": "dept_field",
+    "name": "휴대용 역장기",
+    "file": "assets/items/dept_field.png"
+   },
+   {
+    "id": "dept_helm5",
+    "name": "센서 일체형 헬멧",
+    "file": "assets/items/dept_helm5.png"
+   },
+   {
+    "id": "dept_vest5",
+    "name": "핵 섬유 갑옷",
+    "file": "assets/items/dept_vest5.png"
+   },
+   {
+    "id": "dept_glove5",
+    "name": "외골격 장갑",
+    "file": "assets/items/dept_glove5.png"
+   },
+   {
+    "id": "dept_boots5",
+    "name": "추진 보조 부츠",
+    "file": "assets/items/dept_boots5.png"
+   }
+  ]
+ },
+ {
   "sheet": "design/images/sheets/rank06-A.png",
   "rank": 6,
   "grid": [
@@ -1063,11 +1073,6 @@
     "file": "assets/items/demonking_0.png"
    },
    {
-    "id": "dept_plasma",
-    "name": "플라즈마 절단검",
-    "file": "assets/items/dept_plasma.png"
-   },
-   {
     "id": "observer_0",
     "name": "격을 삼키는 검",
     "file": "assets/items/observer_0.png"
@@ -1076,11 +1081,6 @@
     "id": "ware_bat",
     "name": "손잡이만 감긴 쇠파이프",
     "file": "assets/items/ware_bat.png"
-   },
-   {
-    "id": "dept_barrier",
-    "name": "이동식 방벽",
-    "file": "assets/items/dept_barrier.png"
    },
    {
     "id": "sinsloth_1",
@@ -1096,6 +1096,16 @@
     "id": "demongeneral_2",
     "name": "마장의 투구",
     "file": "assets/items/demongeneral_2.png"
+   },
+   {
+    "id": "sinpride_0",
+    "name": "오만의 관",
+    "file": "assets/items/sinpride_0.png"
+   },
+   {
+    "id": "demonking_1",
+    "name": "마왕의 갑주",
+    "file": "assets/items/demonking_1.png"
    }
   ]
  },
@@ -1107,26 +1117,6 @@
    3
   ],
   "cells": [
-   {
-    "id": "dept_helm6",
-    "name": "전면 차폐 헬멧",
-    "file": "assets/items/dept_helm6.png"
-   },
-   {
-    "id": "sinpride_0",
-    "name": "오만의 관",
-    "file": "assets/items/sinpride_0.png"
-   },
-   {
-    "id": "demonking_1",
-    "name": "마왕의 갑주",
-    "file": "assets/items/demonking_1.png"
-   },
-   {
-    "id": "dept_vest6",
-    "name": "역장 내장 갑주",
-    "file": "assets/items/dept_vest6.png"
-   },
    {
     "id": "elderdragon_1",
     "name": "고룡의 비늘",
@@ -1146,21 +1136,6 @@
     "id": "demongeneral_3",
     "name": "마장의 건틀릿",
     "file": "assets/items/demongeneral_3.png"
-   }
-  ]
- },
- {
-  "sheet": "design/images/sheets/rank06-C.png",
-  "rank": 6,
-  "grid": [
-   3,
-   3
-  ],
-  "cells": [
-   {
-    "id": "dept_glove6",
-    "name": "파쇄 건틀릿",
-    "file": "assets/items/dept_glove6.png"
    },
    {
     "id": "sinenvy_0",
@@ -1186,27 +1161,22 @@
     "id": "abysstentacle_1",
     "name": "바닥 없는 신",
     "file": "assets/items/abysstentacle_1.png"
-   },
-   {
-    "id": "dept_boots6",
-    "name": "중력 완충 부츠",
-    "file": "assets/items/dept_boots6.png"
-   },
-   {
-    "id": "archdemon_2",
-    "name": "군단장의 망토",
-    "file": "assets/items/archdemon_2.png"
    }
   ]
  },
  {
-  "sheet": "design/images/sheets/rank06-D.png",
+  "sheet": "design/images/sheets/rank06-C.png",
   "rank": 6,
   "grid": [
    3,
    3
   ],
   "cells": [
+   {
+    "id": "archdemon_2",
+    "name": "군단장의 망토",
+    "file": "assets/items/archdemon_2.png"
+   },
    {
     "id": "sinlust_0",
     "name": "비단 망토",
@@ -1246,6 +1216,46 @@
     "id": "elderdragon_4",
     "name": "고룡의 심장석",
     "file": "assets/items/elderdragon_4.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank06-D.png",
+  "rank": 6,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "dept_plasma",
+    "name": "플라즈마 절단검",
+    "file": "assets/items/dept_plasma.png"
+   },
+   {
+    "id": "dept_barrier",
+    "name": "이동식 방벽",
+    "file": "assets/items/dept_barrier.png"
+   },
+   {
+    "id": "dept_helm6",
+    "name": "전면 차폐 헬멧",
+    "file": "assets/items/dept_helm6.png"
+   },
+   {
+    "id": "dept_vest6",
+    "name": "역장 내장 갑주",
+    "file": "assets/items/dept_vest6.png"
+   },
+   {
+    "id": "dept_glove6",
+    "name": "파쇄 건틀릿",
+    "file": "assets/items/dept_glove6.png"
+   },
+   {
+    "id": "dept_boots6",
+    "name": "중력 완충 부츠",
+    "file": "assets/items/dept_boots6.png"
    }
   ]
  },
