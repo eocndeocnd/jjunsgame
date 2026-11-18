@@ -1171,43 +1171,45 @@ const CITY_BIO = 10;                                         // 도시 — 그�
 //   (빌라 · 가게 · 빈 건물 7칸 · 백화점 12칸 · 둘레 빌딩 7칸), 옥상이 덜 보이게 깊이(h)를 줄임. 창 간격은 js/mapart.js 의 oldFace · deptFace · glassWall.
 const OLDTOWN = {
   title: '옛 동네', base: 'old',
-  w: 44, h: 13, pad: { t: 6, b: 6, l: 9, r: 9 },
+  w: 44, h: 17, pad: { t: 9, b: 5, l: 9, r: 9 },
+  facade: { f: 3 },                                        // 벽면 높이 3칸 — 깊이가 「가로 + 3칸」이면 위에서 보이는 옥상이 정사각형 (사용자 결정 2026-11-18)
   ground: [],
-  // 건물은 대부분 정사각형(5 × 5칸) — 직사각형은 위아래 줄에 한 채씩만 (사용자 결정). 생김새는 종류마다 매기는 번호 v 로 모두 다르게 (js/mapart.js 의 oldPal)
+  // 옥상은 대부분 정사각형(가로 4칸 · 깊이 7칸) — 직사각형 옥상은 위아래 줄에 한 채씩만. 생김새는 종류마다 매기는 번호 v 로 모두 다르게 (js/mapart.js 의 oldPal)
   buildings: [
-    // 위 줄 — 문은 가운데 골목길(y 5 ~ 7)을 봄
-    { kind: 'villa', roof: 'tank', x: 2, y: 0, w: 5, h: 5, door: { x: 4, w: 1, name: 'home', label: '집' } },
-    { kind: 'back', annex: true, x: 7, y: 0, w: 2, h: 2 },                                                              // 집 바로 옆 틈 — 이상한 게이트가 이 벽 앞에 섬 (사용자 결정)
-    { kind: 'shabby', x: 9, y: 0, w: 5, h: 5, door: { x: 11, w: 2, name: 'myguild', label: '빈 건물' } },             // 나중에 사들여 내 길드로 키울 곳
-    { kind: 'store', x: 16, y: 0, w: 5, h: 5 },
-    { kind: 'back', annex: true, x: 22, y: 0, w: 2, h: 2, door: { x: 22, w: 2, name: 'blackmarket' } },               // 암시장이 들어설 골목 — 닫힌 셔터 (이름표 없음)
-    { kind: 'villa', x: 24, y: 0, w: 7, h: 5 },                                                                         // 위 줄의 직사각형 하나
-    { kind: 'back', x: 33, y: 0, w: 5, h: 5 },
-    { kind: 'store', x: 39, y: 0, w: 5, h: 5 },
+    // 위 줄 — 문은 가운데 골목길(y 7 ~ 9)을 봄
+    { kind: 'villa', roof: 'tank', x: 2, y: 0, w: 4, h: 7, door: { x: 3, w: 1, name: 'home', label: '집' } },
+    { kind: 'back', annex: true, x: 6, y: 0, w: 2, h: 2 },                                                              // 집 바로 옆 틈 — 이상한 게이트가 이 벽 앞에 섬 (사용자 결정)
+    { kind: 'shabby', x: 8, y: 0, w: 4, h: 7, door: { x: 9, w: 2, name: 'myguild', label: '빈 건물' } },             // 나중에 사들여 내 길드로 키울 곳
+    { kind: 'store', x: 14, y: 0, w: 4, h: 7 },
+    { kind: 'back', annex: true, x: 19, y: 0, w: 2, h: 2, door: { x: 19, w: 2, name: 'blackmarket' } },               // 암시장이 들어설 골목 — 닫힌 셔터 (이름표 없음)
+    { kind: 'villa', x: 21, y: 0, w: 6, h: 7 },                                                                         // 위 줄의 직사각형 하나
+    { kind: 'back', x: 29, y: 0, w: 4, h: 7 }, { kind: 'villa', x: 35, y: 0, w: 4, h: 7 }, { kind: 'store', x: 40, y: 0, w: 4, h: 7 },
     // 아래 줄
-    { kind: 'villa', roof: 'tank', x: 1, y: 8, w: 5, h: 5 }, { kind: 'back', x: 8, y: 8, w: 5, h: 5 }, { kind: 'store', x: 15, y: 8, w: 5, h: 5 },
-    { kind: 'villa', x: 22, y: 8, w: 5, h: 5 }, { kind: 'back', x: 29, y: 8, w: 7, h: 5 }, { kind: 'villa', x: 38, y: 8, w: 5, h: 5 },   // 아래 줄의 직사각형 하나 (뒤 건물)
-    // 둘레 — 위 끝은 옥상이 지도 맨 위까지 닿게, 아래 끝은 옥상만 보이게(벽면은 지도 밖 — roofOnly), 오른쪽 가운데는 골목길이 화면 밖으로 이어져 보이게 비움
-    { kind: 'back', x: -9, y: -6, w: 5, h: 5 }, { kind: 'villa', x: -3, y: -6, w: 5, h: 5 }, { kind: 'store', x: 3, y: -6, w: 5, h: 5 },
-    { kind: 'villa', x: 9, y: -6, w: 5, h: 5 }, { kind: 'back', x: 15, y: -6, w: 5, h: 5 }, { kind: 'store', x: 21, y: -6, w: 5, h: 5 },
-    { kind: 'villa', x: 27, y: -6, w: 5, h: 5 }, { kind: 'back', x: 33, y: -6, w: 5, h: 5 }, { kind: 'store', x: 39, y: -6, w: 5, h: 5 },
-    { kind: 'villa', x: 45, y: -6, w: 5, h: 5 }, { kind: 'back', x: 51, y: -6, w: 2, h: 5 },
-    { kind: 'store', x: -7, y: 0, w: 5, h: 5 }, { kind: 'villa', x: -7, y: 8, w: 5, h: 5 },
-    { kind: 'back', x: 46, y: 0, w: 5, h: 5 }, { kind: 'store', x: 46, y: 8, w: 5, h: 5 },
-    { kind: 'villa', roofOnly: true, x: -9, y: 14, w: 5, h: 5 }, { kind: 'back', roofOnly: true, x: -3, y: 14, w: 5, h: 5 }, { kind: 'store', roofOnly: true, x: 3, y: 14, w: 5, h: 5 },
-    { kind: 'back', roofOnly: true, x: 9, y: 14, w: 5, h: 5 }, { kind: 'villa', roofOnly: true, x: 15, y: 14, w: 5, h: 5 }, { kind: 'store', roofOnly: true, x: 21, y: 14, w: 5, h: 5 },
-    { kind: 'back', roofOnly: true, x: 27, y: 14, w: 5, h: 5 }, { kind: 'villa', roofOnly: true, x: 33, y: 14, w: 5, h: 5 }, { kind: 'store', roofOnly: true, x: 39, y: 14, w: 5, h: 5 },
-    { kind: 'back', roofOnly: true, x: 45, y: 14, w: 5, h: 5 }, { kind: 'villa', roofOnly: true, x: 51, y: 14, w: 2, h: 5 }
+    { kind: 'villa', roof: 'tank', x: 1, y: 10, w: 4, h: 7 }, { kind: 'back', x: 7, y: 10, w: 4, h: 7 }, { kind: 'store', x: 13, y: 10, w: 4, h: 7 },
+    { kind: 'villa', x: 19, y: 10, w: 4, h: 7 }, { kind: 'back', x: 25, y: 10, w: 6, h: 7 }, { kind: 'store', x: 33, y: 10, w: 4, h: 7 },   // 아래 줄의 직사각형 하나 (뒤 건물)
+    { kind: 'villa', x: 39, y: 10, w: 4, h: 7 },
+    // 둘레 — 위 끝은 옥상이 지도 맨 위에 닿게, 아래 끝은 옥상만(roofOnly — 4 × 4 정사각형), 오른쪽 가운데는 골목길이 화면 밖으로 이어져 보이게 비움
+    { kind: 'back', x: -9, y: -9, w: 4, h: 7 }, { kind: 'villa', x: -4, y: -9, w: 4, h: 7 }, { kind: 'store', x: 1, y: -9, w: 4, h: 7 },
+    { kind: 'villa', x: 7, y: -9, w: 4, h: 7 }, { kind: 'back', x: 12, y: -9, w: 4, h: 7 }, { kind: 'store', x: 17, y: -9, w: 4, h: 7 },
+    { kind: 'villa', x: 23, y: -9, w: 4, h: 7 }, { kind: 'back', x: 28, y: -9, w: 4, h: 7 }, { kind: 'store', x: 33, y: -9, w: 4, h: 7 },
+    { kind: 'villa', x: 39, y: -9, w: 4, h: 7 }, { kind: 'back', x: 44, y: -9, w: 4, h: 7 }, { kind: 'store', x: 49, y: -9, w: 4, h: 7 },
+    { kind: 'store', x: -9, y: 0, w: 4, h: 7 }, { kind: 'villa', x: -9, y: 10, w: 4, h: 7 },
+    { kind: 'back', x: 49, y: 0, w: 4, h: 7 }, { kind: 'store', x: 49, y: 10, w: 4, h: 7 },
+    { kind: 'villa', roofOnly: true, x: -9, y: 18, w: 4, h: 4 }, { kind: 'back', roofOnly: true, x: -4, y: 18, w: 4, h: 4 }, { kind: 'store', roofOnly: true, x: 1, y: 18, w: 4, h: 4 },
+    { kind: 'back', roofOnly: true, x: 7, y: 18, w: 4, h: 4 }, { kind: 'villa', roofOnly: true, x: 12, y: 18, w: 4, h: 4 }, { kind: 'store', roofOnly: true, x: 17, y: 18, w: 4, h: 4 },
+    { kind: 'back', roofOnly: true, x: 23, y: 18, w: 4, h: 4 }, { kind: 'villa', roofOnly: true, x: 28, y: 18, w: 4, h: 4 }, { kind: 'store', roofOnly: true, x: 33, y: 18, w: 4, h: 4 },
+    { kind: 'back', roofOnly: true, x: 39, y: 18, w: 4, h: 4 }, { kind: 'villa', roofOnly: true, x: 44, y: 18, w: 4, h: 4 }, { kind: 'store', roofOnly: true, x: 49, y: 18, w: 4, h: 4 }
   ],
-  trees: [[14, 12], [37, 12]],
+  trees: [[11, 16], [37, 16]],
   pylons: [],
-  start: [4, 5],                                             // 집 문 앞 골목길
-  gate: [7, 2],                                              // 이상한 게이트 — 집 바로 옆 틈 (두 칸 폭)
-  edges: [{ name: 'city', x: 43, y: 5, w: 1, h: 3, to: 'city.oldtown', label: '헌터들의 도시 →', arrive: 'left' }]
+  start: [3, 7],                                             // 집 문 앞 골목길
+  gate: [6, 2],                                              // 이상한 게이트 — 집 바로 옆 틈 (두 칸 폭)
+  edges: [{ name: 'city', x: 43, y: 7, w: 1, h: 3, to: 'city.oldtown', label: '헌터들의 도시 →', arrive: 'left' }]
 };
 const CITY = {
   title: '헌터들의 도시', base: 'pave',
-  w: 46, h: 53, pad: { t: 6, b: 6, l: 9, r: 9 },
+  w: 46, h: 53, pad: { t: 8, b: 5, l: 9, r: 9 },
+  facade: { f: 3, kinds: ['tower'] },                       // 둘레 빌딩만 벽면 3칸 — 옥상이 정사각형
   ground: [
     ['lot', 2, 45, 11, 7], ['lot', 16, 45, 14, 7], ['lot', 33, 45, 11, 7],
     ['plaza', 11, 14, 24, 6],
@@ -1225,17 +1227,20 @@ const CITY = {
     { kind: 'guild', tone: 2, x: 27, y: 27, w: 8, h: 9, door: { x: 30, w: 2, name: 'guild3', label: '왕관 길드' } },
     { kind: 'guild', tone: 3, x: 37, y: 27, w: 8, h: 9, door: { x: 40, w: 2, name: 'guild4', label: '달 길드' } },
     // 둘레 — 걷지 못하는 곳의 빌딩들 (왼쪽 둘째 길 아래는 옛 동네로 가는 보도가 이어져 보이게 비움)
-    // 둘레 빌딩은 정사각형으로 · 지도 가장자리까지 (사용자 결정 2026-11-18) — 위 끝은 옥상이 맨 위에 닿고, 아래 끝은 옥상만(roofOnly)
-    { kind: 'tower', tone: 0, x: -9, y: -6, w: 5, h: 5 }, { kind: 'tower', tone: 1, x: -3, y: -6, w: 5, h: 5 }, { kind: 'tower', tone: 2, x: 4, y: -6, w: 5, h: 5 }, { kind: 'tower', tone: 0, x: 10, y: -6, w: 5, h: 5 },
-    { kind: 'tower', tone: 1, x: 17, y: -6, w: 5, h: 5 }, { kind: 'tower', tone: 2, x: 23, y: -6, w: 5, h: 5 }, { kind: 'tower', tone: 0, x: 30, y: -6, w: 5, h: 5 }, { kind: 'tower', tone: 1, x: 36, y: -6, w: 5, h: 5 },
-    { kind: 'tower', tone: 2, x: 43, y: -6, w: 5, h: 5 }, { kind: 'tower', tone: 0, x: 50, y: -6, w: 5, h: 5 },
-    { kind: 'tower', tone: 2, x: -9, y: 2, w: 7, h: 7 }, { kind: 'tower', tone: 1, x: -9, y: 11, w: 7, h: 7 },
-    { kind: 'tower', tone: 0, x: 48, y: 2, w: 7, h: 7 }, { kind: 'tower', tone: 2, x: 48, y: 11, w: 7, h: 7 },
-    { kind: 'tower', tone: 1, x: -9, y: 28, w: 7, h: 7 }, { kind: 'tower', tone: 2, x: 48, y: 28, w: 7, h: 7 },
-    { kind: 'tower', tone: 0, x: -9, y: 45, w: 7, h: 7 }, { kind: 'tower', tone: 1, x: 48, y: 45, w: 7, h: 7 },
-    { kind: 'tower', tone: 1, roofOnly: true, x: -9, y: 54, w: 5, h: 5 }, { kind: 'tower', tone: 2, roofOnly: true, x: -3, y: 54, w: 5, h: 5 }, { kind: 'tower', tone: 0, roofOnly: true, x: 4, y: 54, w: 5, h: 5 }, { kind: 'tower', tone: 1, roofOnly: true, x: 10, y: 54, w: 5, h: 5 },
-    { kind: 'tower', tone: 2, roofOnly: true, x: 17, y: 54, w: 5, h: 5 }, { kind: 'tower', tone: 0, roofOnly: true, x: 23, y: 54, w: 5, h: 5 }, { kind: 'tower', tone: 1, roofOnly: true, x: 30, y: 54, w: 5, h: 5 }, { kind: 'tower', tone: 2, roofOnly: true, x: 36, y: 54, w: 5, h: 5 },
-    { kind: 'tower', tone: 0, roofOnly: true, x: 43, y: 54, w: 5, h: 5 }, { kind: 'tower', tone: 1, roofOnly: true, x: 50, y: 54, w: 5, h: 5 }
+    // 둘레 빌딩 — 옥상이 정사각형(가로 4칸 · 깊이 7칸 · 벽면 3칸 — facade), 지도 가장자리까지 (사용자 결정 2026-11-18). 위 끝은 옥상이 맨 위에 닿고, 아래 끝은 옥상만(roofOnly)
+    { kind: 'tower', tone: 0, x: -9, y: -8, w: 4, h: 7 }, { kind: 'tower', tone: 1, x: -4, y: -8, w: 4, h: 7 }, { kind: 'tower', tone: 2, x: 1, y: -8, w: 4, h: 7 },
+    { kind: 'tower', tone: 0, x: 6, y: -8, w: 4, h: 7 }, { kind: 'tower', tone: 1, x: 11, y: -8, w: 4, h: 7 }, { kind: 'tower', tone: 2, x: 16, y: -8, w: 4, h: 7 },
+    { kind: 'tower', tone: 0, x: 21, y: -8, w: 4, h: 7 }, { kind: 'tower', tone: 1, x: 26, y: -8, w: 4, h: 7 }, { kind: 'tower', tone: 2, x: 31, y: -8, w: 4, h: 7 },
+    { kind: 'tower', tone: 0, x: 36, y: -8, w: 4, h: 7 }, { kind: 'tower', tone: 1, x: 41, y: -8, w: 4, h: 7 }, { kind: 'tower', tone: 2, x: 46, y: -8, w: 4, h: 7 },
+    { kind: 'tower', tone: 0, x: 51, y: -8, w: 4, h: 7 },
+    { kind: 'tower', tone: 0, x: -9, y: 2, w: 4, h: 7 }, { kind: 'tower', tone: 1, x: -9, y: 10, w: 4, h: 7 }, { kind: 'tower', tone: 2, x: -9, y: 26, w: 4, h: 7 },
+    { kind: 'tower', tone: 0, x: -9, y: 42, w: 4, h: 7 }, { kind: 'tower', tone: 1, x: 51, y: 2, w: 4, h: 7 }, { kind: 'tower', tone: 2, x: 51, y: 10, w: 4, h: 7 },
+    { kind: 'tower', tone: 0, x: 51, y: 26, w: 4, h: 7 }, { kind: 'tower', tone: 1, x: 51, y: 42, w: 4, h: 7 },
+    { kind: 'tower', tone: 1, roofOnly: true, x: -9, y: 54, w: 4, h: 4 }, { kind: 'tower', tone: 2, roofOnly: true, x: -4, y: 54, w: 4, h: 4 }, { kind: 'tower', tone: 0, roofOnly: true, x: 1, y: 54, w: 4, h: 4 },
+    { kind: 'tower', tone: 1, roofOnly: true, x: 6, y: 54, w: 4, h: 4 }, { kind: 'tower', tone: 2, roofOnly: true, x: 11, y: 54, w: 4, h: 4 }, { kind: 'tower', tone: 0, roofOnly: true, x: 16, y: 54, w: 4, h: 4 },
+    { kind: 'tower', tone: 1, roofOnly: true, x: 21, y: 54, w: 4, h: 4 }, { kind: 'tower', tone: 2, roofOnly: true, x: 26, y: 54, w: 4, h: 4 }, { kind: 'tower', tone: 0, roofOnly: true, x: 31, y: 54, w: 4, h: 4 },
+    { kind: 'tower', tone: 1, roofOnly: true, x: 36, y: 54, w: 4, h: 4 }, { kind: 'tower', tone: 2, roofOnly: true, x: 41, y: 54, w: 4, h: 4 }, { kind: 'tower', tone: 0, roofOnly: true, x: 46, y: 54, w: 4, h: 4 },
+    { kind: 'tower', tone: 1, roofOnly: true, x: 51, y: 54, w: 4, h: 4 }
   ],
   trees: [[11, 3], [11, 6], [11, 9], [11, 12], [34, 3], [34, 6], [34, 9], [34, 12], [3, 2], [7, 2], [38, 2], [42, 2],
           [4, 26], [9, 26], [14, 26], [29, 26], [34, 26], [39, 26], [43, 26], [18, 29], [18, 33], [35, 30], [36, 33]],
@@ -1264,7 +1269,8 @@ function townMap(C, name) {
     });
     const x0 = Math.max(0, b.x + PD.l), y0 = Math.max(0, b.y + PD.t), x1 = Math.min(W, b.x + PD.l + b.w), y1 = Math.min(H, b.y + PD.t + b.h);
     const v = b.v !== undefined ? b.v : (vNext[b.kind] = (vNext[b.kind] || 0) + 1) - 1;   // 생김새 번호 — 종류마다 차례로 (같은 지도의 건물이 모두 다르게)
-    blds.push({ x: x0, y: y0, w: x1 - x0, h: y1 - y0, kind: b.kind, roof: b.roof, tone: b.tone, v, ...(b.roofOnly ? { roofOnly: true } : {}) });
+    const f = b.f !== undefined ? b.f : C.facade && !b.annex && !b.roofOnly && (!C.facade.kinds || C.facade.kinds.includes(b.kind)) ? C.facade.f : undefined;   // 벽면 높이(칸)
+    blds.push({ x: x0, y: y0, w: x1 - x0, h: y1 - y0, kind: b.kind, roof: b.roof, tone: b.tone, v, ...(b.roofOnly ? { roofOnly: true } : {}), ...(f !== undefined ? { f } : {}) });
     if (b.door) {
       if (b.door.x < b.x || b.door.x + b.door.w > b.x + b.w) throw new Error(`${name} — ${b.door.name} 문이 건물 밖`);
       ports.push({ name: b.door.name, label: b.door.label, x: b.door.x + PD.l, y: b.y + PD.t + b.h - 1, w: b.door.w, h: 1, door: true, ...(b.door.to ? { to: b.door.to } : {}) });   // to 가 없으면 닫힌 문

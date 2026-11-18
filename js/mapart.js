@@ -1156,7 +1156,7 @@
       const n = buildings.length;
       for (let y = b.y; y < b.y + b.h; y++) for (let x = b.x; x < b.x + b.w; x++) bAt[y * m.w + x] = n;
       const door = (m.ports || []).find(p => p.door && p.x >= b.x && p.x < b.x + b.w && p.y >= b.y && p.y < b.y + b.h);
-      buildings.push({ x0: b.x, y0: b.y, w: b.w, h: b.h, door, kind: b.kind, roof: b.roof, tone: b.tone, v: b.v, roofOnly: !!b.roofOnly, G: null });
+      buildings.push({ x0: b.x, y0: b.y, w: b.w, h: b.h, door, kind: b.kind, roof: b.roof, tone: b.tone, v: b.v, roofOnly: !!b.roofOnly, f: b.f, G: null });
     }
     for (let k = 0; k < m.w * m.h; k++) {
       if ((m.look[k] & 15) !== BUILD || bAt[k] >= 0) continue;
@@ -1586,7 +1586,7 @@
   ];
   const emblemAt = (n, ix, iy, k) => ix >= 0 && iy >= 0 && ix < 8 * k && iy < 8 * k && EMBLEM[n][(iy / k) | 0][(ix / k) | 0] === '#';
   function cityGeom(B) {
-    const S = CB[B.kind] || CB.back, W = B.w * P, Hh = B.h * P, F = B.roofOnly ? 0 : Math.min(S.F, Hh - 14), roofH = Hh - F;   // roofOnly — 지도 아래 끝의 건물: 옥상만 (벽면은 지도 밖)
+    const S = CB[B.kind] || CB.back, W = B.w * P, Hh = B.h * P, F = B.roofOnly ? 0 : B.f ? Math.min(B.f * P, Hh - 14) : Math.min(S.F, Hh - 14), roofH = Hh - F;   // roofOnly — 지도 아래 끝의 건물: 옥상만 (벽면은 지도 밖)
     const G = { S, W, Hh, F, roofH, old: !!S.old, cut: S.cut || 0, items: [], tone: null, step: null, mid: null,
       door: B.door ? { x0: (B.door.x - B.x0) * P, x1: (B.door.x - B.x0 + B.door.w) * P } : null };
     if (B.kind === 'hq') {                                                         // 가운데 탑이 양 날개보다 높음
