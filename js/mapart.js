@@ -517,7 +517,7 @@
     steel: ['#dfe6ee', '#aeb8c4', '#ffffff', '#7d8794']
   };
   let STC = STC_DEPT;                                                              // 덩어리를 그릴 때마다 그 지도의 것으로 (chunk)
-  const STORE_KINDS = { counter: 1, case: 1, rope: 1, plant: 1, bench: 1 };
+  const STORE_KINDS = { counter: 1, case: 1, rope: 1, plant: 1, bench: 1, pillar: 1, kiosk: 1 };
   const storeZones = (m, A) => A.storeZones || (A.storeZones = JSON.parse((m.props && m.props.wall) || '[]'));
   // 큰 상아색 판 — 서른두 점마다 줄눈, 은은한 결, 군데군데 비스듬한 윤
   function storeTile(X, Y) {
@@ -665,6 +665,19 @@
         }
         return mix(c3('#8a6a42'), c3('#a7845a'), hash(zx >> 1, fy >> 1, 387) * 0.6);   // 코르크
       }
+      if (z.kind === 'screen') {                                                    // 게이트 현황판 (협회) — 은빛 테 두른 검은 화면에 등급 칸 · 남은 시간 막대가 줄지어 깜빡임
+        if (zx < 3 || zx >= ZW - 3 || fy < 6 || fy > 39) return wall;
+        if (zx === 3 || zx === ZW - 4 || fy === 6 || fy === 39) return c3(STC.gold);
+        if (fy === 7) return c3(STC.glow);
+        const ix = zx - 6, iy = fy - 10, row = Math.floor(iy / 5), ry = iy - row * 5;
+        if (ix < 0 || zx >= ZW - 6 || iy < 0 || row > 5 || ry > 2) return c3('#0a1220');
+        const grade = ['#e0524a', '#f0a33a', '#f3dc5a', '#62e6ee', '#5a8ef0', '#b07af0'][(row + z.x) % 6];
+        if (ix < 5) return c3(grade);                                               // 등급 칸
+        if (ix === 5) return c3('#0a1220');
+        const len = 8 + Math.floor(hash(row, z.x, 388) * (ZW - 26));
+        if (ix - 6 < len) return ry === 1 ? mix(c3(STC.glow), WHITE, 0.25) : c3(STC.glow);   // 남은 시간 막대
+        return (ix % 3 === 0 && ry === 1) ? c3('#1d3348') : c3('#0a1220');
+      }
       if (z.kind === 'crest') {                                                     // 협회 문장 — 남색 판 위 방패(흰 테 · H), 양옆으로 흐르는 청록 빛줄
         const mx = zx - ZW / 2 + 0.5, sy = fy - 5;
         const half = y => (y < 0 || y >= 34 ? -1 : y < 19 ? 15 : 15 - (y - 19) * 1.0);
@@ -758,6 +771,21 @@
         if (py === 14 && px % 2 === 0) return mul(floor, 0.85);                     // 줄 그림자
       }
       return floor;
+    }
+    if (k === 'pillar') {                                                           // 기둥 (협회) — 위에서 본 흰 돌 기둥, 은빛 테 둘 · 가운데 청록 빛, 아래로 그림자
+      const dx = px - 7.5, dy = py - 7, r = Math.max(Math.abs(dx), Math.abs(dy));
+      if (r > 6.5) return py > 12 && Math.abs(dx) < 7 ? mul(floor, 0.8) : floor;
+      if (r > 5.5) return c3(STC.line);
+      if (r > 4.5) return c3(STC.gold);
+      if (r < 1.6) return c3(STC.glow);
+      return mix(c3(STC.ivory[2]), c3(STC.ivory[3]), dx + dy > 0 ? 0.6 : 0);
+    }
+    if (k === 'kiosk') {                                                            // 번호표 단말 (협회) — 어두운 몸에 기울어진 청록 화면 · 번호표가 나오는 곳
+      if (px < 3 || px > 12 || py < 2 || py > 14) return py === 15 && px > 3 && px < 12 ? mul(floor, 0.8) : floor;
+      if (px === 3 || px === 12 || py === 2 || py === 14) return c3(STC.line);
+      if (py >= 4 && py <= 8 && px >= 5 && px <= 10) return py === 4 || px === 5 ? mix(c3(STC.glow), WHITE, 0.5) : c3(STC.glow);
+      if (py === 11 && px >= 6 && px <= 9) return c3('#f4f1e8');
+      return c3(py < 10 ? '#26324a' : '#1d2533');
     }
     if (k === 'plant') {                                                            // 화분 — 흰 도기에 금빛 띠, 둥글게 퍼진 잎
       const dx = px - 7.5, r = Math.hypot(dx, (py - 5.5) * 1.1);

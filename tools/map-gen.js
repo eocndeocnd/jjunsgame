@@ -1432,18 +1432,25 @@ const deptInterior = () => storeInterior(DEPT);
 // ---------- 헌터 협회 안 — 1층 로비 (docs/CITY-PLAN.md 3) ----------
 // 위 벽에 왼쪽부터 의뢰 게시판 · 협회 문장 · 의뢰 게시판. 그 앞줄 가운데에 등록 창구(계산대 둘 사이에 직원), 양옆으로 화분 · 기다리는 긴 의자.
 // 가게 안과 같은 틀(storeInterior)에 빛깔만 협회(theme 'hq' — 남색 · 청록 · 은빛, 그림은 js/mapart.js 의 STC_HQ)
+// 2026-11-19 — 훨씬 넓게 (사용자 결정: 가로 · 세로 2배쯤 — 17×10 → 33×20). 도시에서 가장 큰 건물답게
+// 위 벽: 의뢰 게시판 · 게이트 현황판 · 문장 · 게이트 현황판 · 의뢰 게시판. 창구 셋은 위 벽에 넓게 (동료 모집 · 등록 · 게이트).
+// 가운데 깔개 양옆으로 기둥 두 줄, 그 바깥에 긴 의자, 들어오는 곳 양옆에 번호표 단말.
 const ASSOC = {
-  title: '헌터 협회 1층', w: 17, h: 10, to: 'city.association', theme: 'hq',
-  wall: [{ x: 1, w: 5, kind: 'board' }, { x: 6, w: 5, kind: 'crest' }, { x: 11, w: 5, kind: 'board' }],
+  title: '헌터 협회 1층', w: 33, h: 20, to: 'city.association', theme: 'hq',
+  wall: [{ x: 1, w: 7, kind: 'board' }, { x: 9, w: 5, kind: 'screen' }, { x: 14, w: 5, kind: 'crest' }, { x: 19, w: 5, kind: 'screen' }, { x: 25, w: 7, kind: 'board' }],
   props: [
-    { kind: 'counter', x: 5, y: 0, w: 3 }, { kind: 'counter', x: 9, y: 0, w: 3 },          // 등록 창구 계산대 — 사이 (8, 0) 에 직원
-    { kind: 'counter', x: 1, y: 0, w: 1 }, { kind: 'counter', x: 3, y: 0, w: 1 },          // 동료 모집 — 사이 (2, 0)
-    { kind: 'counter', x: 13, y: 0, w: 1 }, { kind: 'counter', x: 15, y: 0, w: 1 },        // 게이트 창구 — 사이 (14, 0)
-    { kind: 'plant', x: 0, y: 0, w: 1 }, { kind: 'plant', x: 16, y: 0, w: 1 }, { kind: 'plant', x: 0, y: 9, w: 1 }, { kind: 'plant', x: 16, y: 9, w: 1 },
-    { kind: 'bench', x: 1, y: 4, w: 3 }, { kind: 'bench', x: 13, y: 4, w: 3 }, { kind: 'bench', x: 1, y: 7, w: 3 }, { kind: 'bench', x: 13, y: 7, w: 3 }
+    { kind: 'counter', x: 13, y: 0, w: 3 }, { kind: 'counter', x: 17, y: 0, w: 3 },        // 등록 창구 계산대 — 사이 (16, 0) 에 직원
+    { kind: 'counter', x: 2, y: 0, w: 3 }, { kind: 'counter', x: 6, y: 0, w: 3 },          // 동료 모집 — 사이 (5, 0)
+    { kind: 'counter', x: 24, y: 0, w: 3 }, { kind: 'counter', x: 28, y: 0, w: 3 },        // 게이트 창구 — 사이 (27, 0)
+    { kind: 'plant', x: 0, y: 0, w: 1 }, { kind: 'plant', x: 32, y: 0, w: 1 }, { kind: 'plant', x: 10, y: 0, w: 1 }, { kind: 'plant', x: 22, y: 0, w: 1 },
+    { kind: 'plant', x: 0, y: 19, w: 1 }, { kind: 'plant', x: 32, y: 19, w: 1 },
+    { kind: 'pillar', x: 12, y: 4 }, { kind: 'pillar', x: 20, y: 4 }, { kind: 'pillar', x: 12, y: 9 }, { kind: 'pillar', x: 20, y: 9 }, { kind: 'pillar', x: 12, y: 14 }, { kind: 'pillar', x: 20, y: 14 },
+    { kind: 'bench', x: 2, y: 5, w: 4 }, { kind: 'bench', x: 7, y: 5, w: 3 }, { kind: 'bench', x: 2, y: 10, w: 4 }, { kind: 'bench', x: 7, y: 10, w: 3 }, { kind: 'bench', x: 2, y: 15, w: 4 },
+    { kind: 'bench', x: 23, y: 5, w: 3 }, { kind: 'bench', x: 27, y: 5, w: 4 }, { kind: 'bench', x: 23, y: 10, w: 3 }, { kind: 'bench', x: 27, y: 10, w: 4 }, { kind: 'bench', x: 27, y: 15, w: 4 },
+    { kind: 'kiosk', x: 13, y: 18 }, { kind: 'kiosk', x: 19, y: 18 }
   ],
-  clerks: [{ x: 8, y: 0, shop: 'assoc', label: '등록 창구' }, { x: 12, y: 3, shop: 'ally', label: '???' },   // ??? — 제4격 보스 뒤에만 서 있는 사람 (첫 동료)
-           { x: 2, y: 0, shop: 'hire', label: '동료 모집' }, { x: 14, y: 0, shop: 'gate', label: '게이트 창구' }],   // 제5격 보스 뒤에 열림 (game.js 의 deskHere)
+  clerks: [{ x: 16, y: 0, shop: 'assoc', label: '등록 창구' }, { x: 26, y: 4, shop: 'ally', label: '???' },   // ??? — 제4격 보스 뒤에만 서 있는 사람 (첫 동료)
+           { x: 5, y: 0, shop: 'hire', label: '동료 모집' }, { x: 27, y: 0, shop: 'gate', label: '게이트 창구' }],   // 제5격 보스 뒤에 열림 (game.js 의 deskHere)
   signs: []
 };
 const assocInterior = () => storeInterior(ASSOC);
