@@ -267,6 +267,12 @@ const MapView = (function () {
         } else if (port.edge) {                            // 지도 가장자리 통로(옛 동네 ⇄ 도시) — 칸은 그리지 않고 이름표만
         } else if (port.rift) {                            // 이상한 게이트 — 옛 동네 집 옆 틈 · 지하수로 첫 공간 (그림은 mapart 의 drawRift)
           if (art) MapArt.drawRift(ctx, ox + (port.x + port.w / 2) * T, oy + (port.y + port.h) * T, T, performance.now() / 1000);
+        } else if (port.unlock && !open) {                // 잠긴 안쪽 문 (백화점 에스컬레이터) — 금빛 기둥 사이로 붉은 줄
+          const x0 = ox + port.x * T, x1 = ox + (port.x + port.w) * T, y = oy + port.y * T, u = T / 16;
+          ctx.fillStyle = '#8a6d2c'; ctx.fillRect(x0 + 2 * u, y + 4 * u, 2 * u, 10 * u); ctx.fillRect(x1 - 4 * u, y + 4 * u, 2 * u, 10 * u);
+          ctx.fillStyle = '#c9a24a'; ctx.fillRect(x0 + 1 * u, y + 3 * u, 4 * u, 2 * u); ctx.fillRect(x1 - 5 * u, y + 3 * u, 4 * u, 2 * u);
+          ctx.strokeStyle = '#b0202e'; ctx.lineWidth = 2 * u; ctx.beginPath();
+          ctx.moveTo(x0 + 3 * u, y + 6 * u); ctx.quadraticCurveTo((x0 + x1) / 2, y + 12 * u, x1 - 3 * u, y + 6 * u); ctx.stroke();
         } else if (!(port.door && art)) {                 // 건물 문(door)은 지도 그림이 성문 · 문간으로 그림
           ctx.fillStyle = open ? '#3fae4a' : '#5c3a1a';
           ctx.fillRect(ox + port.x * T + 2, oy + port.y * T + 2, port.w * T - 4, port.h * T - 4);
@@ -457,7 +463,7 @@ const MapView = (function () {
       rollAura: () => rollAura(),
       postAlive: id => { const f = getEnemy(id); return !!f && !isDowned(id) && isRevealed(f); },   // 이 여정에 꺾었거나 아직 안 나타난 히든은 없음
       // 꺾어야 열리는 문 · 도시가 열린 뒤에만 있는 문 (지하수로 첫 공간의 도시로 나가는 게이트 — needsCity)
-      portOpen: p => (!p.opensAfter || isDowned(p.opensAfter)) && (!p.needsCity || (!!State.meta && !!State.meta.cityOpen)),
+      portOpen: p => (!p.opensAfter || isDowned(p.opensAfter)) && (!p.needsCity || (!!State.meta && !!State.meta.cityOpen)) && (p.unlock !== 'armor' || armorOpen()),
       size: id => (getEnemy(id) || {}).size || 1,  // 지도에서 차지하는 n × n 칸 (data.js ENEMY_SIZE)
       chestOpen: id => !!State.meta && State.meta.chestsOpened.includes(id),  // 연 보물상자 (game.js 의 openChest)
       merchantHere: n => { const m = State.run && State.run.merchant; return !!m && !State.run.over && !!ZONES[m.zone] && ZONES[m.zone].id === n.zone; }

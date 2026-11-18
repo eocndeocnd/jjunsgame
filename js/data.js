@@ -70,6 +70,7 @@ const RULES = {
   //   시뮬(시드 1~12 — 3격 · 7격에 처음 닿는 회차 평균): 핵 60개 · 30개에 하나(못 삼) 10.6 ~ 11.3 · 17 → 24개 · 20개에 하나(삼) 8.5 ~ 8.7 · 14.
   //   그 문턱만 넘으면 더 싸게 해도 그대로입니다 — 그 뒤로는 돈이 아니라 힘이 발목을 잡습니다.
   DEPT_PRICE: 48,
+  ARMOR_PRICE: 24,        // 방어구 매장(백화점 2층) — 그 격의 핵 12개어치, 무기의 절반 (부위가 넷이라 — 사용자 결정 2026-11-18)
   // 재료 (도시 1-다) — 장비를 떨어뜨릴 리 없는 짐승은 장비 대신 제 재료를 줍니다 (data.js 의 MATERIALS).
   // 한 마리에 1개, 전리품 확률만큼 하나 더 (행운 · 기운이 그대로 듦). 재료 MAT_PER_ITEM 개 = 예전에 그 장비를 한 번 주운 셈:
   //   아직 없는 장비면 돈(그 격 일반 CRAFT_PRICE 마리 몫 × WON_SCALE — 1격 4만 · 2격 8만 원: 그 격의 핵 4개)을 얹어 만들고, 이미 가진 장비면 분해했을 때와 같은 강화석으로 바꿉니다.
@@ -2420,7 +2421,7 @@ function examinerStats(g) { return enemyStats(HUNTER_GRADES[g - 1].level); }
 
 const DEPT_ID = 'dept';
 const DEPT_GRADE = 1.2;
-const DEPT_SECTIONS = { weapon: { name: '무기 매장', icon: '🧑‍💼' }, mats: { name: '재료 창구', icon: '🧑‍🔧' } };   // mats — 재료로 만들기 · 바꾸기 · 팔기 (MATERIALS)
+const DEPT_SECTIONS = { weapon: { name: '무기 매장', icon: '🧑‍💼' }, armor: { name: '방어구 매장', icon: '👩‍💼' }, mats: { name: '재료 창구', icon: '🧑‍🔧' } };   // mats — 재료로 만들기 · 바꾸기 · 팔기 (MATERIALS)
 const DEPT_WARES = [
   // 제1격
   ['dept_knife',     '보급형 합금 단검',   'weapon',  '🔪', 1, 'fierce', '협회 인증 입문용. 날보다 손잡이에 공을 들였다.'],
@@ -2441,7 +2442,56 @@ const DEPT_WARES = [
   ['dept_plasma',    '플라즈마 절단검',    'weapon',  '⚡', 6, 'fierce', '매장에서 가장 비싼 칼. 시연은 유리 너머로만 한다.'],
   ['dept_barrier',   '이동식 방벽',        'offhand', '🚧', 6, 'ward',   '등에 지고 가서 발로 차면 펴진다.']
 ];
+// 방어구 매장 (백화점 2층 — 제1격 보스를 꺾으면 열림, 도시 계획 2번). 격마다 투구 · 갑옷 · 장갑 · 신발 넷 (사용자 결정 — 견갑 · 허리띠 · 각반 · 망토는 잡거나 만들어서).
+// 성능은 무기 매장과 같은 틀(그 격 최강 일반 것의 DEPT_GRADE 배), 값은 그 격의 핵 12개어치(ARMOR_PRICE). 이름은 가칭입니다.
+const ARMOR_WARES = [
+  // 제1격
+  ['dept_helm1',   '보급형 안전 헬멧',     'helm',   '⛑️', 1, 'guard',  '협회 마크 스티커가 반쯤 떨어졌다. 턱끈은 새것.'],
+  ['dept_vest1',   '보급 방검 조끼',       'armor',  '🦺', 1, 'guard',  '찔리는 것만 막는다고 적혀 있다. 물리는 것은 안 적혀 있다.'],
+  ['dept_glove1',  '미끄럼 방지 장갑',     'gloves', '🧤', 1, 'swift',  '손바닥의 오돌토돌한 고무가 칼자루를 붙잡는다.'],
+  ['dept_boots1',  '강화 안전화',          'boots',  '🥾', 1, 'swift',  '앞코에 쇠가 들었다. 차면 아프다 — 양쪽 다.'],
+  // 제2격
+  ['dept_helm2',   '경량 카본 헬멧',       'helm',   '🪖', 2, 'fierce', '쓴 것을 잊을 만큼 가볍다. 그래서 자꾸 잊고 나간다.'],
+  ['dept_vest2',   '방탄 섬유 재킷',       'armor',  '🧥', 2, 'ward',   '총알을 막으려고 만든 것이 이빨도 막는다.'],
+  ['dept_glove2',  '충격 흡수 장갑',       'gloves', '🥊', 2, 'guard',  '손등의 젤이 맞을 때마다 꾸욱 눌린다.'],
+  ['dept_boots2',  '쿠션 전술화',          'boots',  '👢', 2, 'swift',  '하루 사만 보를 걸어도 발이 멀쩡하다는 광고.'],
+  // 제3격
+  ['dept_helm3',   '야간 투시 바이저',     'helm',   '🥽', 3, 'pierce', '어둠 속의 것이 초록빛으로 떠오른다. 저쪽도 나를 본다.'],
+  ['dept_vest3',   '세라믹 판 조끼',       'armor',  '🛡️', 3, 'guard',  '판 하나가 깨지면 그 자리만 갈아 끼운다.'],
+  ['dept_glove3',  '그립 강화 장갑',       'gloves', '✊', 3, 'fierce', '손가락 마디마다 작은 모터. 놓치는 일이 없다.'],
+  ['dept_boots3',  '접지 부츠',            'boots',  '🥾', 3, 'swift',  '젖은 바위 위에서도 미끄러지지 않는다 — 점액 위는 보증 밖.'],
+  // 제4격
+  ['dept_helm4',   '열 차단 헬멧',         'helm',   '⛑️', 4, 'ward',   '불길 속에서도 숨이 시원하다. 필터는 석 달마다.'],
+  ['dept_vest4',   '냉각 슈트',            'armor',  '🧊', 4, 'leech',  '안쪽에 찬 액이 돈다. 겨울엔 반품이 많다.'],
+  ['dept_glove4',  '전도 장갑',            'gloves', '⚡', 4, 'thorn',  '붙잡은 것에 약한 전기가 흐른다. 악수는 사양.'],
+  ['dept_boots4',  '자세 제어 부츠',       'boots',  '👟', 4, 'swift',  '넘어지려 하면 발목이 먼저 버틴다.'],
+  // 제5격
+  ['dept_helm5',   '센서 일체형 헬멧',     'helm',   '🪖', 5, 'pierce', '약점이 붉게 표시된다. 표시가 너무 많을 때도 있다.'],
+  ['dept_vest5',   '핵 섬유 갑옷',         'armor',  '🧥', 5, 'guard',  '몬스터 핵에서 뽑은 실로 짰다. 가끔 따뜻하다.'],
+  ['dept_glove5',  '외골격 장갑',          'gloves', '🦾', 5, 'brutal', '팔꿈치까지 올라오는 틀이 힘을 세 배로.'],
+  ['dept_boots5',  '추진 보조 부츠',       'boots',  '🚀', 5, 'swift',  '뒤꿈치에서 짧게 불이 뿜어진다. 실내 사용 금지.'],
+  // 제6격
+  ['dept_helm6',   '전면 차폐 헬멧',       'helm',   '🪖', 6, 'ward',   '얼굴이 보이지 않는다. 매장 직원도 누가 샀는지 모른다.'],
+  ['dept_vest6',   '역장 내장 갑주',       'armor',  '🛡️', 6, 'ward',   '가슴판 안쪽에서 얇은 빛막이 몸을 감싼다.'],
+  ['dept_glove6',  '파쇄 건틀릿',          'gloves', '🥊', 6, 'brutal', '주먹을 쥐면 마디의 돌기가 바깥으로 선다.'],
+  ['dept_boots6',  '중력 완충 부츠',       'boots',  '👢', 6, 'guard',  '높은 데서 떨어져도 사뿐히 — 떨어지는 동안은 그대로 무섭다.']
+];
 const DEPT_MAX_RANK = Math.max(...DEPT_WARES.map(w => w[4]));
+const deptWare = store => ([id, name, slot, icon, r, arch, note]) => {
+  const zone = ZONES.findIndex(z => z.rank === r);
+  const level = Math.max(...ENEMIES.filter(e => e.zoneIndex === zone && e.kind === 'normal').map(e => e.level));
+  const rank = RANKS.find(x => x.n === r);
+  ITEMS.push({
+    id, name, slot,
+    grade: 'normal', arch, special: null, unique: false, note: note || null,
+    level, rank,
+    from: DEPT_ID, fromName: '헌터백화점', fromIcon: icon,
+    store,
+    price: priceFor(r, store === 'armor' ? RULES.ARMOR_PRICE : RULES.DEPT_PRICE) * RULES.WON_SCALE,      // 원 (떠돌이 상인의 price 는 골드)
+    ...makeItemStats(slot, level, DEPT_GRADE, arch, false)
+  });
+};
+ARMOR_WARES.forEach(deptWare('armor'));
 for (const [id, name, slot, icon, r, arch, note] of DEPT_WARES) {
   const zone = ZONES.findIndex(z => z.rank === r);
   const level = Math.max(...ENEMIES.filter(e => e.zoneIndex === zone && e.kind === 'normal').map(e => e.level));

@@ -1848,6 +1848,11 @@ function onMapEvents(evs) {
       fadeThrough(() => goThroughPort(e.port));   // 화면이 까매졌다가 다음 지도의 문(구멍) 앞에서 밝아짐
       changed = true;
       break;                             // 남은 일은 떠나온 지도의 것
+    } else if (e.type === 'closed' && Date.now() - closedSaidAt > 2000 && e.port.unlock === 'armor') {
+      closedSaidAt = Date.now();
+      const boss = zoneBoss(ZONES.findIndex(z => z.rank === 1));
+      pushLog('info', `${e.port.label} — 아직 줄이 쳐져 있다. 「준비 중」. ${boss ? `제1격의 보스 ${boss.name}${josa(boss.name, '을', '를')} 꺾으면 열린다고 한다.` : ''}`);
+      changed = true;
     } else if (e.type === 'closed' && Date.now() - closedSaidAt > 2000) {
       closedSaidAt = Date.now();
       const boss = getEnemy(e.port.opensAfter);
@@ -3421,6 +3426,8 @@ function foeIcon(foe) { return foe && foe.id === 'observer' ? guideEye('foe-eye'
 
 // 길잡이의 한마디 — 도시에 섰을 때 새로 열린 것을 한 번씩 (대사는 제안). 본 것은 meta.guideSaw 에 적어 다시 말하지 않습니다
 const GUIDE_NOTES = [
+  { id: 'armor', when: () => armorOpen(), key: () => 1,
+    text: () => '백화점 <b>2층</b>이 열렸대. 1층 에스컬레이터 위 — <b>방어구 매장</b>. 투구 · 갑옷 · 장갑 · 신발이래.' },
   { id: 'dept', when: () => deptOpenRank() > 1, key: () => deptOpenRank(),
     text: () => `백화점에 새 물건이 들어왔대. <b>제${deptOpenRank()}격</b> 것. 보스를 꺾었다는 소문이 벌써 돌았나 봐.` },
   { id: 'regrade', when: () => hunterGrade() > 0 && hunterGrade() < Math.min(HUNTER_GRADES.length, deptOpenRank() - 1) && canTakeTest(), key: () => deptOpenRank() - 1,

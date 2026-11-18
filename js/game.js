@@ -1361,7 +1361,10 @@ function deptOpenRank() {
   return r;
 }
 // 그 매장에 지금 놓인 것 (아직 안 산 것 — 산 물건은 진열대에서 사라집니다)
+// 방어구 매장(백화점 2층) — 제1격 보스를 한 번이라도 꺾으면 열림 (도시 계획 2번). 1층 에스컬레이터 문도 이걸 봄 (ui 의 portOpen)
+function armorOpen() { return deptOpenRank() >= 2; }
 function deptWares(section) {
+  if (section === 'armor' && !armorOpen()) return [];
   const r = deptOpenRank();
   return ITEMS.filter(i => i.store === section && i.rank.n <= r && !owns(i.id));
 }
@@ -1393,6 +1396,7 @@ function takeHunterTest(rng = Math.random) {
 function buyDept(id) {
   const it = getItem(id);
   if (!State.meta.cityOpen || !hunterGrade() || !it || !it.store || owns(id) || it.rank.n > deptOpenRank()) return false;   // 사려면 헌터 등록부터
+  if (it.store === 'armor' && !armorOpen()) return false;
   if (num(State.meta.won) < it.price) return false;      // 도시는 돈(원)으로 — 골드는 받지 않습니다
   State.meta.won -= it.price;
   State.meta.owned[id] = 1;

@@ -621,6 +621,31 @@
         if (ax < 0.6) c = mul(c, 0.8);
         return mix(c, c3('#fff3cf'), sy / 39 * 0.28);                               // 위층에서 내려오는 빛
       }
+      if (z.kind === 'armor') {                                                     // 방어구 진열 벽 — 금테 벽감 안에 투구 · 갑옷 · 장갑 · 신발이 차례로 걸림
+        if (zx < 3 || zx >= ZW - 3 || fy < 6 || fy > 40) return wall;
+        if (zx === 3 || zx === ZW - 4 || fy === 6 || fy === 40) return c3(STC.gold);
+        if (fy === 7 || fy === 8) return c3(fy === 7 ? '#e9fbfd' : STC.glow);
+        let c = mix(c3(STC.velvet), c3(STC.glow), Math.max(0, 0.25 * (1 - (fy - 9) / 14)));
+        const ix = zx - 6, slot = Math.floor(ix / 17), ax = ix - slot * 17 - 8, ay = fy - 24;
+        if (ix >= 0 && slot < Math.floor((ZW - 12) / 17)) {
+          const kind = (slot + (z.x >> 2)) % 4, steel = c3(['#c9d2dc', '#9aa6b4', '#e8eef4'][(Math.abs(ax) + ay) % 3 === 0 ? 2 : ay > 2 ? 1 : 0]);
+          const edge = c3('#3a404a');
+          if (kind === 0 && Math.hypot(ax * 1.0, (ay + 3) * 1.15) < 7.5 && ay < 4) return ay === 0 && Math.abs(ax) < 5 ? c3('#1a1e26') : Math.hypot(ax, (ay + 3) * 1.15) > 6.6 ? edge : steel;   // 투구
+          if (kind === 1 && ay > -11 && ay < 9 && Math.abs(ax) < (ay < -6 ? 8 : 6.5 - Math.max(0, ay - 4) * 0.4)) return Math.abs(ax) === 0 ? c3('#7d8794') : steel;                  // 갑옷
+          if (kind === 2 && ((Math.abs(ax + 3) < 2.6 && ay > -6 && ay < 6) || (Math.abs(ax - 3) < 2.6 && ay > -4 && ay < 7))) return ay < -2 && ay > -5 ? c3(STC.gold) : steel;  // 장갑 한 켤레
+          if (kind === 3 && ((ax > -7 && ax < -1 && ay > -6 && ay < 8) || (ax > 1 && ax < 7 && ay > -4 && ay < 8) || (ay >= 6 && ay < 8 && ax > -9 && ax < 9))) return ay >= 6 ? c3('#2a2e36') : c3('#6a4a2c');   // 신발
+          if (ay === -13 && Math.abs(ax) <= 2) return c3(STC.goldDim);              // 걸이
+        }
+        if (fy >= 38) c = mix(c, c3(STC.glow), 0.18);
+        return c;
+      }
+      if (z.kind === 'mirror') {                                                    // 큰 거울 — 금테, 비스듬한 빛줄 둘
+        if (zx < 4 || zx >= ZW - 4 || fy < 5 || fy > 41) return wall;
+        if (zx === 4 || zx === ZW - 5 || fy === 5 || fy === 41) return c3(STC.gold);
+        const d = ((zx - fy) % 40 + 40) % 40;
+        if (d < 3 || (d > 8 && d < 10)) return c3('#f4faff');
+        return mix(c3('#b8c8d6'), c3('#e8f0f6'), (fy - 5) / 40);
+      }
       if (z.kind === 'board') {                                                     // 의뢰 게시판 — 은빛 테 안의 코르크 판에 의뢰 종이가 핀으로 꽂힘 (협회)
         if (zx < 3 || zx >= ZW - 3 || fy < 6 || fy > 39) return wall;
         if (zx === 3 || zx === ZW - 4 || fy === 6 || fy === 39) return c3(STC.gold);

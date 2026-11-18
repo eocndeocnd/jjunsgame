@@ -1349,7 +1349,6 @@ const DEPT = {
   wall: [{ x: 1, w: 7, kind: 'rack' }, { x: 9, w: 3, kind: 'esc' }, { x: 13, w: 7, kind: 'mats' }],
   props: [
     { kind: 'counter', x: 1, y: 0, w: 3 }, { kind: 'counter', x: 5, y: 0, w: 3 },          // 무기 매장 계산대 — 사이 (4, 0) 에 점원
-    { kind: 'rope', x: 9, y: 0, w: 3 },                                                     // 에스컬레이터 앞 — 막아 둔 줄
     { kind: 'counter', x: 13, y: 0, w: 3 }, { kind: 'counter', x: 17, y: 0, w: 3 },        // 재료 창구 계산대 — 사이 (16, 0) 에 점원
     { kind: 'plant', x: 8, y: 0, w: 1 }, { kind: 'plant', x: 12, y: 0, w: 1 }, { kind: 'plant', x: 0, y: 11, w: 1 }, { kind: 'plant', x: 20, y: 11, w: 1 },
     { kind: 'case', x: 1, y: 3, w: 2, tone: 0 }, { kind: 'case', x: 5, y: 3, w: 2, tone: 1 }, { kind: 'case', x: 1, y: 6, w: 2, tone: 2 }, { kind: 'case', x: 5, y: 6, w: 2, tone: 3 },
@@ -1357,8 +1356,26 @@ const DEPT = {
     { kind: 'bench', x: 3, y: 9, w: 3 }, { kind: 'bench', x: 15, y: 9, w: 3 }
   ],
   clerks: [{ x: 4, y: 0, shop: 'weapon', label: '무기 매장' }, { x: 16, y: 0, shop: 'mats', label: '재료 창구' }],
-  signs: [{ name: 'floor2', x: 9, y: 0, w: 3, label: '2층 방어구 매장 · 준비 중' }]
+  signs: [],
+  // 에스컬레이터 앞 — 2층 방어구 매장으로 (제1격 보스를 꺾기 전에는 잠김 · 줄이 쳐짐 — ui 의 portOpen · mapview 가 줄을 그림)
+  links: [{ name: 'up', x: 9, y: 0, w: 3, to: 'dept2.out', label: '2층 방어구 매장', unlock: 'armor' }]
 };
+// ---------- 헌터백화점 2층 — 방어구 매장 (도시 계획 2번) ----------
+// 위 벽에 방어구 진열 벽 · 큰 거울 · 방어구 진열 벽. 가운데 계산대 사이에 점원. 아래 가운데가 1층으로 내려가는 에스컬레이터(나가는 문 자리)
+const DEPT2 = {
+  title: '헌터백화점 2층', w: 21, h: 12, to: 'dept.up', outLabel: '1층으로',
+  wall: [{ x: 1, w: 7, kind: 'armor' }, { x: 8, w: 5, kind: 'mirror' }, { x: 13, w: 7, kind: 'armor' }],
+  props: [
+    { kind: 'counter', x: 7, y: 0, w: 3 }, { kind: 'counter', x: 11, y: 0, w: 3 },         // 계산대 — 사이 (10, 0) 에 점원
+    { kind: 'plant', x: 0, y: 0, w: 1 }, { kind: 'plant', x: 20, y: 0, w: 1 }, { kind: 'plant', x: 0, y: 11, w: 1 }, { kind: 'plant', x: 20, y: 11, w: 1 },
+    { kind: 'case', x: 1, y: 3, w: 2, tone: 1 }, { kind: 'case', x: 5, y: 3, w: 2, tone: 5 }, { kind: 'case', x: 1, y: 6, w: 2, tone: 3 }, { kind: 'case', x: 5, y: 6, w: 2, tone: 7 },
+    { kind: 'case', x: 14, y: 3, w: 2, tone: 4 }, { kind: 'case', x: 18, y: 3, w: 2, tone: 6 }, { kind: 'case', x: 14, y: 6, w: 2, tone: 2 }, { kind: 'case', x: 18, y: 6, w: 2, tone: 0 },
+    { kind: 'bench', x: 3, y: 9, w: 3 }, { kind: 'bench', x: 15, y: 9, w: 3 }
+  ],
+  clerks: [{ x: 10, y: 0, shop: 'armor', label: '방어구 매장' }],
+  signs: []
+};
+const dept2Interior = () => storeInterior(DEPT2);
 function storeInterior(D) {
   const TOP = 3, SIDE = 2, BOTTOM = 2, AISLE = 3;
   const W = D.w + SIDE * 2, H = TOP + D.h + BOTTOM, cx = W >> 1;
@@ -1381,10 +1398,15 @@ function storeInterior(D) {
     blds.push({ x: p.x + SIDE, y: p.y + TOP, w, h, kind: p.kind, tone: p.tone });
   }
   // 나가는 문 — 아래 벽 첫 줄 가운데, 통로와 같은 폭
-  const out = { name: 'out', label: '나가기', x: cx - (AISLE >> 1), y: TOP + D.h, w: AISLE, h: 1, to: D.to, door: true };
+  const out = { name: 'out', label: D.outLabel || '나가기', x: cx - (AISLE >> 1), y: TOP + D.h, w: AISLE, h: 1, to: D.to, door: true };
   for (let i = 0; i < out.w; i++) { tiles[out.y * W + out.x + i] = FLOOR; lk[out.y * W + out.x + i] = look(DOORWAY, CITY_BIO); }
   const ports = [out];
   for (const s of D.signs) ports.push({ name: s.name, label: s.label, x: s.x + SIDE, y: s.y + TOP, w: s.w, h: 1, door: true });   // 이름표만 — 들어갈 수 없음 (to 없음)
+  // 안쪽 문 — 바닥 칸 위에 선 문 (에스컬레이터 앞 등). unlock 이 있으면 게임이 열렸는지 봄 (닫히면 벽처럼)
+  for (const l of D.links || []) {
+    for (let i = 0; i < l.w; i++) if (!inFloor(l.x + i, l.y) || tiles[at(l.x + i, l.y)] !== FLOOR) throw new Error(`${D.title} — ${l.name} 문 자리가 빈 바닥이 아님`);
+    ports.push({ name: l.name, label: l.label, x: l.x + SIDE, y: l.y + TOP, w: l.w, h: 1, to: l.to, door: true, ...(l.unlock ? { unlock: l.unlock } : {}) });
+  }
   const start = { name: 'start', x: out.x + (out.w >> 1), y: out.y - 1 };
   const npcs = [start];
   for (const c of D.clerks) {
@@ -1425,11 +1447,11 @@ const assocInterior = () => storeInterior(ASSOC);
 
 // 뽑을 지도 전부 — { 파일 이름: 만드는 함수 }
 function allMaps(data) {
-  const out = { sewer: sewer(data), overworld: overworld(data), hub: hub(data), oldtown: oldtown(), city: city(), dept: deptInterior(), assoc: assocInterior() };
+  const out = { sewer: sewer(data), overworld: overworld(data), hub: hub(data), oldtown: oldtown(), city: city(), dept: deptInterior(), dept2: dept2Interior(), assoc: assocInterior() };
   for (const s of SECRET_ROOMS) out[s.id] = secretRoom(data, s);
   for (const b of BUILDINGS) out[b.id] = buildingInterior(data, b);
   REALMS.forEach((r, i) => { out[r.name] = realm(data, r, i); });
   return out;
 }
 
-module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, looksPng, encodePng, generate, sewer, overworld, hub, oldtown, city, deptInterior, assocInterior, storeInterior, OLDTOWN, CITY, DEPT, ASSOC, CITY_BIO, secretRoom, buildingInterior, allMaps, layoutFromPlan, HUB_DOORS, REALMS, SEWER, SECRET_ROOMS, BUILDINGS, BUILD, DOORWAY, CARPET, RUIN };
+module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, looksPng, encodePng, generate, sewer, overworld, hub, oldtown, city, deptInterior, dept2Interior, assocInterior, storeInterior, OLDTOWN, CITY, DEPT, DEPT2, ASSOC, CITY_BIO, secretRoom, buildingInterior, allMaps, layoutFromPlan, HUB_DOORS, REALMS, SEWER, SECRET_ROOMS, BUILDINGS, BUILD, DOORWAY, CARPET, RUIN };

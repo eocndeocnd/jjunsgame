@@ -1122,9 +1122,13 @@ test('헌터백화점 — 도시의 백화점 문으로 들어가면 1층, 무�
   const blds = JSON.parse(dept.props.blds);
   for (const b of blds) for (const i of cellsOf(dept, b)) assert.ok(dept.solid[i], `${b.kind} 은 막힌 칸`);
   for (let y = clerks[0].y + 1; y < out.y; y++) for (let x = out.x; x < out.x + out.w; x++) assert.ok(!dept.solid[y * dept.w + x], '가운데 통로는 비어 있음');
-  for (const kind of ['counter', 'case', 'rope']) assert.ok(blds.some(b => b.kind === kind), `${kind} 이(가) 있음`);
+  for (const kind of ['counter', 'case']) assert.ok(blds.some(b => b.kind === kind), `${kind} 이(가) 있음`);
   // 이름표만 있는 곳(2층)은 들어갈 수 없음
-  for (const name of ['floor2']) { const p = dept.ports.find(q => q.name === name); assert.ok(p && !p.to && p.label, `${name} — 이름표만`); }
+  // 에스컬레이터 앞 — 2층 방어구 매장으로 가는 문 (제1격 보스 전에는 잠김 — unlock 'armor'), 2층의 나가는 문은 1층 에스컬레이터 앞으로
+  const up = dept.ports.find(q => q.name === 'up'), dept2 = loadMap('dept2'), down = dept2.ports.find(q => q.name === 'out');
+  assert.ok(up && up.to === 'dept2.out' && up.unlock === 'armor', '1층 → 2층 문');
+  assert.ok(down && down.to === 'dept.up', '2층 → 1층 문');
+  assert.deepEqual(dept2.npcs.filter(n => n.shop).map(n => n.shop), ['armor']);
   // 점원에게 걸어가 닿으면 상점 사건 한 번, 그 앞에 선 채로
   const w = M.createWorld(dept, {}, 1);
   w.mobs = [];
@@ -1139,8 +1143,15 @@ test('헌터백화점 — 도시의 백화점 문으로 들어가면 1층, 무�
 
 test('헌터백화점 물건 — 1~6격마다 무기 하나 · 보조무기 하나, 값은 격마다 오르고 몬스터 전리품과 번호가 안 겹침', () => {
   const { ITEMS } = loadData();
-  const wares = ITEMS.filter(i => i.store);
+  const wares = ITEMS.filter(i => i.store === 'weapon');
   assert.equal(wares.length, 12);
+  // 방어구 매장 (2층) — 격마다 투구 · 갑옷 · 장갑 · 신발, 값은 같은 격 무기의 절반
+  const armor = ITEMS.filter(i => i.store === 'armor');
+  assert.equal(armor.length, 24);
+  for (let r = 1; r <= 6; r++) {
+    assert.deepEqual(armor.filter(i => i.rank.n === r).map(i => i.slot).sort(), ['armor', 'boots', 'gloves', 'helm'], `${r}격 방어구`);
+    assert.ok(Math.abs(armor.find(i => i.rank.n === r).price * 2 / wares.find(i => i.rank.n === r).price - 1) < 0.03, `${r}격 방어구 값 ≈ 무기의 절반`);
+  }
   for (let r = 1; r <= 6; r++) assert.deepEqual(wares.filter(i => i.rank.n === r).map(i => i.slot).sort(), ['offhand', 'weapon'], `${r}격`);
   assert.ok(wares.every(i => i.store === 'weapon' && i.price > 0 && !i.ware && !i.chest));
   const price = r => wares.find(i => i.rank.n === r).price;
