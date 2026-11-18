@@ -202,7 +202,8 @@ function expectedTurnDamage(a, d) {
   const h = Math.min(1, num(a.harmTouch));
   const perSwing = (1 - h) * (1 + c * (critDamage(a.dex) - 1)) + h * HARM_TOUCH_MULT;
   const turns = 1 + Math.min(0.9, num(a.doubleTurn));  // 연속 턴은 한 턴에 움직이는 횟수를 늘립니다
-  return base * hit * multi * perSwing * turns;
+  const ally = num(a.ally) * base * hitChance(a.dex, d.dex) * (1 - Math.min(0.9, num(d.block)));   // 함께 가는 동료의 추가타 (크리 없음)
+  return base * hit * multi * perSwing * turns + ally;
 }
 
 // 일격 한 방의 배수 (원작 Resolute Hero 의 Harm Touch 와 같습니다)
@@ -2339,6 +2340,13 @@ const PASSIVES = [
   { id: 'breath', name: '긴 숨',   icon: '🫁', step: 1,    max: 3,  what: '에너지', flat: true, cost: 1.4 }   // 싸움 한 판을 더 — 가장 세서 값 1.4배(잘 번 판에만) · 단계 셋
 ];
 const PASSIVE_BY_ID = Object.fromEntries(PASSIVES.map(p => [p.id, p]));
+
+// ---------- 동료 (도시 계획 4번 — 사용자 결정 2026-11-18) ----------
+// 제4격 보스를 한 번이라도 꺾으면, 도시의 헌터 협회 로비에서 말을 걸어오는 사람. 이야기가 끝나면 그 공간에 함께 감 (함께 가는 동료는 늘 한 명).
+// 능력은 추가타 — 내가 움직인 뒤 한 번 더 때림 (내 한 방 피해의 ratio, 크리 없음, 빗나갈 수 있음). 이름 · 대사는 가칭.
+const ALLIES = {
+  hayun: { id: 'hayun', name: '하윤', grade: 'D', ratio: 0.3, hue: 150, what: '추가타' }
+};
 
 function goldFor(foe) {
   const r = foe && foe.rank ? foe.rank.n : 1;

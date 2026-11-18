@@ -241,6 +241,7 @@ const State = {
     hunterGrade: 0,              // 헌터 등급 — 0 미등록 · 1~7 = F~S (data.js 의 HUNTER_GRADES). 헌터 협회 시험으로 오르고 내려가지 않음
     testedRun: 0,                // 등록 시험을 본 회차 — 한 회차에 한 번
     passives: {},                // 골드로 산 패시브 — id → 단계 (data.js 의 PASSIVES). 영구
+    ally: null,                  // 함께 가는 동료 id (data.js 의 ALLIES) — 제4격 보스 뒤 협회 로비에서
     sets: [null, null, null],    // 세 벌의 차림. equipped 는 늘 sets[activeSet] 과 같습니다
     activeSet: 0,                // 지금 입고 있는 세트 번호
     settings: defaultSettings(),
@@ -646,6 +647,7 @@ function load() {
     State.meta.heroName = typeof data.heroName === 'string' ? data.heroName.replace(/[<>&"'`\\]/g, '').trim().slice(0, 8) : '';
     State.meta.hunterGrade = Math.max(0, Math.min(HUNTER_GRADES.length, Math.floor(num(data.hunterGrade))));
     State.meta.testedRun = Math.max(0, Math.floor(num(data.testedRun)));
+    State.meta.ally = ALLIES[data.ally] ? data.ally : null;
     State.meta.passives = {};
     for (const p of PASSIVES) { const lv = Math.floor(num(data.passives && data.passives[p.id])); if (lv > 0) State.meta.passives[p.id] = Math.min(p.max, lv); }
     // 도시가 생기기 전의 저장본 — 회차를 한 번이라도 끝냈으면(두 번째 회차부터) 도시가 열린 것으로
@@ -714,6 +716,7 @@ function freshMeta() {
     hunterGrade: 0,
     testedRun: 0,
     passives: {},
+    ally: null,
     sets: [null, null, null],
     activeSet: 0,
     settings: defaultSettings(),
@@ -768,6 +771,7 @@ function heroStats() {
   // 다 모은 격 하나마다 핵심 스탯 전체가 조금씩 — 레벨·분배·장비를 다 합친 뒤에 곱합니다
   const collect = 1 + COLLECTION_BONUS * completedRanks();
   for (const k of STAT_KEYS) total[k] = Math.round(total[k] * collect);
+  total.ally = State.meta.ally && ALLIES[State.meta.ally] ? ALLIES[State.meta.ally].ratio : 0;   // 함께 가는 동료의 추가타
   // 골드로 산 패시브 — 근력(공격력) · 맷집(생명)
   total.damage = Math.round(total.damage * passiveMult('might'));
   total.life = Math.round(total.life * passiveMult('grit'));
@@ -820,6 +824,7 @@ function simulateBattle(hero, enemy, rng = Math.random, log = null) {
   const fBase = damageFormula(enemy.damage, hero.defense);
 
   const hDouble  = num(hero.doubleHit);    // 한 턴에 두 번
+  const hAlly    = num(hero.ally);         // 함께 가는 동료 — 내가 움직인 뒤 한 번 더 (내 한 방의 비율)
   const hSteal   = num(hero.lifesteal);    // 준 피해의 일부 회복
   const hBlock   = num(hero.block);        // 통째로 흘리기
   const hThorn   = num(hero.reflect);      // 맞은 만큼 되돌리기
@@ -908,6 +913,15 @@ function simulateBattle(hero, enemy, rng = Math.random, log = null) {
     if (hTurn > 0 && rng() < hTurn) {
       note('hero', 'extra');
       if (heroAct()) return { win: true, turns: turn, heroHpLeft: heroHp };
+    }
+    // ── 동료의 추가타 ──
+    if (hAlly > 0) {
+      if (rng() < hHit) {
+        const out = Math.max(1, hBase * hAlly * roll());
+        foeHp -= out;
+        note('ally', 'hit', out);
+        if (foeHp <= 0) return { win: true, turns: turn, heroHpLeft: heroHp };
+      } else note('ally', 'miss');
     }
 
     // ── 화신의 턴 ──
@@ -1361,6 +1375,21 @@ function deptOpenRank() {
   return r;
 }
 // 그 매장에 지금 놓인 것 (아직 안 산 것 — 산 물건은 진열대에서 사라집니다)
+// ---------- 동료 (data.js 의 ALLIES) ----------
+// 제4격 보스를 한 번이라도 꺾었고 아직 동료가 없으면, 협회 로비에서 기다림 (ui 의 talk → joinAlly)
+function allyWaiting() {
+  const boss = zoneBoss(ZONES.findIndex(z => z.rank === 4));
+  return !State.meta.ally && !!State.meta.cityOpen && !!boss && State.meta.bossesBeaten.includes(boss.id);
+}
+function joinAlly(id = 'hayun') {
+  if (!ALLIES[id] || State.meta.ally) return false;
+  State.meta.ally = id;
+  pushLog('drop', `${ALLIES[id].name}${josa(ALLIES[id].name, '이', '가')} 동료가 되었다 — 그 공간에 함께 간다 (${ALLIES[id].what}).`);
+  save();
+  return true;
+}
+function allyNow() { return State.meta.ally ? ALLIES[State.meta.ally] : null; }
+
 // 방어구 매장(백화점 2층) — 제1격 보스를 한 번이라도 꺾으면 열림 (도시 계획 2번). 1층 에스컬레이터 문도 이걸 봄 (ui 의 portOpen)
 function armorOpen() { return deptOpenRank() >= 2; }
 function deptWares(section) {

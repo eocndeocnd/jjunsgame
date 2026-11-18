@@ -227,7 +227,7 @@
   // 지금 상인이 와 있는 상인 자리 (그 칸이면)
   function merchantAt(w, x, y) { return w.map.npcs.find(n => n.name === 'merchant' && n.x === x && n.y === y && w.hooks.merchantHere(n)) || null; }
   // 가게 점원이 선 칸 (npc 층의 점에 shop 속성 — 헌터백화점의 매장). 늘 막힌 칸이고 닿으면 상점
-  function shopAt(w, x, y) { return w.map.npcs.find(n => n.shop && n.x === x && n.y === y) || null; }
+  function shopAt(w, x, y) { return w.map.npcs.find(n => n.shop && n.x === x && n.y === y && (!w.hooks.npcHere || w.hooks.npcHere(n))) || null; }   // npcHere — 때가 되어야 서 있는 사람 (협회 로비의 동료)
   function portAt(w, x, y) { return w.map.ports.find(p => inRect(p, x, y) && (!p.appears || w.hooks.portOpen(p))) || null; }
   function wall(w, x, y) {
     if (x < 0 || y < 0 || x >= w.map.w || y >= w.map.h || w.map.solid[y * w.map.w + x]) return true;

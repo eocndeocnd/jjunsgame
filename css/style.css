@@ -803,7 +803,11 @@ kbd {
 }
 .bt-speed.on { opacity: 1; }
 .bt-foe .portrait-ic { font-size: clamp(56px, 19vw, 100px); }
-.bt-hero { width: min(21%, 78px); --pf-in: #5f8f3e; }
+.bt-hero { width: min(21%, 78px); --pf-in: #5f8f3e; position: relative; }
+/* 함께 가는 동료 — 내 왼쪽에 조금 작게 (ui.js 의 allySprite) */
+.bt-hero .bt-ally, .enc-hero .bt-ally { position: absolute; right: 100%; bottom: 0; width: 88%; height: 88%; margin-right: 4px; }
+.enc-hero { position: relative; }
+.talk-face .ally-sprite { width: 36px; height: 45px; }
 .bt-hero .portrait-ic { font-size: clamp(28px, 9vw, 42px); }
 
 /* 그림 이펙트 (fx.js) — 초상 가운데에 겹쳐 그립니다. 절반 해상도로 그려 늘려서 도트처럼 보입니다 */

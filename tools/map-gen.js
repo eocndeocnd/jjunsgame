@@ -1440,7 +1440,7 @@ const ASSOC = {
     { kind: 'plant', x: 0, y: 0, w: 1 }, { kind: 'plant', x: 16, y: 0, w: 1 }, { kind: 'plant', x: 0, y: 9, w: 1 }, { kind: 'plant', x: 16, y: 9, w: 1 },
     { kind: 'bench', x: 1, y: 4, w: 3 }, { kind: 'bench', x: 13, y: 4, w: 3 }, { kind: 'bench', x: 1, y: 7, w: 3 }, { kind: 'bench', x: 13, y: 7, w: 3 }
   ],
-  clerks: [{ x: 8, y: 0, shop: 'assoc', label: '등록 창구' }],
+  clerks: [{ x: 8, y: 0, shop: 'assoc', label: '등록 창구' }, { x: 12, y: 3, shop: 'ally', label: '???' }],   // ??? — 제4격 보스 뒤에만 서 있는 사람 (첫 동료)
   signs: []
 };
 const assocInterior = () => storeInterior(ASSOC);

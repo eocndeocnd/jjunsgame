@@ -1316,7 +1316,7 @@ test('헌터 협회 안 — 도시의 협회 문으로 들어가면 1층 로비,
   assert.equal(out.to, 'city.association');
   assert.equal(assoc.props.theme, 'hq');
   const desk = assoc.npcs.filter(n => n.shop);
-  assert.deepEqual(desk.map(n => n.shop), ['assoc']);
+  assert.deepEqual(desk.map(n => n.shop), ['assoc', 'ally']);   // ally — 제4격 보스 뒤에만 서 있는 첫 동료
 });
 
 test('패시브 — 골드로 사면 영원히 · 값은 이번 회차를 시작할 때의 격 · 회차가 끝나면 골드는 사라짐', () => {
@@ -1347,4 +1347,25 @@ test('패시브 — 골드로 사면 영원히 · 값은 이번 회차를 시작
   assert.deepEqual(r.end, [0, 1234, 1]);
   assert.equal(r.nextRun, true);
   assert.deepEqual(r.max, [5, null]);
+});
+
+test('첫 동료 — 제4격 보스 뒤 협회 로비에서 기다림 · 동료가 되면 싸움마다 추가타(기록에 ally) · 예감에도 들어감', () => {
+  const run = loadGame();
+  const r = run(`
+    currentSlot = 0; State.meta = freshMeta(); State.meta.cityOpen = true; startRun();
+    const out = { before: allyWaiting() };
+    State.meta.bossesBeaten = [4].map(n => zoneBoss(ZONES.findIndex(z => z.rank === n)).id);
+    out.waiting = allyWaiting();
+    out.join = [joinAlly('hayun'), joinAlly('hayun'), allyWaiting(), heroStats().ally];
+    const hero = { ...heroStats(), life: 1e6, damage: 100, defense: 0, dex: 50, luck: 0 }, foe = { life: 1e5, damage: 1, defense: 0, dex: 50, luck: 0 };
+    const log = []; simulateBattle(hero, foe, Math.random, log);
+    out.allyHits = log.filter(e => e.who === 'ally').length > 0;
+    out.dmg = [expectedTurnDamage(hero, foe) > expectedTurnDamage({ ...hero, ally: 0 }, foe)];
+    return out;
+  `);
+  assert.equal(r.before, false);
+  assert.equal(r.waiting, true);
+  assert.deepEqual(r.join, [true, false, false, 0.3]);
+  assert.ok(r.allyHits);
+  assert.deepEqual(r.dmg, [true]);
 });

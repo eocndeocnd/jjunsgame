@@ -359,6 +359,7 @@ function renderRecords() {
   $('records').innerHTML = `
     ${m.heroName ? record('이름', m.heroName) : ''}
     ${m.cityOpen ? record('헌터 등급', hunterGrade() ? `${gradeName()}급` : '미등록') : ''}
+    ${m.ally && ALLIES[m.ally] ? record('동료', `${ALLIES[m.ally].name} · ${ALLIES[m.ally].what}`) : ''}
     ${record('회차', m.runCount)}
     ${record('최고 레벨', fmtLevel(m.bestLevel))}
     ${record('최심 도달', `${m.bestZone}지역 · ${deepest.name}`)}
@@ -1077,6 +1078,8 @@ function battleSound(e) {
       case 'survive': return 'special';
       case 'power':   return e.p === 'zeus' || e.p === 'hades' ? 'harm' : 'special';
     }
+  } else if (e.who === 'ally') {
+    return e.k === 'hit' ? 'hit' : 'miss';
   } else {
     switch (e.k) {
       case 'hit':   return e.crit ? 'foeCrit' : 'foeHit';
@@ -1140,6 +1143,9 @@ function battleLine(e, foeName) {
       case 'survive': return { cls: 'b-special', text: '생존 — 생명 1을 남기고 버텼다' };
       case 'power':   return { cls: 'b-power', text: powerLine(e, foeName, v) };
     }
+  } else if (e.who === 'ally') {
+    const an = (allyNow() || {}).name || '동료';
+    return e.k === 'hit' ? { cls: 'b-hero', text: `${an}의 추가타 — ${foeName}에게 ${v}` } : { cls: 'b-miss', text: `${an}의 공격이 빗나갔다` };
   } else {
     switch (e.k) {
       case 'hit':   return { cls: e.crit ? 'b-foecrit' : 'b-foe', text: `${e.crit ? '치명타! ' : ''}${foeName}의 공격 — ${v}` };
@@ -1154,6 +1160,8 @@ function hpPct(hp, max) { return `${Math.max(0, Math.min(100, (hp / Math.max(1, 
 
 // 내 모습 — 지도에서 걷는 그 그림(assets/hero/walk.png)의 뒷모습 서기 칸. 위에 선 상대를 마주 봅니다 (사용자 결정)
 const heroSprite = () => `<span class="portrait-ic hero-sprite" style="background-image:url('${MapView.heroSheet()}')"></span>`;
+// 함께 가는 동료 — 같은 그림을 빛깔만 돌려서 (가칭 — 동료 그림이 생기면 바꿈)
+const allySprite = (id = State.meta.ally || 'hayun') => `<span class="portrait-ic hero-sprite ally-sprite" style="background-image:url('${MapView.heroSheet()}');filter:hue-rotate(${(ALLIES[id] || {}).hue || 150}deg) saturate(1.25)"></span>`;
 
 // 전투 카드 — 처음 그릴 때. 그다음부터는 paintBattle 이 바 · 숫자 · 줄만 바꿉니다.
 // 위에서부터 상대 체력 · 상대 초상(크게) · 내 초상(작게) · 내 체력 · 기록.
@@ -1170,7 +1178,7 @@ function battleCard(b) {
       <div class="bt-arena" id="btArena">
         <span class="bt-speed" id="btSpeed"></span>
         <div class="portrait bt-foe" id="btFoe"><span class="portrait-ic">${foeIcon(foe)}</span></div>
-        <div class="portrait bt-hero" id="btHero">${heroSprite()}</div>
+        <div class="portrait bt-hero" id="btHero">${heroSprite()}${allyNow() ? `<span class="bt-ally" id="btAlly">${allySprite()}</span>` : ''}</div>
       </div>
       <div class="bt-side hero">
         <div class="bt-top"><span class="bt-name">${activeAvatar() ? `<span class="avatar-tag">${avatarTitle(activeAvatar())}</span>` : ''}${heroName()}<span class="lv">Lv.${fmtLevel(r.levelBefore || State.run.level)}</span></span>
@@ -1307,6 +1315,10 @@ function battleFx(e) {
         break;
       }
     }
+  } else if (e.who === 'ally') {                          // 함께 가는 동료 — 내 옆에서 한 번 더
+    const allyEl = $('btAlly');
+    if (e.k === 'hit') { fxLunge(allyEl, -1); fxSprite('hero', 'slash', foeEl, 0.9); fxHit(foeEl, false); fxFloat(foeEl, v, 'ally'); }
+    else { fxLunge(allyEl, -1); fxFloat(foeEl, '빗나감', 'miss'); }
   } else {
     switch (e.k) {
       case 'hit':
@@ -1597,7 +1609,7 @@ function encounterCard(foe, hero, aura, noRetreat) {
       <!-- 상대와, 그 아래 상대를 마주 본 나 — 싸움 화면(battleCard)과 같은 늘어놓음이라 「맞선다」를 눌러도 튀지 않습니다 -->
       <div class="enc-arena">
         <div class="portrait enc-portrait"><span class="portrait-ic">${foeIcon(foe)}</span></div>
-        <div class="portrait enc-hero">${heroSprite()}</div>
+        <div class="portrait enc-hero">${heroSprite()}${allyNow() ? `<span class="bt-ally">${allySprite()}</span>` : ''}</div>
       </div>
       ${dropStrip(foe)}
     </div>
@@ -1832,6 +1844,9 @@ function onMapEvents(evs) {
       Sound.play('encounter');
       openShop();
       changed = true;
+    } else if (e.type === 'shop' && e.npc.shop === 'ally') {
+      if (allyWaiting() && !isTalkOpen()) playTalk(ALLY_MEET, () => { if (joinAlly('hayun')) Sound.play('rankUp'); render(); }, { end: '같이 가자' });
+      changed = true;
     } else if (e.type === 'shop') {
       Sound.play('encounter');           // 가게 점원에게 닿으면 그 매장의 상점 창 (헌터백화점)
       openShop(e.npc.shop);
@@ -1872,6 +1887,7 @@ function mapMarks() {
   const spot = z && npcs.find(n => n.name === 'merchant' && n.zone === z.id);
   if (spot) out.push({ x: spot.x, y: spot.y, icon: '🎒', label: '상인' });
   for (const n of npcs) {
+    if (n.shop === 'ally' && !allyWaiting()) continue;
     const sec = n.shop && (DEPT_SECTIONS[n.shop] || CLERK_DESKS[n.shop]);
     if (sec) out.push({ x: n.x, y: n.y, icon: sec.icon, label: n.label || sec.name });
   }
@@ -2735,7 +2751,7 @@ function renderShop() {
 // 맨 위는 핵 — 모든 몬스터가 남기는 팔 것 (격마다 한 가지). 가진 격만 한 줄씩, 「모두 판다」 한 번으로 다 팝니다. 만드는 데는 쓰지 않습니다.
 // ---------- 헌터 협회 · 등록 창구 (상점 창을 같이 씀 — shopKind 'assoc') ----------
 // 지금의 나(도시의 Lv.1 그대로)로 F 시험관부터 차례로 싸워, 이긴 데까지가 등급. 회차에 한 번 · 내려가지 않음 (game.js 의 takeHunterTest)
-const CLERK_DESKS = { assoc: { name: '등록 창구', icon: '🧑‍💼' } };   // 백화점 매장이 아닌 창구 — 지도 위 이름표
+const CLERK_DESKS = { assoc: { name: '등록 창구', icon: '🧑‍💼' }, ally: { name: '???', icon: '🧍' } };   // 백화점 매장이 아닌 창구 — 지도 위 이름표
 const ASSOC_TALK = {
   none: ['「신규 등록이세요? 시험은 간단해요. 시험관과 한 번씩 붙어 보시면 돼요. F급부터요.」', '「등록증 없이 게이트 근처를 돌아다니시면 곤란해요. …시험 보시게요?」'],
   again: ['「재심사요? 좋아요. 지난번보다 나아지셨는지 볼까요.」', '「등급은 한 번 받으면 안 내려가요. 부담 없이 보세요.」'],
@@ -3327,7 +3343,7 @@ function pxIcon(name) {
 // 주인공의 이름 — 정하기 전에는 「나」
 function heroName() { return State.meta.heroName || '나'; }
 
-const TALK_WHO = { me: () => heroName(), guide: () => '???', nameless: () => '무명의 화신' };
+const TALK_WHO = { me: () => heroName(), guide: () => '???', nameless: () => '무명의 화신', stranger: () => '???', ally: () => ALLIES.hayun.name };
 let talkScript = [], talkIndex = 0, talkDone = null, talkOpts = {};
 function isTalkOpen() { const t = $('talk'); return !!t && !t.classList.contains('hidden'); }
 // 대사를 차례로 보여 줍니다. 다 보면 done(). opts.skip — 건너뛰기 단추(이름을 묻는 줄은 건너뛰지 않음), opts.end — 마지막 단추 글
@@ -3340,7 +3356,7 @@ function renderTalk() {
   const line = talkScript[talkIndex], last = talkIndex === talkScript.length - 1, ask = line.ask === 'name';
   $('talk').dataset.who = line.who;
   $('talkWho').textContent = TALK_WHO[line.who]();
-  $('talkFace').innerHTML = line.who === 'guide' ? guideEye('bob') : line.who === 'me' ? heroSprite() : '';
+  $('talkFace').innerHTML = line.who === 'guide' ? guideEye('bob') : line.who === 'me' ? heroSprite() : line.who === 'stranger' || line.who === 'ally' ? allySprite() : '';
   $('talkFace').classList.toggle('hidden', line.who === 'nameless');
   $('talkBody').innerHTML = typeof line.text === 'function' ? line.text() : line.text;
   $('talkName').classList.toggle('hidden', !ask);
@@ -3425,7 +3441,19 @@ function maybeCityWake() {
 function foeIcon(foe) { return foe && foe.id === 'observer' ? guideEye('foe-eye') : foe.icon; }
 
 // 길잡이의 한마디 — 도시에 섰을 때 새로 열린 것을 한 번씩 (대사는 제안). 본 것은 meta.guideSaw 에 적어 다시 말하지 않습니다
+// 첫 동료와의 만남 (협회 로비 — 제4격 보스 뒤). 대사는 제안 (가칭 하윤 — D급)
+const ALLY_MEET = [
+  { who: 'stranger', text: '잠깐만요. …등록한 지 얼마 안 됐죠? 그런데 벌써 등급이 몇 번이나 올랐어요.' },
+  { who: 'stranger', text: '측정기는 「반응 없음」이었다면서요. 창구 직원이 이상하다고 하는 걸 들었어요.' },
+  { who: 'me', text: '(…들켰나.)' },
+  { who: 'stranger', text: '캐묻지는 않을게요. 대신 — 데려가 줘요. 어디로 가는지는 몰라도, 거기서 강해지는 거잖아요.' },
+  { who: 'guide', text: '…한 명쯤은 같이 들어갈 수 있을지도 몰라. 네 곁에 딱 붙어 있으면.' },
+  { who: 'ally', text: () => `하윤이에요. D급이고요. ${heroName()} 씨 옆에서 한 번씩 더 칠게요 — 그 정도는 해요.` },
+  { who: 'me', text: '(동료가 생겼다.)' }
+];
 const GUIDE_NOTES = [
+  { id: 'ally', when: () => allyWaiting(), key: () => 1,
+    text: () => '협회 로비에 누가 너를 기다리는 것 같아. 아까부터 이쪽을 보고 있던데.' },
   { id: 'armor', when: () => armorOpen(), key: () => 1,
     text: () => '백화점 <b>2층</b>이 열렸대. 1층 에스컬레이터 위 — <b>방어구 매장</b>. 투구 · 갑옷 · 장갑 · 신발이래.' },
   { id: 'dept', when: () => deptOpenRank() > 1, key: () => deptOpenRank(),

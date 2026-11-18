@@ -99,6 +99,7 @@ function simChooseAvatar() {
 function simShop() {
   if (!SIM.SHOP || typeof deptWares !== 'function' || !State.meta.cityOpen) return 0;
   if (typeof takeHunterTest === 'function') takeHunterTest();   // 회차마다 협회 시험부터 — 등록해야 사고 만들 수 있음
+  if (typeof allyWaiting === 'function' && allyWaiting()) joinAlly();   // 제4격 보스 뒤 — 로비의 동료
   let bought = 0;
   if (typeof sellAllCores === 'function') sellAllCores();   // 핵은 모두 팝니다 — 그 돈으로 만들고 삽니다
   if (typeof craftItem === 'function') {
