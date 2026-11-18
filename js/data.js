@@ -57,7 +57,7 @@ const RULES = {
   PASSIVE_GROWTH: 1.04,
   // 떠돌이 상인의 물건 값 = 그 격 일반 화신 한 번 몫의 이만큼 배.
   // 소지품은 4~6격 기준이라 4격 약 2,000 · 5격 약 3,900 · 6격 약 7,400골드 — 몇 회차를 모아야 하나 살 수 있는 값입니다.
-  WARE_PRICE: 60,
+  WARE_SHARE: 0.94,      // 떠돌이 상인의 물건 값 = 그 물건 격의 한 판 벌이 중간값(PASSIVE_BASE) × 이것 — 에너지가 3 남았을 때까지 모이는 몫 (시뮬, 2026-11-18)
   // 돈 (원) — 도시의 화폐 (docs/CITY-PLAN.md 「돈과 골드」 2번). 그 공간에서 들고 나온 것(핵 · 재료)을 재료 창구에 **팔아서만** 법니다.
   // 골드와는 서로 바꿀 수 없습니다 — 백화점 물건 · 재료로 만들기는 돈으로, 떠돌이 상인은 골드로.
   // 눈금: 골드 1 몫 = WON_SCALE 원 (「300원짜리 단검」은 어색해서 — 1격 단검 24만 원, 1격의 핵 1개 1만 원). 아래 값들은 골드 몫으로 적고 이 눈금을 곱합니다.
@@ -2328,12 +2328,13 @@ for (const it of ITEMS) {
 // 골드는 회차가 끝나면 사라지므로, 그 회차에서 번 골드로 사거나 상인에게 쓰고 나와야 합니다. 한 번 산 단계는 영원히 남습니다.
 // 값 = PASSIVE_BASE[격] × 1.9^(가 본 가장 높은 격 − 1) × PASSIVE_GROWTH^(그 패시브의 단계) × cost (RULES 의 설명)
 //   → 어느 격에서든 「한 판 벌어 하나 살까 말까」 (사용자 결정). PASSIVE_BASE 는 시뮬에서 그 격 한 판 벌이의 중간값에 맞춤.
+// 한 단계 — 싸움 · 성장 쪽은 +2% (사용자 결정 2026-11-18 — 4~5% 였을 때 클리어가 57 → 42회차로 너무 빨라짐), 핵 캐기는 돈 버는 쪽이라 +10% 그대로
 const PASSIVES = [
-  { id: 'might',  name: '근력',    icon: '💪', step: 0.04, max: 10, what: '공격력' },
-  { id: 'grit',   name: '맷집',    icon: '🛡️', step: 0.05, max: 10, what: '생명' },
-  { id: 'eye',    name: '눈썰미',  icon: '🔎', step: 0.04, max: 10, what: '경험치' },
+  { id: 'might',  name: '근력',    icon: '💪', step: 0.02, max: 10, what: '공격력' },
+  { id: 'grit',   name: '맷집',    icon: '🛡️', step: 0.02, max: 10, what: '생명' },
+  { id: 'eye',    name: '눈썰미',  icon: '🔎', step: 0.02, max: 10, what: '경험치' },
   { id: 'miner',  name: '핵 캐기', icon: '💠', step: 0.10, max: 10, what: '핵' },
-  { id: 'stride', name: '발걸음',  icon: '👟', step: 0.04, max: 5,  what: '이동속도' },
+  { id: 'stride', name: '발걸음',  icon: '👟', step: 0.02, max: 5,  what: '이동속도' },
   { id: 'breath', name: '긴 숨',   icon: '🫁', step: 1,    max: 3,  what: '에너지', flat: true, cost: 1.4 }   // 싸움 한 판을 더 — 가장 세서 값 1.4배(잘 번 판에만) · 단계 셋
 ];
 const PASSIVE_BY_ID = Object.fromEntries(PASSIVES.map(p => [p.id, p]));
@@ -2345,6 +2346,7 @@ function goldFor(foe) {
 // 떠돌이 상인에게서 강화석 n 개를 사는 값 — 어느 지역에서든 같습니다
 function stonePriceFor(n) { return Math.max(1, Math.ceil(RULES.STONE_PRICE * n)); }
 // 그 격 일반 화신 한 번 몫을 n 배 한 값 — 상인의 물건 값
+function warePrice(rank) { return Math.round(RULES.WARE_SHARE * RULES.PASSIVE_BASE[Math.min(RULES.PASSIVE_BASE.length, rank) - 1] * Math.pow(RULES.GOLD_GROWTH, rank - 1) / 10) * 10; }
 function priceFor(rank, n) { return Math.round(RULES.GOLD_BASE * Math.pow(RULES.GOLD_GROWTH, rank - 1) * n / 10) * 10; }
 
 // ---------- 떠돌이 상인 ----------
@@ -2356,7 +2358,9 @@ function priceFor(rank, n) { return Math.round(RULES.GOLD_BASE * Math.pow(RULES.
 // 한 번 사면 그 물건은 내 것이 되고 상점에서 사라집니다 (그 여정 동안도, 그 뒤로도).
 //   [id, 이름, 부위, 아이콘, 격, 성격, 흔적 한 줄, 골드 획득 %(없으면 생략)]
 //   격은 4~6 — 어느 지역에서 만나든 이 격의 성능 · 값입니다 (1지역에서 사려면 한참 모아야 하고, 사면 한동안 쓸 물건).
-//   성능은 그 격 지역의 가장 센 일반 화신 것의 1.2배, 값은 priceFor(격, WARE_PRICE).
+//   성능은 그 격 지역의 가장 센 일반 화신 것의 1.2배.
+//   값은 warePrice(격) — 내 강함이 그 물건의 격일 때, 그 격 한 판에서 에너지가 2~3 남았을 즈음 모인 골드로 가까스로 살까 말까 (사용자 결정 2026-11-18).
+//   더 강해지면(위 격의 한 판이면) 쉽게 삽니다. 골드는 회차가 끝나면 사라지므로 그 판 안에서.
 const MERCHANT_ID = 'merchant';
 const MERCHANT_UNLOCK = 'carbuncle';
 const MERCHANT_WARES = [
@@ -2388,7 +2392,7 @@ for (const [id, name, slot, icon, r, arch, note, gold] of MERCHANT_WARES) {
     level, rank,
     from: MERCHANT_ID, fromName: '떠돌이 상인', fromIcon: icon,
     ware: true,
-    price: priceFor(r, RULES.WARE_PRICE),
+    price: warePrice(r),
     ...makeItemStats(slot, level, 1.2, arch, false),
     ...(gold ? { goldRate: gold / 100 } : {})
   });
