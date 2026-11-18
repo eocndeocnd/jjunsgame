@@ -516,8 +516,22 @@
     gold: '#a9e4f2', goldDim: '#5b8aa0', wine: '#1f3a61', red: '#2c7fb8', glow: '#62e6ee', line: '#0b0f16', wall: '#dfe6ee', velvet: '#16263f',
     steel: ['#dfe6ee', '#aeb8c4', '#ffffff', '#7d8794']
   };
+  // 내 길드 안 (지도 속성 theme 'guild') — 단계마다: 1 허름(잿빛 · 바랜 깔개) · 2 치움 · 3 간판 단 사무실(따뜻한 나무 · 초록 깔개) · 4 번듯(흰 돌 · 청록) · 5 가장 멋짐(흰 대리석 · 금 · 짙은 청록)
+  const STC_GUILD = [
+    { ivory: ['#9c978c', '#938e83', '#a5a095', '#827d72'], seam: '#7a756b', dark: ['#3a3733', '#34312d', '#403d38', '#2c2a26'], carpet: ['#5a4a3e', '#524337', '#614f42', '#4a3d32'],
+      gold: '#8f897c', goldDim: '#6a655a', wine: '#5a4a3e', red: '#7a4a3a', glow: '#8aa0a0', line: '#1c1b18', wall: '#a8a294', velvet: '#2e2a26', steel: ['#b8b4ac', '#8f8b84', '#d6d2ca', '#6a675f'] },
+    { ivory: ['#c9c4b8', '#c0bbaf', '#d2cdc1', '#b0ab9f'], seam: '#a6a195', dark: ['#3b3a3f', '#35343a', '#424147', '#2c2b30'], carpet: ['#4a5a66', '#43525d', '#52636f', '#3b4852'],
+      gold: '#b8b2a4', goldDim: '#7f7a6e', wine: '#4a5a66', red: '#6a7a86', glow: '#9fd8dc', line: '#16161a', wall: '#d6d0c2', velvet: '#2a2e34', steel: ['#dfe6ee', '#aeb8c4', '#ffffff', '#7d8794'] },
+    { ivory: ['#d8c6a4', '#cfbd9b', '#e0cfae', '#bfae8c'], seam: '#b29f7c', dark: ['#3f3326', '#382d21', '#47392b', '#30271c'], carpet: ['#2f5a3a', '#2a5234', '#356541', '#244a2e'],
+      gold: '#c9a24a', goldDim: '#8a6d2c', wine: '#2f5a3a', red: '#b0402e', glow: '#7fe3b0', line: '#14120e', wall: '#e8dcc2', velvet: '#2a2218', steel: ['#dfe6ee', '#aeb8c4', '#ffffff', '#7d8794'] },
+    { ivory: ['#dfe6ee', '#d6dee8', '#e8eef4', '#c9d2de'], seam: '#b4bfcd', dark: ['#1d2533', '#19202c', '#222b3a', '#141a24'], carpet: ['#1d4a52', '#1a434a', '#22545d', '#163b41'],
+      gold: '#a9e4f2', goldDim: '#5b8aa0', wine: '#1d4a52', red: '#2c8f98', glow: '#62e6ee', line: '#0b0f16', wall: '#e2e8ee', velvet: '#13262a', steel: ['#dfe6ee', '#aeb8c4', '#ffffff', '#7d8794'] },
+    { ivory: ['#f4f1ea', '#ece8df', '#faf8f2', '#dcd6c8'], seam: '#c9c0ad', dark: ['#132a2e', '#102428', '#173236', '#0c1d20'], carpet: ['#0f4a4f', '#0d4247', '#125459', '#0a3a3e'],
+      gold: '#e0b850', goldDim: '#9a7a2c', wine: '#0f4a4f', red: '#c9a24a', glow: '#7ff0f4', line: '#0b0f12', wall: '#f6f2e8', velvet: '#0e2426', steel: ['#fff7dc', '#e0c870', '#ffffff', '#9a7a2c'] }
+  ];
+  let GLV = 0;                                                                     // 내 길드의 단계 (0 = 아직 안 삼) — 게임이 setGuild 로 알려 줌. 바뀌면 그 길드가 나오는 지도를 다시 그림
   let STC = STC_DEPT;                                                              // 덩어리를 그릴 때마다 그 지도의 것으로 (chunk)
-  const STORE_KINDS = { counter: 1, case: 1, rope: 1, plant: 1, bench: 1, pillar: 1, kiosk: 1 };
+  const STORE_KINDS = { counter: 1, case: 1, rope: 1, plant: 1, bench: 1, pillar: 1, kiosk: 1, desk: 1 };
   const storeZones = (m, A) => A.storeZones || (A.storeZones = JSON.parse((m.props && m.props.wall) || '[]'));
   // 큰 상아색 판 — 서른두 점마다 줄눈, 은은한 결, 군데군데 비스듬한 윤
   function storeTile(X, Y) {
@@ -665,6 +679,18 @@
         }
         return mix(c3('#8a6a42'), c3('#a7845a'), hash(zx >> 1, fy >> 1, 387) * 0.6);   // 코르크
       }
+      if (z.kind === 'gbanner') {                                                   // 내 길드 깃발 — 3단계부터 (그 전엔 빛바랜 네모 자국)
+        const mx = zx - ZW / 2 + 0.5, ax = Math.abs(mx);
+        if (GLV < 3) return ax < 14 && fy > 8 && fy < 38 ? mix(wall, WHITE, 0.12) : wall;
+        if (fy === 6 && ax < 17) return c3(STC.gold);                               // 깃대
+        const bottom = 38 - Math.max(0, ax - 4) * 0.5;                              // 아래가 제비 꼬리처럼
+        if (ax < 14 && fy > 6 && fy < bottom) {
+          const ey = fy - 20, star = ax + Math.abs(ey) < 5 || (ax < 1.6 && Math.abs(ey) < 10) || (Math.abs(ey) < 1.6 && ax < 10);
+          if (ax > 12) return c3(STC.gold);
+          return star ? c3(GLV >= 5 ? '#fff4c8' : STC.glow) : c3(STC.wine);
+        }
+        return wall;
+      }
       if (z.kind === 'screen') {                                                    // 게이트 현황판 (협회) — 은빛 테 두른 검은 화면에 등급 칸 · 남은 시간 막대가 줄지어 깜빡임
         if (zx < 3 || zx >= ZW - 3 || fy < 6 || fy > 39) return wall;
         if (zx === 3 || zx === ZW - 4 || fy === 6 || fy === 39) return c3(STC.gold);
@@ -771,6 +797,15 @@
         if (py === 14 && px % 2 === 0) return mul(floor, 0.85);                     // 줄 그림자
       }
       return floor;
+    }
+    if (k === 'desk') {                                                             // 사무 책상 (내 길드) — 나무 윗면 · 모니터 · 서류 더미 · 머그
+      if (py < 2 || py > 13) return py === 14 && px > 1 && px < W - 2 ? mul(floor, 0.82) : floor;
+      if (px === 0 || px === W - 1 || py === 2 || py === 13) return c3(STC.line);
+      if (py >= 10) return mul(c3(STC.dark[0]), px % 10 === 0 ? 0.8 : 1);            // 앞판
+      if (px >= 6 && px <= 15 && py >= 3 && py <= 7) return px === 6 || px === 15 || py === 3 || py === 7 ? c3('#22252c') : mix(c3(STC.glow), WHITE, py === 4 ? 0.45 : 0.1);   // 모니터
+      if (px >= W - 10 && px <= W - 4 && py >= 4 && py <= 8) return (py & 1) ? c3('#f4f1e8') : c3('#d8d2c4');   // 서류
+      if (Math.hypot(px - 3, py - 6) < 1.8) return c3(STC.red);                    // 머그
+      return mix(c3('#8a6a42'), c3('#a7845a'), ((px >> 2) + py) % 3 === 0 ? 0.6 : 0.2);   // 나무 윗면
     }
     if (k === 'pillar') {                                                           // 기둥 (협회) — 위에서 본 흰 돌 기둥, 은빛 테 둘 · 가운데 청록 빛, 아래로 그림자
       const dx = px - 7.5, dy = py - 7, r = Math.max(Math.abs(dx), Math.abs(dy));
@@ -1191,7 +1226,8 @@
   // 지도에 들어설 때마다 세계가 지도를 새로 감싸므로(시작점만 바꿔), 겉모습 층(같은 배열)에 붙여 둡니다 — 오갈 때 다시 안 그리게
   const prepared = new WeakMap();
   function prep(m) {
-    if (prepared.has(m.look)) return prepared.get(m.look);
+    const A0 = prepared.get(m.look);
+    if (A0 && (!A0.mine || A0.glv === GLV)) return A0;
     const dist = new Float32Array(m.w * m.h).fill(99), q = [];
     for (let k = 0; k < m.w * m.h; k++) if (m.tile[k] !== POOL) { dist[k] = 0; q.push(k); }
     for (let n = 0; n < q.length; n++) {
@@ -1210,7 +1246,10 @@
       const n = buildings.length;
       for (let y = b.y; y < b.y + b.h; y++) for (let x = b.x; x < b.x + b.w; x++) bAt[y * m.w + x] = n;
       const door = (m.ports || []).find(p => p.door && p.x >= b.x && p.x < b.x + b.w && p.y >= b.y && p.y < b.y + b.h);
-      buildings.push({ x0: b.x, y0: b.y, w: b.w, h: b.h, door, kind: b.kind, roof: b.roof, tone: b.tone, v: b.v, roofOnly: !!b.roofOnly, f: b.f, G: null });
+      // 내 길드(문 myguild) — 단계마다 다른 건물로: 0 · 1 허름한 빈 건물(1은 「임대」를 떼고 불을 켬) · 2 · 3 고친 옛 건물(mine) · 4 · 5 미래 건물(mineNew)
+      const my = !!door && door.name === 'myguild';
+      const kind = my ? (GLV <= 1 ? 'shabby' : GLV <= 3 ? 'mine' : 'mineNew') : b.kind;
+      buildings.push({ x0: b.x, y0: b.y, w: b.w, h: b.h, door, kind, roof: b.roof, tone: b.tone, v: b.v, roofOnly: !!b.roofOnly, f: b.f, G: null, my, glv: GLV });
     }
     for (let k = 0; k < m.w * m.h; k++) {
       if ((m.look[k] & 15) !== BUILD || bAt[k] >= 0) continue;
@@ -1255,7 +1294,8 @@
       ps[k] = thick ? POOL_SLACK : 0.12;
     }
     for (let y = m.h - 1; y >= 0; y--) for (let x = 0; x < m.w; x++) { const k = y * m.w + x; if (pv[k] === 1) run[k] = Math.min(9, 1 + (y + 1 < m.h ? run[k + m.w] : 0)); }
-    const A = { dist, chunks: new Map(), bAt, buildings, noProp, pv, pb, ps, run };
+    const A = { dist, chunks: new Map(), bAt, buildings, noProp, pv, pb, ps, run, glv: GLV,
+                mine: (m.props && m.props.theme === 'guild') || buildings.some(b => b.my) };
     if (m.props && m.props.city) cityPrep(m, A);
     prepared.set(m.look, A);
     return A;
@@ -1621,6 +1661,8 @@
     // 옛 동네 건물은 벽면을 조금 높이고 깊이를 줄여 옥상이 덜 보이게 (2026-11-18 사용자 결정)
     villa:  { F: 50, old: true, roof: '#6f9a78', wall: '#a35f48', trim: '#e3ddd2' },   // 빨간 벽돌 빌라 — 초록 방수 옥상 · 1층은 필로티
     shabby: { F: 58, old: true, roof: '#7d786f', wall: '#8d8679', trim: '#a39c8f' },   // 허름한 빈 건물 — 막아 둔 창 · 녹 · 「임대」
+    mine:   { F: 62, old: true, roof: '#8f949a', wall: '#d2c9b6', trim: '#ece6d8' },   // 내 길드 2 · 3단계 — 고친 창 · 새 칠 · (3) 간판 · 차양 · 꽃상자
+    mineNew: { F: 92, cut: 4 },                                                       // 내 길드 4 · 5단계 — 미래 건물 (4 청록 유리 · 5 흰 · 금 · 별 문장)
     store:  { F: 44, old: true, roof: '#938d83', wall: '#bdb6a8', trim: '#d8d2c4' },   // 낡은 가게 — 네온 간판
     back:   { F: 44, old: true, roof: '#8a867e', wall: '#8f8b84', trim: '#a8a49c' }    // 낡은 뒤 건물
   };
@@ -1637,6 +1679,10 @@
     { glass: '#2a2d3d', glass2: '#3a3f56', accent: '#9fb4ff', light: '#dbe3ff', roof: '#292b36' }
   ];
   const HQ_TONE = { glass: '#16263f', glass2: '#1f3a61', accent: '#62e6ee', light: '#d6f8fb', roof: '#232c3b' };
+  const MY_TONE = [
+    { glass: '#14353a', glass2: '#1d4a52', accent: '#62e6ee', light: '#d2f8fa', roof: '#24323a' },   // 4단계 — 번듯한 청록 유리
+    { glass: '#1c2a36', glass2: '#e8e2d0', accent: '#f0c850', light: '#fff4c8', roof: '#e6e0d2' }    // 5단계 — 흰 돌 · 금 테 (4대 길드보다)
+  ];
   const DEPT_TONE = { accent: '#c9a24a', roof: '#cfc6b4' };
   const EMBLEM = [
     ['...#....', '..##....', '..###.#.', '.####.##', '.#######', '########', '.######.', '..####..'],   // 불꽃
@@ -1654,6 +1700,7 @@
       G.tone = HQ_TONE; G.mid = [a, b]; G.step = px => (px >= a && px < b ? roofH - up : roofH);
     } else if (B.kind === 'guild') G.tone = GUILD_TONE[(B.tone || 0) % 4];
     else if (B.kind === 'tower') G.tone = TOWER_TONE[(B.tone || 0) % 3];
+    else if (B.kind === 'mineNew') G.tone = MY_TONE[B.glv >= 5 ? 1 : 0];
     else if (B.kind === 'dept') G.tone = DEPT_TONE;
     if (!G.old) return G;
     G.pal = oldPal(B);
@@ -1759,6 +1806,9 @@
         if (B.kind === 'hq') {
           const hx = Math.round(px - cx) + 5, hy = Math.round(py - cy) + 6;
           if (hx >= 0 && hx < 10 && hy >= 0 && hy < 12 && (hx < 3 || hx > 6 || hy === 5 || hy === 6)) return c3('#eafcff');
+        } else if (B.kind === 'mineNew') {                                          // 내 길드 — 네 갈래 별
+          const ax = Math.abs(px - cx), ay = Math.abs(py - cy), s = R * 0.55;
+          if (ax + ay < s * 0.45 || (ax < 1.6 && ay < s) || (ay < 1.6 && ax < s)) return mix(c3(T.accent), WHITE, B.glv >= 5 ? 0.15 : 0.3);
         } else {
           const k = R >= 16 ? 2 : 1;
           if (emblemAt((B.tone || 0) % 4, Math.round(px - cx) + 4 * k, Math.round(py - cy) + 4 * k, k)) return mix(c3(T.accent), WHITE, 0.3);
@@ -1803,6 +1853,15 @@
     if (fx === q1 || fx === q3) return c3(T.accent);
     if (fx === q1 + 1 || fx === q3 + 1) return mix(c3(T.accent), WHITE, 0.4);
     if (fx === q1 - 1 || fx === q3 + 2) return mix(c3(T.glass), c3(T.accent), 0.35);
+    if (B.kind === 'mineNew') {                                                     // 내 길드 — 가운데 별 문장 (5단계는 금빛 테 · 빛나는 별)
+      const ex = fx - (W >> 1) + 0.5, ey = fy - 22, ax = Math.abs(ex), ay = Math.abs(ey);
+      if (ax <= 12 && ay <= 12) {
+        const star = ax + ay < 5 || (ax < 1.6 && ay < 11) || (ay < 1.6 && ax < 11);
+        if (ax > 11 || ay > 11) return c3(T.accent);
+        return star ? mix(c3(T.accent), WHITE, B.glv >= 5 ? 0.55 : 0.3) : c3('#0e1016');
+      }
+      if (B.glv >= 5 && (fx === 2 || fx === W - 3)) return c3(T.accent);                // 5단계 — 양쪽 끝 금빛 기둥
+    }
     if (B.kind === 'guild') {
       const k = 2, ex = fx - ((W >> 1) - 4 * k), ey = fy - 8;
       if (ex >= -3 && ex < 8 * k + 3 && ey >= -3 && ey < 8 * k + 3) {
@@ -2003,11 +2062,38 @@
       if (wy === 7) return c3('#d8d2c6');
       return c;
     }
+    if (k === 'mine') {                                                             // 내 길드 2 · 3단계 — 고친 창(불 켜짐) · 새 칠 · 유리문 · (3) 간판 띠 · 차양 · 꽃상자
+      const L = B.glv, gf = F - 15;
+      if (fy >= gf) {
+        if (fy < gf + 3) {                                                          // 간판 띠 — 3단계는 청록 테 두른 남색 간판
+          if (L < 3) return c3(fy === gf ? '#8f897c' : '#bdb6a8');
+          if (fx < 2 || fx > W - 3 || fy === gf) return c3('#62e6ee');
+          return fy === gf + 1 && fx > 4 && fx < W - 5 && fx % 5 < 3 ? c3('#f4f1e8') : c3('#1d3348');
+        }
+        if (L >= 3 && fy === gf + 3) return (fx >> 2) & 1 ? c3('#2f6a5a') : c3('#e8e2d4');   // 차양
+        if (inDoor) return fx === door.x0 + 2 || fx === door.x1 - 3 ? c3('#3a3f4a') : mix(c3('#ffe6a8'), c3('#f5b860'), (fy - gf) / 15);   // 유리문 · 따뜻한 불빛
+        if (fx % 24 < 2) return c3('#7b7468');
+        return (fx + fy) % 7 === 0 ? c3('#e2eef2') : c3(L >= 3 ? '#9cc4d0' : '#8fa8b4');   // 진열창
+      }
+      let c = mul(c3(L >= 3 ? '#e2d4b4' : S.wall), 0.95 + vnoise(X * 0.1, Y * 0.1, 347) * 0.08);
+      const R = windowRow(W, 9, 13, 4), rows = gf >= 12 ? Math.floor((gf - 12) / 10) + 1 : 0;
+      const ix = fx - R.x0, cx = Math.floor(ix / 13), wx = ((ix % 13) + 13) % 13, wy = (fy - 4) % 10, cy = Math.floor((fy - 4) / 10), h = hash(cx, cy, 359 + B.x0);
+      if (ix >= 0 && cx < R.n && fy >= 4 && cy < rows && wx < 9) {
+        if (wy >= 1 && wy < 8) {
+          if (wx === 0 || wx === 8 || wy === 1 || wy === 7) return c3('#f0ebe0');
+          const lit = L >= 3 || h < 0.5;
+          return lit ? mix(c3('#ffe6a8'), c3('#f5c46e'), wy / 8) : (wx + wy) % 6 === 0 ? c3('#cfe0ea') : c3('#7f9cae');
+        }
+        if (L >= 3 && wy === 8) return wx % 2 ? c3('#3f8a44') : c3(['#e05a6a', '#f0d040', '#f4f1e8'][(wx >> 1) % 3]);   // 꽃상자
+      }
+      return c;
+    }
     if (k === 'shabby') {                                                           // 허름한 빈 건물 — 막아 둔 창 · 깨진 창 · 녹 자국 · 내린 셔터 · 「임대」 종이
       const gf = F - 15;
       if (fy >= gf) {
         if (fy < gf + 3) return hash(Math.floor(fx / 5), 0, 357) < 0.45 ? c3('#8f8778') : c3('#6f685c');   // 글자가 떨어져 나간 간판
-        if (inDoor && fy >= gf + 5 && fy < gf + 11 && fx >= door.x0 + 6 && fx < door.x1 - 6) return (fx + fy) % 3 === 0 ? c3('#c0392b') : c3('#f2efe6');   // 「임대」 종이
+        if (B.glv >= 1 && inDoor && fy >= gf + 7) return mix(c3('#ffd98a'), c3('#f5b860'), (fy - gf - 7) / 8);   // 1단계 — 셔터를 반쯤 올리고 불을 켬
+        if (!B.glv && inDoor && fy >= gf + 5 && fy < gf + 11 && fx >= door.x0 + 6 && fx < door.x1 - 6) return (fx + fy) % 3 === 0 ? c3('#c0392b') : c3('#f2efe6');   // 「임대」 종이
         if (fx % 24 < 2) return c3('#7b7468');
         return fy % 2 ? c3('#6b6259') : c3('#5a5249');                              // 내린 셔터
       }
@@ -2181,7 +2267,8 @@
 
   // 덩어리 하나 (CH×CH 칸) — 캔버스에 한 번 그려 둠. 용암이 있으면 용암 점만 칠한 빛 판(.glow)도 — 움직이는 것(liveGround)이 일렁이게 얹음
   function chunk(m, cx, cy) {
-    STC = m.props && m.props.theme === 'hq' ? STC_HQ : STC_DEPT;                  // 가게 안의 빛깔 — 헌터백화점 · 헌터 협회
+    const th = m.props && m.props.theme;
+    STC = th === 'hq' ? STC_HQ : th === 'guild' ? STC_GUILD[Math.max(0, Math.min(4, GLV - 1))] : STC_DEPT;   // 가게 안의 빛깔 — 헌터백화점 · 헌터 협회 · 내 길드(단계마다)
     const w = Math.min(CH, m.w - cx * CH), h = Math.min(CH, m.h - cy * CH), pw = w * P;
     const cv = document.createElement('canvas');
     cv.width = pw; cv.height = h * P;
@@ -2805,7 +2892,8 @@
     }
   }
 
-  const api = { has: m => !!(m && m.look), drawGround, drawTrees, drawOver, liveGround, liveAir, drawRift, paintTree, texture, bake, propOf, TW, TH, TREE_STYLES, TREE_PAL, cached: m => (prepared.get(m.look) || { chunks: new Map() }).chunks.size, P, CH, VOID, GRASS, DIRT, COBBLE, TILES, WATER, LAVA, OBSID, SNOW, ROCKY, PAVE, CANAL };
+  const setGuild = n => { GLV = n | 0; };
+  const api = { setGuild, has: m => !!(m && m.look), drawGround, drawTrees, drawOver, liveGround, liveAir, drawRift, paintTree, texture, bake, propOf, TW, TH, TREE_STYLES, TREE_PAL, cached: m => (prepared.get(m.look) || { chunks: new Map() }).chunks.size, P, CH, VOID, GRASS, DIRT, COBBLE, TILES, WATER, LAVA, OBSID, SNOW, ROCKY, PAVE, CANAL };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.MapArt = api;
 })(typeof window !== 'undefined' ? window : globalThis);

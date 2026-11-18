@@ -1093,7 +1093,7 @@ test('도시 — 옛 동네(집 앞에서 시작 · 골목 막다른 곳의 이�
   assert.deepEqual(old.ports.filter(q => q.door).map(q => q.name).sort(), ['blackmarket', 'home', 'myguild']);
   assert.deepEqual(city.ports.filter(q => q.door).map(q => q.name).sort(), ['association', 'dept', 'guild1', 'guild2', 'guild3', 'guild4']);
   assert.deepEqual(city.ports.filter(q => q.door && q.to).map(q => q.name).sort(), ['association', 'dept'], '지금 열린 문은 헌터 협회 · 헌터백화점');
-  assert.ok(!old.ports.some(q => q.door && q.to), '옛 동네의 문은 아직 다 닫힘');
+  assert.deepEqual(old.ports.filter(q => q.door && q.to).map(q => q.name), ['myguild'], '옛 동네에서 열리는 문은 내 길드뿐 (게임이 잠금 — unlock guild)');
   const area = b => b.w * b.h, hq = cityBlds.find(b => b.kind === 'hq');
   assert.ok(cityBlds.every(b => b === hq || area(b) < area(hq)), '헌터 협회가 가장 큰 건물');
   assert.equal(cityBlds.filter(b => b.kind === 'guild').length, 4);
@@ -1416,4 +1416,55 @@ test('동료 여럿 · 게이트 — 제5격 보스 뒤 모집 · 함께 갈 한
   assert.ok(r.guard);
   assert.ok(r.heal);
   assert.deepEqual(r.load, [2, 'hayun', true]);
+});
+
+test('길드 — 제7격 보스 뒤 빈 건물이 매물 · 사서 이름 · 사무 자리(단계만큼)에 앉힌 동료가 시간마다 돈(8시간까지) · 단계 올리기', () => {
+  const run = loadGame();
+  const r = run(`
+    currentSlot = 0; State.meta = freshMeta(); State.meta.cityOpen = true; startRun();
+    const beat = n => State.meta.bossesBeaten.push(zoneBoss(ZONES.findIndex(z => z.rank === n)).id);
+    beat(4); beat(5); joinAlly('hayun'); State.meta.hunterGrade = 3; State.meta.won = 1e15; hireAlly('seojin'); hireAlly('minjae');
+    const out = { before: [guildForSale(), buyGuild(), deskHere('guild')] };
+    beat(7);
+    out.sale = guildForSale();
+    out.buy = [buyGuild(), guildLevel(), guildForSale(), deskHere('guild')];
+    setGuildName('새벽'); out.name = State.meta.guild.name;
+    const h = 3600e3, t0 = 1000;
+    // 함께 가는 하윤은 못 앉힘 · 자리는 단계만큼
+    out.seat = [seatAlly('hayun', t0), seatAlly('seojin', t0), seatAlly('minjae', t0), State.meta.guild.seats.slice()];
+    out.busy = [setCompanion('seojin'), sendToGate('seojin', 'F', t0)];
+    const rate = guildSeatRate();
+    out.pend = [guildSeatPending('seojin', t0 + 2 * h) === Math.floor(rate * 2), guildSeatPending('seojin', t0 + 50 * h) === Math.floor(rate * 8), guildFull(t0 + 9 * h)];
+    const w0 = State.meta.won; out.got = collectGuild(t0 + 3 * h); out.gotOk = [out.got === Math.floor(rate * 3), State.meta.won - w0 === out.got, guildPending(t0 + 3 * h)];
+    out.up = [upgradeGuild(t0 + 3 * h), guildLevel(), guildSeatRate() > rate, seatAlly('minjae', t0 + 3 * h), State.meta.guild.seats.length];
+    out.unseat = [unseatAlly('seojin', t0 + 4 * h), seatedAlly('seojin'), setCompanion('seojin')];
+    for (let i = 0; i < 5; i++) upgradeGuild(t0 + 5 * h);
+    out.max = [guildLevel(), guildPrice()];
+    currentSlot = 3; save(); State.meta = freshMeta(); load();
+    out.load = [State.meta.guild.name, State.meta.guild.level, State.meta.guild.seats.slice()];
+    return out;
+  `);
+  assert.deepEqual(r.before, [false, false, false]);
+  assert.equal(r.sale, true);
+  assert.deepEqual(r.buy, [true, 1, false, true]);
+  assert.equal(r.name, '새벽');
+  assert.deepEqual(r.seat, [false, true, false, ['seojin']]);
+  assert.deepEqual(r.busy, [false, false]);
+  assert.deepEqual(r.pend, [true, true, true]);
+  assert.ok(r.got > 0);
+  assert.deepEqual(r.gotOk, [true, true, 0]);
+  assert.deepEqual(r.up, [true, 2, true, true, 2]);
+  assert.deepEqual(r.unseat, [true, false, true]);
+  assert.deepEqual(r.max, [5, null]);
+  assert.deepEqual(r.load, ['새벽', 5, ['minjae']]);
+});
+
+test('내 길드 안 — 옛 동네 빈 건물 문(잠김 · unlock guild) ↔ 길드 안, 길드 장부 · 사무 자리 다섯', () => {
+  const town = loadMap('oldtown'), g = loadMap('guild');
+  const door = town.ports.find(p => p.name === 'myguild'), out = g.ports.find(p => p.name === 'out');
+  assert.equal(door.to, 'guild.out');
+  assert.equal(door.unlock, 'guild');
+  assert.equal(out.to, 'oldtown.myguild');
+  assert.deepEqual(g.npcs.filter(n => n.shop).map(n => n.shop), ['guild']);
+  assert.equal(g.npcs.filter(n => n.name === 'seat').length, 5);
 });

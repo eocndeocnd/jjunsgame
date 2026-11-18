@@ -1179,7 +1179,7 @@ const OLDTOWN = {
     // 위 줄 — 문은 가운데 골목길(y 7 ~ 9)을 봄
     { kind: 'villa', roof: 'tank', x: 2, y: 0, w: 4, h: 7, door: { x: 3, w: 1, name: 'home', label: '집' } },
     { kind: 'back', annex: true, x: 6, y: 0, w: 2, h: 2 },                                                              // 집 바로 옆 틈 — 이상한 게이트가 이 벽 앞에 섬 (사용자 결정)
-    { kind: 'shabby', x: 8, y: 0, w: 4, h: 7, door: { x: 9, w: 2, name: 'myguild', label: '빈 건물' } },             // 나중에 사들여 내 길드로 키울 곳
+    { kind: 'shabby', x: 8, y: 0, w: 4, h: 7, door: { x: 9, w: 2, name: 'myguild', label: '빈 건물', to: 'guild.out', unlock: 'guild' } },   // 사들여 내 길드로 키울 곳 (도시 계획 6번 — 사기 전에는 잠김, 그림은 길드 단계대로 — mapart)
     { kind: 'store', x: 14, y: 0, w: 4, h: 7 },
     { kind: 'back', annex: true, x: 19, y: 0, w: 2, h: 2, door: { x: 19, w: 2, name: 'blackmarket' } },               // 암시장이 들어설 골목 — 닫힌 셔터 (이름표 없음)
     { kind: 'villa', x: 21, y: 0, w: 6, h: 7 },                                                                         // 위 줄의 직사각형 하나
@@ -1285,7 +1285,7 @@ function townMap(C, name) {
     blds.push({ x: x0, y: y0, w: x1 - x0, h: y1 - y0, kind: b.kind, roof: b.roof, tone: b.tone, v, ...(b.roofOnly ? { roofOnly: true } : {}), ...(f !== undefined ? { f } : {}) });
     if (b.door) {
       if (b.door.x < b.x || b.door.x + b.door.w > b.x + b.w) throw new Error(`${name} — ${b.door.name} 문이 건물 밖`);
-      ports.push({ name: b.door.name, label: b.door.label, x: b.door.x + PD.l, y: b.y + PD.t + b.h - 1, w: b.door.w, h: 1, door: true, ...(b.door.to ? { to: b.door.to } : {}) });   // to 가 없으면 닫힌 문
+      ports.push({ name: b.door.name, label: b.door.label, x: b.door.x + PD.l, y: b.y + PD.t + b.h - 1, w: b.door.w, h: 1, door: true, ...(b.door.to ? { to: b.door.to } : {}), ...(b.door.unlock ? { unlock: b.door.unlock } : {}) });   // to 가 없으면 닫힌 문 · unlock 이 있으면 게임이 열렸는지 봄
       if (b.door.to) for (let i = 0; i < b.door.w; i++) tiles[at(b.door.x + i, b.y + b.h - 1)] = FLOOR;   // 열린 문 — 문 칸으로 걸어 들어감 (겉모습은 건물 그대로)
     }
   });
@@ -1409,6 +1409,10 @@ function storeInterior(D) {
   }
   const start = { name: 'start', x: out.x + (out.w >> 1), y: out.y - 1 };
   const npcs = [start];
+  (D.seats || []).forEach((s, i) => {                                               // 사무 자리 — 막지 않는 빈 바닥 (지도엔 앉은 동료만 그림)
+    if (!inFloor(s.x, s.y) || tiles[at(s.x, s.y)] !== FLOOR) throw new Error(`${D.title} — 자리 (${s.x}, ${s.y}) 가 빈 바닥이 아님`);
+    npcs.push({ name: 'seat', x: s.x + SIDE, y: s.y + TOP, seat: i });
+  });
   for (const c of D.clerks) {
     if (!inFloor(c.x, c.y) || tiles[at(c.x, c.y)] !== FLOOR) throw new Error(`${D.title} — 점원 (${c.x}, ${c.y}) 자리가 빈 바닥이 아님`);
     npcs.push({ name: 'clerk', x: c.x + SIDE, y: c.y + TOP, shop: c.shop, label: c.label });
@@ -1454,14 +1458,32 @@ const ASSOC = {
   signs: []
 };
 const assocInterior = () => storeInterior(ASSOC);
+// ---------- 내 길드 (도시 계획 6번) — 옛 동네의 빈 건물 안 ----------
+// 위 벽: 의뢰 게시판 · 길드 깃발(3단계부터) · 의뢰 게시판. 가운데 위에 길드 장부(창구), 양옆에 사무 책상 다섯 — 책상 아래 칸에 앉은 동료(seats).
+// 단계마다 바닥 · 벽 빛깔이 바뀜 (mapart 의 STC_GUILD — 허름 → 멋짐)
+const GUILD = {
+  title: '내 길드', w: 17, h: 10, to: 'oldtown.myguild', theme: 'guild',
+  wall: [{ x: 1, w: 5, kind: 'board' }, { x: 6, w: 5, kind: 'gbanner' }, { x: 11, w: 5, kind: 'board' }],
+  props: [
+    { kind: 'counter', x: 6, y: 0, w: 2 }, { kind: 'counter', x: 9, y: 0, w: 2 },          // 길드 장부 — 사이 (8, 0)
+    { kind: 'desk', x: 1, y: 2, w: 2 }, { kind: 'desk', x: 1, y: 6, w: 2 }, { kind: 'desk', x: 4, y: 4, w: 2 },
+    { kind: 'desk', x: 14, y: 2, w: 2 }, { kind: 'desk', x: 14, y: 6, w: 2 },
+    { kind: 'plant', x: 0, y: 0, w: 1 }, { kind: 'plant', x: 16, y: 0, w: 1 }, { kind: 'plant', x: 0, y: 9, w: 1 }, { kind: 'plant', x: 16, y: 9, w: 1 },
+    { kind: 'bench', x: 11, y: 8, w: 3 }
+  ],
+  clerks: [{ x: 8, y: 0, shop: 'guild', label: '길드 장부' }],
+  seats: [{ x: 1, y: 3 }, { x: 14, y: 3 }, { x: 4, y: 5 }, { x: 1, y: 7 }, { x: 14, y: 7 }],   // 사무 자리 — 앉힌 차례대로 (지도엔 앉은 동료만)
+  signs: []
+};
+const guildInterior = () => storeInterior(GUILD);
 
 // 뽑을 지도 전부 — { 파일 이름: 만드는 함수 }
 function allMaps(data) {
-  const out = { sewer: sewer(data), overworld: overworld(data), hub: hub(data), oldtown: oldtown(), city: city(), dept: deptInterior(), dept2: dept2Interior(), assoc: assocInterior() };
+  const out = { sewer: sewer(data), overworld: overworld(data), hub: hub(data), oldtown: oldtown(), city: city(), dept: deptInterior(), dept2: dept2Interior(), assoc: assocInterior(), guild: guildInterior() };
   for (const s of SECRET_ROOMS) out[s.id] = secretRoom(data, s);
   for (const b of BUILDINGS) out[b.id] = buildingInterior(data, b);
   REALMS.forEach((r, i) => { out[r.name] = realm(data, r, i); });
   return out;
 }
 
-module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, looksPng, encodePng, generate, sewer, overworld, hub, oldtown, city, deptInterior, dept2Interior, assocInterior, storeInterior, OLDTOWN, CITY, DEPT, DEPT2, ASSOC, CITY_BIO, secretRoom, buildingInterior, allMaps, layoutFromPlan, HUB_DOORS, REALMS, SEWER, SECRET_ROOMS, BUILDINGS, BUILD, DOORWAY, CARPET, RUIN };
+module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, looksPng, encodePng, generate, sewer, overworld, hub, oldtown, city, deptInterior, dept2Interior, assocInterior, guildInterior, storeInterior, OLDTOWN, CITY, DEPT, DEPT2, ASSOC, GUILD, CITY_BIO, secretRoom, buildingInterior, allMaps, layoutFromPlan, HUB_DOORS, REALMS, SEWER, SECRET_ROOMS, BUILDINGS, BUILD, DOORWAY, CARPET, RUIN };

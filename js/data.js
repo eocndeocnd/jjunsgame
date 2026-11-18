@@ -75,6 +75,10 @@ const RULES = {
   HIRE_CORES: 40,         // 동료 모집 — 이번 회차를 시작할 때 내 격의 핵 40개어치(직접 한 회차 몫쯤) × 등급마다 +25% (F 1배 … S 2.5배 — game.js 의 hirePrice)
   GATE_CORES: 4,          // 게이트 — 한 시간에 그 게이트 격의 핵 4개 (가장 긴 S급 8시간 = 32개 — 직접 한 회차의 0.6쯤. 게이트 격은 내 격보다 늘 뒤처짐)
   GATE_STONES: 10,        // 게이트 — 한 시간에 강화석 10 × 격 (가장 덜 강화된 부위로 — 보물상자처럼)
+  // 길드 (도시 계획 6번 — 사용자 결정 2026-11-19). 값 · 벌이는 모두 「이번 회차를 시작할 때 내 격의 핵」 몇 개어치 (돈)
+  GUILD_COST: [60, 90, 130, 180, 250],   // 사들이기(1단계) · 2 · 3 · 4 · 5단계로 올리기 — 직접 한 회차(핵 50개쯤)의 1.2 ~ 5배
+  GUILD_INCOME: 1,        // 사무 자리 하나가 한 시간에 버는 것 — 1단계 핵 1개어치, 단계마다 +50% (5단계 3개어치)
+  GUILD_CAP_HOURS: 8,     // 자리마다 쌓이는 한도 — 8시간 몫까지 (받으면 다시)
   // 재료 (도시 1-다) — 장비를 떨어뜨릴 리 없는 짐승은 장비 대신 제 재료를 줍니다 (data.js 의 MATERIALS).
   // 한 마리에 1개, 전리품 확률만큼 하나 더 (행운 · 기운이 그대로 듦). 재료 MAT_PER_ITEM 개 = 예전에 그 장비를 한 번 주운 셈:
   //   아직 없는 장비면 돈(그 격 일반 CRAFT_PRICE 마리 몫 × WON_SCALE — 1격 4만 · 2격 8만 원: 그 격의 핵 4개)을 얹어 만들고, 이미 가진 장비면 분해했을 때와 같은 강화석으로 바꿉니다.
@@ -2371,6 +2375,8 @@ const ALLIES = {
 function allyGradeN(a) { return HUNTER_GRADES.findIndex(g => g.id === a.grade) + 1; }          // F 1 … S 7 (= 그 등급의 격)
 function allyPower(a) { const k = ALLY_KINDS[a.kind]; return Math.round((k.base + k.step * (allyGradeN(a) - 1)) * 1e4) / 1e4; }   // 하윤(D 추가타) 0.3
 function allyWhat(a) { return `${ALLY_KINDS[a.kind].name} — ${ALLY_KINDS[a.kind].desc(allyPower(a))}`; }
+// 길드 (도시 계획 6번) — 옛 동네의 허름한 빈 건물을 사들여 내 길드로. 단계마다 사무 자리가 하나씩(1~5), 겉모습이 바뀜. 이름은 플레이어가 지음
+const GUILD_LEVELS = ['허름한 사무실', '치운 건물', '간판 단 사무실', '번듯한 길드 건물', '도시에서 가장 멋진 길드'];   // 1~5단계 (가칭)
 // 게이트 — 등급마다 하나, 동료 등급 이하만. 보내면 실제 시간이 흐른 뒤(게임을 꺼도) 그 격의 핵 · 강화석을 가져옴. 다 끝나도 받을 때까지 그대로 (쌓이지 않음)
 const GATE_HOURS = { F: 1, E: 2, D: 3, C: 4, B: 5, A: 6, S: 8 };   // 사용자 결정 2026-11-19 — 1~8시간
 function gateInfo(id) {

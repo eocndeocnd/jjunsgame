@@ -825,6 +825,8 @@ kbd {
 .ally-row .gate-lbl { font-size: 11px; color: var(--text-dim); margin-left: 4px; }
 .ally-row > .btn { display: flex; flex-direction: column; align-items: center; gap: 1px; }
 .ally-row > .btn span { font-size: 10px; font-weight: 400; }
+.assoc-actions .btn:has(> span) { display: inline-flex; flex-direction: column; align-items: center; gap: 1px; }
+.assoc-actions .btn > span { font-size: 10px; font-weight: 400; }
 .gate-table summary { cursor: pointer; font-size: 11px; color: var(--text-dim); }
 .bt-hero .portrait-ic { font-size: clamp(28px, 9vw, 42px); }
 
