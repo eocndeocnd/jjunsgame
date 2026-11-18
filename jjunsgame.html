@@ -2755,8 +2755,8 @@ body.drawer-open .drawer { transform: none; }
 .drawer-body { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
                padding: 6px 14px calc(env(safe-area-inset-bottom) + 22px); }
 .drawer .panel { display: none; }
-body[data-tab="stats"] .stats-panel, body[data-tab="gear"] .gear-panel, body[data-tab="hero"] .hero-panel,
-body[data-tab="settings"] .settings-panel { display: flex; }
+body[data-tab="stats"] .stats-panel, body[data-tab="passive"] .passive-panel, body[data-tab="gear"] .gear-panel,
+body[data-tab="more"] .hero-panel, body[data-tab="more"] .settings-panel { display: flex; }   /* 기능 — 나 + 설정 (2026-11-19) */
 .drawer .topbar { margin: 4px 0 0; }
 .drawer .footer { margin-top: 0; }
 @media (min-width: 861px) {
@@ -2891,15 +2891,15 @@ body.meeting .enc-portrait .portrait-ic { font-size: clamp(90px, 34vw, 190px); }
 <!-- 지도를 옮길 때 잠깐 화면을 까맣게 덮는 막 (ui.js 의 fadeThrough) -->
 <div id="fade" class="fade"></div>
 
-<!-- 메뉴 서랍 — 스탯 · 전리품 · 나 · 설정. 폰은 아래에서, 넓은 화면은 오른쪽에서 나옵니다 (ui.js 의 showTab) -->
+<!-- 메뉴 서랍 — 스탯 · 패시브 · 전리품 · 기능(나 + 설정 — 2026-11-19 사용자 결정). 폰은 아래에서, 넓은 화면은 오른쪽에서 나옵니다 (ui.js 의 showTab) -->
 <div class="drawer-back" id="drawerBack"></div>
 <div class="drawer" id="drawer">
   <div class="drawer-head">
     <nav class="mobile-tabs" id="mobileTabs">
       <button data-tab="stats"><span class="mt-icon">▲</span>스탯</button>
+      <button data-tab="passive"><span class="mt-icon">✦</span>패시브</button>
       <button data-tab="gear"><span class="mt-icon">■</span>전리품</button>
-      <button data-tab="hero"><span class="mt-icon">◆</span>나</button>
-      <button data-tab="settings"><span class="mt-icon">≡</span>설정</button>
+      <button data-tab="more"><span class="mt-icon">≡</span>기능</button>
     </nav>
     <button class="drawer-x" id="drawerX" aria-label="닫기">✕</button>
   </div>
@@ -2912,16 +2912,18 @@ body.meeting .enc-portrait .portrait-ic { font-size: clamp(90px, 34vw, 190px); }
       <div id="alloc" class="alloc"></div>
     </div>
 
-    <!-- 패시브 — 골드로 사는 영구 능력. 골드는 회차가 끝나면 사라짐 (ui.js 의 renderPassives) -->
+    <div class="frame"><ul class="stats" id="heroStats"></ul></div>
+  </section>
+
+  <!-- 패시브 — 골드로 사는 영구 능력. 골드는 회차가 끝나면 사라짐 (ui.js 의 renderPassives) -->
+  <section class="panel passive-panel">
     <div class="frame passive-frame">
       <h3 class="alloc-title">패시브 <span class="count" id="passiveGold"></span></h3>
       <div id="passives" class="passives"></div>
     </div>
-
-    <div class="frame"><ul class="stats" id="heroStats"></ul></div>
   </section>
 
-  <!-- 나 — 레벨 · 격 · 경험치 · 에너지, 여태까지의 기록 -->
+  <!-- 기능 (위) — 나: 레벨 · 격 · 경험치 · 에너지, 여태까지의 기록. 아래 settings-panel 과 같은 칸(more)에 이어서 보임 -->
   <section class="panel hero-panel">
     <div class="frame">
       <div class="level-row">
@@ -2960,7 +2962,7 @@ body.meeting .enc-portrait .portrait-ic { font-size: clamp(90px, 34vw, 190px); }
     </div>
   </section>
 
-  <!-- 설정 — 기록 + 설정. 맨 위 이름표(제목 명패)를 빠르게 다섯 번 누르면 관리자 창. 기록은 길어서 접혀 있고 「보기」로 펼칩니다 -->
+  <!-- 기능 (아래) — 기록 + 설정. 맨 위 이름표(제목 명패)를 빠르게 다섯 번 누르면 관리자 창. 기록은 길어서 접혀 있고 「보기」로 펼칩니다 -->
   <section class="panel settings-panel">
     <header class="topbar">
       <div class="brand">
@@ -16100,7 +16102,7 @@ function wireJourney() {
   }
   on('rosterBtn',    openRosterModal);
   on('jAllocBtn',    openAlloc);       // 「스탯」 칸의 분배판으로
-  on('hudGoldBtn',   () => { if (fightLocked()) return; showTab('stats'); render(); const f = $('passives'); if (f) f.scrollIntoView({ block: 'center', behavior: 'smooth' }); });   // 골드 → 패시브
+  on('hudGoldBtn',   () => { if (fightLocked()) return; showTab('passive'); render(); });   // 골드 → 패시브 칸
   const rab = $('rosterAllBtn');
   if (rab && !rab.dataset.wired) {
     rab.dataset.wired = '1';
@@ -16243,7 +16245,7 @@ function wireKeys() {
 const KEY_HINT = '<kbd>Space</kbd>';
 
 // ---------- 메뉴 서랍의 칸 ----------
-// 'journey' 는 지도(서랍 닫힘), 'stats' · 'gear' · 'hero' · 'settings' 는 메뉴 서랍의 스탯 · 전리품 · 나 · 설정 칸
+// 'journey' 는 지도(서랍 닫힘), 'stats' · 'passive' · 'gear' · 'more' 는 메뉴 서랍의 스탯 · 패시브 · 전리품 · 기능(나 + 설정) 칸
 // — 서랍이 열려 있는 동안 지도는 멈춥니다 (mapPaused)
 let drawerTab = 'stats';   // 손잡이로 다시 열 때 마지막에 본 칸
 function showTab(name) {

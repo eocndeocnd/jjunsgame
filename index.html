@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/galmuri@2.40.3/dist/galmuri.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/neodgm/neodgm-webfont@1.601/neodgm/style.css">
-<link rel="stylesheet" href="css/style.css?v=20261119021824">
+<link rel="stylesheet" href="css/style.css?v=20261119022010">
 </head>
 <body data-tab="journey">
 
@@ -34,15 +34,15 @@
 <!-- 지도를 옮길 때 잠깐 화면을 까맣게 덮는 막 (ui.js 의 fadeThrough) -->
 <div id="fade" class="fade"></div>
 
-<!-- 메뉴 서랍 — 스탯 · 전리품 · 나 · 설정. 폰은 아래에서, 넓은 화면은 오른쪽에서 나옵니다 (ui.js 의 showTab) -->
+<!-- 메뉴 서랍 — 스탯 · 패시브 · 전리품 · 기능(나 + 설정 — 2026-11-19 사용자 결정). 폰은 아래에서, 넓은 화면은 오른쪽에서 나옵니다 (ui.js 의 showTab) -->
 <div class="drawer-back" id="drawerBack"></div>
 <div class="drawer" id="drawer">
   <div class="drawer-head">
     <nav class="mobile-tabs" id="mobileTabs">
       <button data-tab="stats"><span class="mt-icon">▲</span>스탯</button>
+      <button data-tab="passive"><span class="mt-icon">✦</span>패시브</button>
       <button data-tab="gear"><span class="mt-icon">■</span>전리품</button>
-      <button data-tab="hero"><span class="mt-icon">◆</span>나</button>
-      <button data-tab="settings"><span class="mt-icon">≡</span>설정</button>
+      <button data-tab="more"><span class="mt-icon">≡</span>기능</button>
     </nav>
     <button class="drawer-x" id="drawerX" aria-label="닫기">✕</button>
   </div>
@@ -55,16 +55,18 @@
       <div id="alloc" class="alloc"></div>
     </div>
 
-    <!-- 패시브 — 골드로 사는 영구 능력. 골드는 회차가 끝나면 사라짐 (ui.js 의 renderPassives) -->
+    <div class="frame"><ul class="stats" id="heroStats"></ul></div>
+  </section>
+
+  <!-- 패시브 — 골드로 사는 영구 능력. 골드는 회차가 끝나면 사라짐 (ui.js 의 renderPassives) -->
+  <section class="panel passive-panel">
     <div class="frame passive-frame">
       <h3 class="alloc-title">패시브 <span class="count" id="passiveGold"></span></h3>
       <div id="passives" class="passives"></div>
     </div>
-
-    <div class="frame"><ul class="stats" id="heroStats"></ul></div>
   </section>
 
-  <!-- 나 — 레벨 · 격 · 경험치 · 에너지, 여태까지의 기록 -->
+  <!-- 기능 (위) — 나: 레벨 · 격 · 경험치 · 에너지, 여태까지의 기록. 아래 settings-panel 과 같은 칸(more)에 이어서 보임 -->
   <section class="panel hero-panel">
     <div class="frame">
       <div class="level-row">
@@ -103,7 +105,7 @@
     </div>
   </section>
 
-  <!-- 설정 — 기록 + 설정. 맨 위 이름표(제목 명패)를 빠르게 다섯 번 누르면 관리자 창. 기록은 길어서 접혀 있고 「보기」로 펼칩니다 -->
+  <!-- 기능 (아래) — 기록 + 설정. 맨 위 이름표(제목 명패)를 빠르게 다섯 번 누르면 관리자 창. 기록은 길어서 접혀 있고 「보기」로 펼칩니다 -->
   <section class="panel settings-panel">
     <header class="topbar">
       <div class="brand">
@@ -323,20 +325,20 @@
 </div>
 
 <!-- 맨 뒤의 헤진 지도. 게임과 상관없이 먼저 그려둡니다. -->
-<script src="js/backdrop.js?v=20261119021824"></script>
+<script src="js/backdrop.js?v=20261119022010"></script>
 <!-- 효과음과 배경음. 소리 파일 없이 그 자리에서 만듭니다. -->
-<script src="js/sound.js?v=20261119021824"></script>
+<script src="js/sound.js?v=20261119022010"></script>
 <!-- 전투 이펙트 — assets/fx 의 그림 두 장에서 프레임을 잘라 씁니다 -->
-<script src="js/fx.js?v=20261119021824"></script>
-<script src="js/data.js?v=20261119021824"></script>
-<script src="js/game.js?v=20261119021824"></script>
+<script src="js/fx.js?v=20261119022010"></script>
+<script src="js/data.js?v=20261119022010"></script>
+<script src="js/game.js?v=20261119022010"></script>
 <!-- 월드맵 — 지도(maps/*.tmj 를 build.py 가 감싼 것) · 걷기 규칙 · 그리기 -->
-<script src="js/maps.js?v=20261119021824"></script>
-<script src="js/map.js?v=20261119021824"></script>
-<script src="js/mapart.js?v=20261119021824"></script>
-<script src="js/mapview.js?v=20261119021824"></script>
+<script src="js/maps.js?v=20261119022010"></script>
+<script src="js/map.js?v=20261119022010"></script>
+<script src="js/mapart.js?v=20261119022010"></script>
+<script src="js/mapview.js?v=20261119022010"></script>
 <!-- 장비 그림 목록 (tools/cut-sheets.js 가 만듦) — 없는 장비는 이모티콘 -->
-<script src="js/itemart.js?v=20261119021824"></script>
-<script src="js/ui.js?v=20261119021824"></script>
+<script src="js/itemart.js?v=20261119022010"></script>
+<script src="js/ui.js?v=20261119022010"></script>
 </body>
 </html>

@@ -1971,7 +1971,7 @@ function wireJourney() {
   }
   on('rosterBtn',    openRosterModal);
   on('jAllocBtn',    openAlloc);       // 「스탯」 칸의 분배판으로
-  on('hudGoldBtn',   () => { if (fightLocked()) return; showTab('stats'); render(); const f = $('passives'); if (f) f.scrollIntoView({ block: 'center', behavior: 'smooth' }); });   // 골드 → 패시브
+  on('hudGoldBtn',   () => { if (fightLocked()) return; showTab('passive'); render(); });   // 골드 → 패시브 칸
   const rab = $('rosterAllBtn');
   if (rab && !rab.dataset.wired) {
     rab.dataset.wired = '1';
@@ -2114,7 +2114,7 @@ function wireKeys() {
 const KEY_HINT = '<kbd>Space</kbd>';
 
 // ---------- 메뉴 서랍의 칸 ----------
-// 'journey' 는 지도(서랍 닫힘), 'stats' · 'gear' · 'hero' · 'settings' 는 메뉴 서랍의 스탯 · 전리품 · 나 · 설정 칸
+// 'journey' 는 지도(서랍 닫힘), 'stats' · 'passive' · 'gear' · 'more' 는 메뉴 서랍의 스탯 · 패시브 · 전리품 · 기능(나 + 설정) 칸
 // — 서랍이 열려 있는 동안 지도는 멈춥니다 (mapPaused)
 let drawerTab = 'stats';   // 손잡이로 다시 열 때 마지막에 본 칸
 function showTab(name) {
