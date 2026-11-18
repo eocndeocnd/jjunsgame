@@ -1247,7 +1247,8 @@ const CITY = {
   // 보도의 자잘한 것 (2026-11-18) — 버스 정류장 · 자판기 · 홀로그램 안내판 · 벤치 · 분리수거함 · 볼라드 · 전기자전거 (막힌 칸 — 그림은 mapart.js 의 clutterSprite)
   clutter: [
     { kind: 'bus', x: 6, y: 24, w: 3, h: 1 }, { kind: 'bus', x: 36, y: 42, w: 3, h: 1 },
-    { kind: 'vend', x: 16, y: 36, tone: 0 }, { kind: 'vend', x: 17, y: 36, tone: 2 }, { kind: 'vend', x: 34, y: 43, tone: 1 },
+    // 자판기 — 길을 막지 않게 건물 · 가림막에 붙여 (사용자 결정 2026-11-19): 백화점 오른쪽 벽 · 오른쪽 빈터 가림막 앞
+    { kind: 'vend', x: 16, y: 34, tone: 0 }, { kind: 'vend', x: 16, y: 35, tone: 2 }, { kind: 'vend', x: 34, y: 44, tone: 1 },
     { kind: 'holo', x: 15, y: 17 }, { kind: 'holo', x: 30, y: 17 },
     { kind: 'bench', x: 17, y: 18, w: 2, h: 1 }, { kind: 'bench', x: 27, y: 18, w: 2, h: 1 }, { kind: 'bench', x: 10, y: 24, w: 2, h: 1 },
     { kind: 'bin', x: 20, y: 36 }, { kind: 'bin', x: 45, y: 36 },

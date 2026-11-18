@@ -1599,12 +1599,7 @@
   }
   function asphalt(X, Y) {
     const c = shadeOf(CYC.asphalt, fbm(X * 0.04, Y * 0.04, 301) * 0.7 + hash(X, Y, 302) * 0.3);
-    // 맨홀 — 드문드문 한 칸 가운데, 테 두른 둥근 뚜껑에 격자 (빛 도는 도시라 테에 청록이 살짝)
-    const tx = X >> 4, ty = Y >> 4;
-    if (hash(tx, ty, 496) < 0.012) {
-      const r = Math.hypot((X & 15) - 7.5, (Y & 15) - 7.5);
-      if (r < 5.6) return r > 4.6 ? c3('#1a1c20') : r > 4 ? mix(c3('#5d636c'), c3(CYC.glow), 0.25) : ((X + Y) & 3) === 0 ? c3('#3c4048') : c3('#4c515a');
-    }
+    // (맨홀은 없앰 — 미래 도시엔 하수구가 안 보이게, 사용자 결정 2026-11-19)
     return hash(X, Y, 303) < 0.02 ? c3('#42454d') : c;
   }
   // 찻길 무늬 — 가장자리를 따라 흐르는 빛 띠 · 가운데 흰 두 줄 · 흰 점선 차선, 횡단보도는 길을 가로지르는 굵은 줄(양끝은 빛). 네거리 한가운데는 무늬 없음
@@ -1628,8 +1623,7 @@
         if ((w < 9 && (v === -1 || v === 0)) || (w >= 9 && Math.abs(v + 0.5) <= (14 - w) * 0.8)) return mix(c3(CYC.paint), c3(CYC.asphalt[0]), 0.35 + hash(cell, a, 495) * 0.15);
       }
     }
-    // 빗물받이 — 연석 바로 안쪽, 여섯 칸에 한 번
-    if ((a === 3 || a === Wd - 4 || a === 4 || a === Wd - 5) && ((along % (P * 6)) + P * 6) % (P * 6) < 7) return ((along & 1) ? c3('#16181c') : c3('#5a5f68'));
+    // (빗물받이는 없앰 — 미래 도시엔 하수구가 안 보이게, 사용자 결정 2026-11-19)
     if (Wd >= 4 * P && (a === (Wd >> 2) || a === Wd - (Wd >> 2)) && ((along % 20) + 20) % 20 < 10) return mix(c3(CYC.paint), c3(CYC.asphalt[0]), 0.3);
     if (a === 1 || a === Wd - 2) return c3(CYC.glow);
     if (a === 2 || a === Wd - 3) return mix(c3(CYC.glowDim), c3(CYC.asphalt[0]), 0.45);
@@ -1714,7 +1708,7 @@
       if (e.t === ROCK && Math.hypot(lx - 7.5, ly - 7.5) < 6.2) { const r = Math.hypot(lx - 7.5, ly - 7.5); return r > 5 ? c3(CYC.glow) : r > 4 ? c3('#20262e') : c3('#3a4250'); }
       if (terAt(tx, ty - 1) === BUILD && (ly === 3 || ly === 5)) c = mix(c, c3('#d9b43a'), hash(X >> 2, ty, 500) < 0.15 ? 0.25 : 0.7);   // 건물 앞 노란 이중선 — 주정차 금지 (군데군데 닳음)
       if (terAt(tx, ty + 1) === BUILD && (ly === 10 || ly === 12)) c = mix(c, c3('#d9b43a'), hash(X >> 2, ty, 501) < 0.15 ? 0.25 : 0.7);
-      if (hash(tx, ty, 502) < 0.018 && terAt(tx, ty - 1) !== BUILD && terAt(tx, ty + 1) !== BUILD) {           // 작은 맨홀 — 녹슨 테 · 격자
+      if (hash(tx, ty, 502) < 0.006 && terAt(tx, ty - 1) !== BUILD && terAt(tx, ty + 1) !== BUILD) {           // 작은 맨홀 — 녹슨 테 · 격자 (2026-11-19 셋에 하나로 줄임 — 사용자 결정)
         const r = Math.hypot(lx - 7.5, ly - 7.5);
         if (r < 4.6) return r > 3.7 ? c3('#2a2826') : ((X + Y) & 3) === 0 ? c3('#4a4440') : c3('#5c5650');
       }
@@ -2799,7 +2793,7 @@
         }
       }
       // 차 — 차선마다 몇 대, 저마다 빠르기 · 빛깔. 오른쪽 통행 (가로: 아래 차선이 오른쪽으로 · 세로: 왼쪽 차선이 아래로)
-      const per = Math.max(1, Math.round(L / (P * 7)));
+      const per = Math.max(1, Math.round(L / (P * 28)));                            // 2026-11-19 넷에 하나로 줄임 (사용자 결정 — 예전 P * 7)
       for (let lane = 0; lane < 2; lane++) for (let i = 0; i < per; i++) {
         const h = hash(bi * 7 + lane, i, 470);
         if (h < 0.3) continue;                                                      // 빈 자리 — 차가 일정하게 늘어서 보이지 않게
