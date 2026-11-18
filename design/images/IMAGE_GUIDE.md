@@ -18,7 +18,7 @@
 ## 개수
 
 - 몬스터 297개 (일반 157 · 정예 114 · 히든 6 · 보스 20) — 이 중 **화신 215명**은 몬스터 그림을 화신 그림으로도 씁니다
-- 전리품 549개 — 부위별: weapon 63 · offhand 45 · helm 45 · armor 46 · shoulder 36 · gloves 37 · belt 30 · greaves 35 · boots 34 · cloak 39 · ring 35 · necklace 41 · bracelet 38 · special 25
+- 전리품 573개 — 부위별: weapon 63 · offhand 45 · helm 51 · armor 52 · shoulder 36 · gloves 43 · belt 30 · greaves 35 · boots 40 · cloak 39 · ring 35 · necklace 41 · bracelet 38 · special 25
 
 ## 그 밖의 그림
 
@@ -2975,6 +2975,30 @@
 - `ware_ring` **안쪽에 날짜가 새겨진 반지** (ring, 제6격 성능) → `assets/items/ware_ring.png` — 날짜는 오늘보다 한참 전이다.
 - `ware_greaves` **무릎보호대** (greaves, 제6격 성능) → `assets/items/ware_greaves.png` — 한쪽만 심하게 닳았다.
 - `ware_scarf` **색 바랜 목도리** (shoulder, 제6격 성능) → `assets/items/ware_scarf.png` — 누가 떠 준 것인지 모르는 채 두르게 된다.
+- `dept_helm1` **보급형 안전 헬멧** (helm, 제1격 성능) → `assets/items/dept_helm1.png` — 협회 마크 스티커가 반쯤 떨어졌다. 턱끈은 새것.
+- `dept_vest1` **보급 방검 조끼** (armor, 제1격 성능) → `assets/items/dept_vest1.png` — 찔리는 것만 막는다고 적혀 있다. 물리는 것은 안 적혀 있다.
+- `dept_glove1` **미끄럼 방지 장갑** (gloves, 제1격 성능) → `assets/items/dept_glove1.png` — 손바닥의 오돌토돌한 고무가 칼자루를 붙잡는다.
+- `dept_boots1` **강화 안전화** (boots, 제1격 성능) → `assets/items/dept_boots1.png` — 앞코에 쇠가 들었다. 차면 아프다 — 양쪽 다.
+- `dept_helm2` **경량 카본 헬멧** (helm, 제2격 성능) → `assets/items/dept_helm2.png` — 쓴 것을 잊을 만큼 가볍다. 그래서 자꾸 잊고 나간다.
+- `dept_vest2` **방탄 섬유 재킷** (armor, 제2격 성능) → `assets/items/dept_vest2.png` — 총알을 막으려고 만든 것이 이빨도 막는다.
+- `dept_glove2` **충격 흡수 장갑** (gloves, 제2격 성능) → `assets/items/dept_glove2.png` — 손등의 젤이 맞을 때마다 꾸욱 눌린다.
+- `dept_boots2` **쿠션 전술화** (boots, 제2격 성능) → `assets/items/dept_boots2.png` — 하루 사만 보를 걸어도 발이 멀쩡하다는 광고.
+- `dept_helm3` **야간 투시 바이저** (helm, 제3격 성능) → `assets/items/dept_helm3.png` — 어둠 속의 것이 초록빛으로 떠오른다. 저쪽도 나를 본다.
+- `dept_vest3` **세라믹 판 조끼** (armor, 제3격 성능) → `assets/items/dept_vest3.png` — 판 하나가 깨지면 그 자리만 갈아 끼운다.
+- `dept_glove3` **그립 강화 장갑** (gloves, 제3격 성능) → `assets/items/dept_glove3.png` — 손가락 마디마다 작은 모터. 놓치는 일이 없다.
+- `dept_boots3` **접지 부츠** (boots, 제3격 성능) → `assets/items/dept_boots3.png` — 젖은 바위 위에서도 미끄러지지 않는다 — 점액 위는 보증 밖.
+- `dept_helm4` **열 차단 헬멧** (helm, 제4격 성능) → `assets/items/dept_helm4.png` — 불길 속에서도 숨이 시원하다. 필터는 석 달마다.
+- `dept_vest4` **냉각 슈트** (armor, 제4격 성능) → `assets/items/dept_vest4.png` — 안쪽에 찬 액이 돈다. 겨울엔 반품이 많다.
+- `dept_glove4` **전도 장갑** (gloves, 제4격 성능) → `assets/items/dept_glove4.png` — 붙잡은 것에 약한 전기가 흐른다. 악수는 사양.
+- `dept_boots4` **자세 제어 부츠** (boots, 제4격 성능) → `assets/items/dept_boots4.png` — 넘어지려 하면 발목이 먼저 버틴다.
+- `dept_helm5` **센서 일체형 헬멧** (helm, 제5격 성능) → `assets/items/dept_helm5.png` — 약점이 붉게 표시된다. 표시가 너무 많을 때도 있다.
+- `dept_vest5` **핵 섬유 갑옷** (armor, 제5격 성능) → `assets/items/dept_vest5.png` — 몬스터 핵에서 뽑은 실로 짰다. 가끔 따뜻하다.
+- `dept_glove5` **외골격 장갑** (gloves, 제5격 성능) → `assets/items/dept_glove5.png` — 팔꿈치까지 올라오는 틀이 힘을 세 배로.
+- `dept_boots5` **추진 보조 부츠** (boots, 제5격 성능) → `assets/items/dept_boots5.png` — 뒤꿈치에서 짧게 불이 뿜어진다. 실내 사용 금지.
+- `dept_helm6` **전면 차폐 헬멧** (helm, 제6격 성능) → `assets/items/dept_helm6.png` — 얼굴이 보이지 않는다. 매장 직원도 누가 샀는지 모른다.
+- `dept_vest6` **역장 내장 갑주** (armor, 제6격 성능) → `assets/items/dept_vest6.png` — 가슴판 안쪽에서 얇은 빛막이 몸을 감싼다.
+- `dept_glove6` **파쇄 건틀릿** (gloves, 제6격 성능) → `assets/items/dept_glove6.png` — 주먹을 쥐면 마디의 돌기가 바깥으로 선다.
+- `dept_boots6` **중력 완충 부츠** (boots, 제6격 성능) → `assets/items/dept_boots6.png` — 높은 데서 떨어져도 사뿐히 — 떨어지는 동안은 그대로 무섭다.
 - `dept_knife` **보급형 합금 단검** (weapon, 제1격 성능) → `assets/items/dept_knife.png` — 협회 인증 입문용. 날보다 손잡이에 공을 들였다.
 - `dept_buckler` **폴리카보네이트 방패** (offhand, 제1격 성능) → `assets/items/dept_buckler.png` — 투명해서 앞이 보인다 — 그게 장점인지는 써 봐야 안다.
 - `dept_saber` **경량 티타늄 장검** (weapon, 제2격 성능) → `assets/items/dept_saber.png` — 한 손으로 하루 종일 휘둘러도 손목이 남는다.

@@ -30,7 +30,9 @@ if (cmd === 'images') {
   write('design/images/image-manifest.json', out.json);
   write('design/images/IMAGE_GUIDE.md', out.md);
   // 장비 그림 프롬프트 묶음 — 이미지 AI 에 붙여 넣을 것 (격마다 한 파일, 한 장에 9개까지). 예전에 뽑은 격 파일은 지우고 새로 씁니다
-  const batches = require('./prompt-batches.js').build(JSON.parse(out.json), f => fs.existsSync(path.join(ROOT, f)));
+  const prevFile = path.join(ROOT, 'design/images/prompts/sheets.json');
+  const prev = fs.existsSync(prevFile) ? JSON.parse(fs.readFileSync(prevFile, 'utf8')) : [];   // 다 잘라 둔 시트는 그대로 (prompt-batches 의 build)
+  const batches = require('./prompt-batches.js').build(JSON.parse(out.json), f => fs.existsSync(path.join(ROOT, f)), prev);
   const dir = path.join(ROOT, 'design/images/prompts');
   if (fs.existsSync(dir)) for (const f of fs.readdirSync(dir)) if (/^rank\d+\.md$/.test(f)) fs.unlinkSync(path.join(dir, f));
   for (const [name, text] of Object.entries(batches.files)) write(`design/images/prompts/${name}`, text);

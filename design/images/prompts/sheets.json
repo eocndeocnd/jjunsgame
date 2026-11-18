@@ -165,6 +165,36 @@
   ]
  },
  {
+  "sheet": "design/images/sheets/rank01-D.png",
+  "rank": 1,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "dept_helm1",
+    "name": "보급형 안전 헬멧",
+    "file": "assets/items/dept_helm1.png"
+   },
+   {
+    "id": "dept_vest1",
+    "name": "보급 방검 조끼",
+    "file": "assets/items/dept_vest1.png"
+   },
+   {
+    "id": "dept_glove1",
+    "name": "미끄럼 방지 장갑",
+    "file": "assets/items/dept_glove1.png"
+   },
+   {
+    "id": "dept_boots1",
+    "name": "강화 안전화",
+    "file": "assets/items/dept_boots1.png"
+   }
+  ]
+ },
+ {
   "sheet": "design/images/sheets/rank02-A.png",
   "rank": 2,
   "grid": [
@@ -326,6 +356,36 @@
     "id": "gargoyle_2",
     "name": "돌 팔찌",
     "file": "assets/items/gargoyle_2.png"
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank02-D.png",
+  "rank": 2,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "dept_helm2",
+    "name": "경량 카본 헬멧",
+    "file": "assets/items/dept_helm2.png"
+   },
+   {
+    "id": "dept_vest2",
+    "name": "방탄 섬유 재킷",
+    "file": "assets/items/dept_vest2.png"
+   },
+   {
+    "id": "dept_glove2",
+    "name": "충격 흡수 장갑",
+    "file": "assets/items/dept_glove2.png"
+   },
+   {
+    "id": "dept_boots2",
+    "name": "쿠션 전술화",
+    "file": "assets/items/dept_boots2.png"
    }
   ]
  },
@@ -495,6 +555,36 @@
   ]
  },
  {
+  "sheet": "design/images/sheets/rank03-D.png",
+  "rank": 3,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
+   {
+    "id": "dept_helm3",
+    "name": "야간 투시 바이저",
+    "file": "assets/items/dept_helm3.png"
+   },
+   {
+    "id": "dept_vest3",
+    "name": "세라믹 판 조끼",
+    "file": "assets/items/dept_vest3.png"
+   },
+   {
+    "id": "dept_glove3",
+    "name": "그립 강화 장갑",
+    "file": "assets/items/dept_glove3.png"
+   },
+   {
+    "id": "dept_boots3",
+    "name": "접지 부츠",
+    "file": "assets/items/dept_boots3.png"
+   }
+  ]
+ },
+ {
   "sheet": "design/images/sheets/rank04-A.png",
   "rank": 4,
   "grid": [
@@ -536,6 +626,11 @@
     "id": "ware_flashlight",
     "name": "아직 켜지는 손전등",
     "file": "assets/items/ware_flashlight.png"
+   },
+   {
+    "id": "cyclops_0",
+    "name": "외눈 투구",
+    "file": "assets/items/cyclops_0.png"
    }
   ]
  },
@@ -548,9 +643,9 @@
   ],
   "cells": [
    {
-    "id": "cyclops_0",
-    "name": "외눈 투구",
-    "file": "assets/items/cyclops_0.png"
+    "id": "dept_helm4",
+    "name": "열 차단 헬멧",
+    "file": "assets/items/dept_helm4.png"
    },
    {
     "id": "giantking_1",
@@ -561,6 +656,11 @@
     "id": "ware_hardhat",
     "name": "이름이 번진 안전모",
     "file": "assets/items/ware_hardhat.png"
+   },
+   {
+    "id": "dept_vest4",
+    "name": "냉각 슈트",
+    "file": "assets/items/dept_vest4.png"
    },
    {
     "id": "goliath2_1",
@@ -603,6 +703,11 @@
     "file": "assets/items/cyclops_1.png"
    },
    {
+    "id": "dept_glove4",
+    "name": "전도 장갑",
+    "file": "assets/items/dept_glove4.png"
+   },
+   {
     "id": "firegiant_0",
     "name": "용암을 주무르는 손",
     "file": "assets/items/firegiant_0.png"
@@ -637,6 +742,11 @@
    3
   ],
   "cells": [
+   {
+    "id": "dept_boots4",
+    "name": "자세 제어 부츠",
+    "file": "assets/items/dept_boots4.png"
+   },
    {
     "id": "ware_boots",
     "name": "끈이 해진 등산화",
@@ -721,6 +831,11 @@
     "id": "ware_sign",
     "name": "방패 대신 든 표지판",
     "file": "assets/items/ware_sign.png"
+   },
+   {
+    "id": "banshee_0",
+    "name": "통곡의 두건",
+    "file": "assets/items/banshee_0.png"
    }
   ]
  },
@@ -733,9 +848,9 @@
   ],
   "cells": [
    {
-    "id": "banshee_0",
-    "name": "통곡의 두건",
-    "file": "assets/items/banshee_0.png"
+    "id": "dept_helm5",
+    "name": "센서 일체형 헬멧",
+    "file": "assets/items/dept_helm5.png"
    },
    {
     "id": "lich_2",
@@ -756,6 +871,11 @@
     "id": "deathknight_1",
     "name": "사자의 판금",
     "file": "assets/items/deathknight_1.png"
+   },
+   {
+    "id": "dept_vest5",
+    "name": "핵 섬유 갑옷",
+    "file": "assets/items/dept_vest5.png"
    },
    {
     "id": "lichking_1",
@@ -783,6 +903,11 @@
   ],
   "cells": [
    {
+    "id": "dept_glove5",
+    "name": "외골격 장갑",
+    "file": "assets/items/dept_glove5.png"
+   },
+   {
     "id": "ghoul_0",
     "name": "갈퀴손",
     "file": "assets/items/ghoul_0.png"
@@ -808,19 +933,14 @@
     "file": "assets/items/bonedragon_1.png"
    },
    {
+    "id": "dept_boots5",
+    "name": "추진 보조 부츠",
+    "file": "assets/items/dept_boots5.png"
+   },
+   {
     "id": "palehorse_0",
     "name": "죽음이 걸친 창백한 망토",
     "file": "assets/items/palehorse_0.png"
-   },
-   {
-    "id": "vampire_1",
-    "name": "귀족의 망토",
-    "file": "assets/items/vampire_1.png"
-   },
-   {
-    "id": "ware_raincoat",
-    "name": "찢긴 방수 망토",
-    "file": "assets/items/ware_raincoat.png"
    }
   ]
  },
@@ -832,6 +952,16 @@
    3
   ],
   "cells": [
+   {
+    "id": "vampire_1",
+    "name": "귀족의 망토",
+    "file": "assets/items/vampire_1.png"
+   },
+   {
+    "id": "ware_raincoat",
+    "name": "찢긴 방수 망토",
+    "file": "assets/items/ware_raincoat.png"
+   },
    {
     "id": "wraith_0",
     "name": "안개 수의",
@@ -861,11 +991,6 @@
     "id": "succubus_1",
     "name": "훔친 꿈",
     "file": "assets/items/succubus_1.png"
-   },
-   {
-    "id": "ware_tag",
-    "name": "번호만 남은 인식표",
-    "file": "assets/items/ware_tag.png"
    }
   ]
  },
@@ -877,6 +1002,11 @@
    3
   ],
   "cells": [
+   {
+    "id": "ware_tag",
+    "name": "번호만 남은 인식표",
+    "file": "assets/items/ware_tag.png"
+   },
    {
     "id": "banshee_1",
     "name": "예고의 고리",
@@ -961,6 +1091,11 @@
     "id": "apocalypsebeast_0",
     "name": "일곱 뿔의 관",
     "file": "assets/items/apocalypsebeast_0.png"
+   },
+   {
+    "id": "demongeneral_2",
+    "name": "마장의 투구",
+    "file": "assets/items/demongeneral_2.png"
    }
   ]
  },
@@ -973,9 +1108,9 @@
   ],
   "cells": [
    {
-    "id": "demongeneral_2",
-    "name": "마장의 투구",
-    "file": "assets/items/demongeneral_2.png"
+    "id": "dept_helm6",
+    "name": "전면 차폐 헬멧",
+    "file": "assets/items/dept_helm6.png"
    },
    {
     "id": "sinpride_0",
@@ -986,6 +1121,11 @@
     "id": "demonking_1",
     "name": "마왕의 갑주",
     "file": "assets/items/demonking_1.png"
+   },
+   {
+    "id": "dept_vest6",
+    "name": "역장 내장 갑주",
+    "file": "assets/items/dept_vest6.png"
    },
    {
     "id": "elderdragon_1",
@@ -1018,6 +1158,11 @@
   ],
   "cells": [
    {
+    "id": "dept_glove6",
+    "name": "파쇄 건틀릿",
+    "file": "assets/items/dept_glove6.png"
+   },
+   {
     "id": "sinenvy_0",
     "name": "훔쳐 낀 장갑",
     "file": "assets/items/sinenvy_0.png"
@@ -1043,14 +1188,14 @@
     "file": "assets/items/abysstentacle_1.png"
    },
    {
+    "id": "dept_boots6",
+    "name": "중력 완충 부츠",
+    "file": "assets/items/dept_boots6.png"
+   },
+   {
     "id": "archdemon_2",
     "name": "군단장의 망토",
     "file": "assets/items/archdemon_2.png"
-   },
-   {
-    "id": "sinlust_0",
-    "name": "비단 망토",
-    "file": "assets/items/sinlust_0.png"
    }
   ]
  },
@@ -1062,6 +1207,11 @@
    3
   ],
   "cells": [
+   {
+    "id": "sinlust_0",
+    "name": "비단 망토",
+    "file": "assets/items/sinlust_0.png"
+   },
    {
     "id": "chest_abyss_ring",
     "name": "왕좌 아래 떨어진 반지",

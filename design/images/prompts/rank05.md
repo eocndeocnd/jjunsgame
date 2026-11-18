@@ -1,13 +1,13 @@
-# 제5격 마족 — 장비 38개 · 시트 5장
+# 제5격 마족 — 장비 42개 · 시트 5장
 
 > 자동으로 만든 파일입니다 (`node tools/cli.js images`). 손으로 고치지 마세요. 쓰는 법은 같은 폴더의 `README.md`.
 
-## 시트 5-A — 무기 · 보조무기 (8개)
+## 시트 5-A — 무기 · 보조무기 · 투구 (9개)
 
 저장할 이름: `design/images/sheets/rank05-A.png`
 
 ```text
-Make ONE square image, 1024x1024: a sprite sheet of 8 separate game item icons in a 3x3 grid.
+Make ONE square image, 1024x1024: a sprite sheet of 9 separate game item icons in a 3x3 grid.
 
 HARD RULES — breaking any of these makes the image unusable:
 1. NO TEXT ANYWHERE. Do not write item names, type names, captions, labels or numbers — not in Korean, not in English.
@@ -23,13 +23,14 @@ BACKGROUND: one flat solid magenta (#FF00FF) everywhere. No gradient, no checker
 Do not use magenta or hot pink on the items themselves.
 
 LAYOUT: an invisible 3 x 3 grid of equal square cells (do not draw it). Exactly one item per cell, centered, filling about 70% of its cell,
-never touching the cell edges. Fill the cells left to right, top to bottom, in the order listed. Leave the last 1 cell empty (plain magenta).
+never touching the cell edges. Fill the cells left to right, top to bottom, in the order listed.
 
 TIER LOOK: mid-tier gear — solid forged metal, good leather, small magic stones. Cleaner shapes, a little shine, at most a faint glow.
 
 FRAMING BY TYPE:
 - WEAPON: whole weapon, diagonal, tip or head toward the upper right
 - OFF-HAND (shield, book, lantern, orb ...): front view, slightly tilted
+- HEADGEAR: 3/4 front view, empty (no head inside)
 
 ITEMS — the names below are for you to read, NOT to write. Draw what each name describes. Never put any of these words in the image.
 If a name describes a different kind of object than its type, draw the object from the name.
@@ -41,6 +42,7 @@ If a name describes a different kind of object than its type, draw the object fr
 6. OFF-HAND (shield, book, lantern, orb ...) 「기근의 저울」 — loot from the monster 「검은 말의 기사」. more refined and menacing; mood: sinister, a touch of blood red.
 7. OFF-HAND (shield, book, lantern, orb ...) 「휴대용 역장기」 — near-future manufactured hunter gear made by human technology — new, clean metal, thin glowing lines. plain look; mood: spiked, thorny. Hint (Korean): 켜면 팔뚝 앞에 얇은 빛막이 선다. 배터리 별매.
 8. OFF-HAND (shield, book, lantern, orb ...) 「방패 대신 든 표지판」 — a modern everyday item left behind by someone who came before — worn and used; do not hint whose it was. plain look; mood: spiked, thorny. Hint (Korean): 「공사중 · 우회하세요」
+9. HEADGEAR 「통곡의 두건」 — loot from the monster 「밴시」. plain look; mood: aggressive, sharp.
 ```
 
 | 칸 | 장비 | 부위 | 나온 곳 | 잘라서 둘 곳 |
@@ -53,13 +55,14 @@ If a name describes a different kind of object than its type, draw the object fr
 | 6 | 기근의 저울 | 보조무기 | 검은 말의 기사 | `assets/items/blackhorse_0.png` |
 | 7 | 휴대용 역장기 | 보조무기 | 헌터백화점 | `assets/items/dept_field.png` |
 | 8 | 방패 대신 든 표지판 | 보조무기 | 떠돌이 상인 | `assets/items/ware_sign.png` |
+| 9 | 통곡의 두건 | 투구 | 밴시 | `assets/items/banshee_0.png` |
 
-## 시트 5-B — 투구 · 갑옷 · 어깨 (8개)
+## 시트 5-B — 투구 · 갑옷 · 어깨 (9개)
 
 저장할 이름: `design/images/sheets/rank05-B.png`
 
 ```text
-Make ONE square image, 1024x1024: a sprite sheet of 8 separate game item icons in a 3x3 grid.
+Make ONE square image, 1024x1024: a sprite sheet of 9 separate game item icons in a 3x3 grid.
 
 HARD RULES — breaking any of these makes the image unusable:
 1. NO TEXT ANYWHERE. Do not write item names, type names, captions, labels or numbers — not in Korean, not in English.
@@ -75,7 +78,7 @@ BACKGROUND: one flat solid magenta (#FF00FF) everywhere. No gradient, no checker
 Do not use magenta or hot pink on the items themselves.
 
 LAYOUT: an invisible 3 x 3 grid of equal square cells (do not draw it). Exactly one item per cell, centered, filling about 70% of its cell,
-never touching the cell edges. Fill the cells left to right, top to bottom, in the order listed. Leave the last 1 cell empty (plain magenta).
+never touching the cell edges. Fill the cells left to right, top to bottom, in the order listed.
 
 TIER LOOK: mid-tier gear — solid forged metal, good leather, small magic stones. Cleaner shapes, a little shine, at most a faint glow.
 
@@ -86,26 +89,28 @@ FRAMING BY TYPE:
 
 ITEMS — the names below are for you to read, NOT to write. Draw what each name describes. Never put any of these words in the image.
 If a name describes a different kind of object than its type, draw the object from the name.
-1. HEADGEAR 「통곡의 두건」 — loot from the monster 「밴시」. plain look; mood: aggressive, sharp.
+1. HEADGEAR 「센서 일체형 헬멧」 — near-future manufactured hunter gear made by human technology — new, clean metal, thin glowing lines. plain look; mood: pointed, piercing. Hint (Korean): 약점이 붉게 표시된다. 표시가 너무 많을 때도 있다.
 2. HEADGEAR 「학자의 관」 — loot from the monster 「리치」. more refined and menacing; mood: pointed, piercing.
 3. HEADGEAR 「승리의 면류관」 — loot from the monster 「흰 말의 기사」. more refined and menacing; mood: pointed, piercing.
 4. BODY ARMOR / CLOTHING 「뼈 갑주」 — loot from the monster 「본 드래곤」. plain look; mood: pointed, piercing.
 5. BODY ARMOR / CLOTHING 「사자의 판금」 — loot from the monster 「데스 나이트」. more refined and menacing; mood: sturdy, protective.
-6. BODY ARMOR / CLOTHING 「불사의 판금」 — loot from the monster 「불사의 왕」. the most ornate and imposing piece of this set; mood: reinforced, built to last.
-7. SHOULDER GUARD 「계약의 낙인」 — loot from the monster 「데몬 로드」. plain look; mood: heavy, blunt, massive.
-8. SHOULDER GUARD 「악몽의 어깨」 — loot from the monster 「인큐버스」. plain look; mood: sinister, a touch of blood red.
+6. BODY ARMOR / CLOTHING 「핵 섬유 갑옷」 — near-future manufactured hunter gear made by human technology — new, clean metal, thin glowing lines. plain look; mood: sturdy, protective. Hint (Korean): 몬스터 핵에서 뽑은 실로 짰다. 가끔 따뜻하다.
+7. BODY ARMOR / CLOTHING 「불사의 판금」 — loot from the monster 「불사의 왕」. the most ornate and imposing piece of this set; mood: reinforced, built to last.
+8. SHOULDER GUARD 「계약의 낙인」 — loot from the monster 「데몬 로드」. plain look; mood: heavy, blunt, massive.
+9. SHOULDER GUARD 「악몽의 어깨」 — loot from the monster 「인큐버스」. plain look; mood: sinister, a touch of blood red.
 ```
 
 | 칸 | 장비 | 부위 | 나온 곳 | 잘라서 둘 곳 |
 |---|---|---|---|---|
-| 1 | 통곡의 두건 | 투구 | 밴시 | `assets/items/banshee_0.png` |
+| 1 | 센서 일체형 헬멧 | 투구 | 헌터백화점 | `assets/items/dept_helm5.png` |
 | 2 | 학자의 관 | 투구 | 리치 | `assets/items/lich_2.png` |
 | 3 | 승리의 면류관 | 투구 | 흰 말의 기사 | `assets/items/whitehorse_0.png` |
 | 4 | 뼈 갑주 | 갑옷 | 본 드래곤 | `assets/items/bonedragon_0.png` |
 | 5 | 사자의 판금 | 갑옷 | 데스 나이트 | `assets/items/deathknight_1.png` |
-| 6 | 불사의 판금 | 갑옷 | 불사의 왕 | `assets/items/lichking_1.png` |
-| 7 | 계약의 낙인 | 어깨 | 데몬 로드 | `assets/items/demonlord_0.png` |
-| 8 | 악몽의 어깨 | 어깨 | 인큐버스 | `assets/items/incubus_0.png` |
+| 6 | 핵 섬유 갑옷 | 갑옷 | 헌터백화점 | `assets/items/dept_vest5.png` |
+| 7 | 불사의 판금 | 갑옷 | 불사의 왕 | `assets/items/lichking_1.png` |
+| 8 | 계약의 낙인 | 어깨 | 데몬 로드 | `assets/items/demonlord_0.png` |
+| 9 | 악몽의 어깨 | 어깨 | 인큐버스 | `assets/items/incubus_0.png` |
 
 ## 시트 5-C — 장갑 · 허리띠 · 각반 · 신발 · 망토 (8개)
 
@@ -141,33 +146,33 @@ FRAMING BY TYPE:
 
 ITEMS — the names below are for you to read, NOT to write. Draw what each name describes. Never put any of these words in the image.
 If a name describes a different kind of object than its type, draw the object from the name.
-1. GLOVES / GAUNTLETS 「갈퀴손」 — loot from the monster 「구울」. plain look; mood: sinister, a touch of blood red.
-2. BELT / SASH 「수의 허리끈」 — loot from the monster 「구울」. plain look; mood: sinister, a touch of blood red.
-3. BELT / SASH 「탄창이 빈 전술 벨트」 — a modern everyday item left behind by someone who came before — worn and used; do not hint whose it was. plain look; mood: sturdy, protective. Hint (Korean): 고리마다 누군가의 손때가 있다.
-4. LEG ARMOR 「용암 정강이」 — loot from the monster 「발록」. plain look; mood: aggressive, sharp.
-5. BOOTS / SHOES 「해골 발톱」 — loot from the monster 「본 드래곤」. plain look; mood: pointed, piercing.
-6. CLOAK / CAPE 「죽음이 걸친 창백한 망토」 — loot from the monster 「창백한 말의 기사」. more refined and menacing; mood: spiked, thorny.
-7. CLOAK / CAPE 「귀족의 망토」 — loot from the monster 「뱀파이어」. plain look; mood: sinister, a touch of blood red.
-8. CLOAK / CAPE 「찢긴 방수 망토」 — a modern everyday item left behind by someone who came before — worn and used; do not hint whose it was. plain look; mood: reinforced, built to last. Hint (Korean): 후드를 쓰면 빗소리 같은 것이 들린다.
+1. GLOVES / GAUNTLETS 「외골격 장갑」 — near-future manufactured hunter gear made by human technology — new, clean metal, thin glowing lines. plain look; mood: heavy, blunt, massive. Hint (Korean): 팔꿈치까지 올라오는 틀이 힘을 세 배로.
+2. GLOVES / GAUNTLETS 「갈퀴손」 — loot from the monster 「구울」. plain look; mood: sinister, a touch of blood red.
+3. BELT / SASH 「수의 허리끈」 — loot from the monster 「구울」. plain look; mood: sinister, a touch of blood red.
+4. BELT / SASH 「탄창이 빈 전술 벨트」 — a modern everyday item left behind by someone who came before — worn and used; do not hint whose it was. plain look; mood: sturdy, protective. Hint (Korean): 고리마다 누군가의 손때가 있다.
+5. LEG ARMOR 「용암 정강이」 — loot from the monster 「발록」. plain look; mood: aggressive, sharp.
+6. BOOTS / SHOES 「해골 발톱」 — loot from the monster 「본 드래곤」. plain look; mood: pointed, piercing.
+7. BOOTS / SHOES 「추진 보조 부츠」 — near-future manufactured hunter gear made by human technology — new, clean metal, thin glowing lines. plain look; mood: light, slim, built for speed. Hint (Korean): 뒤꿈치에서 짧게 불이 뿜어진다. 실내 사용 금지.
+8. CLOAK / CAPE 「죽음이 걸친 창백한 망토」 — loot from the monster 「창백한 말의 기사」. more refined and menacing; mood: spiked, thorny.
 ```
 
 | 칸 | 장비 | 부위 | 나온 곳 | 잘라서 둘 곳 |
 |---|---|---|---|---|
-| 1 | 갈퀴손 | 장갑 | 구울 | `assets/items/ghoul_0.png` |
-| 2 | 수의 허리끈 | 허리띠 | 구울 | `assets/items/ghoul_2.png` |
-| 3 | 탄창이 빈 전술 벨트 | 허리띠 | 떠돌이 상인 | `assets/items/ware_belt.png` |
-| 4 | 용암 정강이 | 각반 | 발록 | `assets/items/balrog_1.png` |
-| 5 | 해골 발톱 | 신발 | 본 드래곤 | `assets/items/bonedragon_1.png` |
-| 6 | 죽음이 걸친 창백한 망토 | 망토 | 창백한 말의 기사 | `assets/items/palehorse_0.png` |
-| 7 | 귀족의 망토 | 망토 | 뱀파이어 | `assets/items/vampire_1.png` |
-| 8 | 찢긴 방수 망토 | 망토 | 떠돌이 상인 | `assets/items/ware_raincoat.png` |
+| 1 | 외골격 장갑 | 장갑 | 헌터백화점 | `assets/items/dept_glove5.png` |
+| 2 | 갈퀴손 | 장갑 | 구울 | `assets/items/ghoul_0.png` |
+| 3 | 수의 허리끈 | 허리띠 | 구울 | `assets/items/ghoul_2.png` |
+| 4 | 탄창이 빈 전술 벨트 | 허리띠 | 떠돌이 상인 | `assets/items/ware_belt.png` |
+| 5 | 용암 정강이 | 각반 | 발록 | `assets/items/balrog_1.png` |
+| 6 | 해골 발톱 | 신발 | 본 드래곤 | `assets/items/bonedragon_1.png` |
+| 7 | 추진 보조 부츠 | 신발 | 헌터백화점 | `assets/items/dept_boots5.png` |
+| 8 | 죽음이 걸친 창백한 망토 | 망토 | 창백한 말의 기사 | `assets/items/palehorse_0.png` |
 
-## 시트 5-D — 망토 · 반지 · 목걸이 (7개)
+## 시트 5-D — 망토 · 반지 · 목걸이 (8개)
 
 저장할 이름: `design/images/sheets/rank05-D.png`
 
 ```text
-Make ONE square image, 1024x1024: a sprite sheet of 7 separate game item icons in a 3x3 grid.
+Make ONE square image, 1024x1024: a sprite sheet of 8 separate game item icons in a 3x3 grid.
 
 HARD RULES — breaking any of these makes the image unusable:
 1. NO TEXT ANYWHERE. Do not write item names, type names, captions, labels or numbers — not in Korean, not in English.
@@ -183,7 +188,7 @@ BACKGROUND: one flat solid magenta (#FF00FF) everywhere. No gradient, no checker
 Do not use magenta or hot pink on the items themselves.
 
 LAYOUT: an invisible 3 x 3 grid of equal square cells (do not draw it). Exactly one item per cell, centered, filling about 70% of its cell,
-never touching the cell edges. Fill the cells left to right, top to bottom, in the order listed. Leave the last 2 cells empty (plain magenta).
+never touching the cell edges. Fill the cells left to right, top to bottom, in the order listed. Leave the last 1 cell empty (plain magenta).
 
 TIER LOOK: mid-tier gear — solid forged metal, good leather, small magic stones. Cleaner shapes, a little shine, at most a faint glow.
 
@@ -194,31 +199,33 @@ FRAMING BY TYPE:
 
 ITEMS — the names below are for you to read, NOT to write. Draw what each name describes. Never put any of these words in the image.
 If a name describes a different kind of object than its type, draw the object from the name.
-1. CLOAK / CAPE 「안개 수의」 — loot from the monster 「레이스」. plain look; mood: light, slim, built for speed.
-2. RING 「피로 쓴 서명」 — loot from the monster 「데몬 로드」. plain look; mood: heavy, blunt, massive.
-3. RING 「유혹의 반지」 — loot from the monster 「서큐버스」. plain look; mood: a lucky charm, a hint of gold.
-4. NECKLACE / AMULET 「장례 종 목걸이」 — old treasure that was buried in a chest for a long time. plain look; mood: sinister, a touch of blood red.
-5. NECKLACE / AMULET 「성물함」 — loot from the monster 「리치」. more refined and menacing; mood: pointed, piercing.
-6. NECKLACE / AMULET 「훔친 꿈」 — loot from the monster 「서큐버스」. plain look; mood: a lucky charm, a hint of gold.
-7. NECKLACE / AMULET 「번호만 남은 인식표」 — a modern everyday item left behind by someone who came before — worn and used; do not hint whose it was. plain look; mood: a lucky charm, a hint of gold. Hint (Korean): 체인에 묻은 얼룩은 닦이지 않는다.
+1. CLOAK / CAPE 「귀족의 망토」 — loot from the monster 「뱀파이어」. plain look; mood: sinister, a touch of blood red.
+2. CLOAK / CAPE 「찢긴 방수 망토」 — a modern everyday item left behind by someone who came before — worn and used; do not hint whose it was. plain look; mood: reinforced, built to last. Hint (Korean): 후드를 쓰면 빗소리 같은 것이 들린다.
+3. CLOAK / CAPE 「안개 수의」 — loot from the monster 「레이스」. plain look; mood: light, slim, built for speed.
+4. RING 「피로 쓴 서명」 — loot from the monster 「데몬 로드」. plain look; mood: heavy, blunt, massive.
+5. RING 「유혹의 반지」 — loot from the monster 「서큐버스」. plain look; mood: a lucky charm, a hint of gold.
+6. NECKLACE / AMULET 「장례 종 목걸이」 — old treasure that was buried in a chest for a long time. plain look; mood: sinister, a touch of blood red.
+7. NECKLACE / AMULET 「성물함」 — loot from the monster 「리치」. more refined and menacing; mood: pointed, piercing.
+8. NECKLACE / AMULET 「훔친 꿈」 — loot from the monster 「서큐버스」. plain look; mood: a lucky charm, a hint of gold.
 ```
 
 | 칸 | 장비 | 부위 | 나온 곳 | 잘라서 둘 곳 |
 |---|---|---|---|---|
-| 1 | 안개 수의 | 망토 | 레이스 | `assets/items/wraith_0.png` |
-| 2 | 피로 쓴 서명 | 반지 | 데몬 로드 | `assets/items/demonlord_2.png` |
-| 3 | 유혹의 반지 | 반지 | 서큐버스 | `assets/items/succubus_0.png` |
-| 4 | 장례 종 목걸이 | 목걸이 | 보물상자 | `assets/items/chest_necro_bell.png` |
-| 5 | 성물함 | 목걸이 | 리치 | `assets/items/lich_1.png` |
-| 6 | 훔친 꿈 | 목걸이 | 서큐버스 | `assets/items/succubus_1.png` |
-| 7 | 번호만 남은 인식표 | 목걸이 | 떠돌이 상인 | `assets/items/ware_tag.png` |
+| 1 | 귀족의 망토 | 망토 | 뱀파이어 | `assets/items/vampire_1.png` |
+| 2 | 찢긴 방수 망토 | 망토 | 떠돌이 상인 | `assets/items/ware_raincoat.png` |
+| 3 | 안개 수의 | 망토 | 레이스 | `assets/items/wraith_0.png` |
+| 4 | 피로 쓴 서명 | 반지 | 데몬 로드 | `assets/items/demonlord_2.png` |
+| 5 | 유혹의 반지 | 반지 | 서큐버스 | `assets/items/succubus_0.png` |
+| 6 | 장례 종 목걸이 | 목걸이 | 보물상자 | `assets/items/chest_necro_bell.png` |
+| 7 | 성물함 | 목걸이 | 리치 | `assets/items/lich_1.png` |
+| 8 | 훔친 꿈 | 목걸이 | 서큐버스 | `assets/items/succubus_1.png` |
 
-## 시트 5-E — 팔찌 · 특수장비 (7개)
+## 시트 5-E — 목걸이 · 팔찌 · 특수장비 (8개)
 
 저장할 이름: `design/images/sheets/rank05-E.png`
 
 ```text
-Make ONE square image, 1024x1024: a sprite sheet of 7 separate game item icons in a 3x3 grid.
+Make ONE square image, 1024x1024: a sprite sheet of 8 separate game item icons in a 3x3 grid.
 
 HARD RULES — breaking any of these makes the image unusable:
 1. NO TEXT ANYWHERE. Do not write item names, type names, captions, labels or numbers — not in Korean, not in English.
@@ -234,34 +241,37 @@ BACKGROUND: one flat solid magenta (#FF00FF) everywhere. No gradient, no checker
 Do not use magenta or hot pink on the items themselves.
 
 LAYOUT: an invisible 3 x 3 grid of equal square cells (do not draw it). Exactly one item per cell, centered, filling about 70% of its cell,
-never touching the cell edges. Fill the cells left to right, top to bottom, in the order listed. Leave the last 2 cells empty (plain magenta).
+never touching the cell edges. Fill the cells left to right, top to bottom, in the order listed. Leave the last 1 cell empty (plain magenta).
 
 TIER LOOK: mid-tier gear — solid forged metal, good leather, small magic stones. Cleaner shapes, a little shine, at most a faint glow.
 
 FRAMING BY TYPE:
+- NECKLACE / AMULET: chain in a loop, pendant at the bottom center
 - BRACELET / BANGLE / WRISTWATCH: single band, 3/4 view
 - SMALL PRECIOUS OBJECT (gem or relic): single small object, 3/4 view
 
 ITEMS — the names below are for you to read, NOT to write. Draw what each name describes. Never put any of these words in the image.
 If a name describes a different kind of object than its type, draw the object from the name.
-1. BRACELET / BANGLE / WRISTWATCH 「예고의 고리」 — loot from the monster 「밴시」. plain look; mood: aggressive, sharp.
-2. BRACELET / BANGLE / WRISTWATCH 「멈춘 손목시계」 — a modern everyday item left behind by someone who came before — worn and used; do not hint whose it was. plain look; mood: light, slim, built for speed. Hint (Korean): 바늘은 새벽 네 시 십 분에서 움직이지 않는다.
-3. BRACELET / BANGLE / WRISTWATCH 「원한의 고리」 — loot from the monster 「레이스」. plain look; mood: light, slim, built for speed.
-4. SMALL PRECIOUS OBJECT (gem or relic) 「죽지 않는 성물함」 — loot from the monster 「불사의 왕」. a small ancient object; the most ornate and imposing piece of this set.
-5. SMALL PRECIOUS OBJECT (gem or relic) 「까마귀가 물어 온 청옥」 — loot from the monster 「까마귀 왕」. a small shining stone or crystal; mysterious, faintly glowing.
-6. SMALL PRECIOUS OBJECT (gem or relic) 「검은 깃 부적」 — loot from the monster 「까마귀 왕」. a small ancient object; mysterious, faintly glowing.
-7. SMALL PRECIOUS OBJECT (gem or relic) 「흡혈귀의 송곳니」 — loot from the monster 「뱀파이어」. a small ancient object; plain look.
+1. NECKLACE / AMULET 「번호만 남은 인식표」 — a modern everyday item left behind by someone who came before — worn and used; do not hint whose it was. plain look; mood: a lucky charm, a hint of gold. Hint (Korean): 체인에 묻은 얼룩은 닦이지 않는다.
+2. BRACELET / BANGLE / WRISTWATCH 「예고의 고리」 — loot from the monster 「밴시」. plain look; mood: aggressive, sharp.
+3. BRACELET / BANGLE / WRISTWATCH 「멈춘 손목시계」 — a modern everyday item left behind by someone who came before — worn and used; do not hint whose it was. plain look; mood: light, slim, built for speed. Hint (Korean): 바늘은 새벽 네 시 십 분에서 움직이지 않는다.
+4. BRACELET / BANGLE / WRISTWATCH 「원한의 고리」 — loot from the monster 「레이스」. plain look; mood: light, slim, built for speed.
+5. SMALL PRECIOUS OBJECT (gem or relic) 「죽지 않는 성물함」 — loot from the monster 「불사의 왕」. a small ancient object; the most ornate and imposing piece of this set.
+6. SMALL PRECIOUS OBJECT (gem or relic) 「까마귀가 물어 온 청옥」 — loot from the monster 「까마귀 왕」. a small shining stone or crystal; mysterious, faintly glowing.
+7. SMALL PRECIOUS OBJECT (gem or relic) 「검은 깃 부적」 — loot from the monster 「까마귀 왕」. a small ancient object; mysterious, faintly glowing.
+8. SMALL PRECIOUS OBJECT (gem or relic) 「흡혈귀의 송곳니」 — loot from the monster 「뱀파이어」. a small ancient object; plain look.
 ```
 
 | 칸 | 장비 | 부위 | 나온 곳 | 잘라서 둘 곳 |
 |---|---|---|---|---|
-| 1 | 예고의 고리 | 팔찌 | 밴시 | `assets/items/banshee_1.png` |
-| 2 | 멈춘 손목시계 | 팔찌 | 떠돌이 상인 | `assets/items/ware_watch.png` |
-| 3 | 원한의 고리 | 팔찌 | 레이스 | `assets/items/wraith_1.png` |
-| 4 | 죽지 않는 성물함 | 특수장비 | 불사의 왕 | `assets/items/lichking_4.png` |
-| 5 | 까마귀가 물어 온 청옥 | 특수장비 | 까마귀 왕 | `assets/items/ravenking_0.png` |
-| 6 | 검은 깃 부적 | 특수장비 | 까마귀 왕 | `assets/items/ravenking_1.png` |
-| 7 | 흡혈귀의 송곳니 | 특수장비 | 뱀파이어 | `assets/items/vampire_4.png` |
+| 1 | 번호만 남은 인식표 | 목걸이 | 떠돌이 상인 | `assets/items/ware_tag.png` |
+| 2 | 예고의 고리 | 팔찌 | 밴시 | `assets/items/banshee_1.png` |
+| 3 | 멈춘 손목시계 | 팔찌 | 떠돌이 상인 | `assets/items/ware_watch.png` |
+| 4 | 원한의 고리 | 팔찌 | 레이스 | `assets/items/wraith_1.png` |
+| 5 | 죽지 않는 성물함 | 특수장비 | 불사의 왕 | `assets/items/lichking_4.png` |
+| 6 | 까마귀가 물어 온 청옥 | 특수장비 | 까마귀 왕 | `assets/items/ravenking_0.png` |
+| 7 | 검은 깃 부적 | 특수장비 | 까마귀 왕 | `assets/items/ravenking_1.png` |
+| 8 | 흡혈귀의 송곳니 | 특수장비 | 뱀파이어 | `assets/items/vampire_4.png` |
 
 ## 하나씩 뽑기 (시트가 잘 안 될 때)
 
@@ -347,6 +357,12 @@ If the name describes a different kind of object than its type, draw the object 
   HEADGEAR 「통곡의 두건」 — loot from the monster 「밴시」. plain look; mood: aggressive, sharp. Framing: 3/4 front view, empty (no head inside).
   ```
 
+- **센서 일체형 헬멧** → `assets/items/dept_helm5.png`
+
+  ```text
+  HEADGEAR 「센서 일체형 헬멧」 — near-future manufactured hunter gear made by human technology — new, clean metal, thin glowing lines. plain look; mood: pointed, piercing. Hint (Korean): 약점이 붉게 표시된다. 표시가 너무 많을 때도 있다. Framing: 3/4 front view, empty (no head inside).
+  ```
+
 - **학자의 관** → `assets/items/lich_2.png`
 
   ```text
@@ -371,6 +387,12 @@ If the name describes a different kind of object than its type, draw the object 
   BODY ARMOR / CLOTHING 「사자의 판금」 — loot from the monster 「데스 나이트」. more refined and menacing; mood: sturdy, protective. Framing: front view, torso piece only, empty (no body inside).
   ```
 
+- **핵 섬유 갑옷** → `assets/items/dept_vest5.png`
+
+  ```text
+  BODY ARMOR / CLOTHING 「핵 섬유 갑옷」 — near-future manufactured hunter gear made by human technology — new, clean metal, thin glowing lines. plain look; mood: sturdy, protective. Hint (Korean): 몬스터 핵에서 뽑은 실로 짰다. 가끔 따뜻하다. Framing: front view, torso piece only, empty (no body inside).
+  ```
+
 - **불사의 판금** → `assets/items/lichking_1.png`
 
   ```text
@@ -387,6 +409,12 @@ If the name describes a different kind of object than its type, draw the object 
 
   ```text
   SHOULDER GUARD 「악몽의 어깨」 — loot from the monster 「인큐버스」. plain look; mood: sinister, a touch of blood red. Framing: one pauldron or a matching pair, 3/4 view.
+  ```
+
+- **외골격 장갑** → `assets/items/dept_glove5.png`
+
+  ```text
+  GLOVES / GAUNTLETS 「외골격 장갑」 — near-future manufactured hunter gear made by human technology — new, clean metal, thin glowing lines. plain look; mood: heavy, blunt, massive. Hint (Korean): 팔꿈치까지 올라오는 틀이 힘을 세 배로. Framing: a pair, backs of the hands, fingers up.
   ```
 
 - **갈퀴손** → `assets/items/ghoul_0.png`
@@ -417,6 +445,12 @@ If the name describes a different kind of object than its type, draw the object 
 
   ```text
   BOOTS / SHOES 「해골 발톱」 — loot from the monster 「본 드래곤」. plain look; mood: pointed, piercing. Framing: a pair, side view facing right.
+  ```
+
+- **추진 보조 부츠** → `assets/items/dept_boots5.png`
+
+  ```text
+  BOOTS / SHOES 「추진 보조 부츠」 — near-future manufactured hunter gear made by human technology — new, clean metal, thin glowing lines. plain look; mood: light, slim, built for speed. Hint (Korean): 뒤꿈치에서 짧게 불이 뿜어진다. 실내 사용 금지. Framing: a pair, side view facing right.
   ```
 
 - **죽음이 걸친 창백한 망토** → `assets/items/palehorse_0.png`

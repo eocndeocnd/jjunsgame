@@ -1,8 +1,8 @@
-# 제2격 마물 — 장비 27개 · 시트 3장
+# 제2격 마물 — 장비 31개 · 시트 4장
 
 > 자동으로 만든 파일입니다 (`node tools/cli.js images`). 손으로 고치지 마세요. 쓰는 법은 같은 폴더의 `README.md`.
 
-## 시트 2-A — 무기 · 보조무기 · 투구 · 갑옷 (9개)
+## 시트 2-A — 무기 · 보조무기 · 투구 · 갑옷 (9개) ✅ 다 자름
 
 저장할 이름: `design/images/sheets/rank02-A.png`
 
@@ -58,7 +58,7 @@ If a name describes a different kind of object than its type, draw the object fr
 | 8 | 뿔 달린 투구 | 투구 | 오크 장군 | `assets/items/orcgeneral_2.png` ✅ |
 | 9 | 가죽 흉갑 | 갑옷 | 오크 전사 | `assets/items/orc_1.png` ✅ |
 
-## 시트 2-B — 갑옷 · 어깨 · 장갑 · 허리띠 · 각반 · 신발 (9개)
+## 시트 2-B — 갑옷 · 어깨 · 장갑 · 허리띠 · 각반 · 신발 (9개) ✅ 다 자름
 
 저장할 이름: `design/images/sheets/rank02-B.png`
 
@@ -116,7 +116,7 @@ If a name describes a different kind of object than its type, draw the object fr
 | 8 | 두꺼운 각반 | 각반 | 오우거 | `assets/items/ogre_1.png` ✅ |
 | 9 | 그림자 신 | 신발 | 다크 엘프 자객 | `assets/items/darkelf_1.png` ✅ |
 
-## 시트 2-C — 신발 · 망토 · 반지 · 목걸이 · 팔찌 (9개)
+## 시트 2-C — 신발 · 망토 · 반지 · 목걸이 · 팔찌 (9개) ✅ 다 자름
 
 저장할 이름: `design/images/sheets/rank02-C.png`
 
@@ -172,6 +172,52 @@ If a name describes a different kind of object than its type, draw the object fr
 | 7 | 숲의 심장 | 목걸이 | 트롤 킹 | `assets/items/trollking_2.png` ✅ |
 | 8 | 석화의 팔찌 | 팔찌 | 바실리스크 | `assets/items/basilisk_2.png` ✅ |
 | 9 | 돌 팔찌 | 팔찌 | 가고일 | `assets/items/gargoyle_2.png` ✅ |
+
+## 시트 2-D — 투구 · 갑옷 · 장갑 · 신발 (4개)
+
+저장할 이름: `design/images/sheets/rank02-D.png`
+
+```text
+Make ONE square image, 1024x1024: a sprite sheet of 4 separate game item icons in a 3x3 grid.
+
+HARD RULES — breaking any of these makes the image unusable:
+1. NO TEXT ANYWHERE. Do not write item names, type names, captions, labels or numbers — not in Korean, not in English.
+2. NO LINES. No grid lines, no cell borders, no frames, no dividers between items.
+3. The whole background is one flat magenta (#FF00FF). Items float on it with empty space around each one.
+
+STYLE — the same for every icon:
+- 16-bit pixel art, crisp 1px dark outline, limited color palette, flat shading with one highlight
+- one object per icon, a simple bold silhouette that still reads at 64 px
+- no text, no letters, no numbers, no labels, no frames, no grid lines, no drop shadows
+
+BACKGROUND: one flat solid magenta (#FF00FF) everywhere. No gradient, no checkerboard, no floor.
+Do not use magenta or hot pink on the items themselves.
+
+LAYOUT: an invisible 3 x 3 grid of equal square cells (do not draw it). Exactly one item per cell, centered, filling about 70% of its cell,
+never touching the cell edges. Fill the cells left to right, top to bottom, in the order listed. Leave the last 5 cells empty (plain magenta).
+
+TIER LOOK: factory-new hunter gear sold in a modern department store — clean, unworn, manufactured; basic budget models, simple shapes.
+
+FRAMING BY TYPE:
+- HEADGEAR: 3/4 front view, empty (no head inside)
+- BODY ARMOR / CLOTHING: front view, torso piece only, empty (no body inside)
+- GLOVES / GAUNTLETS: a pair, backs of the hands, fingers up
+- BOOTS / SHOES: a pair, side view facing right
+
+ITEMS — the names below are for you to read, NOT to write. Draw what each name describes. Never put any of these words in the image.
+If a name describes a different kind of object than its type, draw the object from the name.
+1. HEADGEAR 「경량 카본 헬멧」 — near-future manufactured hunter gear made by human technology — new, clean metal, thin glowing lines. plain look; mood: aggressive, sharp. Hint (Korean): 쓴 것을 잊을 만큼 가볍다. 그래서 자꾸 잊고 나간다.
+2. BODY ARMOR / CLOTHING 「방탄 섬유 재킷」 — near-future manufactured hunter gear made by human technology — new, clean metal, thin glowing lines. plain look; mood: reinforced, built to last. Hint (Korean): 총알을 막으려고 만든 것이 이빨도 막는다.
+3. GLOVES / GAUNTLETS 「충격 흡수 장갑」 — near-future manufactured hunter gear made by human technology — new, clean metal, thin glowing lines. plain look; mood: sturdy, protective. Hint (Korean): 손등의 젤이 맞을 때마다 꾸욱 눌린다.
+4. BOOTS / SHOES 「쿠션 전술화」 — near-future manufactured hunter gear made by human technology — new, clean metal, thin glowing lines. plain look; mood: light, slim, built for speed. Hint (Korean): 하루 사만 보를 걸어도 발이 멀쩡하다는 광고.
+```
+
+| 칸 | 장비 | 부위 | 나온 곳 | 잘라서 둘 곳 |
+|---|---|---|---|---|
+| 1 | 경량 카본 헬멧 | 투구 | 헌터백화점 | `assets/items/dept_helm2.png` |
+| 2 | 방탄 섬유 재킷 | 갑옷 | 헌터백화점 | `assets/items/dept_vest2.png` |
+| 3 | 충격 흡수 장갑 | 장갑 | 헌터백화점 | `assets/items/dept_glove2.png` |
+| 4 | 쿠션 전술화 | 신발 | 헌터백화점 | `assets/items/dept_boots2.png` |
 
 ## 하나씩 뽑기 (시트가 잘 안 될 때)
 
@@ -239,6 +285,12 @@ If the name describes a different kind of object than its type, draw the object 
   OFF-HAND (shield, book, lantern, orb ...) 「뿌리 방패」 — loot from the monster 「트렌트」. plain look; mood: spiked, thorny. Framing: front view, slightly tilted.
   ```
 
+- **경량 카본 헬멧** → `assets/items/dept_helm2.png`
+
+  ```text
+  HEADGEAR 「경량 카본 헬멧」 — near-future manufactured hunter gear made by human technology — new, clean metal, thin glowing lines. plain look; mood: aggressive, sharp. Hint (Korean): 쓴 것을 잊을 만큼 가볍다. 그래서 자꾸 잊고 나간다. Framing: 3/4 front view, empty (no head inside).
+  ```
+
 - **돌 뿔** → `assets/items/gargoyle_1.png`
 
   ```text
@@ -249,6 +301,12 @@ If the name describes a different kind of object than its type, draw the object 
 
   ```text
   HEADGEAR 「뿔 달린 투구」 — loot from the monster 「오크 장군」. more refined and menacing; mood: aggressive, sharp. Framing: 3/4 front view, empty (no head inside).
+  ```
+
+- **방탄 섬유 재킷** → `assets/items/dept_vest2.png`
+
+  ```text
+  BODY ARMOR / CLOTHING 「방탄 섬유 재킷」 — near-future manufactured hunter gear made by human technology — new, clean metal, thin glowing lines. plain look; mood: reinforced, built to last. Hint (Korean): 총알을 막으려고 만든 것이 이빨도 막는다. Framing: front view, torso piece only, empty (no body inside).
   ```
 
 - **가죽 흉갑** → `assets/items/orc_1.png`
@@ -273,6 +331,12 @@ If the name describes a different kind of object than its type, draw the object 
 
   ```text
   SHOULDER GUARD 「장군의 견장」 — loot from the monster 「오크 장군」. more refined and menacing; mood: aggressive, sharp. Framing: one pauldron or a matching pair, 3/4 view.
+  ```
+
+- **충격 흡수 장갑** → `assets/items/dept_glove2.png`
+
+  ```text
+  GLOVES / GAUNTLETS 「충격 흡수 장갑」 — near-future manufactured hunter gear made by human technology — new, clean metal, thin glowing lines. plain look; mood: sturdy, protective. Hint (Korean): 손등의 젤이 맞을 때마다 꾸욱 눌린다. Framing: a pair, backs of the hands, fingers up.
   ```
 
 - **오크 손등가리개** → `assets/items/orc_2.png`
@@ -309,6 +373,12 @@ If the name describes a different kind of object than its type, draw the object 
 
   ```text
   BOOTS / SHOES 「그림자 신」 — loot from the monster 「다크 엘프 자객」. plain look; mood: sinister, a touch of blood red. Framing: a pair, side view facing right.
+  ```
+
+- **쿠션 전술화** → `assets/items/dept_boots2.png`
+
+  ```text
+  BOOTS / SHOES 「쿠션 전술화」 — near-future manufactured hunter gear made by human technology — new, clean metal, thin glowing lines. plain look; mood: light, slim, built for speed. Hint (Korean): 하루 사만 보를 걸어도 발이 멀쩡하다는 광고. Framing: a pair, side view facing right.
   ```
 
 - **깃털 신** → `assets/items/harpy_0.png`

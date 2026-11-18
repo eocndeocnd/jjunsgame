@@ -62,6 +62,8 @@ const STYLE = [
 ].join('\n');
 
 const tierOf = rank => TIERS.find(t => rank <= t[0])[1];
+// 시트가 모두 헌터백화점 물건이면 격의 낡은 모습 대신 「새로 만든 장비」로 (방어구 매장 시트 rank0N-D 등 — 낡은 녹 · 뼈와 부딪히지 않게)
+const SHOP_LOOK = rank => `factory-new hunter gear sold in a modern department store — clean, unworn, manufactured; ${rank <= 2 ? 'basic budget models, simple shapes' : rank <= 4 ? 'mid-range models with a few glowing details' : 'premium high-tech models with glowing lines'}.`;
 const pad = n => String(n).padStart(2, '0');
 
 // 장비 한 줄 — 이름은 우리말 그대로 (그리는 쪽이 뜻을 읽습니다), 나머지는 영어
@@ -94,7 +96,7 @@ function sheetPrompt(items, rank) {
     'never touching the cell edges. Fill the cells left to right, top to bottom, in the order listed.'
       + (empty ? ` Leave the last ${empty} cell${empty > 1 ? 's' : ''} empty (plain magenta).` : ''),
     '',
-    `TIER LOOK: ${tierOf(rank)}`,
+    `TIER LOOK: ${items.every(i => i.from_monster === '헌터백화점') ? SHOP_LOOK(rank) : tierOf(rank)}`,
     '',
     'FRAMING BY TYPE:',
     ...slots.map(s => `- ${SLOT_EN[s][0]}: ${SLOT_EN[s][1]}`),
@@ -130,14 +132,28 @@ function chunk(list) {
 }
 
 // manifest — image-manifest.json 을 읽은 것. exists(path) — 그 그림 파일이 이미 있나 (진행 표시용).
+// prev — 예전 sheets.json. 칸 그림을 다 잘라 둔 시트는 **얼려서** 그대로 둡니다 (칸 → 장비 대응이 밀리지 않게 — 장비가 늘어도
+//   이미 만든 시트를 다시 자를 수 있게). 그 격에 새로 생긴 장비는 다음 글자의 새 시트로 (예: 1~3격에 방어구가 생겨 rank01-D).
 // → { files: { 'README.md': 글, 'rank01.md': 글, …, 'sheets.json': 글 }, sheets: 장 수, items: 개수 }
-function build(manifest, exists = () => false) {
+function build(manifest, exists = () => false, prev = []) {
   const files = {}, sheetIndex = [], rows = [];
   const ranks = [...new Set(manifest.items.map(i => i.rank))].sort((a, b) => a - b);
   for (const rank of ranks) {
     const items = manifest.items.filter(i => i.rank === rank)
       .sort((a, b) => SLOT_ORDER.indexOf(a.slot) - SLOT_ORDER.indexOf(b.slot) || (a.id < b.id ? -1 : 1));
-    const sheets = chunk(items), name = `rank${pad(rank)}.md`, rankName = items[0].rank_name;
+    const byId = new Map(items.map(i => [i.id, i]));
+    const frozen = prev.filter(sh => sh.rank === rank && sh.cells.length && sh.cells.every(c => byId.has(c.id) && exists(c.file)))
+      .map(sh => ({ file: sh.sheet, list: sh.cells.map(c => byId.get(c.id)), frozen: true }));
+    const taken = new Set(frozen.flatMap(sh => sh.list.map(i => i.id)));
+    const rest = items.filter(i => !taken.has(i.id));
+    const used = new Set(frozen.map(sh => sh.file));
+    let next = 0;
+    const fresh = (rest.length ? chunk(rest) : []).map(list => {
+      let file;
+      do file = `design/images/sheets/rank${pad(rank)}-${String.fromCharCode(65 + next++)}.png`; while (used.has(file));
+      return { file, list, frozen: false };
+    });
+    const sheets = [...frozen, ...fresh].sort((a, b) => (a.file < b.file ? -1 : 1)), name = `rank${pad(rank)}.md`, rankName = items[0].rank_name;
     const done = items.filter(i => exists(i.file)).length;
     rows.push({ rank, rankName, n: items.length, sheets: sheets.length, name, done });
     const out = [
@@ -146,12 +162,12 @@ function build(manifest, exists = () => false) {
       '> 자동으로 만든 파일입니다 (`node tools/cli.js images`). 손으로 고치지 마세요. 쓰는 법은 같은 폴더의 `README.md`.',
       ''
     ];
-    sheets.forEach((list, s) => {
-      const letter = String.fromCharCode(65 + s), file = `design/images/sheets/rank${pad(rank)}-${letter}.png`;
+    sheets.forEach(({ file, list, frozen: done }) => {
+      const letter = file.match(/-([A-Z])\.png$/)[1];
       const kinds = SLOT_ORDER.filter(x => list.some(i => i.slot === x)).map(x => SLOT_KO[x]).join(' · ');
       sheetIndex.push({ sheet: file, rank, grid: [3, 3], cells: list.map(i => ({ id: i.id, name: i.name, file: i.file })) });
       out.push(
-        `## 시트 ${rank}-${letter} — ${kinds} (${list.length}개)`,
+        `## 시트 ${rank}-${letter} — ${kinds} (${list.length}개)${done ? ' ✅ 다 자름' : ''}`,
         '',
         `저장할 이름: \`${file}\``,
         '',
