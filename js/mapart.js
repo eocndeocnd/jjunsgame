@@ -1505,7 +1505,7 @@
       if (out(1, 0) && lx > 13) return lx === 15 ? c3('#1d4f57') : fence(Y);
       return c;
     }
-    if (e.t === WALL) {                                                            // 찻길 끝 막음 — 빛 가림막
+    if (e.t === WALL && t !== ROCKY) {                                             // 찻길 끝 막음 — 빛 가림막 (옛 동네 바닥의 막힌 칸은 자잘한 것이 놓인 자리 — 바닥 그대로)
       let c = asphalt(X, Y);
       const across = tileAt(tx - 1, ty) !== WALL || tileAt(tx + 1, ty) !== WALL;   // 옆이 찻길이면 세로로 선 가림막
       const a = across ? lx : ly, s = across ? Y : X;
@@ -1544,6 +1544,12 @@
       if (Math.abs(vnoise(X * 0.07, Y * 0.07, 332) - 0.5) < 0.008) c = c3('#4a4844');
       if (fbm(X * 0.03, Y * 0.03, 333) > 0.63) c = mix(c, c3('#3e4a52'), hash(X, Y, 334) < 0.08 ? 0.15 : 0.35);
       if (e.t === ROCK && Math.hypot(lx - 7.5, ly - 7.5) < 6.2) { const r = Math.hypot(lx - 7.5, ly - 7.5); return r > 5 ? c3(CYC.glow) : r > 4 ? c3('#20262e') : c3('#3a4250'); }
+      if (terAt(tx, ty - 1) === BUILD && (ly === 3 || ly === 5)) c = mix(c, c3('#d9b43a'), hash(X >> 2, ty, 500) < 0.15 ? 0.25 : 0.7);   // 건물 앞 노란 이중선 — 주정차 금지 (군데군데 닳음)
+      if (terAt(tx, ty + 1) === BUILD && (ly === 10 || ly === 12)) c = mix(c, c3('#d9b43a'), hash(X >> 2, ty, 501) < 0.15 ? 0.25 : 0.7);
+      if (hash(tx, ty, 502) < 0.018 && terAt(tx, ty - 1) !== BUILD && terAt(tx, ty + 1) !== BUILD) {           // 작은 맨홀 — 녹슨 테 · 격자
+        const r = Math.hypot(lx - 7.5, ly - 7.5);
+        if (r < 4.6) return r > 3.7 ? c3('#2a2826') : ((X + Y) & 3) === 0 ? c3('#4a4440') : c3('#5c5650');
+      }
       if (terAt(tx - 1, ty) === BUILD && lx < 6) c = mul(c, 0.6 + lx * 0.06);
       if (terAt(tx + 1, ty) === BUILD && lx > 10) c = mul(c, 1 - (lx - 10) * 0.05);
       return c;
@@ -2330,8 +2336,82 @@
   }
 
   // 나무 — 보이는 칸의 나무를 위에서 아래로 (아래 것이 위 것을 가리게). 밑동이 그 칸 아래 가장자리에 닿고, 발밑에 옅은 그림자
+  // ---------- 옛 동네의 자잘한 것 (지도 속성 clutter — tools/map-gen.js 의 OLDTOWN.clutter) ----------
+  // 불법주차한 낡은 차(가로 · 세로 두 칸) · 라바콘 · 종량제 봉투 더미 · 스티로폼 화분 · 세워 둔 오토바이. 칸은 막혀 있고(지나갈 수 없음) 그림은 그 칸 안에.
+  // 낡은 차 — 빛바랜 칠 · 먼지 · 앞뒤 유리 · 옆 거울 · 바퀴 끝이 살짝 보임. 앞이 오른쪽(가로) · 아래(세로)
+  const OLD_CAR = ['#b8b2a6', '#6a7f94', '#8a3a34', '#4f5d48', '#c9a25a', '#9a9aa0'];
+  const clutterSprites = {};
+  function clutterSprite(it) {
+    const key = `${it.kind}|${it.tone | 0}|${it.w}x${it.h}`;
+    if (clutterSprites[key]) return clutterSprites[key];
+    const W = it.w * P, H = it.h * P, cv = document.createElement('canvas');
+    cv.width = W; cv.height = H;
+    const g = cv.getContext('2d'), img = g.createImageData(W, H), d = img.data;
+    const put = (x, y, c, a = 255) => { if (x < 0 || y < 0 || x >= W || y >= H) return; const i = (y * W + x) * 4; d[i] = c[0]; d[i + 1] = c[1]; d[i + 2] = c[2]; d[i + 3] = a; };
+    const rect = (x0, y0, w, h, c, a) => { for (let y = y0; y < y0 + h; y++) for (let x = x0; x < x0 + w; x++) put(x, y, c, a); };
+    const ink = c3('#17161a'), seed = (it.x * 31 + it.y * 17) | 0;
+    if (it.kind === 'car') {
+      const vert = it.h > it.w, L = 30, Wd = 13, body = c3(OLD_CAR[(it.tone | 0) % OLD_CAR.length]);
+      // 가로로 그린 뒤 세로면 돌려 놓음
+      const pts = [];
+      const P2 = (x, y, c, a) => pts.push([x, y, c, a]);
+      for (let x = 1; x < L + 1; x++) P2(x, Wd + 1, [0, 0, 0], 70);                                   // 그림자
+      for (const wx of [6, 22]) for (let x = wx; x < wx + 5; x++) { P2(x, 0, ink); P2(x, Wd, ink); }   // 바퀴
+      for (let y = 1; y < Wd; y++) for (let x = 1; x < L; x++) {
+        const edge = y === 1 || y === Wd - 1 || x === 1 || x === L - 1;
+        let c = edge ? ink : body;
+        if (!edge) {
+          if (x >= 19 && x <= 21) c = y === 2 ? c3('#6f8aa0') : c3('#2c3a48');                     // 앞 유리
+          else if (x >= 6 && x <= 7) c = c3('#33404c');                                             // 뒷유리
+          else if (x >= 8 && x <= 18) c = mul(body, y === 2 ? 1.08 : 0.9);                           // 지붕
+          else if (x > 21) c = mul(body, 1.04);                                                     // 보닛
+          if (hash(x + seed, y, 497) < 0.08) c = mix(c, c3('#7a7468'), 0.35);                       // 먼지 · 빛바램
+        }
+        P2(x, y, c);
+      }
+      P2(L - 1, 3, c3('#f2e6a0')); P2(L - 1, Wd - 3, c3('#f2e6a0'));                                // 전조등
+      P2(1, 3, c3('#b23a32')); P2(1, Wd - 3, c3('#b23a32'));                                        // 미등
+      P2(19, 0, ink); P2(19, Wd, ink);                                                              // 옆 거울
+      const ox = ((it.w * P - (vert ? Wd + 2 : L + 2)) / 2) | 0, oy = ((it.h * P - (vert ? L + 2 : Wd + 2)) / 2) | 0;
+      for (const [x, y, c, a] of pts) vert ? put(ox + (Wd + 1 - y), oy + x, c, a) : put(ox + x, oy + y, c, a);
+    } else if (it.kind === 'cone') {                                                                // 라바콘 둘 — 주황 원뿔에 흰 띠, 검은 받침
+      for (const [cx, by] of [[5, 13], [11, 10]]) {
+        rect(cx - 4, by + 1, 9, 2, [0, 0, 0], 60);
+        rect(cx - 3, by - 1, 7, 2, c3('#2a2a2e'));
+        for (let k = 0; k < 9; k++) { const hw = Math.max(0, 3 - (k / 3) | 0); rect(cx - hw, by - 2 - k, hw * 2 + 1, 1, k === 3 || k === 4 ? c3('#f4f1ea') : k > 6 ? c3('#ff8a3a') : c3('#f06a20')); }
+      }
+    } else if (it.kind === 'trash') {                                                               // 종량제 봉투 더미 — 흰 · 하늘빛 봉투, 묶은 매듭
+      rect(1, 13, 14, 2, [0, 0, 0], 60);
+      for (const [cx, cy, r, c] of [[5, 10, 4, '#e8eef2'], [11, 10, 4, '#cfe3f0'], [8, 6, 4, '#e8eef2']]) {
+        for (let y = -r; y <= r; y++) for (let x = -r; x <= r; x++) if (x * x + y * y <= r * r + 1) put(cx + x, cy + y, x + y > 2 ? mul(c3(c), 0.82) : c3(c));
+        put(cx, cy - r - 1, c3('#9aa8b2')); put(cx - 1, cy - r - 2, c3('#9aa8b2')); put(cx + 1, cy - r - 2, c3('#9aa8b2'));
+      }
+    } else if (it.kind === 'planter') {                                                             // 스티로폼 화분 — 흰 상자에 상추 · 고추
+      rect(2, 13, 13, 2, [0, 0, 0], 60);
+      rect(2, 8, 12, 5, c3('#f2f0ea')); rect(2, 12, 12, 1, c3('#c9c6be')); rect(2, 8, 12, 1, c3('#ffffff'));
+      for (let x = 3; x < 13; x++) for (let y = 3; y < 9; y++) if (hash(x + seed, y, 498) < 0.55 - (8 - y) * 0.05) put(x, y, (x + y) % 3 ? c3('#4f9a3a') : c3('#2f6a28'));
+      put(5, 5, c3('#d03a2a')); put(10, 4, c3('#d03a2a')); put(8, 6, c3('#d03a2a'));
+    } else if (it.kind === 'scooter') {                                                             // 세워 둔 오토바이 — 위에서 본 몸통 · 안장 · 핸들 · 앞뒤 바퀴
+      rect(2, 12, 13, 2, [0, 0, 0], 60);
+      rect(1, 7, 3, 3, ink); rect(12, 7, 3, 3, ink);                                                 // 바퀴
+      rect(3, 6, 10, 5, c3(OLD_CAR[((it.tone | 0) + 2) % OLD_CAR.length])); rect(3, 6, 10, 1, c3('#e8e4dc'));
+      rect(5, 7, 5, 3, c3('#2a2628'));                                                               // 안장
+      rect(12, 3, 1, 11, c3('#3a3a40')); put(12, 3, c3('#9aa0a8')); put(12, 13, c3('#9aa0a8'));    // 핸들
+      put(14, 8, c3('#f2e6a0'));
+    }
+    g.putImageData(img, 0, 0);
+    return (clutterSprites[key] = cv);
+  }
+  function drawClutter(ctx, m, A, ox, oy, T, x0, y0, x1, y1) {
+    if (!A.clutter) A.clutter = JSON.parse((m.props && m.props.clutter) || '[]');
+    for (const it of A.clutter) {
+      if (it.x + it.w < x0 - 1 || it.x > x1 + 1 || it.y + it.h < y0 - 1 || it.y > y1 + 1) continue;
+      ctx.drawImage(clutterSprite(it), Math.round(ox + it.x * T), Math.round(oy + it.y * T), it.w * T, it.h * T);
+    }
+  }
   function drawTrees(ctx, m, ox, oy, T, x0, y0, x1, y1) {
     ctx.imageSmoothingEnabled = false;
+    if (m.props && m.props.clutter) drawClutter(ctx, m, prep(m), ox, oy, T, x0, y0, x1, y1);   // 옛 동네의 자잘한 것 — 불법주차 차 · 라바콘 …
     const sw = TW / P * T, sh = TH / P * T;
     for (let y = Math.max(0, y0 - 1); y < Math.min(m.h, y1 + 3); y++) for (let x = Math.max(0, x0 - 3); x < Math.min(m.w, x1 + 1); x++) {   // 왼쪽은 세 칸 더 (폭 세 칸 기둥)
       const k = y * m.w + x;

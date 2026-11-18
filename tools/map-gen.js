@@ -1200,6 +1200,18 @@ const OLDTOWN = {
     { kind: 'back', roofOnly: true, x: 23, y: 18, w: 4, h: 4 }, { kind: 'villa', roofOnly: true, x: 28, y: 18, w: 4, h: 4 }, { kind: 'store', roofOnly: true, x: 33, y: 18, w: 4, h: 4 },
     { kind: 'back', roofOnly: true, x: 39, y: 18, w: 4, h: 4 }, { kind: 'villa', roofOnly: true, x: 44, y: 18, w: 4, h: 4 }, { kind: 'store', roofOnly: true, x: 49, y: 18, w: 4, h: 4 }
   ],
+  // 자잘한 것 (사용자 결정 2026-11-18) — 막힌 칸 · 그림은 js/mapart.js 의 clutterSprite. 길을 막아 갇히는 칸이 생기면 뽑을 때 멈춤
+  //   car 불법주차한 낡은 차(가로 w2 · 세로 h2 — tone 빛깔) · cone 라바콘 · trash 종량제 봉투 · planter 스티로폼 화분 · scooter 오토바이
+  clutter: [
+    { kind: 'car', x: 14, y: 9, w: 2, h: 1, tone: 0 }, { kind: 'cone', x: 16, y: 9 },
+    { kind: 'car', x: 27, y: 4, w: 1, h: 2, tone: 2 }, { kind: 'cone', x: 28, y: 0 },
+    { kind: 'car', x: 34, y: 9, w: 2, h: 1, tone: 1 },
+    { kind: 'car', x: 23, y: 11, w: 1, h: 2, tone: 3 },
+    { kind: 'cone', x: 18, y: 0 }, { kind: 'cone', x: 6, y: 10 },
+    { kind: 'trash', x: 13, y: 6 }, { kind: 'trash', x: 31, y: 10 }, { kind: 'trash', x: 0, y: 16 },
+    { kind: 'planter', x: 1, y: 6 }, { kind: 'planter', x: 24, y: 16 }, { kind: 'planter', x: 34, y: 0 },
+    { kind: 'scooter', x: 38, y: 9, tone: 1 }, { kind: 'scooter', x: 12, y: 0, tone: 4 }
+  ],
   trees: [[11, 16], [37, 16]],
   pylons: [],
   start: [3, 7],                                             // 집 문 앞 골목길
@@ -1208,7 +1220,7 @@ const OLDTOWN = {
 };
 const CITY = {
   title: '헌터들의 도시', base: 'pave',
-  w: 46, h: 53, pad: { t: 8, b: 5, l: 9, r: 9 },
+  w: 46, h: 53, pad: { t: 6, b: 6, l: 9, r: 9 },
   facade: { f: 3, kinds: ['tower'] },                       // 둘레 빌딩만 벽면 3칸 — 옥상이 정사각형
   ground: [
     ['lot', 2, 45, 11, 7], ['lot', 16, 45, 14, 7], ['lot', 33, 45, 11, 7],
@@ -1227,20 +1239,10 @@ const CITY = {
     { kind: 'guild', tone: 2, x: 27, y: 27, w: 8, h: 9, door: { x: 30, w: 2, name: 'guild3', label: '왕관 길드' } },
     { kind: 'guild', tone: 3, x: 37, y: 27, w: 8, h: 9, door: { x: 40, w: 2, name: 'guild4', label: '달 길드' } },
     // 둘레 — 걷지 못하는 곳의 빌딩들 (왼쪽 둘째 길 아래는 옛 동네로 가는 보도가 이어져 보이게 비움)
-    // 둘레 빌딩 — 옥상이 정사각형(가로 4칸 · 깊이 7칸 · 벽면 3칸 — facade), 지도 가장자리까지 (사용자 결정 2026-11-18). 위 끝은 옥상이 맨 위에 닿고, 아래 끝은 옥상만(roofOnly)
-    { kind: 'tower', tone: 0, x: -9, y: -8, w: 4, h: 7 }, { kind: 'tower', tone: 1, x: -4, y: -8, w: 4, h: 7 }, { kind: 'tower', tone: 2, x: 1, y: -8, w: 4, h: 7 },
-    { kind: 'tower', tone: 0, x: 6, y: -8, w: 4, h: 7 }, { kind: 'tower', tone: 1, x: 11, y: -8, w: 4, h: 7 }, { kind: 'tower', tone: 2, x: 16, y: -8, w: 4, h: 7 },
-    { kind: 'tower', tone: 0, x: 21, y: -8, w: 4, h: 7 }, { kind: 'tower', tone: 1, x: 26, y: -8, w: 4, h: 7 }, { kind: 'tower', tone: 2, x: 31, y: -8, w: 4, h: 7 },
-    { kind: 'tower', tone: 0, x: 36, y: -8, w: 4, h: 7 }, { kind: 'tower', tone: 1, x: 41, y: -8, w: 4, h: 7 }, { kind: 'tower', tone: 2, x: 46, y: -8, w: 4, h: 7 },
-    { kind: 'tower', tone: 0, x: 51, y: -8, w: 4, h: 7 },
+    // 둘레 빌딩 — 양옆만 (위아래 끝의 빌딩은 없앰 — 사용자 결정 2026-11-18). 옥상이 정사각형(가로 4칸 · 깊이 7칸 · 벽면 3칸 — facade), 지도 가장자리까지
     { kind: 'tower', tone: 0, x: -9, y: 2, w: 4, h: 7 }, { kind: 'tower', tone: 1, x: -9, y: 10, w: 4, h: 7 }, { kind: 'tower', tone: 2, x: -9, y: 26, w: 4, h: 7 },
     { kind: 'tower', tone: 0, x: -9, y: 42, w: 4, h: 7 }, { kind: 'tower', tone: 1, x: 51, y: 2, w: 4, h: 7 }, { kind: 'tower', tone: 2, x: 51, y: 10, w: 4, h: 7 },
-    { kind: 'tower', tone: 0, x: 51, y: 26, w: 4, h: 7 }, { kind: 'tower', tone: 1, x: 51, y: 42, w: 4, h: 7 },
-    { kind: 'tower', tone: 1, roofOnly: true, x: -9, y: 54, w: 4, h: 4 }, { kind: 'tower', tone: 2, roofOnly: true, x: -4, y: 54, w: 4, h: 4 }, { kind: 'tower', tone: 0, roofOnly: true, x: 1, y: 54, w: 4, h: 4 },
-    { kind: 'tower', tone: 1, roofOnly: true, x: 6, y: 54, w: 4, h: 4 }, { kind: 'tower', tone: 2, roofOnly: true, x: 11, y: 54, w: 4, h: 4 }, { kind: 'tower', tone: 0, roofOnly: true, x: 16, y: 54, w: 4, h: 4 },
-    { kind: 'tower', tone: 1, roofOnly: true, x: 21, y: 54, w: 4, h: 4 }, { kind: 'tower', tone: 2, roofOnly: true, x: 26, y: 54, w: 4, h: 4 }, { kind: 'tower', tone: 0, roofOnly: true, x: 31, y: 54, w: 4, h: 4 },
-    { kind: 'tower', tone: 1, roofOnly: true, x: 36, y: 54, w: 4, h: 4 }, { kind: 'tower', tone: 2, roofOnly: true, x: 41, y: 54, w: 4, h: 4 }, { kind: 'tower', tone: 0, roofOnly: true, x: 46, y: 54, w: 4, h: 4 },
-    { kind: 'tower', tone: 1, roofOnly: true, x: 51, y: 54, w: 4, h: 4 }
+    { kind: 'tower', tone: 0, x: 51, y: 26, w: 4, h: 7 }, { kind: 'tower', tone: 1, x: 51, y: 42, w: 4, h: 7 }
   ],
   trees: [[11, 3], [11, 6], [11, 9], [11, 12], [34, 3], [34, 6], [34, 9], [34, 12], [3, 2], [7, 2], [38, 2], [42, 2],
           [4, 26], [9, 26], [14, 26], [29, 26], [34, 26], [39, 26], [43, 26], [18, 29], [18, 33], [35, 30], [36, 33]],
@@ -1282,6 +1284,16 @@ function townMap(C, name) {
     if (o >= 0 && o !== i && !b.annex && !C.buildings[o].annex && (x >= b.x && x < b.x + b.w || y >= b.y && y < b.y + b.h))
       throw new Error(`${name} — 건물 ${i}(${b.kind}) 와 ${o}(${C.buildings[o].kind}) 가 (${x}, ${y}) 에서 붙음`);
   }));
+  // 자잘한 것 — 걷는 곳의 맨땅에만, 막힌 칸으로 (겉모습은 바닥 그대로)
+  const clutter = [];
+  for (const c of C.clutter || []) {
+    const w = c.w || 1, h = c.h || 1;
+    each(c.x, c.y, w, h, (k, x, y) => {
+      if (!inWalk(x, y) || tiles[k] !== FLOOR || ROADISH_LOOK(lk[k])) throw new Error(`${name} — ${c.kind} (${x}, ${y}) 자리가 걷는 곳의 맨땅이 아님`);
+      tiles[k] = WALL;
+    });
+    clutter.push({ kind: c.kind, x: c.x + PD.l, y: c.y + PD.t, w, h, tone: c.tone || 0 });
+  }
   for (const [list, tile, what] of [[C.trees, TREE, '나무'], [C.pylons, ROCK, '기둥']]) for (const [x, y] of list) {
     const k = at(x, y);
     if (!onMap(x, y) || tiles[k] !== FLOOR || ROADISH_LOOK(lk[k])) throw new Error(`${name} — ${what} (${x}, ${y}) 자리가 맨땅이 아님`);
@@ -1292,12 +1304,26 @@ function townMap(C, name) {
   for (const e of C.edges) for (let j = 0; j < e.h; j++) for (let i = 0; i < e.w; i++) spots.push([e.x + i, e.y + j, `${e.name} 통로`]);
   for (const [x, y, what] of spots) if (!inWalk(x, y) || tiles[at(x, y)] !== FLOOR) throw new Error(`${name} — ${what} (${x}, ${y}) 이(가) 걷는 곳의 맨땅이 아님`);
   for (const p of ports) for (let i = 0; i < p.w; i++) if (tiles[(p.y + 1) * W + p.x + i] !== FLOOR) throw new Error(`${name} — ${p.name} 문 앞이 막힘`);
+  // 걷는 곳의 맨땅은 모두 시작점에서 걸어서 닿아야 함 (자잘한 것 · 나무가 틈을 막아 갇힌 칸이 생기지 않게)
+  {
+    const seen = new Uint8Array(W * H), q = [at(sx, sy)], open = k => tiles[k] === FLOOR;
+    seen[q[0]] = 1;
+    for (let n = 0; n < q.length; n++) {
+      const k = q[n], x = (k % W) - PD.l, y = ((k / W) | 0) - PD.t;
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        if (!inWalk(x + dx, y + dy)) continue;
+        const j = at(x + dx, y + dy);
+        if (!seen[j] && open(j)) { seen[j] = 1; q.push(j); }
+      }
+    }
+    for (let y = 0; y < C.h; y++) for (let x = 0; x < C.w; x++) if (open(at(x, y)) && !seen[at(x, y)]) throw new Error(`${name} — (${x}, ${y}) 에 걸어서 못 감`);
+  }
   // 이상한 게이트 — 나에게만 보임 (그림은 mapview 의 rift). 들어가면 지하수로 첫 공간의 같은 게이트 앞
   if (C.gate) ports.push({ name: 'gate', x: C.gate[0] + PD.l, y: C.gate[1] + PD.t, w: 2, h: 1, to: 'sewer.city', rift: true });
   // 지도 가장자리 통로 — 그리지 않고 이름표만 (mapview 의 edge). 넘어가면 그 지도의 같은 이름 통로 안쪽(arrive 쪽)에 섬
   for (const e of C.edges) ports.push({ name: e.name, label: e.label, x: e.x + PD.l, y: e.y + PD.t, w: e.w, h: e.h, to: e.to, edge: true, arrive: e.arrive });
   return buildTmj({ w: W, h: H, tiles, look: lk, ports, npcs: [{ name: 'start', x: sx + PD.l, y: sy + PD.t }],
-    props: { title: C.title, city: true, walk: `${PD.l},${PD.t},${C.w},${C.h}`, blds: JSON.stringify(blds) } });
+    props: { title: C.title, city: true, walk: `${PD.l},${PD.t},${C.w},${C.h}`, blds: JSON.stringify(blds), ...(clutter.length ? { clutter: JSON.stringify(clutter) } : {}) } });
 }
 const oldtown = () => townMap(OLDTOWN, '옛 동네');
 const city = () => townMap(CITY, '도시');
