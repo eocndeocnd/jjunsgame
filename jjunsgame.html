@@ -12325,7 +12325,7 @@ const MAP_FILES = {"arthurian":{"compressionlevel":-1,"type":"map","version":"1.
     return (pylonCv = cv);
   }
 
-  // ---------- 이상한 게이트 — 도시 골목 막다른 곳 · 지하수로 첫 공간 (나에게만 보임) ----------
+  // ---------- 이상한 게이트 — 옛 동네 집 옆 틈 · 지하수로 첫 공간 (나에게만 보임) ----------
   // 흔히 보는 파란 원 대신, 허공이 찢긴 듯한 세로 틈 — 검은 속에 소용돌이 · 별, 청록 · 보라로 번뜩이는 들쭉날쭉한 테, 둘레를 떠도는 조각.
   // 여덟 장을 미리 그려 두고 번갈아 붙임 (mapview 가 문 자리에 부름 — port.rift)
   const RIFT_W = 36, RIFT_H = 46, riftFrames = [];
@@ -13336,7 +13336,7 @@ const MapView = (function () {
             ctx.fillStyle = '#ffd76a'; ctx.fill();
           }
         } else if (port.edge) {                            // 지도 가장자리 통로(옛 동네 ⇄ 도시) — 칸은 그리지 않고 이름표만
-        } else if (port.rift) {                            // 이상한 게이트 — 도시 골목 막다른 곳 · 지하수로 첫 공간 (그림은 mapart 의 drawRift)
+        } else if (port.rift) {                            // 이상한 게이트 — 옛 동네 집 옆 틈 · 지하수로 첫 공간 (그림은 mapart 의 drawRift)
           if (art) MapArt.drawRift(ctx, ox + (port.x + port.w / 2) * T, oy + (port.y + port.h) * T, T, performance.now() / 1000);
         } else if (!(port.door && art)) {                 // 건물 문(door)은 지도 그림이 성문 · 문간으로 그림
           ctx.fillStyle = open ? '#3fae4a' : '#5c3a1a';
