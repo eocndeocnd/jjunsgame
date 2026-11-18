@@ -8711,7 +8711,7 @@ function freshRun() {
     level: 1,
     xp: 0,
     spent: emptySpent(),          // 이미 찍은 포인트 (되돌릴 수 없음)
-    unspent: POINTS_PER_LEVEL,    // Lv.1 몫부터 지급
+    unspent: 0,                   // 포인트는 레벨이 오를 때부터 (Lv.1 몫은 없음 — 도시에서 눈을 뜨자마자 「스탯 분배」가 떠서 헷갈림, 사용자 결정 2026-11-19)
     energy: startEnergy(),   // 기본 + 지금까지 삼켜둔 격
     kills: 0,
     zoneIndex: 0,        // 지금 있는 지역
