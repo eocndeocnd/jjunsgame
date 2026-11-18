@@ -9,6 +9,8 @@
 //  · 어느 칸이 어느 장비인지는 design/images/prompts/sheets.json (node tools/cli.js images 가 뽑음)
 //  · 배경은 자홍색(#FF00FF) — 칸 네 귀퉁이에서 실제 배경색을 재서 걷어내고, 가장자리는 배경색을 빼서 분홍 테가 남지 않게 합니다
 //  · 물건만 잘라 256×256 가운데에 (여백 약 10%). 줄일 때는 넓이 평균 — 도트가 뭉개지지 않게 정수 배 근처면 그 배로
+//  · 게임에 넣을 때는 128×128 로 줄이고 색을 256가지 이하로 모아 팔레트 PNG 로 (한 장 약 8KB — writeIcon, 사용자 결정 2026-11-18)
+//    node tools/cut-sheets.js --shrink   이미 있는 큰 그림(예전 256 RGBA)을 한 번에 줄임
 //  · 시트는 PNG(8비트, 인터레이스 없음). webp 는 Windows 의 그림 변환기로 바꿔 읽습니다. 패키지 없이 Node 만으로 돕니다.
 //  · 제미나이의 반짝이 표시(오른쪽 아래)는 덮인 정도(tools/gemini-mark.json)로 거꾸로 풀어 걷어냅니다 — 장비 위에 겹쳐도 원래 색으로
 // ============================================================
@@ -67,6 +69,74 @@ function writePng(file, { w, h, px }) {
   fs.writeFileSync(file, Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
     chunk('IHDR', ihdr), chunk('IDAT', zlib.deflateSync(raw, { level: 9 })), chunk('IEND', Buffer.alloc(0))]));
 }
+
+// ---------- 게임에 넣는 크기 (사용자 결정 2026-11-18 — 앞으로 넣는 그림은 모두 용량을 줄여서) ----------
+// 자르고 다듬는 일은 256×256 에서 하고, 저장할 때 ICON(128)×128 로 줄인 뒤 색을 256가지 이하로 모아 팔레트 PNG 로 씁니다.
+// 화면에서는 많아야 40~60px — 128 이면 폰의 2배 화면에서도 선명합니다. 한 장 약 65KB → 약 8KB.
+const ICON = 128;
+// 넓이 평균으로 줄임 (투명한 곳의 색이 가장자리에 번지지 않게 알파로 가중)
+function shrinkIcon(img, size = ICON) {
+  const k = img.w / size, px = Buffer.alloc(size * size * 4);
+  for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+    let r = 0, g = 0, b = 0, a = 0, n = 0;
+    for (let yy = Math.floor(y * k); yy < Math.floor((y + 1) * k); yy++) for (let xx = Math.floor(x * k); xx < Math.floor((x + 1) * k); xx++) {
+      const i = (yy * img.w + xx) * 4, al = img.px[i + 3];
+      r += img.px[i] * al; g += img.px[i + 1] * al; b += img.px[i + 2] * al; a += al; n++;
+    }
+    const o = (y * size + x) * 4;
+    if (!a) continue;
+    px[o] = Math.round(r / a); px[o + 1] = Math.round(g / a); px[o + 2] = Math.round(b / a); px[o + 3] = Math.round(a / n);
+  }
+  return { w: size, h: size, px };
+}
+// 색 모으기 — 중간값 자르기(median cut). 0번은 완전 투명, 나머지 255칸에 RGBA 를 모읍니다
+function quantize(img, max = 255) {
+  const counts = new Map();
+  for (let i = 0; i < img.px.length; i += 4) {
+    if (img.px[i + 3] < 8) continue;
+    const key = (img.px[i] << 24 | img.px[i + 1] << 16 | img.px[i + 2] << 8 | img.px[i + 3]) >>> 0;
+    counts.set(key, (counts.get(key) || 0) + 1);
+  }
+  const colors = [...counts].map(([key, n]) => ({ c: [key >>> 24, (key >>> 16) & 255, (key >>> 8) & 255, key & 255], n, key }));
+  const boxes = colors.length ? [colors] : [];
+  const range = box => { let best = 0, ch = 0; for (let k = 0; k < 4; k++) { let lo = 255, hi = 0; for (const e of box) { lo = Math.min(lo, e.c[k]); hi = Math.max(hi, e.c[k]); } if (hi - lo > best) { best = hi - lo; ch = k; } } return { best, ch }; };
+  while (boxes.length < max) {
+    let pick = -1, score = 0, chan = 0;
+    boxes.forEach((box, i) => { if (box.length < 2) return; const r = range(box), s = r.best * Math.sqrt(box.reduce((t, e) => t + e.n, 0)); if (s > score) { score = s; pick = i; chan = r.ch; } });
+    if (pick < 0) break;
+    const box = boxes[pick].sort((a, b) => a.c[chan] - b.c[chan]), total = box.reduce((t, e) => t + e.n, 0);
+    let acc = 0, cut = 1;
+    for (; cut < box.length - 1; cut++) { acc += box[cut - 1].n; if (acc >= total / 2) break; }
+    boxes.splice(pick, 1, box.slice(0, cut), box.slice(cut));
+  }
+  const palette = [[0, 0, 0, 0]], index = new Map();
+  for (const box of boxes) {
+    const t = box.reduce((s, e) => s + e.n, 0), avg = [0, 1, 2, 3].map(k => Math.round(box.reduce((s, e) => s + e.c[k] * e.n, 0) / t));
+    for (const e of box) index.set(e.key, palette.length);
+    palette.push(avg);
+  }
+  const idx = new Uint8Array(img.w * img.h);
+  for (let p = 0, i = 0; i < img.px.length; i += 4, p++) {
+    if (img.px[i + 3] < 8) continue;
+    idx[p] = index.get((img.px[i] << 24 | img.px[i + 1] << 16 | img.px[i + 2] << 8 | img.px[i + 3]) >>> 0);
+  }
+  return { palette, idx };
+}
+function writeIndexedPng(file, img) {
+  const { palette, idx } = quantize(img), w = img.w, h = img.h;
+  const ihdr = Buffer.alloc(13); ihdr.writeUInt32BE(w, 0); ihdr.writeUInt32BE(h, 4); ihdr[8] = 8; ihdr[9] = 3;
+  const plte = Buffer.alloc(palette.length * 3), trns = Buffer.alloc(palette.length);
+  palette.forEach((c, i) => { plte[i * 3] = c[0]; plte[i * 3 + 1] = c[1]; plte[i * 3 + 2] = c[2]; trns[i] = c[3]; });
+  const raw = Buffer.alloc((w + 1) * h);
+  for (let y = 0; y < h; y++) Buffer.from(idx.buffer, y * w, w).copy(raw, y * (w + 1) + 1);
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    chunk('IHDR', ihdr), chunk('PLTE', plte), chunk('tRNS', trns), chunk('IDAT', zlib.deflateSync(raw, { level: 9 })), chunk('IEND', Buffer.alloc(0))]));
+}
+// 장비 그림 한 장을 게임에 넣는 모양으로 — 줄이고 · 색을 모아서
+function writeIcon(file, img) { writeIndexedPng(file, img.w > ICON ? shrinkIcon(img) : img); }
+// PNG 의 가로 크기만 (다시 줄일 필요가 있나 볼 때)
+function pngWidth(file) { const b = fs.readFileSync(file); return b.readUInt32BE(16); }
 
 // 시트 읽기 — PNG 는 바로, webp(이름만 .png 인 것 포함)는 Windows 의 그림 변환기(WIC)로 PNG 로 바꿔서 읽습니다
 function readSheet(file) {
@@ -267,6 +337,19 @@ function preview(file, icons) {
 // ---------- 돌리기 ----------
 if (require.main === module) {
   const args = process.argv.slice(2), force = args.includes('--force'), pv = args.includes('--preview') ? args[args.indexOf('--preview') + 1] : null;
+  // --shrink — 이미 있는 장비 그림 중 큰 것(예전 256 RGBA)을 게임 크기로 (시트 없이)
+  if (args.includes('--shrink')) {
+    const dir = path.join(ROOT, 'assets/items');
+    let n = 0, before = 0, after = 0;
+    for (const f of fs.readdirSync(dir).filter(f => /\.png$/.test(f))) {
+      const file = path.join(dir, f);
+      before += fs.statSync(file).size;
+      if (pngWidth(file) > ICON) { writeIcon(file, readPng(file)); n++; }
+      after += fs.statSync(file).size;
+    }
+    console.log(`장비 그림 ${n}장을 줄였습니다 — 모두 ${(before / 1024).toFixed(0)}KB → ${(after / 1024).toFixed(0)}KB`);
+    process.exit(0);
+  }
   const index = JSON.parse(fs.readFileSync(path.join(ROOT, 'design/images/prompts/sheets.json'), 'utf8'));
   const made = [];
   let cut = 0, skipped = 0, sheets = 0;
@@ -286,7 +369,7 @@ if (require.main === module) {
       const fit = cells[k] && fitIcon(cells[k]);
       if (!fit) { console.log(`  ⚠ ${sh.sheet} ${k + 1}칸 (${c.name}) — 비어 있음 (물건이 옆 칸 쪽으로 쏠렸거나 하나로 붙었을 수 있음)`); return; }
       if (cells[k].edge) console.log(`  ⚠ ${sh.sheet} ${k + 1}칸 (${c.name}) — 물건이 시트 가장자리에 닿음 (잘렸을 수 있음)`);
-      writePng(out, fit.img);
+      writeIcon(out, fit.img);
       made.push(fit.img); cut++;
     });
   }
@@ -308,4 +391,4 @@ function writeArtList() {
   console.log(`js/itemart.js — 그림 있는 장비 ${ids.length}개`);
 }
 
-module.exports = { readPng, readSheet, removeMark, writePng, keyCell, splitSheet, fitIcon, writeArtList };
+module.exports = { readPng, readSheet, removeMark, writePng, writeIcon, shrinkIcon, quantize, keyCell, splitSheet, fitIcon, writeArtList };
