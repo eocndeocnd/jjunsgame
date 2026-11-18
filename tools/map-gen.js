@@ -1225,16 +1225,17 @@ const CITY = {
     { kind: 'guild', tone: 2, x: 27, y: 27, w: 8, h: 9, door: { x: 30, w: 2, name: 'guild3', label: '왕관 길드' } },
     { kind: 'guild', tone: 3, x: 37, y: 27, w: 8, h: 9, door: { x: 40, w: 2, name: 'guild4', label: '달 길드' } },
     // 둘레 — 걷지 못하는 곳의 빌딩들 (왼쪽 둘째 길 아래는 옛 동네로 가는 보도가 이어져 보이게 비움)
-    { kind: 'tower', tone: 0, x: -8, y: -6, w: 7, h: 5 }, { kind: 'tower', tone: 1, x: 1, y: -6, w: 7, h: 5 }, { kind: 'tower', tone: 2, x: 10, y: -6, w: 7, h: 5 },
-    { kind: 'tower', tone: 0, x: 19, y: -6, w: 7, h: 5 }, { kind: 'tower', tone: 1, x: 28, y: -6, w: 7, h: 5 }, { kind: 'tower', tone: 2, x: 37, y: -6, w: 7, h: 5 },
-    { kind: 'tower', tone: 0, x: 46, y: -6, w: 7, h: 5 },
-    { kind: 'tower', tone: 2, x: -8, y: 2, w: 7, h: 7 }, { kind: 'tower', tone: 1, x: -8, y: 11, w: 7, h: 7 },
-    { kind: 'tower', tone: 0, x: 47, y: 2, w: 7, h: 7 }, { kind: 'tower', tone: 2, x: 47, y: 11, w: 7, h: 7 },
-    { kind: 'tower', tone: 1, x: -8, y: 28, w: 7, h: 7 }, { kind: 'tower', tone: 2, x: 47, y: 28, w: 7, h: 7 },
-    { kind: 'tower', tone: 0, x: -8, y: 46, w: 7, h: 6 }, { kind: 'tower', tone: 1, x: 47, y: 45, w: 7, h: 7 },
-    { kind: 'tower', tone: 2, x: -8, y: 54, w: 7, h: 5 }, { kind: 'tower', tone: 0, x: 1, y: 54, w: 7, h: 5 }, { kind: 'tower', tone: 1, x: 10, y: 54, w: 7, h: 5 },
-    { kind: 'tower', tone: 2, x: 19, y: 54, w: 7, h: 5 }, { kind: 'tower', tone: 0, x: 28, y: 54, w: 7, h: 5 }, { kind: 'tower', tone: 1, x: 37, y: 54, w: 7, h: 5 },
-    { kind: 'tower', tone: 2, x: 46, y: 54, w: 7, h: 5 }
+    // 둘레 빌딩은 정사각형으로 · 지도 가장자리까지 (사용자 결정 2026-11-18) — 위 끝은 옥상이 맨 위에 닿고, 아래 끝은 옥상만(roofOnly)
+    { kind: 'tower', tone: 0, x: -9, y: -6, w: 5, h: 5 }, { kind: 'tower', tone: 1, x: -3, y: -6, w: 5, h: 5 }, { kind: 'tower', tone: 2, x: 4, y: -6, w: 5, h: 5 }, { kind: 'tower', tone: 0, x: 10, y: -6, w: 5, h: 5 },
+    { kind: 'tower', tone: 1, x: 17, y: -6, w: 5, h: 5 }, { kind: 'tower', tone: 2, x: 23, y: -6, w: 5, h: 5 }, { kind: 'tower', tone: 0, x: 30, y: -6, w: 5, h: 5 }, { kind: 'tower', tone: 1, x: 36, y: -6, w: 5, h: 5 },
+    { kind: 'tower', tone: 2, x: 43, y: -6, w: 5, h: 5 }, { kind: 'tower', tone: 0, x: 50, y: -6, w: 5, h: 5 },
+    { kind: 'tower', tone: 2, x: -9, y: 2, w: 7, h: 7 }, { kind: 'tower', tone: 1, x: -9, y: 11, w: 7, h: 7 },
+    { kind: 'tower', tone: 0, x: 48, y: 2, w: 7, h: 7 }, { kind: 'tower', tone: 2, x: 48, y: 11, w: 7, h: 7 },
+    { kind: 'tower', tone: 1, x: -9, y: 28, w: 7, h: 7 }, { kind: 'tower', tone: 2, x: 48, y: 28, w: 7, h: 7 },
+    { kind: 'tower', tone: 0, x: -9, y: 45, w: 7, h: 7 }, { kind: 'tower', tone: 1, x: 48, y: 45, w: 7, h: 7 },
+    { kind: 'tower', tone: 1, roofOnly: true, x: -9, y: 54, w: 5, h: 5 }, { kind: 'tower', tone: 2, roofOnly: true, x: -3, y: 54, w: 5, h: 5 }, { kind: 'tower', tone: 0, roofOnly: true, x: 4, y: 54, w: 5, h: 5 }, { kind: 'tower', tone: 1, roofOnly: true, x: 10, y: 54, w: 5, h: 5 },
+    { kind: 'tower', tone: 2, roofOnly: true, x: 17, y: 54, w: 5, h: 5 }, { kind: 'tower', tone: 0, roofOnly: true, x: 23, y: 54, w: 5, h: 5 }, { kind: 'tower', tone: 1, roofOnly: true, x: 30, y: 54, w: 5, h: 5 }, { kind: 'tower', tone: 2, roofOnly: true, x: 36, y: 54, w: 5, h: 5 },
+    { kind: 'tower', tone: 0, roofOnly: true, x: 43, y: 54, w: 5, h: 5 }, { kind: 'tower', tone: 1, roofOnly: true, x: 50, y: 54, w: 5, h: 5 }
   ],
   trees: [[11, 3], [11, 6], [11, 9], [11, 12], [34, 3], [34, 6], [34, 9], [34, 12], [3, 2], [7, 2], [38, 2], [42, 2],
           [4, 26], [9, 26], [14, 26], [29, 26], [34, 26], [39, 26], [43, 26], [18, 29], [18, 33], [35, 30], [36, 33]],

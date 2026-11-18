@@ -1712,7 +1712,7 @@
     return c;
   }
   // 유리 벽면의 바탕 — 세로 창살 · 층 줄 · 비친 하늘 · 군데군데 불 켜진 창
-  // pw — 유리 한 칸의 너비(점). 둘레 빌딩은 14 (7칸 = 112점에 8칸 — 한 줄에 반복되는 창 8개 이하, 사용자 결정), 길드는 8 그대로
+  // pw — 유리 한 칸의 너비(점). 둘레 빌딩은 16 (한 칸에 유리 하나 — 잘리는 유리 없이, 7칸이어도 한 줄에 7개), 길드는 8 그대로
   function glassWall(T, fx, fy, seed, pw = 8) {
     const gx = Math.floor(fx / pw);
     if (fx % pw === 0) return mul(c3(T.glass), 0.72);
@@ -1750,7 +1750,7 @@
         return emblemAt((B.tone || 0) % 4, ex, ey, k) ? mix(c3(T.accent), WHITE, 0.35) : c3('#0e1016');
       }
     }
-    return glassWall(T, fx, fy, 350 + B.x0 * 3 + B.y0, B.kind === 'tower' ? 14 : 8);
+    return glassWall(T, fx, fy, 350 + B.x0 * 3 + B.y0, B.kind === 'tower' ? 16 : 8);
   }
   // 헌터 협회 — 가운데 탑엔 위에서 아래로 흐르는 빛줄과 방패 문장(H), 양 날개엔 가로 빛 띠, 아래는 넓은 계단과 환한 문
   function hqFace(B, G, fx, fy, F) {
@@ -2484,7 +2484,7 @@
       if (!B.kind || (B.x0 + B.w) * P < vx0 || B.x0 * P > vx1 || (B.y0 + B.h) * P < vy0 || B.y0 * P > vy1) continue;
       const G = B.G || (B.G = cityGeom(B)), FX = B.x0 * P, FY = B.y0 * P + G.roofH, F = G.F, W = G.W;
       if (B.kind === 'tower' || B.kind === 'guild') {
-        const pw = B.kind === 'tower' ? 14 : 8, top = F - 16, T2 = G.tone;
+        const pw = B.kind === 'tower' ? 16 : 8, top = F - 16, T2 = G.tone;
         for (let i = 0; i * pw < W; i++) for (let j = 0; 7 * j + 9 < top; j++) {
           const hc = hash(B.x0 * 31 + i, B.y0 * 17 + j, 480);
           if (hc > 0.1) continue;
