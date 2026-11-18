@@ -1372,9 +1372,10 @@ const DEPT = {
     { kind: 'plant', x: 8, y: 0, w: 1 }, { kind: 'plant', x: 12, y: 0, w: 1 }, { kind: 'plant', x: 0, y: 11, w: 1 }, { kind: 'plant', x: 20, y: 11, w: 1 },
     { kind: 'case', x: 1, y: 3, w: 2, tone: 0 }, { kind: 'case', x: 5, y: 3, w: 2, tone: 1 }, { kind: 'case', x: 1, y: 6, w: 2, tone: 2 }, { kind: 'case', x: 5, y: 6, w: 2, tone: 3 },
     { kind: 'case', x: 14, y: 3, w: 2, tone: 4 }, { kind: 'case', x: 18, y: 3, w: 2, tone: 5 }, { kind: 'case', x: 14, y: 6, w: 2, tone: 6 }, { kind: 'case', x: 18, y: 6, w: 2, tone: 7 },
-    { kind: 'bench', x: 3, y: 9, w: 3 }, { kind: 'bench', x: 15, y: 9, w: 3 }
+    { kind: 'bench', x: 3, y: 9, w: 3 }, { kind: 'bench', x: 15, y: 9, w: 3 },
+    { kind: 'counter', x: 16, y: 11, w: 2 }, { kind: 'counter', x: 19, y: 11, w: 1 }      // 강화석 교환 — 사이 (18, 11) 에 직원 (오른쪽 아래)
   ],
-  clerks: [{ x: 4, y: 0, shop: 'weapon', label: '무기 매장' }, { x: 16, y: 0, shop: 'mats', label: '재료 창구' }],
+  clerks: [{ x: 4, y: 0, shop: 'weapon', label: '무기 매장' }, { x: 16, y: 0, shop: 'mats', label: '재료 창구' }, { x: 18, y: 11, shop: 'stones', label: '강화석 교환' }],
   signs: [],
   // 에스컬레이터 앞 — 2층 방어구 매장으로 (제1격 보스를 꺾기 전에는 잠김 · 줄이 쳐짐 — ui 의 portOpen · mapview 가 줄을 그림)
   links: [{ name: 'up', x: 9, y: 0, w: 3, to: 'dept2.out', label: '2층 방어구 매장', unlock: 'armor' }]

@@ -2466,7 +2466,7 @@ function examinerStats(g) { return enemyStats(HUNTER_GRADES[g - 1].level); }
 
 const DEPT_ID = 'dept';
 const DEPT_GRADE = 1.2;
-const DEPT_SECTIONS = { weapon: { name: '무기 매장', icon: '🧑‍💼' }, armor: { name: '방어구 매장', icon: '👩‍💼' }, mats: { name: '재료 창구', icon: '🧑‍🔧' } };   // mats — 재료로 만들기 · 바꾸기 · 팔기 (MATERIALS)
+const DEPT_SECTIONS = { weapon: { name: '무기 매장', icon: '🧑‍💼' }, armor: { name: '방어구 매장', icon: '👩‍💼' }, mats: { name: '재료 창구', icon: '🧑‍🔧' }, stones: { name: '강화석 교환', icon: '👨‍🔬' } };   // stones — 이미 가진 장비의 재료를 강화석으로 (2026-11-19 재료 창구에서 떼어 냄 — 사용자 결정)   // mats — 재료로 만들기 · 바꾸기 · 팔기 (MATERIALS)
 const DEPT_WARES = [
   // 제1격
   ['dept_knife',     '보급형 합금 단검',   'weapon',  '🔪', 1, 'fierce', '협회 인증 입문용. 날보다 손잡이에 공을 들였다.'],

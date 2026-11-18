@@ -2678,6 +2678,7 @@ const MAT_TALK = {
 };
 function clerkLine(kind) {
   const pick = list => list[Math.floor(Math.random() * list.length)];
+  if (kind === 'stones') return pick(STONE_TALK);
   if (kind === 'mats') {
     const any = Object.keys(State.meta.mats || {}).some(id => matsOf(id) > 0), made = ITEMS.some(i => i.craft && owns(i.id));
     return pick(!any ? MAT_TALK.none : made ? MAT_TALK.again : MAT_TALK.first);
@@ -2716,6 +2717,7 @@ function renderShop() {
   if (shopKind === 'gate') { renderGates(); return; }
   if (shopKind === 'guild') { renderGuild(); return; }
   if (shopKind === 'mats') { renderMatShop(); return; }
+  if (shopKind === 'stones') { renderStoneShop(); return; }
   const dept = isDeptShop();
   // 지갑 — 백화점(도시)은 돈(원), 떠돌이 상인(그 공간)은 골드
   const gold = num(dept ? State.meta.won : State.meta.gold);
@@ -2995,6 +2997,41 @@ function renderGuild() {
   startShopTicker();
 }
 
+// ---------- 헌터백화점 1층 · 강화석 교환 (재료 창구에서 떼어 냄 — 사용자 결정 2026-11-19) ----------
+// 이미 가진 장비의 재료 n개를, 그 장비를 또 주워 분해했을 때와 같은 강화석으로 (game.js 의 matToStones)
+const STONE_TALK = ['「가지신 장비랑 같은 재료면 녹여서 강화석으로 뽑아 드려요. 손이 좀 가지만요.」', '「이 가죽이면… 신발 쪽 강화석이 나오겠네요. 잠깐만요.」'];
+// 바꿀 수 있는 재료 — 그 재료로 만드는 장비 중 이미 가진 것이 있는 재료
+function stoneMats() { return Object.values(MATERIALS).filter(mat => ITEMS.some(i => i.craft && i.craft.mat === mat.id && owns(i.id))); }
+function renderStoneShop() {
+  $('shopTitle').textContent = `헌터백화점 · ${DEPT_SECTIONS.stones.name}`;
+  $('shopGold').innerHTML = '';
+  const blocks = stoneMats().map(mat => {
+    const have = matsOf(mat.id);
+    const cards = ITEMS.filter(i => i.craft && i.craft.mat === mat.id && owns(i.id)).map(item => {
+      const c = item.craft;
+      return `
+      <div class="inv-item ware">
+        <span class="inv-art">${itemArt(item)}</span>
+        <div class="inv-body">
+          <div class="inv-head">${itemTag(item)}<span class="inv-name">${item.name}</span></div>
+          <div class="inv-stats">${SLOT_NAMES[item.slot]} 강화석 — 지금 ${fmt(stonesOf(item.slot))}개</div>
+        </div>
+        <div class="inv-act mat-act"><button class="btn primary" data-matstone="${item.id}" ${have >= c.n ? '' : 'disabled'}><b>강화석 +${fmt(matStoneYield(item))}</b><span>${mat.name} ${c.n}개</span></button></div>
+      </div>`;
+    }).join('');
+    return `
+    <div class="mat-block">
+      <div class="mat-head"><span class="mat-name">${mat.icon} ${mat.name} <b>${fmt(have)}개</b></span></div>
+      <div class="inventory shop-wares">${cards}</div>
+    </div>`;
+  }).join('');
+  $('shopBody').innerHTML = `<div class="shop-say">${DEPT_SECTIONS.stones.icon} ${shopSay}</div>`
+    + (blocks || '<div class="adm-note">바꿀 것이 없다 — 재료로 장비를 한 번 만들고 나면, 같은 재료를 그 부위의 강화석으로 바꿀 수 있다</div>');
+  for (const b of $('shopBody').querySelectorAll('[data-matstone]')) b.addEventListener('click', () => {
+    if (matToStones(b.dataset.matstone)) { Sound.play('stone'); render(); }
+  });
+}
+
 function renderMatShop() {
   const won = num(State.meta.won);      // 도시의 돈 — 판 값도 만드는 값도 원
   $('shopTitle').textContent = `헌터백화점 · ${DEPT_SECTIONS.mats.name}`;
@@ -3015,21 +3052,20 @@ function renderMatShop() {
         </div>`).join('')}</div>
     </div>` : '';
   const blocks = Object.values(MATERIALS).map(mat => {
-    const have = matsOf(mat.id), items = ITEMS.filter(i => i.craft && i.craft.mat === mat.id);
-    if (!have && !items.some(i => owns(i.id))) return '';
+    // 이미 가진 장비는 목록에서 빠짐 (사용자 결정 2026-11-19) — 그 재료를 강화석으로 바꾸는 것은 「강화석 교환」 창구에서 (renderStoneShop)
+    const have = matsOf(mat.id), items = ITEMS.filter(i => i.craft && i.craft.mat === mat.id && !owns(i.id));
+    if (!have) return '';
     const cards = items.map(item => {
-      const c = item.craft, owned = owns(item.id);
+      const c = item.craft;
       const worn = getItem(State.meta.equipped[item.slot]);
-      const diff = owned ? '' : itemDiffText(item, worn, slotMult(item.slot));
+      const diff = itemDiffText(item, worn, slotMult(item.slot));
       const spec = itemSpecialText(item);
-      const act = owned
-        ? `<button class="btn" data-matstone="${item.id}" ${have >= c.n ? '' : 'disabled'}><b>강화석 +${fmt(matStoneYield(item))}</b><span>재료 ${c.n}개</span></button>`
-        : `<button class="btn primary" data-craft="${item.id}" ${have >= c.n && won >= c.won && hunterGrade() ? '' : 'disabled'}><b>만든다</b><span>재료 ${c.n}개 · ${fmtWon(c.won)}</span></button>`;
+      const act = `<button class="btn primary" data-craft="${item.id}" ${have >= c.n && won >= c.won && hunterGrade() ? '' : 'disabled'}><b>만든다</b><span>재료 ${c.n}개 · ${fmtWon(c.won)}</span></button>`;
       return `
-      <div class="inv-item ware${owned ? ' made' : ''}">
+      <div class="inv-item ware">
         <span class="inv-art">${itemArt(item)}</span>
         <div class="inv-body">
-          <div class="inv-head">${itemTag(item)}<span class="inv-name">${item.name}</span>${owned ? '<span class="mat-have">가짐</span>' : ''}</div>
+          <div class="inv-head">${itemTag(item)}<span class="inv-name">${item.name}</span></div>
           <div class="inv-stats">${SLOT_NAMES[item.slot]} · ${itemStatText(item) || '—'}${spec ? ` <span class="inv-spec">${spec}</span>` : ''}</div>
           ${diff ? `<div class="inv-diff">${diff}</div>` : ''}
         </div>
@@ -3049,7 +3085,8 @@ function renderMatShop() {
     </div>`;
   }).join('');
   $('shopBody').innerHTML = `<div class="shop-say">${DEPT_SECTIONS.mats.icon} ${shopSay}</div>`
-    + (hunterGrade() ? '' : '<div class="license-note">🪪 만들기는 헌터 등록증이 있어야 한다 — 팔기 · 강화석으로 바꾸기는 그대로</div>')
+    + (hunterGrade() ? '' : '<div class="license-note">🪪 만들기는 헌터 등록증이 있어야 한다 — 팔기는 그대로</div>')
+    + (stoneMats().length ? `<p class="hint">이미 가진 장비의 재료는 오른쪽 아래 <b>${DEPT_SECTIONS.stones.name}</b>에서 강화석으로 바꿀 수 있다</p>` : '')
     + coreBlock
     + (blocks || (coreBlock ? '' : '<div class="adm-note">가져온 것이 없다 — 몬스터를 꺾으면 핵이, 장비를 지니지 않는 짐승을 꺾으면 재료도 나온다</div>'));
   const all = $('sellCoresBtn');
@@ -3060,9 +3097,6 @@ function renderMatShop() {
     Sound.play('equip');
     render();
     askWear(id);
-  });
-  for (const b of $('shopBody').querySelectorAll('[data-matstone]')) b.addEventListener('click', () => {
-    if (matToStones(b.dataset.matstone)) { Sound.play('stone'); render(); }
   });
   for (const b of $('shopBody').querySelectorAll('[data-sellmat]')) b.addEventListener('click', () => {
     if (sellMats(b.dataset.sellmat, Number(b.dataset.n))) { Sound.play('stone'); render(); }
