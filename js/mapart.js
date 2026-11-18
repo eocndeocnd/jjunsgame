@@ -1247,9 +1247,10 @@
       for (let y = b.y; y < b.y + b.h; y++) for (let x = b.x; x < b.x + b.w; x++) bAt[y * m.w + x] = n;
       const door = (m.ports || []).find(p => p.door && p.x >= b.x && p.x < b.x + b.w && p.y >= b.y && p.y < b.y + b.h);
       // 내 길드(문 myguild) — 단계마다 다른 건물로: 0 · 1 허름한 빈 건물(1은 「임대」를 떼고 불을 켬) · 2 · 3 고친 옛 건물(mine) · 4 · 5 미래 건물(mineNew)
-      const my = !!door && door.name === 'myguild';
-      const kind = my ? (GLV <= 1 ? 'shabby' : GLV <= 3 ? 'mine' : 'mineNew') : b.kind;
-      buildings.push({ x0: b.x, y0: b.y, w: b.w, h: b.h, door, kind, roof: b.roof, tone: b.tone, v: b.v, roofOnly: !!b.roofOnly, f: b.f, G: null, my, glv: GLV });
+      // 미래 도시 가운데 빈터(mineCity · overLot) — 4단계부터 미래 건물(4 청록 · 5 흰 · 금). 그 전엔 칸이 빈터 그대로 (cellOf 가 건물로 안 봄)
+      const my = !!door && (door.name === 'myguild' || door.name === 'myguild2');
+      const kind = b.kind === 'mineCity' ? 'mineNew' : my ? (GLV <= 1 ? 'shabby' : 'mine') : b.kind;
+      buildings.push({ x0: b.x, y0: b.y, w: b.w, h: b.h, door, kind, roof: b.roof, tone: b.tone, v: b.v, roofOnly: !!b.roofOnly, f: b.f, G: null, my, glv: b.kind === 'mineCity' ? GLV : Math.min(3, GLV), over: !!b.overLot });
     }
     for (let k = 0; k < m.w * m.h; k++) {
       if ((m.look[k] & 15) !== BUILD || bAt[k] >= 0) continue;
@@ -1309,7 +1310,7 @@
   function cellOf(m, A, tx, ty) {
     const k = ty * m.w + tx, t = m.tile[k], raw = m.look[k] & 15;
     const e = { t, raw, ter: terOf(raw), bio: m.look[k] >> 4 };
-    if (raw === BUILD) { e.b = A.bAt[k]; return e; }
+    if (raw === BUILD || (GLV >= 4 && A.bAt[k] >= 0 && A.buildings[A.bAt[k]].over)) { e.b = A.bAt[k]; return e; }   // 빈터 위의 내 길드 — 4단계부터
     if (raw === RUIN) {                                                  // 무너진 성벽 조각 — 그 조각(이어진 RUIN 칸)의 칸 범위
       const isR = (x, y) => x >= 0 && y >= 0 && x < m.w && y < m.h && (m.look[y * m.w + x] & 15) === RUIN;
       let c0 = tx, c1 = tx, r0 = ty, r1 = ty;

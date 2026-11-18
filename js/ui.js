@@ -1868,8 +1868,15 @@ function onMapEvents(evs) {
     } else if (e.type === 'closed' && e.port.unlock === 'guild') {
       if (Date.now() - closedSaidAt > 2000) {
         closedSaidAt = Date.now();
-        if (guildForSale()) { if (!isShopOpen()) { Sound.play('encounter'); openShop('guild'); } }
+        if (guildLevel() >= 4) pushLog('info', '옛 사무실 — 문을 잠가 두었다. 길드는 이제 헌터들의 도시 한가운데에 있다.');
+        else if (guildForSale()) { if (!isShopOpen()) { Sound.play('encounter'); openShop('guild'); } }
         else pushLog('info', '빈 건물 — 셔터가 내려져 있다. 바랜 「임대」 종이가 붙어 있다.');
+      }
+      changed = true;
+    } else if (e.type === 'closed' && e.port.unlock === 'guildCity') {   // 미래 도시 가운데 빈터 — 4단계 전
+      if (Date.now() - closedSaidAt > 2000) {
+        closedSaidAt = Date.now();
+        pushLog('info', guildOwned() ? '가림막 친 빈터 — 길드를 4단계로 올리면 여기에 새 건물을 짓는다.' : '가림막 친 빈터다. 「공사 예정」.');
       }
       changed = true;
     } else if (e.type === 'closed' && Date.now() - closedSaidAt > 2000 && e.port.unlock === 'armor') {
@@ -2901,6 +2908,12 @@ const GUILD_NAME_TALK = [
   { who: 'guide', ask: 'guild', text: '간판에 걸 이름은 있어야지. 뭐라고 할래?' },
   { who: 'me', text: () => `(오늘부터 「${(State.meta.guild && State.meta.guild.name) || '내 길드'}」.)` }
 ];
+// 4단계 — 길드가 미래 도시 가운데 빈터의 새 건물로 (사용자 결정 2026-11-19). 옛 동네 건물은 「옛 사무실」로 남음
+const GUILD_MOVE_TALK = [
+  { who: 'guide', text: '…이제 옛 동네엔 다 안 들어가겠다. 도시 한가운데 가림막 친 빈터 있지? 거기에 새로 지었대.' },
+  { who: 'guide', text: '이제 길드는 <b>헌터들의 도시</b>에 있어. 장부도 책상도 다 그리로 옮겼고.' },
+  { who: 'me', text: '(옛 사무실은 그대로 두자. 처음 시작한 곳이니까.)' }
+];
 function renderGuild() {
   const won = num(State.meta.won), g = State.meta.guild, now = Date.now();
   $('shopGold').innerHTML = `${pxIcon('won')}돈 ${fmtWon(won)}`;
@@ -2950,7 +2963,12 @@ function renderGuild() {
   const body = $('shopBody');
   $('guildCollectBtn').addEventListener('click', () => { if (collectGuild()) Sound.play('drop'); render(); });
   const ub = $('guildUpBtn');
-  if (ub) ub.addEventListener('click', () => { if (upgradeGuild()) Sound.play('rankUp'); render(); });
+  if (ub) ub.addEventListener('click', () => {
+    if (!upgradeGuild()) return;
+    Sound.play('rankUp');
+    if (guildLevel() === 4) { closeShop(); playTalk(GUILD_MOVE_TALK, () => render(), { end: '가 보자' }); }   // 4단계 — 미래 도시로
+    render();
+  });
   body.querySelectorAll('[data-seat]').forEach(b => b.addEventListener('click', () => { if (seatAlly(b.dataset.seat)) Sound.play('equip'); render(); }));
   body.querySelectorAll('[data-unseat]').forEach(b => b.addEventListener('click', () => { if (unseatAlly(b.dataset.unseat)) Sound.play('equip'); render(); }));
   startShopTicker();

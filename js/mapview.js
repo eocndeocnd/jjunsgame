@@ -465,8 +465,14 @@ const MapView = (function () {
       postAlive: id => { const f = getEnemy(id); return !!f && !isDowned(id) && isRevealed(f); },   // 이 여정에 꺾었거나 아직 안 나타난 히든은 없음
       // 꺾어야 열리는 문 · 도시가 열린 뒤에만 있는 문 (지하수로 첫 공간의 도시로 나가는 게이트 — needsCity)
       npcHere: n => deskHere(n.shop),   // 협회 로비의 「???」(제4격 보스 뒤) · 동료 모집 · 게이트 창구(제5격 보스 뒤)
-      portOpen: p => (!p.opensAfter || isDowned(p.opensAfter)) && (!p.needsCity || (!!State.meta && !!State.meta.cityOpen)) && (p.unlock !== 'armor' || armorOpen()) && (p.unlock !== 'guild' || guildOwned()),
-      portLabel: p => (p.name === 'myguild' && State.meta && State.meta.guild ? State.meta.guild.name || '내 길드' : null),   // 내 길드 — 지은 이름으로
+      portOpen: p => (!p.opensAfter || isDowned(p.opensAfter)) && (!p.needsCity || (!!State.meta && !!State.meta.cityOpen)) && (p.unlock !== 'armor' || armorOpen()) && (p.unlock !== 'guild' || (guildLevel() >= 1 && guildLevel() <= 3)) && (p.unlock !== 'guildCity' || guildLevel() >= 4),
+      // 내 길드 — 지은 이름으로 (1~3단계는 옛 동네, 4단계부터는 미래 도시 가운데 빈터 · 옛 동네 건물은 「옛 사무실」)
+      portLabel: p => {
+        const g = State.meta && State.meta.guild, name = g && (g.name || '내 길드');
+        if (p.name === 'myguild' && g) return g.level >= 4 ? '옛 사무실' : name;
+        if (p.name === 'myguild2') return g && g.level >= 4 ? name : null;
+        return null;
+      },
       size: id => (getEnemy(id) || {}).size || 1,  // 지도에서 차지하는 n × n 칸 (data.js ENEMY_SIZE)
       chestOpen: id => !!State.meta && State.meta.chestsOpened.includes(id),  // 연 보물상자 (game.js 의 openChest)
       merchantHere: n => { const m = State.run && State.run.merchant; return !!m && !State.run.over && !!ZONES[m.zone] && ZONES[m.zone].id === n.zone; }

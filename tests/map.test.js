@@ -1042,7 +1042,7 @@ function checkTown(m, d) {
   for (const [n, b] of blds.entries()) for (const i of cellsOf(m, b)) {
     assert.ok(!owner.has(i), `${m.id} 건물 ${n} 겹침`);
     owner.set(i, n);
-    assert.equal(m.look[i] & 15, BUILD, `${m.id} 건물 ${n} — 건물 칸이 아닌 곳을 덮음`);
+    if (!b.overLot) assert.equal(m.look[i] & 15, BUILD, `${m.id} 건물 ${n} — 건물 칸이 아닌 곳을 덮음`);   // overLot — 빈터 위의 내 길드(4단계부터 그림만 건물)
   }
   for (let i = 0; i < m.w * m.h; i++) if ((m.look[i] & 15) === BUILD) assert.ok(owner.has(i), `${m.id} 건물 칸 ${i % m.w},${(i / m.w) | 0} 이(가) 어느 건물에도 안 듦`);
   for (const p of m.ports.filter(q => q.door)) {
@@ -1091,8 +1091,8 @@ test('도시 — 옛 동네(집 앞에서 시작 · 골목 막다른 곳의 이�
   // 있어야 하는 건물
   const oldBlds = checkTown(old, dOld), cityBlds = checkTown(city, dCity);
   assert.deepEqual(old.ports.filter(q => q.door).map(q => q.name).sort(), ['blackmarket', 'home', 'myguild']);
-  assert.deepEqual(city.ports.filter(q => q.door).map(q => q.name).sort(), ['association', 'dept', 'guild1', 'guild2', 'guild3', 'guild4']);
-  assert.deepEqual(city.ports.filter(q => q.door && q.to).map(q => q.name).sort(), ['association', 'dept'], '지금 열린 문은 헌터 협회 · 헌터백화점');
+  assert.deepEqual(city.ports.filter(q => q.door).map(q => q.name).sort(), ['association', 'dept', 'guild1', 'guild2', 'guild3', 'guild4', 'myguild2']);
+  assert.deepEqual(city.ports.filter(q => q.door && q.to).map(q => q.name).sort(), ['association', 'dept', 'myguild2'], '열린 문은 헌터 협회 · 헌터백화점 · 내 길드(4단계부터 — unlock guildCity)');
   assert.deepEqual(old.ports.filter(q => q.door && q.to).map(q => q.name), ['myguild'], '옛 동네에서 열리는 문은 내 길드뿐 (게임이 잠금 — unlock guild)');
   const area = b => b.w * b.h, hq = cityBlds.find(b => b.kind === 'hq');
   assert.ok(cityBlds.every(b => b === hq || area(b) < area(hq)), '헌터 협회가 가장 큰 건물');
