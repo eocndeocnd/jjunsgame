@@ -976,11 +976,13 @@ function scheduleAutoContinue() {
 // 체력 바와 기록 줄만 바꿉니다.
 // 건너뛰기는 없습니다 — 나중에 상대와 내 그림, 효과 연출이 들어올 자리라 끝까지 봅니다.
 let battle = null;                       // { r: 그 결과, i: 지금까지 보여준 줄 수, step: 줄 간격(ms), timer }
-const BATTLE_PACE = { 1: 90, 2: 260 };   // 빠르게 · 보통 — 한 줄에 몇 ms
+// 싸움 전체의 빠르기 — 줄 간격 · 끝맺음 · 빨라지는 때 · 이펙트 길이를 모두 이만큼 나눔 (2026-11-19 사용자 결정 ×1.5)
+const BATTLE_FAST = 1.5;
+const BATTLE_PACE = { 1: 90, 2: 260 };   // 빠르게 · 보통 — 한 줄에 몇 ms (BATTLE_FAST 로 나누기 전)
 const BATTLE_MAX_MS = 6000;              // 긴 전투도 이 안에 끝나게 줄 간격을 줄입니다
 // 길어지는 싸움은 점점 빠르게 — 시작하고 3초가 지나면 ×2, 6초가 지나면 ×3 (사용자 결정). 빨라지면 싸움 칸 구석에 「×2」
 const BATTLE_RAMP = [[6000, 3], [3000, 2]];
-const battleRamp = () => { const t = performance.now() - battle.t0; for (const [ms, k] of BATTLE_RAMP) if (t >= ms) return k; return 1; };
+const battleRamp = () => { const t = (performance.now() - battle.t0) * BATTLE_FAST; for (const [ms, k] of BATTLE_RAMP) if (t >= ms) return k; return 1; };
 // 기록은 최근 여섯 줄만 — 위에 초상이 들어와서 줄였습니다. 폰은 한 화면에 들어오게 다섯 줄.
 const battleLines = () => (window.innerWidth <= 860 ? 5 : 6);
 
@@ -990,7 +992,7 @@ function startBattle(r, logFrom) {
   const speed = State.meta.settings.battleSpeed;
   const log = r && r.replay && r.replay.log;
   if (!speed || !log || !log.length) return;
-  const step = Math.max(30, Math.min(BATTLE_PACE[speed] || 260, BATTLE_MAX_MS / log.length));
+  const step = Math.max(20, Math.min(BATTLE_PACE[speed] || 260, BATTLE_MAX_MS / log.length) / BATTLE_FAST);
   battle = { r, i: 0, step, logFrom: logFrom || 0, held: heldSpoils(r), t0: performance.now() };
   battle.timer = setTimeout(tickBattle, step);
 }
@@ -1062,7 +1064,7 @@ function tickBattle() {
   // 마지막 줄을 보여준 뒤 잠깐 멈췄다가 결과로 (길어진 싸움은 그 멈춤도 빨라진 만큼 짧게)
   const k = battleRamp(), tag = $('btSpeed');
   if (tag) { tag.textContent = k > 1 ? `×${k}` : ''; tag.classList.toggle('on', k > 1); }
-  battle.timer = setTimeout(battle.i >= n ? finishBattle : tickBattle, battle.i >= n ? 700 / k : battle.step / k);
+  battle.timer = setTimeout(battle.i >= n ? finishBattle : tickBattle, battle.i >= n ? 700 / k / BATTLE_FAST : battle.step / k);
 }
 
 // 기록 한 줄 → 효과음 이름
@@ -1201,6 +1203,7 @@ const FX_SHAKE = [
 ];
 
 function fxAnim(el, frames, ms, easing) {
+  ms /= BATTLE_FAST;                     // 싸움의 빠르기에 맞춰
   if (!el || !el.animate || calmMotion()) return;
   el.animate(frames, { duration: ms, easing: easing || 'ease-out' });
 }
@@ -1237,7 +1240,7 @@ function fxFloat(el, text, cls) {
     { transform: `translate(${x}, ${-rise * 0.26}px) scale(1.1)`, opacity: 1, offset: 0.2 },
     { transform: `translate(${x}, ${-rise * 0.74}px) scale(1)`, opacity: 1, offset: 0.7 },
     { transform: `translate(${x}, ${-rise}px) scale(1)`, opacity: 0 }
-  ], { duration: 800, easing: 'ease-out' }).onfinish = () => f.remove();
+  ], { duration: 800 / BATTLE_FAST, easing: 'ease-out' }).onfinish = () => f.remove();
 }
 
 // 두 초상 사이에 잠깐 뜨는 띠 — 연속 턴 · 생존 같은 특수 능력치
@@ -1254,7 +1257,7 @@ function fxBanner(text) {
     { transform: 'translate(-50%, -50%) scale(1.05)', opacity: 1, offset: 0.2 },
     { transform: 'translate(-50%, -50%) scale(1)', opacity: 1, offset: 0.75 },
     { transform: 'translate(-50%, -50%) scale(1)', opacity: 0 }
-  ], { duration: 900, easing: 'ease-out' }).onfinish = () => b.remove();
+  ], { duration: 900 / BATTLE_FAST, easing: 'ease-out' }).onfinish = () => b.remove();
 }
 
 // 쓰러짐 — 깜빡이다 바랜 채로 남습니다
@@ -1265,7 +1268,7 @@ function fxDown(el) {
 }
 
 // 그림 이펙트 길이 — 전투 빠르기에 맞춥니다 (빠르게면 짧게, 보통이면 0.4초 남짓)
-function fxMs() { return Math.max(220, Math.min(480, ((battle && battle.step) || 260) * 1.6)); }
+function fxMs() { return Math.max(150, Math.min(320, ((battle && battle.step) || 260 / BATTLE_FAST) * 1.6)); }   // 줄 간격이 이미 BATTLE_FAST 만큼 짧음
 
 // 그림 이펙트 (fx.js) — 내 공격은 상대 초상 가운데, 상대 공격은 내 초상 위.
 // 기기에서 「움직임 줄이기」를 켰으면 띄우지 않습니다.
