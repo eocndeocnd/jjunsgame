@@ -382,6 +382,22 @@ function record(label, value, cls = '') {
 }
 
 // ---------- 나 ----------
+// 헌터 자격증 — 기능 칸 위 오른쪽 (도시가 열린 뒤). 사진 · 이름 · 등급, 미등록이면 「미등록」
+function renderLicense() {
+  const el = $('licenseCard'), m = State.meta;
+  if (!el) return;
+  el.classList.toggle('hidden', !m.cityOpen);
+  if (!m.cityOpen) return;
+  const g = hunterGrade();
+  el.classList.toggle('none', !g);
+  el.innerHTML = `<div class="lic-head"><span>헌터 자격증</span><span>🪪</span></div>
+    <div class="lic-body">
+      <span class="lic-photo">${heroSprite()}</span>
+      <span class="lic-name">${heroName()}</span>
+      <span class="lic-grade">${g ? gradeName() : '미등록'}</span>
+    </div>
+    <div class="lic-foot">${g ? `${gradeName()}급 · 헌터 협회` : '협회에서 시험을 보면 발급'}</div>`;
+}
 function renderHero() {
   const run = State.run;
   const base = heroBaseStats(run.level);
@@ -403,6 +419,7 @@ function renderHero() {
     ${next && knownRank(next.n) ? `<span class="rank-next">제${next.n}격까지 Lv.${fmtLevel(next.minLevel - run.level)}</span>` : ''}
   `;
 
+  renderLicense();
   // 경험치 바
   const need = xpToNext(run.level);
   $('xpText').textContent = `${fmt(run.xp)} / ${fmt(need)}`;

@@ -2742,40 +2742,6 @@
     }
     return (A.lanes = [...bands.values()].filter(b => b.to - b.from >= 6));
   }
-  // 떠서 다니는 차 — 오른쪽을 보는 18 × 10 점 (앞 유리 · 지붕 · 전조등 · 미등 · 밑의 청록 빛). 빛깔 · 방향마다 한 번 그려 둠
-  const CAR_COLORS = ['#e8ecf0', '#2c3440', '#c9353f', '#3a7bd5', '#e0b93a', '#6a4fbf', '#9aa3ad'];
-  const carSprites = {};
-  function carSprite(ci, dir) {                                                   // dir 0 오른쪽 · 1 왼쪽 · 2 아래 · 3 위
-    const key = ci * 4 + dir;
-    if (carSprites[key]) return carSprites[key];
-    const body = c3(CAR_COLORS[ci]), px = [];
-    for (let y = 0; y < 10; y++) for (let x = 0; x < 18; x++) {
-      let c = null;
-      if (y === 9) c = x >= 3 && x <= 14 ? [98, 230, 238, 110] : null;           // 밑의 빛
-      else if (y === 0 || y === 8) c = x >= 2 && x <= 15 ? [17, 20, 24, 255] : null;
-      else if (x === 0 || x === 17) c = y >= 2 && y <= 6 ? [17, 20, 24, 255] : null;
-      else if ((x === 1 || x === 16) && (y === 1 || y === 7)) c = [17, 20, 24, 255];
-      else if (x === 16 && (y === 2 || y === 6)) c = [255, 246, 192, 255];         // 전조등
-      else if (x === 1 && (y === 2 || y === 6)) c = [255, 70, 70, 255];            // 미등
-      else if (x >= 12 && x <= 13 && y >= 2 && y <= 6) c = [159, 216, 240, 255];   // 앞 유리
-      else if (x >= 5 && x <= 11 && y >= 2 && y <= 6) c = y === 2 ? [74, 106, 138, 255] : [26, 42, 58, 255];   // 지붕 유리
-      else if (x >= 3 && x <= 4 && y >= 2 && y <= 6) c = [42, 58, 74, 255];        // 뒷유리
-      else if (x >= 1 && x <= 16 && y >= 1 && y <= 7) c = [...(y === 1 ? mix(body, WHITE, 0.3) : y === 7 ? mul(body, 0.7) : body), 255];
-      if (c) px.push([x, y, c]);
-    }
-    const horiz = dir < 2, cv = document.createElement('canvas');
-    cv.width = horiz ? 18 : 10; cv.height = horiz ? 10 : 18;
-    const g = cv.getContext('2d'), img = g.createImageData(cv.width, cv.height), d = img.data;
-    for (const [x, y, c] of px) {
-      let X = x, Y = y;
-      if (dir === 1) X = 17 - x;
-      else if (dir === 2) { X = 9 - y; Y = x; }                                     // 아래로 — 앞이 아래
-      else if (dir === 3) { X = y; Y = 17 - x; }
-      const i = (Y * cv.width + X) * 4; d[i] = c[0]; d[i + 1] = c[1]; d[i + 2] = c[2]; d[i + 3] = c[3];
-    }
-    g.putImageData(img, 0, 0);
-    return (carSprites[key] = cv);
-  }
   function liveCity(ctx, m, A, ox, oy, T, x0, y0, x1, y1, t) {
     const u = T / P, vx0 = x0 * P - 40, vx1 = x1 * P + 40, vy0 = y0 * P - 40, vy1 = y1 * P + 40;
     ctx.imageSmoothingEnabled = false;
@@ -2792,25 +2758,7 @@
           else ctx.fillRect(ox + (base + line) * u, oy + p * u, u, 10 * u);
         }
       }
-      // 차 — 차선마다 몇 대, 저마다 빠르기 · 빛깔. 오른쪽 통행 (가로: 아래 차선이 오른쪽으로 · 세로: 왼쪽 차선이 아래로)
-      const per = Math.max(1, Math.round(L / (P * 28)));                            // 2026-11-19 넷에 하나로 줄임 (사용자 결정 — 예전 P * 7)
-      for (let lane = 0; lane < 2; lane++) for (let i = 0; i < per; i++) {
-        const h = hash(bi * 7 + lane, i, 470);
-        if (h < 0.3) continue;                                                      // 빈 자리 — 차가 일정하게 늘어서 보이지 않게
-        const speed = 34 + hash(bi, i * 3 + lane, 471) * 40, span = L + 80;
-        const pos = ((h * span + t * speed) % span) - 40;
-        const fwd = b.horiz ? lane === 1 : lane === 0;                              // 오른쪽 · 아래로 가는 차선
-        const along = start + (fwd ? pos : L - pos);
-        const across = base + (lane === 0 ? Wd * 0.25 : Wd * 0.75);
-        const cv = carSprite(((hash(bi, i * 5 + lane, 472) * CAR_COLORS.length) | 0) % CAR_COLORS.length, b.horiz ? (fwd ? 0 : 1) : (fwd ? 2 : 3));
-        const X = b.horiz ? along - 9 : across - 5, Y = b.horiz ? across - 5 : along - 9;
-        if (X > vx1 || X + 18 < vx0 || Y > vy1 || Y + 18 < vy0) continue;
-        // 전조등 빛 — 앞쪽으로 옅게
-        ctx.fillStyle = 'rgba(255,250,210,0.13)';
-        if (b.horiz) ctx.fillRect(ox + (fwd ? X + 18 : X - 12) * u, oy + (Y + 1) * u, 12 * u, 8 * u);
-        else ctx.fillRect(ox + (X + 1) * u, oy + (fwd ? Y + 18 : Y - 12) * u, 8 * u, 12 * u);
-        ctx.drawImage(cv, ox + X * u, oy + Y * u, cv.width * u, cv.height * u);
-      }
+      // (다니는 차는 없앰 — 사용자 결정 2026-11-19)
     }
     // 건물 — 창 몇 개에 불이 켜졌다 꺼짐 · 협회 탑의 빛줄 · 낡은 가게의 네온 깜빡임
     for (const B of A.buildings) {
