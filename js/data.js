@@ -2463,6 +2463,14 @@ const HUNTER_GRADES = [
   { id: 'S', rank: 7, level: 9600000 }
 ];
 function examinerStats(g) { return enemyStats(HUNTER_GRADES[g - 1].level); }
+// 4대 길드 (사용자 결정 2026-11-19 — 이름 홍염 · 청해 · 크라운 · 달). 차례는 도시 지도의 길드 건물 tone 0~3 과 같음.
+// S급 시험관은 그 길드의 S급 헌터가 와서 맡음 — 시험마다 차례로 돌아감 (game.js 의 examinerFoe). 사람 이름 · 그림은 나중에 (지금은 이모지)
+const BIG_GUILDS = [
+  { id: 'hongyeom', name: '홍염', icon: '🦸' },
+  { id: 'cheonghae', name: '청해', icon: '🥷' },    // 무협을 이어받은 길드
+  { id: 'crown', name: '크라운', icon: '🤴' },
+  { id: 'dal', name: '달', icon: '🧝' }
+];
 
 const DEPT_ID = 'dept';
 const DEPT_GRADE = 1.2;

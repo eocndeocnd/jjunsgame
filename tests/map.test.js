@@ -1499,6 +1499,33 @@ test('시험장 — 「시험을 본다」 → 시험관과 한 명씩 (결과�
   assert.deepEqual(r.forfeit, [null, 0, false]);
 });
 
+test('S급 시험 — A급을 넘으면 4대 길드의 S급 헌터가 옴 (시험마다 홍염 · 청해 · 크라운 · 달 차례로), 들어오기 전엔 못 맞섬', () => {
+  const run = loadGame();
+  const r = run(`
+    currentSlot = 0; State.meta = freshMeta(); State.meta.cityOpen = true;
+    const out = [];
+    for (let i = 0; i < 5; i++) {
+      startRun(); State.run.level = 1e9;
+      startHunterTest();
+      while (State.run.test.g < HUNTER_GRADES.length) { fightExaminer(() => 0.5); dismissResult(); }
+      const t = State.run.test;
+      out.push([examinerNow().name, sHunterComing(), deskHere('examiner')]);
+      t.sArrived = true;
+      const r = fightExaminer(() => 0.5);
+      out.push([r.enemy.guild, sHunterComing()]);
+      dismissResult(); leaveArena();
+      State.meta.runCount += 1;
+    }
+    out.push(State.meta.sExams, examinerFoe(7).name);
+    return out;
+  `);
+  assert.deepEqual(r[0], ['홍염 길드 · S급 헌터', true, true]);
+  assert.deepEqual(r.filter((x, i) => i % 2 === 1 && i < 10).map(x => x[0]), [0, 1, 2, 3, 0]);
+  assert.deepEqual(r.filter((x, i) => i % 2 === 0 && i < 10).map(x => x[0]), ['홍염 길드 · S급 헌터', '청해 길드 · S급 헌터', '크라운 길드 · S급 헌터', '달 길드 · S급 헌터', '홍염 길드 · S급 헌터']);
+  assert.equal(r[10], 5);
+  assert.equal(r[11], 'S급 시험관');
+});
+
 test('협회 로비 — 등록 창구 왼쪽 시험장 문(시험 중에만 열림) ↔ 시험장, 시험관 자리 하나', () => {
   const assoc = loadMap('assoc'), arena = loadMap('arena');
   const door = assoc.ports.find(p => p.name === 'arena'), out = arena.ports.find(p => p.name === 'out');

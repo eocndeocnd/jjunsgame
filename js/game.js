@@ -240,6 +240,7 @@ const State = {
     heroName: '',                // 주인공의 이름 — 첫 회차가 끝나 도시에서 처음 눈을 뜰 때 정합니다 (없으면 「나」)
     hunterGrade: 0,              // 헌터 등급 — 0 미등록 · 1~7 = F~S (data.js 의 HUNTER_GRADES). 헌터 협회 시험으로 오르고 내려가지 않음
     testedRun: 0,                // 등록 시험을 본 회차 — 한 회차에 한 번
+    sExams: 0,                   // S급 시험관을 만난 횟수 — 4대 길드가 이 차례로 돌아가며 옴 (BIG_GUILDS)
     passives: {},                // 골드로 산 패시브 — id → 단계 (data.js 의 PASSIVES). 영구
     ally: null,                  // 그 공간에 함께 가는 동료 id (data.js 의 ALLIES) — 늘 한 명 · 없을 수 있음
     allies: [],                  // 내 동료 id 들 (이야기로 만난 동료 · 고용한 동료)
@@ -650,6 +651,7 @@ function load() {
     State.meta.heroName = typeof data.heroName === 'string' ? data.heroName.replace(/[<>&"'`\\]/g, '').trim().slice(0, 8) : '';
     State.meta.hunterGrade = Math.max(0, Math.min(HUNTER_GRADES.length, Math.floor(num(data.hunterGrade))));
     State.meta.testedRun = Math.max(0, Math.floor(num(data.testedRun)));
+    State.meta.sExams = Math.max(0, Math.floor(num(data.sExams)));
     State.meta.allies = [...new Set((Array.isArray(data.allies) ? data.allies : []).concat(data.ally ? [data.ally] : []))].filter(id => ALLIES[id]);
     State.meta.gates = {};
     for (const [id, g] of Object.entries(data.gates && typeof data.gates === 'object' ? data.gates : {})) {
@@ -732,6 +734,7 @@ function freshMeta() {
     heroName: '',
     hunterGrade: 0,
     testedRun: 0,
+    sExams: 0,
     passives: {},
     ally: null,
     allies: [],
@@ -1582,12 +1585,13 @@ function takeHunterTest(rng = Math.random) {
 }
 
 // ---------- 시험장 (사용자 결정 2026-11-19) — 등록 창구에서 「시험을 본다」 → 시험장, 시험관과 한 명씩 진짜로 싸움 ----------
-// 시험관은 그림이 생기기 전까지 이모지. S급 시험관은 나중에 4대 길드의 S급 헌터가 와서 맡는 연출로 (사용자 결정 — 지금은 자리만).
+// 시험관은 그림이 생기기 전까지 이모지. S급 시험관은 4대 길드의 S급 헌터가 와서 맡음 (사용자 결정) — 시험마다 차례로 (BIG_GUILDS · meta.sExams).
 // 시험관의 레벨은 어디에도 보여 주지 않음 (사용자 결정). 경험치 · 전리품 · 에너지는 그대로.
 const EXAMINER_ICONS = ['🧑‍🏫', '👮', '🤺', '🏋️', '🥋', '🧛', '🤴'];   // F … S
-function examinerFoe(g) {
-  const G = HUNTER_GRADES[g - 1];
-  return { id: `examiner${G.id}`, name: `${G.id}급 시험관`, icon: EXAMINER_ICONS[g - 1], kind: 'normal', examiner: true, grade: G.id, level: G.level, ...examinerStats(g) };
+function examinerFoe(g, guild = null) {
+  const G = HUNTER_GRADES[g - 1], B = g === HUNTER_GRADES.length && guild != null ? BIG_GUILDS[guild] : null;
+  return { id: `examiner${G.id}`, name: B ? `${B.name} 길드 · S급 헌터` : `${G.id}급 시험관`, icon: B ? B.icon : EXAMINER_ICONS[g - 1],
+           kind: 'normal', examiner: true, grade: G.id, level: G.level, guild: B ? guild : null, ...examinerStats(g) };
 }
 function startHunterTest() {
   if (!canTakeTest() || State.run.test) return false;
@@ -1596,15 +1600,21 @@ function startHunterTest() {
   save();
   return true;
 }
-function examinerNow() { const t = State.run && State.run.test; return t && !t.done ? examinerFoe(t.g) : null; }
+function examinerNow() { const t = State.run && State.run.test; return t && !t.done ? examinerFoe(t.g, t.sGuild) : null; }
+// S급 차례인데 그 길드의 헌터가 아직 시험장에 안 들어왔는가 (들어오는 연출은 ui 의 sEntranceStart)
+function sHunterComing() { const t = State.run && State.run.test; return !!t && !t.done && t.g === HUNTER_GRADES.length && !t.sArrived; }
 // 지금 시험관과 한 번 — 결과는 싸움 결과와 같은 모양(run.lastResult — examiner: true)이라 싸움 화면이 그대로 보여 줌
 function fightExaminer(rng = Math.random) {
   const run = State.run, t = run && run.test;
   if (!t || t.done || run.lastResult) return null;
-  const g = t.g, foe = examinerFoe(g), hero = heroStats(), log = [];
+  const g = t.g, foe = examinerFoe(g, t.sGuild), hero = heroStats(), log = [];
   const r = simulateBattle(hero, foe, rng, log);
   t.bouts.push({ g, win: !!r.win, turns: r.turns });
   if (r.win) { t.passed = g; t.g += 1; }
+  if (t.g === HUNTER_GRADES.length && t.sGuild == null) {   // A급을 넘음 — 이번에 올 4대 길드 (차례로)
+    t.sGuild = num(State.meta.sExams) % BIG_GUILDS.length;
+    State.meta.sExams = num(State.meta.sExams) + 1;
+  }
   if (!r.win || t.g > HUNTER_GRADES.length) finishHunterTest();
   run.lastResult = { examiner: true, enemy: foe, win: !!r.win, turns: r.turns, g, done: t.done, before: t.before, grade: hunterGrade(), drops: [],
                      replay: { log, heroMax: hero.life, foeMax: foe.life } };

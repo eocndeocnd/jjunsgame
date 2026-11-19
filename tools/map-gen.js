@@ -1162,7 +1162,7 @@ function hub(data) {
 const CITY_BIO = 10;                                         // 도시 — 그림(js/mapart.js 의 CITY)이 이 격 번호로 도시 무늬를 고름
 // 땅 [종류, x, y, w, h] — 뒤에 적은 것이 앞의 것을 덮음. 적지 않은 곳은 base(보도 · 낡은 바닥).
 //   road 찻길 · cross 횡단보도 · plaza 광장 · lawn 잔디 · pave 보도 · old 낡은 바닥 · lot 가림막 친 빈터(못 들어감) · bar 찻길 끝 막음
-// 건물 — kind(그림): hq 헌터 협회 · dept 헌터백화점 · guild 4대 길드(tone 0 붉은 불꽃 · 1 푸른 파도 · 2 금빛 왕관 · 3 보랏빛 달 — 이름은 가칭) ·
+// 건물 — kind(그림): hq 헌터 협회 · dept 헌터백화점 · guild 4대 길드(tone 0 홍염 붉은 불꽃 · 1 청해 푸른 파도 · 2 크라운 금빛 왕관 · 3 달 보랏빛 달 — 이름 사용자 결정 2026-11-19, data.js 의 BIG_GUILDS) ·
 //   tower 둘레의 빌딩(tone 으로 빛깔) · villa 빨간 벽돌 빌라 · shabby 허름한 빈 건물 · store 낡은 가게 · back 낡은 뒤 건물
 //   door { x, w, name, label } — 아래 줄의 문 (지금은 모두 닫혀 있음 — 안은 다음 조각들). annex — 골목 끝에 덧붙인 채 (옆 건물과 붙어도 됨)
 // 나무 [x, y] — 잔디 · 광장 곁의 것은 벚나무가 섞임 (그림이 고름). 기둥 [x, y] — 몬스터 핵으로 빛나는 가로등
@@ -1228,10 +1228,10 @@ const CITY = {
   ],
   buildings: [
     { kind: 'hq', x: 13, y: 1, w: 20, h: 13, door: { x: 21, w: 4, name: 'association', label: '헌터 협회', to: 'assoc.out' } },   // 안은 ASSOC (1층 로비 — 등록 창구)
-    { kind: 'guild', tone: 0, x: 2, y: 5, w: 8, h: 9, door: { x: 5, w: 2, name: 'guild1', label: '불꽃 길드' } },      // 길드 이름은 가칭 (나중에 다시 정함)
-    { kind: 'guild', tone: 1, x: 36, y: 5, w: 8, h: 9, door: { x: 39, w: 2, name: 'guild2', label: '파도 길드' } },
+    { kind: 'guild', tone: 0, x: 2, y: 5, w: 8, h: 9, door: { x: 5, w: 2, name: 'guild1', label: '홍염 길드' } },
+    { kind: 'guild', tone: 1, x: 36, y: 5, w: 8, h: 9, door: { x: 39, w: 2, name: 'guild2', label: '청해 길드' } },
     { kind: 'dept', x: 4, y: 28, w: 12, h: 8, door: { x: 8, w: 4, name: 'dept', label: '헌터백화점', to: 'dept.out' } },   // 안은 DEPT (1층)
-    { kind: 'guild', tone: 2, x: 27, y: 27, w: 8, h: 9, door: { x: 30, w: 2, name: 'guild3', label: '왕관 길드' } },
+    { kind: 'guild', tone: 2, x: 27, y: 27, w: 8, h: 9, door: { x: 30, w: 2, name: 'guild3', label: '크라운 길드' } },
     { kind: 'guild', tone: 3, x: 37, y: 27, w: 8, h: 9, door: { x: 40, w: 2, name: 'guild4', label: '달 길드' } },
     // 가운데 빈터 — 내 길드가 4단계부터 여기에 (사용자 결정 2026-11-19). 그 전엔 빈터 그대로 (overLot — 겉모습은 빈터, 그림은 mapart 가 길드 단계대로)
     { kind: 'mineCity', overLot: true, f: 4, x: 16, y: 45, w: 14, h: 7, door: { x: 21, w: 4, name: 'myguild2', label: '', to: 'guild2.out', unlock: 'guildCity' } },

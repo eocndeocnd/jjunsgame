@@ -841,6 +841,7 @@ kbd {
 .assoc-actions .btn > span { font-size: 10px; font-weight: 400; }
 /* 시험장 — 시험관과의 결과 (ui.js 의 examinerResultCard) */
 .exam-result .exam-end { padding: 8px 10px; border: 2px solid var(--line); background: var(--paper-hi); font-size: 13px; text-align: center; }
+.exam-result .exam-say { padding: 6px 10px; margin-bottom: 6px; font-size: 13px; text-align: center; }
 .exam-result .exam-end.up { background: #dff3e6; border-color: #1f7a4a; }
 .exam-result .exam-end.down { background: #f6e0dc; border-color: #b0202e; }
 .gate-table summary { cursor: pointer; font-size: 11px; color: var(--text-dim); }

@@ -1939,7 +1939,19 @@ function mapMarks() {
       continue;
     }
     if (!deskHere(n.shop)) continue;
-    if (n.shop === 'examiner') { const f = examinerNow(); out.push({ x: n.x, y: n.y, icon: f.icon, label: f.name }); continue; }
+    if (n.shop === 'examiner') {
+      const f = examinerNow();
+      if (sHunterComing()) {   // S급 — 4대 길드의 헌터가 아직 안 옴: 감독의 말 → 문에서 걸어 들어옴
+        if (!sEntrance && !isTalkOpen() && !State.run.lastResult) sEntranceStart();
+        if (!sEntrance || !sEntrance.t0) continue;
+        const door = mapView.world.map.ports.find(p => p.name === 'out');   // 시험장 문(로비 쪽)에서 출발
+        const k = Math.min(1, (performance.now() - sEntrance.t0) / S_WALK_MS), y0 = door ? door.y : mapView.world.map.h;
+        out.push({ x: n.x, y: y0 + (n.y - y0) * (1 - (1 - k) * (1 - k)), icon: f.icon, label: f.name });
+        continue;
+      }
+      out.push({ x: n.x, y: n.y, icon: f.icon, label: f.name });
+      continue;
+    }
     const sec = n.shop && (DEPT_SECTIONS[n.shop] || CLERK_DESKS[n.shop]);
     if (sec) out.push({ x: n.x, y: n.y, icon: sec.icon, label: n.label || sec.name });
   }
@@ -2848,8 +2860,9 @@ const EXAMINER_LINES = {
 };
 function examinerTalk() {
   const foe = examinerNow();
-  if (!foe || isTalkOpen() || State.run.lastResult) return;
-  playTalk([{ who: 'examiner', text: EXAMINER_LINES[foe.grade] || '「시작하죠.」' }], () => {
+  if (!foe || isTalkOpen() || State.run.lastResult || sHunterComing()) return;
+  const lines = foe.guild != null ? S_HUNTER[foe.guild].hi : [EXAMINER_LINES[foe.grade] || '「시작하죠.」'];
+  playTalk(lines.map(text => ({ who: 'examiner', text })), () => {
     const from = logSeq;
     const r = fightExaminer();
     if (!r) return;
@@ -2857,18 +2870,58 @@ function examinerTalk() {
     render();
   }, { end: '맞선다' });
 }
+// ---------- S급 시험 — 4대 길드의 S급 헌터가 와서 맡음 (사용자 결정 2026-11-19) ----------
+// A급을 이기면 감독이 길드에 연락 → 시험장 문으로 그 길드의 S급 헌터가 걸어 들어와 시험관 자리에 섬 → 한마디 → 싸움 → 이기면 · 지면 한마디.
+// 길드는 시험마다 홍염 · 청해 · 크라운 · 달 차례로 (game.js 의 fightExaminer · meta.sExams). 대사는 제안.
+const S_CALL = B => [
+  { who: 'proctor', text: '「…A급 시험관까지 이기셨어요? 잠시만요, 잠시만.」' },
+  { who: 'proctor', text: '「S급 시험관은 협회에 없어요. 이럴 땐 4대 길드에 부탁드리게 돼 있거든요.」' },
+  { who: 'proctor', text: `「오늘은 <b>${B.name} 길드</b>에서 오신대요. …아, 저기 문으로 들어오시네요.」` }
+];
+const S_HUNTER = [
+  { hi: ['「홍염 길드다. 신규 등록자가 A급을 넘었다길래 직접 왔지.」', '「불 좀 붙여 봐. 미지근하면 바로 끝낸다.」'],
+    win: '「…하. 불이 꺼진 건 오랜만이네. 협회에 S로 올려 둬.」', lose: '「아직 미지근해. 더 뜨거워져서 와.」' },
+  { hi: ['「청해 길드에서 왔습니다. 옛 문파의 무공을 잇는 곳이지요.」', '(두 손을 모아 포권한다.) 「예를 갖추고 — 한 수 겨뤄 봅시다.」'],
+    win: '(다시 포권한다.) 「훌륭한 한 수였습니다. S급, 인정하지요.」', lose: '「기본은 섰습니다. 수련을 더 쌓고 오시지요.」' },
+  { hi: ['「크라운 길드. 바쁜 사람 불러 놓고 실망시키진 않겠지?」', '「S급이 뭔지, 한 번만 보여 줄게.」'],
+    win: '「…좋아. 이 정도면 S급 자격은 있네. 기억해 둘게.」', lose: '「나쁘지 않았어. 근데 S는 아직이야.」' },
+  { hi: ['「…달 길드. 밤에만 움직이는데, 협회 부탁이라 왔어요.」', '「조용히 끝내요. 아프지 않게.」'],
+    win: '「…졌네요. S급, 축하해요. 밤이 길어지겠어요.」', lose: '「다음엔 조금 더 오래 버텨 봐요.」' }
+];
+const S_WALK_MS = 2400;                // 문에서 시험관 자리까지 걸어 들어오는 시간
+let sEntrance = null;                  // 들어오는 중 — { t0 } (t0 0 = 아직 감독의 말)
+// S급 차례가 되면 지도가 부름 (mapMarks — 결과 창을 닫은 뒤 · 불러온 뒤에도 다시 이어짐)
+function sEntranceStart() {
+  const t = State.run.test, B = BIG_GUILDS[t.sGuild];
+  sEntrance = { t0: 0 };
+  playTalk(S_CALL(B), () => {
+    sEntrance = { t0: performance.now() };
+    Sound.play('encounter');
+    setTimeout(sEntranceArrive, S_WALK_MS + 200);
+  }, { end: '기다린다' });
+}
+function sEntranceArrive() {
+  sEntrance = null;
+  const t = State.run && State.run.test;
+  if (!t || !sHunterComing()) return;   // 그새 시험장을 나감
+  t.sArrived = true;
+  save();
+  examinerTalk();
+}
+
 // 시험관과의 싸움 결과 — 다음 시험관 · 시험 끝 (경험치 · 전리품 없음)
 function examinerResultCard(r) {
   const next = !r.done ? examinerFoe(r.g + 1) : null;
   const up = r.grade > r.before;
-  const end = !r.done ? `다음은 <b>${next.name}</b>.`
+  const say = r.enemy.guild != null ? `<div class="exam-say">${r.enemy.icon} ${S_HUNTER[r.enemy.guild][r.win ? 'win' : 'lose']}</div>` : '';
+  const end = !r.done ? (r.g + 1 === HUNTER_GRADES.length ? '다음은 <b>S급</b> — …시험장이 술렁인다.' : `다음은 <b>${next.name}</b>.`)
     : up ? (r.before ? `등급이 올랐다 — <b>${gradeName(r.before)}급 → ${gradeName(r.grade)}급</b>` : `<b>${gradeName(r.grade)}급 헌터</b>로 등록했다! 이제 백화점에서 살 수 있다`)
     : r.grade ? `그대로 <b>${gradeName(r.grade)}급</b> — 더 세져서 다시 오자` : '불합격 — 장비를 갖추고 강해져서 다시 오자';
   return `
     <div class="result ${r.win ? 'win' : 'lose'} exam-result">
       <div class="res-head">${r.win ? '통과' : '탈락'}</div>
       <div class="res-foe"><span class="res-icon">${r.enemy.icon}</span>${r.enemy.name}<span class="res-turns">${r.turns}턴</span></div>
-      <div class="res-lines"><div class="exam-end ${r.done ? (up ? 'up' : r.grade ? '' : 'down') : ''}">${end}</div></div>
+      <div class="res-lines">${say}<div class="exam-end ${r.done ? (up ? 'up' : r.grade ? '' : 'down') : ''}">${end}</div></div>
       <div class="res-actions"><button id="continueBtn" class="btn primary thumb">${r.done ? '시험을 마친다' : '다음 시험관'}${KEY_HINT}</button></div>
     </div>`;
 }
