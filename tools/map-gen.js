@@ -1172,12 +1172,12 @@ const CITY_BIO = 10;                                         // 도시 — 그�
 const OLDTOWN = {
   title: '옛 동네', base: 'old',
   // 2026-11-19 가로 44 → 24 (사용자 결정 — 「옛 동네 맵 크기 줄이기」). 위 줄: 집 · 게이트 틈 · 내 길드가 될 건물 · 가게 · 암시장 골목 · 빌라, 아래 줄 넷
-  w: 24, h: 17, pad: { t: 9, b: 5, l: 9, r: 9 },
+  w: 24, h: 19, pad: { t: 9, b: 5, l: 9, r: 9 },   // 2026-11-19 가운데 골목길 3 → 5칸 (y 7 ~ 11 — 사용자 결정 「내가 가는 길」)
   facade: { f: 3 },                                        // 벽면 높이 3칸 — 깊이가 「가로 + 3칸」이면 위에서 보이는 옥상이 정사각형 (사용자 결정 2026-11-18)
   ground: [],
   // 옥상은 대부분 정사각형(가로 4칸 · 깊이 7칸) — 직사각형 옥상은 위 줄 오른쪽 끝 한 채만. 생김새는 종류마다 매기는 번호 v 로 모두 다르게 (js/mapart.js 의 oldPal)
   buildings: [
-    // 위 줄 — 문은 가운데 골목길(y 7 ~ 9)을 봄
+    // 위 줄 — 문은 가운데 골목길(y 7 ~ 11)을 봄
     { kind: 'villa', roof: 'tank', x: 2, y: 0, w: 4, h: 7, door: { x: 3, w: 1, name: 'home', label: '집', to: 'home.out', unlock: 'home1' } },   // 안은 HOME (원룸) — 새 집을 사면 잠김 (이사)
     { kind: 'back', annex: true, x: 6, y: 0, w: 2, h: 2 },                                                              // 집 바로 옆 틈 — 이상한 게이트가 이 벽 앞에 섬 (사용자 결정)
     { kind: 'shabby', x: 8, y: 0, w: 4, h: 7, door: { x: 9, w: 2, name: 'myguild', label: '빈 건물', to: 'guild.out', unlock: 'guild' } },   // 사들여 내 길드로 키울 곳 (도시 계획 6번 — 1~3단계. 4단계부터는 미래 도시로 옮기고 「옛 사무실」 — 그림은 mapart)
@@ -1185,33 +1185,32 @@ const OLDTOWN = {
     { kind: 'back', annex: true, x: 17, y: 0, w: 2, h: 2, door: { x: 17, w: 2, name: 'blackmarket', to: 'bm.out', unlock: 'bm' } },   // 암시장 — 셔터 (이름표 없음). 9격 뒤 · 후드티가 와 있는 회차에만 반쯤 올라감
     { kind: 'villa', x: 19, y: 0, w: 5, h: 7 },                                                                         // 위 줄 오른쪽 끝 — 지도 끝까지
     // 아래 줄
-    { kind: 'villa', roof: 'tank', x: 1, y: 10, w: 4, h: 7 }, { kind: 'back', x: 7, y: 10, w: 4, h: 7 }, { kind: 'store', x: 13, y: 10, w: 4, h: 7 },
-    { kind: 'villa', x: 19, y: 10, w: 4, h: 7 },
+    { kind: 'villa', roof: 'tank', x: 1, y: 12, w: 4, h: 7 }, { kind: 'back', x: 7, y: 12, w: 4, h: 7 }, { kind: 'store', x: 13, y: 12, w: 4, h: 7 },
+    { kind: 'villa', x: 19, y: 12, w: 4, h: 7 },
     // 둘레 — 위 끝은 옥상이 지도 맨 위에 닿게, 아래 끝은 옥상만(roofOnly — 4 × 4 정사각형), 오른쪽 가운데는 골목길이 화면 밖으로 이어져 보이게 비움
     { kind: 'back', x: -9, y: -9, w: 4, h: 7 }, { kind: 'villa', x: -4, y: -9, w: 4, h: 7 }, { kind: 'store', x: 1, y: -9, w: 4, h: 7 },
     { kind: 'villa', x: 7, y: -9, w: 4, h: 7 }, { kind: 'back', x: 12, y: -9, w: 4, h: 7 }, { kind: 'store', x: 17, y: -9, w: 4, h: 7 },
     { kind: 'villa', x: 23, y: -9, w: 4, h: 7 }, { kind: 'back', x: 28, y: -9, w: 4, h: 7 },
-    { kind: 'store', x: -9, y: 0, w: 4, h: 7 }, { kind: 'villa', x: -9, y: 10, w: 4, h: 7 },
-    { kind: 'back', x: 29, y: 0, w: 4, h: 7 }, { kind: 'store', x: 29, y: 10, w: 4, h: 7 },
-    { kind: 'villa', roofOnly: true, x: -9, y: 18, w: 4, h: 4 }, { kind: 'back', roofOnly: true, x: -4, y: 18, w: 4, h: 4 }, { kind: 'store', roofOnly: true, x: 1, y: 18, w: 4, h: 4 },
-    { kind: 'back', roofOnly: true, x: 7, y: 18, w: 4, h: 4 }, { kind: 'villa', roofOnly: true, x: 12, y: 18, w: 4, h: 4 }, { kind: 'store', roofOnly: true, x: 17, y: 18, w: 4, h: 4 },
-    { kind: 'back', roofOnly: true, x: 23, y: 18, w: 4, h: 4 }, { kind: 'villa', roofOnly: true, x: 28, y: 18, w: 4, h: 4 }
+    { kind: 'store', x: -9, y: 0, w: 4, h: 7 }, { kind: 'villa', x: -9, y: 12, w: 4, h: 7 },
+    { kind: 'back', x: 29, y: 0, w: 4, h: 7 }, { kind: 'store', x: 29, y: 12, w: 4, h: 7 },
+    { kind: 'villa', roofOnly: true, x: -9, y: 20, w: 4, h: 4 }, { kind: 'back', roofOnly: true, x: -4, y: 20, w: 4, h: 4 }, { kind: 'store', roofOnly: true, x: 1, y: 20, w: 4, h: 4 },
+    { kind: 'back', roofOnly: true, x: 7, y: 20, w: 4, h: 4 }, { kind: 'villa', roofOnly: true, x: 12, y: 20, w: 4, h: 4 }, { kind: 'store', roofOnly: true, x: 17, y: 20, w: 4, h: 4 },
+    { kind: 'back', roofOnly: true, x: 23, y: 20, w: 4, h: 4 }, { kind: 'villa', roofOnly: true, x: 28, y: 20, w: 4, h: 4 }
   ],
   // 자잘한 것 (사용자 결정 2026-11-18) — 막힌 칸 · 그림은 js/mapart.js 의 clutterSprite. 길을 막아 갇히는 칸이 생기면 뽑을 때 멈춤
   //   car 불법주차한 낡은 차(가로 w2 · 세로 h2 — tone 빛깔) · cone 라바콘 · trash 종량제 봉투 · planter 스티로폼 화분 · scooter 오토바이
   clutter: [
-    { kind: 'car', x: 14, y: 8, w: 2, h: 1, tone: 0 }, { kind: 'cone', x: 16, y: 8 },   // 골목 가운데 줄 — 아래 줄은 아래 건물의 옥상 밑 (over)
-    { kind: 'car', x: 17, y: 12, w: 1, h: 2, tone: 3 },
-    { kind: 'cone', x: 12, y: 0 }, { kind: 'cone', x: 6, y: 10 },
-    { kind: 'trash', x: 18, y: 5 }, { kind: 'trash', x: 0, y: 16 },
-    { kind: 'planter', x: 1, y: 6 }, { kind: 'planter', x: 18, y: 16 },
-    { kind: 'scooter', x: 20, y: 8, tone: 1 }
+    // 가운데 골목길(y 7 ~ 11)엔 아무것도 두지 않음 — 내가 가는 길 (사용자 결정 2026-11-19 — 차 · 라바콘 · 오토바이를 치움)
+    { kind: 'car', x: 17, y: 14, w: 1, h: 2, tone: 3 },
+    { kind: 'cone', x: 12, y: 0 }, { kind: 'cone', x: 6, y: 12 },
+    { kind: 'trash', x: 18, y: 5 }, { kind: 'trash', x: 0, y: 18 },
+    { kind: 'planter', x: 1, y: 6 }, { kind: 'planter', x: 18, y: 18 }
   ],
-  trees: [[11, 16]],
+  trees: [[11, 18]],
   pylons: [],
   start: [3, 7],                                             // 집 문 앞 골목길
   gate: [6, 2],                                              // 이상한 게이트 — 집 바로 옆 틈 (두 칸 폭)
-  edges: [{ name: 'city', x: 23, y: 7, w: 1, h: 3, to: 'city.oldtown', label: '헌터들의 도시 →', arrive: 'left' }]
+  edges: [{ name: 'city', x: 23, y: 8, w: 1, h: 3, to: 'city.oldtown', label: '헌터들의 도시 →', arrive: 'left' }]   // 도착 · 이름표는 골목길 가운데 줄 (y 9)
 };
 const CITY = {
   title: '헌터들의 도시', base: 'pave',
