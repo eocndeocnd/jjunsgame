@@ -2360,10 +2360,12 @@ const PASSIVE_BY_ID = Object.fromEntries(PASSIVES.map(p => [p.id, p]));
 const ALLY_KINDS = {
   strike: { name: '추가타', stat: 'ally',      base: 0.2,  step: 0.05,  desc: v => `내가 움직인 뒤 한 번 더 — 내 한 방의 ${Math.round(v * 1000) / 10}%` },   // 크리 없음 · 빗나갈 수 있음
   heal:   { name: '회복',   stat: 'allyHeal',  base: 0.02, step: 0.005, desc: v => `내 턴마다 내 생명의 ${Math.round(v * 1000) / 10}% 회복` },
-  guard:  { name: '막기',   stat: 'allyGuard', base: 0.1,  step: 0.025, desc: v => `내가 받는 피해 −${Math.round(v * 1000) / 10}%` }
+  guard:  { name: '막기',   stat: 'allyGuard', base: 0.1,  step: 0.025, desc: v => `내가 받는 피해 −${Math.round(v * 1000) / 10}%` },
+  endure: { name: '버티기', stat: 'allyEndure', base: 0.05, step: 0.05, desc: v => `싸움마다 한 번, 쓰러질 때 생명 ${Math.round(v * 1000) / 10}%로 버팀` }   // 이야기 동료 단우만 (2026-11-19)
 };
 const ALLIES = {
   hayun:    { id: 'hayun',    name: '하윤', grade: 'D', kind: 'strike', icon: '🥷', story: true },
+  danwoo:   { id: 'danwoo',   name: '단우', grade: 'A', kind: 'endure', icon: '🥋', story: true },   // 둘째 이야기 동료 — 청해 길드를 떠난 무인 (제8격 보스 뒤 · 내 길드에 찾아옴 — 사용자 결정 2026-11-19)
   seojin:   { id: 'seojin',   name: '서진', grade: 'F', kind: 'guard',  icon: '💂', hire: true },
   minjae:   { id: 'minjae',   name: '민재', grade: 'E', kind: 'heal',   icon: '🧑‍⚕️', hire: true },
   jiu:      { id: 'jiu',      name: '지우', grade: 'D', kind: 'strike', icon: '🧝', hire: true },
@@ -2466,10 +2468,10 @@ function examinerStats(g) { return enemyStats(HUNTER_GRADES[g - 1].level); }
 // 4대 길드 (사용자 결정 2026-11-19 — 이름 홍염 · 청해 · 크라운 · 달). 차례는 도시 지도의 길드 건물 tone 0~3 과 같음.
 // S급 시험관은 그 길드의 S급 헌터가 와서 맡음 — 시험마다 차례로 돌아감 (game.js 의 examinerFoe). 사람 이름 · 그림은 나중에 (지금은 이모지)
 const BIG_GUILDS = [
-  { id: 'hongyeom', name: '홍염', icon: '🦸' },
-  { id: 'cheonghae', name: '청해', icon: '🥷' },    // 무협을 이어받은 길드
+  { id: 'hongyeom', name: '홍염', icon: '👺' },
+  { id: 'cheonghae', name: '청해', icon: '🧘' },    // 무협을 이어받은 길드
   { id: 'crown', name: '크라운', icon: '🤴' },
-  { id: 'dal', name: '달', icon: '🧝' }
+  { id: 'dal', name: '달', icon: '🕵️' }
 ];
 
 const DEPT_ID = 'dept';

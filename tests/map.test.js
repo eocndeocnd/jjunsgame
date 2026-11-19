@@ -1464,13 +1464,40 @@ test('길드 — 제7격 보스 뒤 빈 건물이 매물 · 사서 이름 · 사
   assert.deepEqual(r.load, ['새벽', 5, ['minjae']]);
 });
 
+test('둘째 동료 단우 — 제8격 보스 뒤 · 내 길드가 있어야 사무실에서 기다림, 버티기는 한 싸움에 한 번', () => {
+  const run = loadGame();
+  const r = run(`
+    currentSlot = 0; State.meta = freshMeta(); State.meta.cityOpen = true; startRun();
+    const beat = n => State.meta.bossesBeaten.push(zoneBoss(ZONES.findIndex(z => z.rank === n)).id);
+    beat(8);
+    const out = { noGuild: [ally2Waiting(), deskHere('ally2')] };
+    State.meta.guild = { name: '새벽', level: 1, seats: [], since: 0 };
+    out.waiting = [ally2Waiting(), deskHere('ally2')];
+    out.join = [joinAlly('danwoo'), ally2Waiting(), allyPower(ALLIES.danwoo)];
+    setCompanion('danwoo');
+    const h = heroStats();
+    out.stat = [h.allyEndure, h.ally, h.allyGuard];
+    // 한 방에 쓰러지는 상대 — 버티기가 딱 한 번
+    const hero = { ...h, life: 100, damage: 1, defense: 0, dex: 50, luck: 0 }, foe = { life: 1e9, damage: 1e6, defense: 0, dex: 1e6, luck: 0 };
+    const log = []; const res = simulateBattle(hero, foe, () => 0.5, log);
+    out.fight = [res.win, log.filter(e => e.who === 'ally' && e.k === 'endure').length, log.find(e => e.k === 'endure').v];
+    return out;
+  `);
+  assert.deepEqual(r.noGuild, [false, false]);
+  assert.deepEqual(r.waiting, [true, true]);
+  assert.deepEqual(r.join, [true, false, 0.3]);
+  assert.deepEqual(r.stat, [0.3, 0, 0]);
+  assert.deepEqual(r.fight, [false, 1, 30]);
+});
+
 test('내 길드 안 — 옛 동네 빈 건물 문(잠김 · unlock guild) ↔ 길드 안, 길드 장부 · 사무 자리 다섯', () => {
   const town = loadMap('oldtown'), g = loadMap('guild');
   const door = town.ports.find(p => p.name === 'myguild'), out = g.ports.find(p => p.name === 'out');
   assert.equal(door.to, 'guild.out');
   assert.equal(door.unlock, 'guild');
   assert.equal(out.to, 'oldtown.myguild');
-  assert.deepEqual(g.npcs.filter(n => n.shop).map(n => n.shop), ['guild']);
+  assert.deepEqual(g.npcs.filter(n => n.shop).map(n => n.shop), ['guild', 'ally2']);
+  assert.deepEqual(loadMap('guild2').npcs.filter(n => n.shop).map(n => n.shop), ['guild', 'ally2']);
   assert.equal(g.npcs.filter(n => n.name === 'seat').length, 5);
 });
 

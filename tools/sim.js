@@ -74,7 +74,7 @@ function simEnhance() {
 function simPowerVs(foe) {
   const h = heroStats();
   const kill = foe.life / Math.max(1e-9, expectedTurnDamage(h, foe));
-  const die = h.life / Math.max(1e-9, expectedTurnDamage(foe, h) - h.life * (h.allyHeal || 0));   // 동료의 회복만큼 덜 깎임
+  const die = h.life * (1 + (h.allyEndure || 0)) / Math.max(1e-9, expectedTurnDamage(foe, h) - h.life * (h.allyHeal || 0));   // 동료의 회복만큼 덜 깎임 · 버티기만큼 더
   return die / kill;
 }
 
@@ -100,6 +100,8 @@ function simShop() {
   if (!SIM.SHOP || typeof deptWares !== 'function' || !State.meta.cityOpen) return 0;
   if (typeof takeHunterTest === 'function') takeHunterTest();   // 회차마다 협회 시험부터 — 등록해야 사고 만들 수 있음
   if (typeof allyWaiting === 'function' && allyWaiting()) joinAlly();   // 제4격 보스 뒤 — 로비의 동료
+  // 제8격 보스 뒤 — 단우 (게임에선 내 길드가 있어야 찾아옴. 시뮬은 길드를 사지 않으므로 길드가 있는 사람으로 침)
+  if (typeof ally2Waiting === 'function' && State.meta.cityOpen && rankBossBeaten(8) && !allyOwned('danwoo')) joinAlly('danwoo');
   let bought = 0;
   if (typeof sellAllCores === 'function') sellAllCores();   // 핵은 모두 팝니다 — 그 돈으로 만들고 삽니다
   if (typeof craftItem === 'function') {

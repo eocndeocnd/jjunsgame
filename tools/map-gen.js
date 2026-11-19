@@ -1507,7 +1507,7 @@ const GUILD = {
     { kind: 'plant', x: 0, y: 0, w: 1 }, { kind: 'plant', x: 16, y: 0, w: 1 }, { kind: 'plant', x: 0, y: 9, w: 1 }, { kind: 'plant', x: 16, y: 9, w: 1 },
     { kind: 'bench', x: 11, y: 8, w: 3 }
   ],
-  clerks: [{ x: 8, y: 0, shop: 'guild', label: '길드 장부' }],
+  clerks: [{ x: 8, y: 0, shop: 'guild', label: '길드 장부' }, { x: 11, y: 6, shop: 'ally2', label: '???' }],   // ??? — 제8격 보스 뒤에 찾아오는 단우 (game.js 의 ally2Waiting)
   seats: [{ x: 1, y: 3 }, { x: 14, y: 3 }, { x: 4, y: 5 }, { x: 1, y: 7 }, { x: 14, y: 7 }],   // 사무 자리 — 앉힌 차례대로 (지도엔 앉은 동료만)
   signs: []
 };
@@ -1539,7 +1539,7 @@ const GUILD2 = {
     { kind: 'plant', x: 0, y: 0, w: 1 }, { kind: 'plant', x: 20, y: 0, w: 1 }, { kind: 'plant', x: 0, y: 11, w: 1 }, { kind: 'plant', x: 20, y: 11, w: 1 },
     { kind: 'bench', x: 3, y: 10, w: 3 }, { kind: 'bench', x: 15, y: 10, w: 3 }
   ],
-  clerks: [{ x: 10, y: 0, shop: 'guild', label: '길드 장부' }],
+  clerks: [{ x: 10, y: 0, shop: 'guild', label: '길드 장부' }, { x: 14, y: 7, shop: 'ally2', label: '???' }],
   seats: [{ x: 1, y: 3 }, { x: 17, y: 3 }, { x: 5, y: 5 }, { x: 1, y: 7 }, { x: 17, y: 7 }],
   signs: []
 };

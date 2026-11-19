@@ -1102,7 +1102,7 @@ function battleSound(e) {
       case 'power':   return e.p === 'zeus' || e.p === 'hades' ? 'harm' : 'special';
     }
   } else if (e.who === 'ally') {
-    return e.k === 'hit' ? 'hit' : e.k === 'heal' ? 'heal' : 'miss';
+    return e.k === 'hit' ? 'hit' : e.k === 'heal' ? 'heal' : e.k === 'endure' ? 'special' : 'miss';
   } else {
     switch (e.k) {
       case 'hit':   return e.crit ? 'foeCrit' : 'foeHit';
@@ -1168,7 +1168,8 @@ function battleLine(e, foeName) {
     }
   } else if (e.who === 'ally') {
     const an = (allyNow() || {}).name || '동료';
-    return e.k === 'hit' ? { cls: 'b-hero', text: `${an}의 추가타 — ${foeName}에게 ${v}` } : e.k === 'heal' ? { cls: 'b-heal', text: `${an}의 회복 — 생명 +${v}` } : { cls: 'b-miss', text: `${an}의 공격이 빗나갔다` };
+    return e.k === 'hit' ? { cls: 'b-hero', text: `${an}의 추가타 — ${foeName}에게 ${v}` } : e.k === 'heal' ? { cls: 'b-heal', text: `${an}의 회복 — 생명 +${v}` }
+      : e.k === 'endure' ? { cls: 'b-special', text: `${an}${josa(an, '이', '가')} 받쳤다 — 쓰러지지 않았다 (생명 ${v})` } : { cls: 'b-miss', text: `${an}의 공격이 빗나갔다` };
   } else {
     switch (e.k) {
       case 'hit':   return { cls: e.crit ? 'b-foecrit' : 'b-foe', text: `${e.crit ? '치명타! ' : ''}${foeName}의 공격 — ${v}` };
@@ -1343,6 +1344,7 @@ function battleFx(e) {
     const allyEl = $('btAlly');
     if (e.k === 'hit') { fxLunge(allyEl, -1); fxSprite('hero', 'slash', foeEl, 0.9); fxHit(foeEl, false); fxFloat(foeEl, v, 'ally'); }
     else if (e.k === 'heal') fxFloat(heroEl, `+${v}`, 'heal');
+    else if (e.k === 'endure') { fxLunge(allyEl, -1); fxFloat(heroEl, `+${v}`, 'heal'); fxBanner('받쳤다!'); }
     else { fxLunge(allyEl, -1); fxFloat(foeEl, '빗나감', 'miss'); }
   } else {
     switch (e.k) {
@@ -1875,6 +1877,9 @@ function onMapEvents(evs) {
       changed = true;
     } else if (e.type === 'shop' && e.npc.shop === 'bed') {   // 우리 집 침대 — 혼잣말 한마디 (분위기만)
       if (!isTalkOpen()) playTalk([{ who: 'me', text: homeLine() }], null, { end: '일어난다' });
+      changed = true;
+    } else if (e.type === 'shop' && e.npc.shop === 'ally2') {   // 내 길드 사무실 — 단우 (제8격 보스 뒤)
+      if (ally2Waiting() && !isTalkOpen()) playTalk(ALLY2_MEET, () => { if (joinAlly('danwoo')) Sound.play('rankUp'); render(); }, { end: '같이 가자' });
       changed = true;
     } else if (e.type === 'shop' && e.npc.shop === 'ally') {
       if (allyWaiting() && !isTalkOpen()) playTalk(ALLY_MEET, () => { if (joinAlly('hayun')) Sound.play('rankUp'); render(); }, { end: '같이 가자' });
@@ -2823,7 +2828,7 @@ function renderShop() {
 // 맨 위는 핵 — 모든 몬스터가 남기는 팔 것 (격마다 한 가지). 가진 격만 한 줄씩, 「모두 판다」 한 번으로 다 팝니다. 만드는 데는 쓰지 않습니다.
 // ---------- 헌터 협회 · 등록 창구 (상점 창을 같이 씀 — shopKind 'assoc') ----------
 // 지금의 나(도시의 Lv.1 그대로)로 F 시험관부터 차례로 싸워, 이긴 데까지가 등급. 회차에 한 번 · 내려가지 않음 (game.js 의 takeHunterTest)
-const CLERK_DESKS = { examiner: { name: '시험관', icon: '🧑‍🏫' }, assoc: { name: '등록 창구', icon: '🧑‍💼' }, ally: { name: '???', icon: ALLIES.hayun.icon }, hire: { name: '동료 모집', icon: '👩‍💼' }, gate: { name: '게이트 창구', icon: '🧑‍✈️' }, guild: { name: '길드 장부', icon: '📒' }, bed: { name: '침대', icon: '💤' } };   // 백화점 매장이 아닌 창구 — 지도 위 이름표
+const CLERK_DESKS = { examiner: { name: '시험관', icon: '🧑‍🏫' }, assoc: { name: '등록 창구', icon: '🧑‍💼' }, ally: { name: '???', icon: ALLIES.hayun.icon }, ally2: { name: '???', icon: ALLIES.danwoo.icon }, hire: { name: '동료 모집', icon: '👩‍💼' }, gate: { name: '게이트 창구', icon: '🧑‍✈️' }, guild: { name: '길드 장부', icon: '📒' }, bed: { name: '침대', icon: '💤' } };   // 백화점 매장이 아닌 창구 — 지도 위 이름표
 const ASSOC_TALK = {
   none: ['「신규 등록이세요? 시험은 간단해요. 시험관과 한 번씩 붙어 보시면 돼요. F급부터요.」', '「등록증 없이 게이트 근처를 돌아다니시면 곤란해요. …시험 보시게요?」'],
   again: ['「재심사요? 좋아요. 지난번보다 나아지셨는지 볼까요.」', '「등급은 한 번 받으면 안 내려가요. 부담 없이 보세요.」'],
@@ -3682,7 +3687,7 @@ function pxIcon(name) {
 // 주인공의 이름 — 정하기 전에는 「나」
 function heroName() { return State.meta.heroName || '나'; }
 
-const TALK_WHO = { me: () => heroName(), guide: () => '???', nameless: () => '무명의 화신', stranger: () => '???', ally: () => ALLIES.hayun.name,
+const TALK_WHO = { me: () => heroName(), guide: () => '???', nameless: () => '무명의 화신', stranger: () => '???', ally: () => ALLIES.hayun.name, stranger2: () => '???', ally2: () => ALLIES.danwoo.name,
                    proctor: () => '시험 감독', examiner: () => (examinerNow() || { name: '시험관' }).name };
 let talkScript = [], talkIndex = 0, talkDone = null, talkOpts = {};
 function isTalkOpen() { const t = $('talk'); return !!t && !t.classList.contains('hidden'); }
@@ -3696,7 +3701,7 @@ function renderTalk() {
   const line = talkScript[talkIndex], last = talkIndex === talkScript.length - 1, ask = line.ask === 'name' || line.ask === 'guild';
   $('talk').dataset.who = line.who;
   $('talkWho').textContent = TALK_WHO[line.who]();
-  $('talkFace').innerHTML = line.who === 'guide' ? guideEye('bob') : line.who === 'me' ? heroSprite() : line.who === 'stranger' || line.who === 'ally' ? allySprite('hayun') : line.who === 'examiner' ? `<span class="ally-sprite">${(examinerNow() || {}).icon || '🧑‍🏫'}</span>` : line.who === 'proctor' ? `<span class="ally-sprite">${CLERK_DESKS.assoc.icon}</span>` : '';
+  $('talkFace').innerHTML = line.who === 'guide' ? guideEye('bob') : line.who === 'me' ? heroSprite() : line.who === 'stranger' || line.who === 'ally' ? allySprite('hayun') : line.who === 'stranger2' || line.who === 'ally2' ? allySprite('danwoo') : line.who === 'examiner' ? `<span class="ally-sprite">${(examinerNow() || {}).icon || '🧑‍🏫'}</span>` : line.who === 'proctor' ? `<span class="ally-sprite">${CLERK_DESKS.assoc.icon}</span>` : '';
   $('talkFace').classList.toggle('hidden', line.who === 'nameless');
   $('talkBody').innerHTML = typeof line.text === 'function' ? line.text() : line.text;
   $('talkName').classList.toggle('hidden', !ask);
@@ -3792,7 +3797,21 @@ const ALLY_MEET = [
   { who: 'ally', text: () => `하윤이에요. D급이고요. ${heroName()} 씨 옆에서 한 번씩 더 칠게요 — 그 정도는 해요.` },
   { who: 'me', text: '(동료가 생겼다.)' }
 ];
+// 둘째 동료와의 만남 (내 길드 사무실 — 제8격 보스 뒤). 청해 길드를 떠난 무인 — 하오체 (사용자 결정 2026-11-19). 대사는 제안 (가칭 단우 — A급)
+// 도시는 내 격을 모름 — 찾아온 까닭은 협회에 도는 이야기(측정기는 조용한데 등급이 오른 길드장)와 순서 없는 새 길드
+const ALLY2_MEET = [
+  { who: 'stranger2', text: '「…여기가 새로 생긴 길드요? 길드장을 기다리고 있었소.」' },
+  { who: 'me', text: '(낡은 도복 차림이다. 소매에 푸른 물결 무늬를 뜯어낸 자국이 있다.)' },
+  { who: 'stranger2', text: '「청해에 있었소. 옛 문파의 무공을 잇는다는 그 길드 말이오.」' },
+  { who: 'stranger2', text: '「거기선 백 년 전 순서대로만 배우오. 다음 초식은 십 년 뒤에나 가르쳐 준다더군. 그래서 나왔소.」' },
+  { who: 'stranger2', text: '「협회에서 들었소. 측정기는 조용한데 등급은 쉬지 않고 오른 길드장이 있다고. — 그 순서 없는 길을, 옆에서 보고 싶소.」' },
+  { who: 'guide', text: '…이 사람, 쓰러지는 걸 붙잡는 손이야. 같이 가면 한 번쯤은 네가 넘어지지 않게 받쳐 줄걸.' },
+  { who: 'ally2', text: () => `「단우라 하오. A급이오. ${heroName()} 길드장이 무너질 때 한 번 — 내가 받치겠소.」` },
+  { who: 'me', text: '(동료가 생겼다.)' }
+];
 const GUIDE_NOTES = [
+  { id: 'ally2', when: () => ally2Waiting(), key: () => 1,
+    text: () => `${(State.meta.guild && State.meta.guild.name) || '네 길드'} 사무실에 누가 와 있대. 낡은 도복 차림으로 — 길드장을 기다린다던데.` },
   { id: 'guildSale', when: () => guildForSale(), key: () => 1,
     text: () => '집 옆 빈 건물 있잖아. 셔터에 <b>「매물」</b> 종이가 새로 붙었어. 이제 너도 살 수 있을걸 — <b>네 길드</b>로.' },
   { id: 'guildFull', when: () => guildFull(), key: () => Math.floor(Date.now() / (RULES.GUILD_CAP_HOURS * 3600e3)),

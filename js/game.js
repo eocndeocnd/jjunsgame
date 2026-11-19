@@ -795,7 +795,7 @@ function heroStats() {
   const collect = 1 + COLLECTION_BONUS * completedRanks();
   for (const k of STAT_KEYS) total[k] = Math.round(total[k] * collect);
   // 함께 가는 동료의 능력 — 추가타(ally) · 회복(allyHeal) · 막기(allyGuard) 중 하나
-  total.ally = 0; total.allyHeal = 0; total.allyGuard = 0;
+  total.ally = 0; total.allyHeal = 0; total.allyGuard = 0; total.allyEndure = 0;
   const comp = allyNow();
   if (comp) total[ALLY_KINDS[comp.kind].stat] = allyPower(comp);
   // 골드로 산 패시브 — 근력(공격력) · 맷집(생명)
@@ -853,6 +853,8 @@ function simulateBattle(hero, enemy, rng = Math.random, log = null) {
   const hAlly    = num(hero.ally);         // 함께 가는 동료 — 내가 움직인 뒤 한 번 더 (내 한 방의 비율)
   const hAllyHeal  = num(hero.allyHeal);   // 함께 가는 동료 — 내 턴마다 생명의 일부 회복
   const hAllyGuard = Math.min(0.9, num(hero.allyGuard));   // 함께 가는 동료 — 받는 피해를 줄임
+  const hAllyEndure = num(hero.allyEndure);                 // 함께 가는 동료 — 한 싸움에 한 번, 쓰러질 때 생명의 일부로 버팀
+  let endured = false;
   const hSteal   = num(hero.lifesteal);    // 준 피해의 일부 회복
   const hBlock   = num(hero.block);        // 통째로 흘리기
   const hThorn   = num(hero.reflect);      // 맞은 만큼 되돌리기
@@ -997,6 +999,12 @@ function simulateBattle(hero, enemy, rng = Math.random, log = null) {
       heroHp = hero.life;
       note('hero', 'power', 0, { p: 'cthulhu' });
     }
+    // 동료의 버티기 — 한 싸움에 한 번 (화신의 되살아남이 다 지나간 뒤)
+    if (heroHp <= 0 && hAllyEndure > 0 && !endured) {
+      endured = true;
+      heroHp = hero.life * hAllyEndure;
+      note('ally', 'endure', heroHp);
+    }
     if (heroHp <= 0) return { win: false, turns: turn, heroHpLeft: 0 };
   }
   return { win: false, turns: MAX_TURNS, heroHpLeft: heroHp };
@@ -1008,7 +1016,7 @@ function winChance(hero, enemy, samples = 200) {
   const heroDps = Math.max(0.001, expectedTurnDamage(hero, enemy));
   const foeDps  = Math.max(0.001, expectedTurnDamage(enemy, hero));
   const turnsToKill = enemy.life / heroDps;
-  const turnsToDie  = hero.life  / Math.max(0.001, foeDps - hero.life * num(hero.allyHeal));   // 동료의 회복만큼 덜 깎임
+  const turnsToDie  = hero.life * (1 + num(hero.allyEndure)) / Math.max(0.001, foeDps - hero.life * num(hero.allyHeal));   // 동료의 회복만큼 덜 깎임 · 버티기만큼 더
 
   // 운으로도 못 뒤집을 만큼 차이가 크면 굴리지 않습니다.
   // 크리와 빗나감이 있어서 예전보다 훨씬 넉넉하게(3배) 잡아야 합니다.
@@ -1414,6 +1422,8 @@ const rankBossBeaten = r => { const boss = zoneBoss(ZONES.findIndex(z => z.rank 
 function allyOwned(id) { return (State.meta.allies || []).includes(id); }
 // 제4격 보스를 한 번이라도 꺾었고 아직 하윤을 못 만났으면, 협회 로비에서 기다림 (ui 의 talk → joinAlly)
 function allyWaiting() { return !allyOwned('hayun') && !!State.meta.cityOpen && rankBossBeaten(4); }
+// 둘째 이야기 동료 단우 — 제8격 보스를 꺾었고 내 길드가 있으면, 길드 사무실에 찾아와 기다림 (도시는 격을 모름 — 찾아온 까닭은 「내 길드」)
+function ally2Waiting() { return !allyOwned('danwoo') && !!State.meta.cityOpen && rankBossBeaten(8) && guildOwned(); }
 // 동료가 늘어남 — 함께 가는 동료가 없으면 바로 함께 감
 function addAlly(id) {
   State.meta.allies = (State.meta.allies || []).concat(id);
@@ -1428,7 +1438,7 @@ function joinAlly(id = 'hayun') {
 }
 function allyNow() { return State.meta.ally && ALLIES[State.meta.ally] ? ALLIES[State.meta.ally] : null; }
 // 때가 되어야 서 있는 창구 · 사람 (지도 — mapview 의 npcHere · ui 의 mapMarks)
-function deskHere(shop) { return shop === 'ally' ? allyWaiting() : shop === 'hire' || shop === 'gate' ? gatesOpen() : shop === 'guild' ? guildOwned() : shop === 'examiner' ? !!examinerNow() : true; }
+function deskHere(shop) { return shop === 'ally' ? allyWaiting() : shop === 'ally2' ? ally2Waiting() : shop === 'hire' || shop === 'gate' ? gatesOpen() : shop === 'guild' ? guildOwned() : shop === 'examiner' ? !!examinerNow() : true; }
 // 제5격 보스를 한 번이라도 꺾으면 협회의 「동료 모집」 · 「게이트 창구」가 열림
 function gatesOpen() { return !!State.meta.cityOpen && rankBossBeaten(5); }
 // 동료 모집 창구에 서 있는 사람 — 내 등급까지 (고용한 사람도 「함께하는 중」으로 남김)
@@ -1587,7 +1597,7 @@ function takeHunterTest(rng = Math.random) {
 // ---------- 시험장 (사용자 결정 2026-11-19) — 등록 창구에서 「시험을 본다」 → 시험장, 시험관과 한 명씩 진짜로 싸움 ----------
 // 시험관은 그림이 생기기 전까지 이모지. S급 시험관은 4대 길드의 S급 헌터가 와서 맡음 (사용자 결정) — 시험마다 차례로 (BIG_GUILDS · meta.sExams).
 // 시험관의 레벨은 어디에도 보여 주지 않음 (사용자 결정). 경험치 · 전리품 · 에너지는 그대로.
-const EXAMINER_ICONS = ['🧑‍🏫', '👮', '🤺', '🏋️', '🥋', '🧛', '🤴'];   // F … S
+const EXAMINER_ICONS = ['🧑‍🏫', '👮', '🤺', '🏋️', '🏹', '🧛', '🤴'];   // F … S
 function examinerFoe(g, guild = null) {
   const G = HUNTER_GRADES[g - 1], B = g === HUNTER_GRADES.length && guild != null ? BIG_GUILDS[guild] : null;
   return { id: `examiner${G.id}`, name: B ? `${B.name} 길드 · S급 헌터` : `${G.id}급 시험관`, icon: B ? B.icon : EXAMINER_ICONS[g - 1],
