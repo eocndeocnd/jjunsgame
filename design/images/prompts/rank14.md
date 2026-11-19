@@ -58,12 +58,12 @@ If a name describes a different kind of object than its type, draw the object fr
 | 8 | 다스림의 흉갑 | 갑옷 | 주천사 | `assets/items/dominion2_0.png` |
 | 9 | 천군의 갑주 | 갑옷 | 미카엘 | `assets/items/michael2_1.png` |
 
-## 시트 14-B — 어깨 · 장갑 · 허리띠 · 각반 · 신발 (9개)
+## 시트 14-B — 어깨 · 장갑 · 각반 · 신발 (8개)
 
 저장할 이름: `design/images/sheets/rank14-B.png`
 
 ```text
-Make ONE square image, 1024x1024: a sprite sheet of 9 separate game item icons in a 3x3 grid.
+Make ONE square image, 1024x1024: a sprite sheet of 8 separate game item icons in a 3x3 grid.
 
 HARD RULES — breaking any of these makes the image unusable:
 1. NO TEXT ANYWHERE. Do not write item names, type names, captions, labels or numbers — not in Korean, not in English.
@@ -79,14 +79,13 @@ BACKGROUND: one flat solid magenta (#FF00FF) everywhere. No gradient, no checker
 Do not use magenta or hot pink on the items themselves.
 
 LAYOUT: an invisible 3 x 3 grid of equal square cells (do not draw it). Exactly one item per cell, centered, filling about 70% of its cell,
-never touching the cell edges. Fill the cells left to right, top to bottom, in the order listed.
+never touching the cell edges. Fill the cells left to right, top to bottom, in the order listed. Leave the last 1 cell empty (plain magenta).
 
 TIER LOOK: top-tier gear — divine or otherworldly: radiant, strange materials, a strong glow, elaborate but still one clear silhouette.
 
 FRAMING BY TYPE:
 - SHOULDER GUARD: one pauldron or a matching pair, 3/4 view
 - GLOVES / GAUNTLETS: a pair, backs of the hands, fingers up
-- BELT / SASH: laid in a loop, buckle or knot at the front
 - LEG ARMOR: a pair of shin guards, front view
 - BOOTS / SHOES: a pair, side view facing right
 
@@ -96,11 +95,10 @@ If a name describes a different kind of object than its type, draw the object fr
 2. SHOULDER GUARD 「능천사의 견갑」 — loot from the monster 「능천사」. plain look; mood: aggressive, sharp.
 3. GLOVES / GAUNTLETS 「불꽃을 쥔 손」 — loot from the monster 「우리엘」. more refined and menacing; mood: pointed, piercing.
 4. GLOVES / GAUNTLETS 「기적을 행하는 손」 — loot from the monster 「역천사」. plain look; mood: a lucky charm, a hint of gold.
-5. BELT / SASH 「홀을 찬 띠」 — loot from the monster 「권천사」. plain look; mood: sturdy, protective.
-6. LEG ARMOR 「일으켜 세우는 각반」 — loot from the monster 「레미엘」. more refined and menacing; mood: reinforced, built to last.
-7. LEG ARMOR 「바퀴 속의 바퀴」 — loot from the monster 「좌천사」. plain look; mood: spiked, thorny.
-8. BOOTS / SHOES 「달의 길을 걷는 신」 — loot from the monster 「사리엘」. more refined and menacing; mood: light, slim, built for speed.
-9. BOOTS / SHOES 「구름 디딤 신」 — loot from the monster 「나팔의 천사」. plain look; mood: light, slim, built for speed.
+5. LEG ARMOR 「일으켜 세우는 각반」 — loot from the monster 「레미엘」. more refined and menacing; mood: reinforced, built to last.
+6. LEG ARMOR 「바퀴 속의 바퀴」 — loot from the monster 「좌천사」. plain look; mood: spiked, thorny.
+7. BOOTS / SHOES 「달의 길을 걷는 신」 — loot from the monster 「사리엘」. more refined and menacing; mood: light, slim, built for speed.
+8. BOOTS / SHOES 「구름 디딤 신」 — loot from the monster 「나팔의 천사」. plain look; mood: light, slim, built for speed.
 ```
 
 | 칸 | 장비 | 부위 | 나온 곳 | 잘라서 둘 곳 |
@@ -109,18 +107,17 @@ If a name describes a different kind of object than its type, draw the object fr
 | 2 | 능천사의 견갑 | 어깨 | 능천사 | `assets/items/powerangel2_1.png` |
 | 3 | 불꽃을 쥔 손 | 장갑 | 우리엘 | `assets/items/uriel_0.png` |
 | 4 | 기적을 행하는 손 | 장갑 | 역천사 | `assets/items/virtueangel2_1.png` |
-| 5 | 홀을 찬 띠 | 허리띠 | 권천사 | `assets/items/principality2_1.png` |
-| 6 | 일으켜 세우는 각반 | 각반 | 레미엘 | `assets/items/remiel_0.png` |
-| 7 | 바퀴 속의 바퀴 | 각반 | 좌천사 | `assets/items/throneangel2_0.png` |
-| 8 | 달의 길을 걷는 신 | 신발 | 사리엘 | `assets/items/sariel_0.png` |
-| 9 | 구름 디딤 신 | 신발 | 나팔의 천사 | `assets/items/trumpetangel2_1.png` |
+| 5 | 일으켜 세우는 각반 | 각반 | 레미엘 | `assets/items/remiel_0.png` |
+| 6 | 바퀴 속의 바퀴 | 각반 | 좌천사 | `assets/items/throneangel2_0.png` |
+| 7 | 달의 길을 걷는 신 | 신발 | 사리엘 | `assets/items/sariel_0.png` |
+| 8 | 구름 디딤 신 | 신발 | 나팔의 천사 | `assets/items/trumpetangel2_1.png` |
 
-## 시트 14-C — 망토 · 반지 · 목걸이 · 팔찌 · 특수장비 (9개)
+## 시트 14-C — 망토 · 반지 · 목걸이 · 팔찌 · 특수장비 (8개)
 
 저장할 이름: `design/images/sheets/rank14-C.png`
 
 ```text
-Make ONE square image, 1024x1024: a sprite sheet of 9 separate game item icons in a 3x3 grid.
+Make ONE square image, 1024x1024: a sprite sheet of 8 separate game item icons in a 3x3 grid.
 
 HARD RULES — breaking any of these makes the image unusable:
 1. NO TEXT ANYWHERE. Do not write item names, type names, captions, labels or numbers — not in Korean, not in English.
@@ -136,7 +133,7 @@ BACKGROUND: one flat solid magenta (#FF00FF) everywhere. No gradient, no checker
 Do not use magenta or hot pink on the items themselves.
 
 LAYOUT: an invisible 3 x 3 grid of equal square cells (do not draw it). Exactly one item per cell, centered, filling about 70% of its cell,
-never touching the cell edges. Fill the cells left to right, top to bottom, in the order listed.
+never touching the cell edges. Fill the cells left to right, top to bottom, in the order listed. Leave the last 1 cell empty (plain magenta).
 
 TIER LOOK: top-tier gear — divine or otherworldly: radiant, strange materials, a strong glow, elaborate but still one clear silhouette.
 
@@ -153,11 +150,10 @@ If a name describes a different kind of object than its type, draw the object fr
 2. CLOAK / CAPE 「깃털 한 장의 망토」 — loot from the monster 「수호천사」. plain look; mood: reinforced, built to last.
 3. CLOAK / CAPE 「여섯 날개」 — loot from the monster 「치품천사」. plain look; mood: aggressive, sharp.
 4. RING 「지켜보는 반지」 — loot from the monster 「수호천사」. plain look; mood: reinforced, built to last.
-5. NECKLACE / AMULET 「주권의 목걸이」 — loot from the monster 「주천사」. plain look; mood: heavy, blunt, massive.
-6. NECKLACE / AMULET 「토비트의 물고기」 — loot from the monster 「라파엘」. more refined and menacing; mood: reinforced, built to last.
-7. BRACELET / BANGLE / WRISTWATCH 「빛을 다스리는 팔찌」 — loot from the monster 「라구엘」. more refined and menacing; mood: sturdy, protective.
-8. BRACELET / BANGLE / WRISTWATCH 「기적의 팔찌」 — loot from the monster 「역천사」. plain look; mood: a lucky charm, a hint of gold.
-9. SMALL PRECIOUS OBJECT (gem or relic) 「미카엘의 저울」 — loot from the monster 「미카엘」. a small ancient object; the most ornate and imposing piece of this set.
+5. NECKLACE / AMULET 「토비트의 물고기」 — loot from the monster 「라파엘」. more refined and menacing; mood: reinforced, built to last.
+6. BRACELET / BANGLE / WRISTWATCH 「빛을 다스리는 팔찌」 — loot from the monster 「라구엘」. more refined and menacing; mood: sturdy, protective.
+7. BRACELET / BANGLE / WRISTWATCH 「기적의 팔찌」 — loot from the monster 「역천사」. plain look; mood: a lucky charm, a hint of gold.
+8. SMALL PRECIOUS OBJECT (gem or relic) 「미카엘의 저울」 — loot from the monster 「미카엘」. a small ancient object; the most ornate and imposing piece of this set.
 ```
 
 | 칸 | 장비 | 부위 | 나온 곳 | 잘라서 둘 곳 |
@@ -166,11 +162,10 @@ If a name describes a different kind of object than its type, draw the object fr
 | 2 | 깃털 한 장의 망토 | 망토 | 수호천사 | `assets/items/guardianangel2_0.png` |
 | 3 | 여섯 날개 | 망토 | 치품천사 | `assets/items/seraph2_0.png` |
 | 4 | 지켜보는 반지 | 반지 | 수호천사 | `assets/items/guardianangel2_1.png` |
-| 5 | 주권의 목걸이 | 목걸이 | 주천사 | `assets/items/dominion2_1.png` |
-| 6 | 토비트의 물고기 | 목걸이 | 라파엘 | `assets/items/raphael2_0.png` |
-| 7 | 빛을 다스리는 팔찌 | 팔찌 | 라구엘 | `assets/items/raguel_0.png` |
-| 8 | 기적의 팔찌 | 팔찌 | 역천사 | `assets/items/virtueangel2_0.png` |
-| 9 | 미카엘의 저울 | 특수장비 | 미카엘 | `assets/items/michael2_2.png` |
+| 5 | 토비트의 물고기 | 목걸이 | 라파엘 | `assets/items/raphael2_0.png` |
+| 6 | 빛을 다스리는 팔찌 | 팔찌 | 라구엘 | `assets/items/raguel_0.png` |
+| 7 | 기적의 팔찌 | 팔찌 | 역천사 | `assets/items/virtueangel2_0.png` |
+| 8 | 미카엘의 저울 | 특수장비 | 미카엘 | `assets/items/michael2_2.png` |
 
 ## 하나씩 뽑기 (시트가 잘 안 될 때)
 

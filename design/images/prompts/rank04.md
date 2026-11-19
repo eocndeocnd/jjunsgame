@@ -154,7 +154,7 @@ If a name describes a different kind of object than its type, draw the object fr
 | 6 | 서리 내린 각반 | 각반 | 서리 거인 | `assets/items/frostgiant_0.png` ✅ |
 | 7 | 눈길을 다지는 각반 | 각반 | 털매머드 | `assets/items/mammoth_0.png` ✅ |
 
-## 시트 4-D — 신발 · 망토 · 반지 · 목걸이 · 팔찌 · 특수장비 (7개)
+## 시트 4-D — 신발 · 망토 · 반지 · 목걸이 · 팔찌 · 특수장비 (7개) ✅ 다 자름
 
 저장할 이름: `design/images/sheets/rank04-D.png`
 
@@ -200,15 +200,15 @@ If a name describes a different kind of object than its type, draw the object fr
 
 | 칸 | 장비 | 부위 | 나온 곳 | 잘라서 둘 곳 |
 |---|---|---|---|---|
-| 1 | 끈이 해진 등산화 | 신발 | 떠돌이 상인 | `assets/items/ware_boots.png` |
-| 2 | 큰 발자국 털신 | 신발 | 설인 | `assets/items/yeti_0.png` |
-| 3 | 눈보라 털가죽 | 망토 | 설인 | `assets/items/yeti_1.png` |
-| 4 | 구름 성의 열쇠고리 | 반지 | 구름 거인 | `assets/items/cloudgiant_0.png` |
-| 5 | 로크의 알 껍데기 | 목걸이 | 로크 | `assets/items/roc_0.png` |
-| 6 | 매머드 털 팔찌 | 팔찌 | 털매머드 | `assets/items/mammoth_1.png` |
-| 7 | 고개의 쐐기돌 | 특수장비 | 거인왕 | `assets/items/giantking_2.png` |
+| 1 | 끈이 해진 등산화 | 신발 | 떠돌이 상인 | `assets/items/ware_boots.png` ✅ |
+| 2 | 큰 발자국 털신 | 신발 | 설인 | `assets/items/yeti_0.png` ✅ |
+| 3 | 눈보라 털가죽 | 망토 | 설인 | `assets/items/yeti_1.png` ✅ |
+| 4 | 구름 성의 열쇠고리 | 반지 | 구름 거인 | `assets/items/cloudgiant_0.png` ✅ |
+| 5 | 로크의 알 껍데기 | 목걸이 | 로크 | `assets/items/roc_0.png` ✅ |
+| 6 | 매머드 털 팔찌 | 팔찌 | 털매머드 | `assets/items/mammoth_1.png` ✅ |
+| 7 | 고개의 쐐기돌 | 특수장비 | 거인왕 | `assets/items/giantking_2.png` ✅ |
 
-## 시트 4-E — 투구 · 갑옷 · 장갑 · 신발 (4개)
+## 시트 4-E — 투구 · 갑옷 · 장갑 · 신발 (4개) ✅ 다 자름
 
 저장할 이름: `design/images/sheets/rank04-E.png`
 
@@ -249,10 +249,10 @@ If a name describes a different kind of object than its type, draw the object fr
 
 | 칸 | 장비 | 부위 | 나온 곳 | 잘라서 둘 곳 |
 |---|---|---|---|---|
-| 1 | 열 차단 헬멧 | 투구 | 헌터백화점 | `assets/items/dept_helm4.png` |
-| 2 | 냉각 슈트 | 갑옷 | 헌터백화점 | `assets/items/dept_vest4.png` |
-| 3 | 전도 장갑 | 장갑 | 헌터백화점 | `assets/items/dept_glove4.png` |
-| 4 | 자세 제어 부츠 | 신발 | 헌터백화점 | `assets/items/dept_boots4.png` |
+| 1 | 열 차단 헬멧 | 투구 | 헌터백화점 | `assets/items/dept_helm4.png` ✅ |
+| 2 | 냉각 슈트 | 갑옷 | 헌터백화점 | `assets/items/dept_vest4.png` ✅ |
+| 3 | 전도 장갑 | 장갑 | 헌터백화점 | `assets/items/dept_glove4.png` ✅ |
+| 4 | 자세 제어 부츠 | 신발 | 헌터백화점 | `assets/items/dept_boots4.png` ✅ |
 
 ## 하나씩 뽑기 (시트가 잘 안 될 때)
 

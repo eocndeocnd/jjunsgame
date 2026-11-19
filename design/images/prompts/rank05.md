@@ -57,7 +57,7 @@ If a name describes a different kind of object than its type, draw the object fr
 | 8 | 학자의 관 | 투구 | 리치 | `assets/items/lich_2.png` ✅ |
 | 9 | 승리의 면류관 | 투구 | 흰 말의 기사 | `assets/items/whitehorse_0.png` ✅ |
 
-## 시트 5-B — 갑옷 · 어깨 · 장갑 · 허리띠 · 각반 · 신발 (8개)
+## 시트 5-B — 갑옷 · 어깨 · 장갑 · 허리띠 · 각반 · 신발 (8개) ✅ 다 자름
 
 저장할 이름: `design/images/sheets/rank05-B.png`
 
@@ -104,16 +104,16 @@ If a name describes a different kind of object than its type, draw the object fr
 
 | 칸 | 장비 | 부위 | 나온 곳 | 잘라서 둘 곳 |
 |---|---|---|---|---|
-| 1 | 뼈 갑주 | 갑옷 | 본 드래곤 | `assets/items/bonedragon_0.png` |
-| 2 | 사자의 판금 | 갑옷 | 데스 나이트 | `assets/items/deathknight_1.png` |
-| 3 | 계약의 낙인 | 어깨 | 데몬 로드 | `assets/items/demonlord_0.png` |
-| 4 | 갈퀴손 | 장갑 | 구울 | `assets/items/ghoul_0.png` |
-| 5 | 수의 허리끈 | 허리띠 | 구울 | `assets/items/ghoul_2.png` |
-| 6 | 탄창이 빈 전술 벨트 | 허리띠 | 떠돌이 상인 | `assets/items/ware_belt.png` |
-| 7 | 용암 정강이 | 각반 | 발록 | `assets/items/balrog_1.png` |
-| 8 | 해골 발톱 | 신발 | 본 드래곤 | `assets/items/bonedragon_1.png` |
+| 1 | 뼈 갑주 | 갑옷 | 본 드래곤 | `assets/items/bonedragon_0.png` ✅ |
+| 2 | 사자의 판금 | 갑옷 | 데스 나이트 | `assets/items/deathknight_1.png` ✅ |
+| 3 | 계약의 낙인 | 어깨 | 데몬 로드 | `assets/items/demonlord_0.png` ✅ |
+| 4 | 갈퀴손 | 장갑 | 구울 | `assets/items/ghoul_0.png` ✅ |
+| 5 | 수의 허리끈 | 허리띠 | 구울 | `assets/items/ghoul_2.png` ✅ |
+| 6 | 탄창이 빈 전술 벨트 | 허리띠 | 떠돌이 상인 | `assets/items/ware_belt.png` ✅ |
+| 7 | 용암 정강이 | 각반 | 발록 | `assets/items/balrog_1.png` ✅ |
+| 8 | 해골 발톱 | 신발 | 본 드래곤 | `assets/items/bonedragon_1.png` ✅ |
 
-## 시트 5-C — 망토 · 반지 · 목걸이 (8개)
+## 시트 5-C — 망토 · 반지 · 목걸이 (8개) ✅ 다 자름
 
 저장할 이름: `design/images/sheets/rank05-C.png`
 
@@ -157,16 +157,16 @@ If a name describes a different kind of object than its type, draw the object fr
 
 | 칸 | 장비 | 부위 | 나온 곳 | 잘라서 둘 곳 |
 |---|---|---|---|---|
-| 1 | 죽음이 걸친 창백한 망토 | 망토 | 창백한 말의 기사 | `assets/items/palehorse_0.png` |
-| 2 | 귀족의 망토 | 망토 | 뱀파이어 | `assets/items/vampire_1.png` |
-| 3 | 찢긴 방수 망토 | 망토 | 떠돌이 상인 | `assets/items/ware_raincoat.png` |
-| 4 | 피로 쓴 서명 | 반지 | 데몬 로드 | `assets/items/demonlord_2.png` |
-| 5 | 유혹의 반지 | 반지 | 서큐버스 | `assets/items/succubus_0.png` |
-| 6 | 장례 종 목걸이 | 목걸이 | 보물상자 | `assets/items/chest_necro_bell.png` |
-| 7 | 성물함 | 목걸이 | 리치 | `assets/items/lich_1.png` |
-| 8 | 훔친 꿈 | 목걸이 | 서큐버스 | `assets/items/succubus_1.png` |
+| 1 | 죽음이 걸친 창백한 망토 | 망토 | 창백한 말의 기사 | `assets/items/palehorse_0.png` ✅ |
+| 2 | 귀족의 망토 | 망토 | 뱀파이어 | `assets/items/vampire_1.png` ✅ |
+| 3 | 찢긴 방수 망토 | 망토 | 떠돌이 상인 | `assets/items/ware_raincoat.png` ✅ |
+| 4 | 피로 쓴 서명 | 반지 | 데몬 로드 | `assets/items/demonlord_2.png` ✅ |
+| 5 | 유혹의 반지 | 반지 | 서큐버스 | `assets/items/succubus_0.png` ✅ |
+| 6 | 장례 종 목걸이 | 목걸이 | 보물상자 | `assets/items/chest_necro_bell.png` ✅ |
+| 7 | 성물함 | 목걸이 | 리치 | `assets/items/lich_1.png` ✅ |
+| 8 | 훔친 꿈 | 목걸이 | 서큐버스 | `assets/items/succubus_1.png` ✅ |
 
-## 시트 5-D — 목걸이 · 팔찌 · 특수장비 (7개)
+## 시트 5-D — 목걸이 · 팔찌 · 특수장비 (7개) ✅ 다 자름
 
 저장할 이름: `design/images/sheets/rank05-D.png`
 
@@ -209,15 +209,15 @@ If a name describes a different kind of object than its type, draw the object fr
 
 | 칸 | 장비 | 부위 | 나온 곳 | 잘라서 둘 곳 |
 |---|---|---|---|---|
-| 1 | 번호만 남은 인식표 | 목걸이 | 떠돌이 상인 | `assets/items/ware_tag.png` |
-| 2 | 예고의 고리 | 팔찌 | 밴시 | `assets/items/banshee_1.png` |
-| 3 | 멈춘 손목시계 | 팔찌 | 떠돌이 상인 | `assets/items/ware_watch.png` |
-| 4 | 죽지 않는 성물함 | 특수장비 | 불사의 왕 | `assets/items/lichking_4.png` |
-| 5 | 까마귀가 물어 온 청옥 | 특수장비 | 까마귀 왕 | `assets/items/ravenking_0.png` |
-| 6 | 검은 깃 부적 | 특수장비 | 까마귀 왕 | `assets/items/ravenking_1.png` |
-| 7 | 흡혈귀의 송곳니 | 특수장비 | 뱀파이어 | `assets/items/vampire_4.png` |
+| 1 | 번호만 남은 인식표 | 목걸이 | 떠돌이 상인 | `assets/items/ware_tag.png` ✅ |
+| 2 | 예고의 고리 | 팔찌 | 밴시 | `assets/items/banshee_1.png` ✅ |
+| 3 | 멈춘 손목시계 | 팔찌 | 떠돌이 상인 | `assets/items/ware_watch.png` ✅ |
+| 4 | 죽지 않는 성물함 | 특수장비 | 불사의 왕 | `assets/items/lichking_4.png` ✅ |
+| 5 | 까마귀가 물어 온 청옥 | 특수장비 | 까마귀 왕 | `assets/items/ravenking_0.png` ✅ |
+| 6 | 검은 깃 부적 | 특수장비 | 까마귀 왕 | `assets/items/ravenking_1.png` ✅ |
+| 7 | 흡혈귀의 송곳니 | 특수장비 | 뱀파이어 | `assets/items/vampire_4.png` ✅ |
 
-## 시트 5-E — 무기 · 보조무기 · 투구 · 갑옷 · 장갑 · 신발 (6개)
+## 시트 5-E — 무기 · 보조무기 · 투구 · 갑옷 · 장갑 · 신발 (6개) ✅ 다 자름
 
 저장할 이름: `design/images/sheets/rank05-E.png`
 
@@ -262,12 +262,12 @@ If a name describes a different kind of object than its type, draw the object fr
 
 | 칸 | 장비 | 부위 | 나온 곳 | 잘라서 둘 곳 |
 |---|---|---|---|---|
-| 1 | 전도 합금 창 | 무기 | 헌터백화점 | `assets/items/dept_lance.png` |
-| 2 | 휴대용 역장기 | 보조무기 | 헌터백화점 | `assets/items/dept_field.png` |
-| 3 | 센서 일체형 헬멧 | 투구 | 헌터백화점 | `assets/items/dept_helm5.png` |
-| 4 | 핵 섬유 갑옷 | 갑옷 | 헌터백화점 | `assets/items/dept_vest5.png` |
-| 5 | 외골격 장갑 | 장갑 | 헌터백화점 | `assets/items/dept_glove5.png` |
-| 6 | 추진 보조 부츠 | 신발 | 헌터백화점 | `assets/items/dept_boots5.png` |
+| 1 | 전도 합금 창 | 무기 | 헌터백화점 | `assets/items/dept_lance.png` ✅ |
+| 2 | 휴대용 역장기 | 보조무기 | 헌터백화점 | `assets/items/dept_field.png` ✅ |
+| 3 | 센서 일체형 헬멧 | 투구 | 헌터백화점 | `assets/items/dept_helm5.png` ✅ |
+| 4 | 핵 섬유 갑옷 | 갑옷 | 헌터백화점 | `assets/items/dept_vest5.png` ✅ |
+| 5 | 외골격 장갑 | 장갑 | 헌터백화점 | `assets/items/dept_glove5.png` ✅ |
+| 6 | 추진 보조 부츠 | 신발 | 헌터백화점 | `assets/items/dept_boots5.png` ✅ |
 
 ## 하나씩 뽑기 (시트가 잘 안 될 때)
 

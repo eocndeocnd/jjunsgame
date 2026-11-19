@@ -116,12 +116,12 @@ If a name describes a different kind of object than its type, draw the object fr
 | 8 | 야생의 각반 | 각반 | 엔키두 | `assets/items/enkidu2_1.png` |
 | 9 | 테티스가 잡았던 발목 | 신발 | 아킬레우스 | `assets/items/achilles2_1.png` |
 
-## 시트 13-C — 신발 · 망토 · 반지 · 목걸이 · 팔찌 · 특수장비 (9개)
+## 시트 13-C — 신발 · 망토 · 반지 · 목걸이 · 팔찌 · 특수장비 (8개)
 
 저장할 이름: `design/images/sheets/rank13-C.png`
 
 ```text
-Make ONE square image, 1024x1024: a sprite sheet of 9 separate game item icons in a 3x3 grid.
+Make ONE square image, 1024x1024: a sprite sheet of 8 separate game item icons in a 3x3 grid.
 
 HARD RULES — breaking any of these makes the image unusable:
 1. NO TEXT ANYWHERE. Do not write item names, type names, captions, labels or numbers — not in Korean, not in English.
@@ -137,7 +137,7 @@ BACKGROUND: one flat solid magenta (#FF00FF) everywhere. No gradient, no checker
 Do not use magenta or hot pink on the items themselves.
 
 LAYOUT: an invisible 3 x 3 grid of equal square cells (do not draw it). Exactly one item per cell, centered, filling about 70% of its cell,
-never touching the cell edges. Fill the cells left to right, top to bottom, in the order listed.
+never touching the cell edges. Fill the cells left to right, top to bottom, in the order listed. Leave the last 1 cell empty (plain magenta).
 
 TIER LOOK: top-tier gear — divine or otherworldly: radiant, strange materials, a strong glow, elaborate but still one clear silhouette.
 
@@ -159,7 +159,6 @@ If a name describes a different kind of object than its type, draw the object fr
 6. BRACELET / BANGLE / WRISTWATCH 「흐룬팅의 고리」 — loot from the monster 「베오울프」. more refined and menacing; mood: spiked, thorny.
 7. BRACELET / BANGLE / WRISTWATCH 「뒤틀림의 팔찌」 — loot from the monster 「쿠 훌린」. plain look; mood: heavy, blunt, massive.
 8. SMALL PRECIOUS OBJECT (gem or relic) 「네메아를 꺾은 주먹」 — loot from the monster 「헤라클레스」. a small ancient object; the most ornate and imposing piece of this set.
-9. SMALL PRECIOUS OBJECT (gem or relic) 「파프니르의 피」 — loot from the monster 「지그프리트」. a small shining stone or crystal; plain look.
 ```
 
 | 칸 | 장비 | 부위 | 나온 곳 | 잘라서 둘 곳 |
@@ -172,7 +171,6 @@ If a name describes a different kind of object than its type, draw the object fr
 | 6 | 흐룬팅의 고리 | 팔찌 | 베오울프 | `assets/items/beowulf2_1.png` |
 | 7 | 뒤틀림의 팔찌 | 팔찌 | 쿠 훌린 | `assets/items/cuchulainn2_1.png` |
 | 8 | 네메아를 꺾은 주먹 | 특수장비 | 헤라클레스 | `assets/items/heracles2_2.png` |
-| 9 | 파프니르의 피 | 특수장비 | 지그프리트 | `assets/items/siegfried2_1.png` |
 
 ## 하나씩 뽑기 (시트가 잘 안 될 때)
 

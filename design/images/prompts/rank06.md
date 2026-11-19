@@ -2,7 +2,7 @@
 
 > 자동으로 만든 파일입니다 (`node tools/cli.js images`). 손으로 고치지 마세요. 쓰는 법은 같은 폴더의 `README.md`.
 
-## 시트 6-A — 무기 · 보조무기 · 투구 · 갑옷 (7개)
+## 시트 6-A — 무기 · 보조무기 · 투구 · 갑옷 (7개) ✅ 다 자름
 
 저장할 이름: `design/images/sheets/rank06-A.png`
 
@@ -46,15 +46,15 @@ If a name describes a different kind of object than its type, draw the object fr
 
 | 칸 | 장비 | 부위 | 나온 곳 | 잘라서 둘 곳 |
 |---|---|---|---|---|
-| 1 | 심연의 대검 | 무기 | 아크데몬 | `assets/items/archdemon_0.png` |
-| 2 | 마왕의 검 | 무기 | 마왕 | `assets/items/demonking_0.png` |
-| 3 | 격을 삼키는 검 | 무기 | 관측자 | `assets/items/observer_0.png` |
-| 4 | 손잡이만 감긴 쇠파이프 | 무기 | 떠돌이 상인 | `assets/items/ware_bat.png` |
-| 5 | 졸음의 방패 | 보조무기 | 칠죄종 · 나태 | `assets/items/sinsloth_1.png` |
-| 6 | 오만의 관 | 투구 | 칠죄종 · 오만 | `assets/items/sinpride_0.png` |
-| 7 | 마왕의 갑주 | 갑옷 | 마왕 | `assets/items/demonking_1.png` |
+| 1 | 심연의 대검 | 무기 | 아크데몬 | `assets/items/archdemon_0.png` ✅ |
+| 2 | 마왕의 검 | 무기 | 마왕 | `assets/items/demonking_0.png` ✅ |
+| 3 | 격을 삼키는 검 | 무기 | 관측자 | `assets/items/observer_0.png` ✅ |
+| 4 | 손잡이만 감긴 쇠파이프 | 무기 | 떠돌이 상인 | `assets/items/ware_bat.png` ✅ |
+| 5 | 졸음의 방패 | 보조무기 | 칠죄종 · 나태 | `assets/items/sinsloth_1.png` ✅ |
+| 6 | 오만의 관 | 투구 | 칠죄종 · 오만 | `assets/items/sinpride_0.png` ✅ |
+| 7 | 마왕의 갑주 | 갑옷 | 마왕 | `assets/items/demonking_1.png` ✅ |
 
-## 시트 6-B — 갑옷 · 어깨 · 장갑 · 허리띠 · 각반 · 신발 · 망토 (7개)
+## 시트 6-B — 갑옷 · 어깨 · 장갑 · 허리띠 · 각반 · 신발 · 망토 (7개) ✅ 다 자름
 
 저장할 이름: `design/images/sheets/rank06-B.png`
 
@@ -101,15 +101,15 @@ If a name describes a different kind of object than its type, draw the object fr
 
 | 칸 | 장비 | 부위 | 나온 곳 | 잘라서 둘 곳 |
 |---|---|---|---|---|
-| 1 | 고룡의 비늘 | 갑옷 | 고대룡 | `assets/items/elderdragon_1.png` |
-| 2 | 색 바랜 목도리 | 어깨 | 떠돌이 상인 | `assets/items/ware_scarf.png` |
-| 3 | 훔쳐 낀 장갑 | 장갑 | 칠죄종 · 질투 | `assets/items/sinenvy_0.png` |
-| 4 | 부푼 허리띠 | 허리띠 | 칠죄종 · 폭식 | `assets/items/singluttony_0.png` |
-| 5 | 무릎보호대 | 각반 | 떠돌이 상인 | `assets/items/ware_greaves.png` |
-| 6 | 바닥 없는 신 | 신발 | 심연의 촉수 | `assets/items/abysstentacle_1.png` |
-| 7 | 비단 망토 | 망토 | 칠죄종 · 색욕 | `assets/items/sinlust_0.png` |
+| 1 | 고룡의 비늘 | 갑옷 | 고대룡 | `assets/items/elderdragon_1.png` ✅ |
+| 2 | 색 바랜 목도리 | 어깨 | 떠돌이 상인 | `assets/items/ware_scarf.png` ✅ |
+| 3 | 훔쳐 낀 장갑 | 장갑 | 칠죄종 · 질투 | `assets/items/sinenvy_0.png` ✅ |
+| 4 | 부푼 허리띠 | 허리띠 | 칠죄종 · 폭식 | `assets/items/singluttony_0.png` ✅ |
+| 5 | 무릎보호대 | 각반 | 떠돌이 상인 | `assets/items/ware_greaves.png` ✅ |
+| 6 | 바닥 없는 신 | 신발 | 심연의 촉수 | `assets/items/abysstentacle_1.png` ✅ |
+| 7 | 비단 망토 | 망토 | 칠죄종 · 색욕 | `assets/items/sinlust_0.png` ✅ |
 
-## 시트 6-C — 반지 · 목걸이 · 팔찌 · 특수장비 (7개)
+## 시트 6-C — 반지 · 목걸이 · 팔찌 · 특수장비 (7개) ✅ 다 자름
 
 저장할 이름: `design/images/sheets/rank06-C.png`
 
@@ -153,13 +153,13 @@ If a name describes a different kind of object than its type, draw the object fr
 
 | 칸 | 장비 | 부위 | 나온 곳 | 잘라서 둘 곳 |
 |---|---|---|---|---|
-| 1 | 왕좌 아래 떨어진 반지 | 반지 | 보물상자 | `assets/items/chest_abyss_ring.png` |
-| 2 | 탐욕의 반지 | 반지 | 칠죄종 · 탐욕 | `assets/items/singreed_0.png` |
-| 3 | 안쪽에 날짜가 새겨진 반지 | 반지 | 떠돌이 상인 | `assets/items/ware_ring.png` |
-| 4 | 마왕의 관 | 목걸이 | 마왕 | `assets/items/demonking_2.png` |
-| 5 | 세계수의 파편 | 목걸이 | 세계수를 먹는 벌레 | `assets/items/worldworm_2.png` |
-| 6 | 갉는 팔찌 | 팔찌 | 세계수를 먹는 벌레 | `assets/items/worldworm_3.png` |
-| 7 | 고룡의 심장석 | 특수장비 | 고대룡 | `assets/items/elderdragon_4.png` |
+| 1 | 왕좌 아래 떨어진 반지 | 반지 | 보물상자 | `assets/items/chest_abyss_ring.png` ✅ |
+| 2 | 탐욕의 반지 | 반지 | 칠죄종 · 탐욕 | `assets/items/singreed_0.png` ✅ |
+| 3 | 안쪽에 날짜가 새겨진 반지 | 반지 | 떠돌이 상인 | `assets/items/ware_ring.png` ✅ |
+| 4 | 마왕의 관 | 목걸이 | 마왕 | `assets/items/demonking_2.png` ✅ |
+| 5 | 세계수의 파편 | 목걸이 | 세계수를 먹는 벌레 | `assets/items/worldworm_2.png` ✅ |
+| 6 | 갉는 팔찌 | 팔찌 | 세계수를 먹는 벌레 | `assets/items/worldworm_3.png` ✅ |
+| 7 | 고룡의 심장석 | 특수장비 | 고대룡 | `assets/items/elderdragon_4.png` ✅ |
 
 ## 시트 6-D — 무기 · 보조무기 · 투구 · 갑옷 · 장갑 · 신발 (6개)
 

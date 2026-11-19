@@ -95,7 +95,7 @@ If a name describes a different kind of object than its type, draw the object fr
 4. BELT / SASH 「방울뱀 허리띠」 — loot from the monster 「이그」. plain look; mood: spiked, thorny.
 5. LEG ARMOR 「호수 바닥의 각반」 — loot from the monster 「글라아키」. plain look; mood: modest, well used.
 6. BOOTS / SHOES 「눈을 밟지 않는 신」 — loot from the monster 「이타콰」. plain look; mood: light, slim, built for speed.
-7. CLOAK / CAPE 「누더기 황의」 — loot from the monster 「하스터」. more refined and menacing; mood: spiked, thorny.
+7. CLOAK / CAPE 「바람의 망토」 — loot from the monster 「이타콰」. plain look; mood: light, slim, built for speed.
 ```
 
 | 칸 | 장비 | 부위 | 나온 곳 | 잘라서 둘 곳 |
@@ -106,14 +106,14 @@ If a name describes a different kind of object than its type, draw the object fr
 | 4 | 방울뱀 허리띠 | 허리띠 | 이그 | `assets/items/yig2_0.png` |
 | 5 | 호수 바닥의 각반 | 각반 | 글라아키 | `assets/items/glaaki2_1.png` |
 | 6 | 눈을 밟지 않는 신 | 신발 | 이타콰 | `assets/items/ithaqua2_0.png` |
-| 7 | 누더기 황의 | 망토 | 하스터 | `assets/items/hastur2_0.png` |
+| 7 | 바람의 망토 | 망토 | 이타콰 | `assets/items/ithaqua2_1.png` |
 
-## 시트 19-C — 망토 · 반지 · 목걸이 · 팔찌 · 특수장비 (7개)
+## 시트 19-C — 반지 · 목걸이 · 팔찌 · 특수장비 (6개)
 
 저장할 이름: `design/images/sheets/rank19-C.png`
 
 ```text
-Make ONE square image, 1024x1024: a sprite sheet of 7 separate game item icons in a 3x3 grid.
+Make ONE square image, 1024x1024: a sprite sheet of 6 separate game item icons in a 3x3 grid.
 
 HARD RULES — breaking any of these makes the image unusable:
 1. NO TEXT ANYWHERE. Do not write item names, type names, captions, labels or numbers — not in Korean, not in English.
@@ -129,12 +129,11 @@ BACKGROUND: one flat solid magenta (#FF00FF) everywhere. No gradient, no checker
 Do not use magenta or hot pink on the items themselves.
 
 LAYOUT: an invisible 3 x 3 grid of equal square cells (do not draw it). Exactly one item per cell, centered, filling about 70% of its cell,
-never touching the cell edges. Fill the cells left to right, top to bottom, in the order listed. Leave the last 2 cells empty (plain magenta).
+never touching the cell edges. Fill the cells left to right, top to bottom, in the order listed. Leave the last 3 cells empty (plain magenta).
 
 TIER LOOK: top-tier gear — divine or otherworldly: radiant, strange materials, a strong glow, elaborate but still one clear silhouette.
 
 FRAMING BY TYPE:
-- CLOAK / CAPE: front view, hanging open, empty (no body inside)
 - RING: single ring, 3/4 view so the band is visible
 - NECKLACE / AMULET: chain in a loop, pendant at the bottom center
 - BRACELET / BANGLE / WRISTWATCH: single band, 3/4 view
@@ -142,24 +141,22 @@ FRAMING BY TYPE:
 
 ITEMS — the names below are for you to read, NOT to write. Draw what each name describes. Never put any of these words in the image.
 If a name describes a different kind of object than its type, draw the object from the name.
-1. CLOAK / CAPE 「바람의 망토」 — loot from the monster 「이타콰」. plain look; mood: light, slim, built for speed.
-2. RING 「저주의 고리」 — loot from the monster 「이그」. plain look; mood: spiked, thorny.
-3. NECKLACE / AMULET 「거미줄에 걸린 꿈」 — loot from the monster 「아틀락-나챠」. plain look; mood: sturdy, protective.
-4. NECKLACE / AMULET 「가라앉은 도시의 산호 목걸이」 — old treasure that was buried in a chest for a long time. plain look; mood: pointed, piercing.
-5. BRACELET / BANGLE / WRISTWATCH 「상아 팔찌」 — loot from the monster 「차우그나르 파우근」. plain look; mood: sinister, a touch of blood red.
-6. BRACELET / BANGLE / WRISTWATCH 「잠의 팔찌」 — loot from the monster 「츠아토구아」. more refined and menacing; mood: reinforced, built to last.
-7. SMALL PRECIOUS OBJECT (gem or relic) 「잠든 신의 우상」 — loot from the monster 「크툴루」. a small ancient object; the most ornate and imposing piece of this set.
+1. RING 「저주의 고리」 — loot from the monster 「이그」. plain look; mood: spiked, thorny.
+2. NECKLACE / AMULET 「거미줄에 걸린 꿈」 — loot from the monster 「아틀락-나챠」. plain look; mood: sturdy, protective.
+3. NECKLACE / AMULET 「가라앉은 도시의 산호 목걸이」 — old treasure that was buried in a chest for a long time. plain look; mood: pointed, piercing.
+4. BRACELET / BANGLE / WRISTWATCH 「상아 팔찌」 — loot from the monster 「차우그나르 파우근」. plain look; mood: sinister, a touch of blood red.
+5. BRACELET / BANGLE / WRISTWATCH 「잠의 팔찌」 — loot from the monster 「츠아토구아」. more refined and menacing; mood: reinforced, built to last.
+6. SMALL PRECIOUS OBJECT (gem or relic) 「잠든 신의 우상」 — loot from the monster 「크툴루」. a small ancient object; the most ornate and imposing piece of this set.
 ```
 
 | 칸 | 장비 | 부위 | 나온 곳 | 잘라서 둘 곳 |
 |---|---|---|---|---|
-| 1 | 바람의 망토 | 망토 | 이타콰 | `assets/items/ithaqua2_1.png` |
-| 2 | 저주의 고리 | 반지 | 이그 | `assets/items/yig2_1.png` |
-| 3 | 거미줄에 걸린 꿈 | 목걸이 | 아틀락-나챠 | `assets/items/atlachnacha_0.png` |
-| 4 | 가라앉은 도시의 산호 목걸이 | 목걸이 | 보물상자 | `assets/items/chest_rlyeh_necklace.png` |
-| 5 | 상아 팔찌 | 팔찌 | 차우그나르 파우근 | `assets/items/chaugnar2_1.png` |
-| 6 | 잠의 팔찌 | 팔찌 | 츠아토구아 | `assets/items/tsathoggua2_0.png` |
-| 7 | 잠든 신의 우상 | 특수장비 | 크툴루 | `assets/items/cthulhu2_2.png` |
+| 1 | 저주의 고리 | 반지 | 이그 | `assets/items/yig2_1.png` |
+| 2 | 거미줄에 걸린 꿈 | 목걸이 | 아틀락-나챠 | `assets/items/atlachnacha_0.png` |
+| 3 | 가라앉은 도시의 산호 목걸이 | 목걸이 | 보물상자 | `assets/items/chest_rlyeh_necklace.png` |
+| 4 | 상아 팔찌 | 팔찌 | 차우그나르 파우근 | `assets/items/chaugnar2_1.png` |
+| 5 | 잠의 팔찌 | 팔찌 | 츠아토구아 | `assets/items/tsathoggua2_0.png` |
+| 6 | 잠든 신의 우상 | 특수장비 | 크툴루 | `assets/items/cthulhu2_2.png` |
 
 ## 하나씩 뽑기 (시트가 잘 안 될 때)
 
