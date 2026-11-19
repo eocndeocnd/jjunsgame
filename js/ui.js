@@ -793,6 +793,9 @@ function renderJourney() {
   document.body.classList.toggle('meeting', !fighting && !run.lastResult && !run.over && !!run.encounter);
   if (fighting) {
     stage = battleCard(battle);
+  } else if (run.lastResult && run.lastResult.raid) {
+    stage = raidResultCard(run.lastResult);
+    if (!run.lastResult.sounded) { run.lastResult.sounded = true; Sound.play(run.lastResult.win ? 'rankUp' : 'retreat'); }
   } else if (run.lastResult && run.lastResult.gatein) {
     stage = foundResultCard(run.lastResult);
     if (!run.lastResult.sounded) { run.lastResult.sounded = true; Sound.play(run.lastResult.win ? 'rankUp' : 'retreat'); }
@@ -1886,6 +1889,15 @@ function onMapEvents(evs) {
     } else if (e.type === 'shop' && e.npc.shop === 'bed') {   // 우리 집 침대 — 혼잣말 한마디 (분위기만)
       if (!isTalkOpen()) playTalk([{ who: 'me', text: homeLine() }], null, { end: '일어난다' });
       changed = true;
+    } else if (e.type === 'shop' && e.npc.shop === 'chief') {   // 협회장실 — 협회장 (SS급 이야기)
+      chiefTalk();
+      changed = true;
+    } else if (e.type === 'shop' && /^(chiefS|raidS|raidD)\d$/.test(e.npc.shop)) {   // 4대 길드 S급 — 한마디
+      sHunterLine(e.npc.shop);
+      changed = true;
+    } else if (e.type === 'shop' && e.npc.shop === 'raidboss') {   // 광장 게이트 안 — 보스
+      raidBossTalk();
+      changed = true;
     } else if (e.type === 'shop' && e.npc.shop === 'gateboss') {   // 게이트 안 — 보스
       foundBossTalk();
       changed = true;
@@ -1925,6 +1937,9 @@ function onMapEvents(evs) {
         if (home2ForSale()) { if (!isShopOpen()) { Sound.play('encounter'); openShop('home2'); } }
         else pushLog('info', '가림막 친 빈터다. 「주거 단지 — 공사 예정」.');
       }
+      changed = true;
+    } else if (e.type === 'closed' && e.port.unlock === 'chief') {   // 협회장실 — 부를 때만 열림
+      if (Date.now() - closedSaidAt > 2000) { closedSaidAt = Date.now(); pushLog('info', State.meta.ssDone ? '협회장실 — 문이 닫혀 있다. 안에서 전화 소리가 끊이지 않는다.' : '협회장실 — 「관계자 외 출입 금지」.'); }
       changed = true;
     } else if (e.type === 'closed' && e.port.unlock === 'home1') {   // 옛 원룸 — 이사 나감
       if (Date.now() - closedSaidAt > 2000) { closedSaidAt = Date.now(); pushLog('info', '이사 나온 원룸 — 문에 새 세입자의 이름표가 붙어 있다.'); }
@@ -1974,6 +1989,9 @@ function mapMarks() {
     }
     if (!deskHere(n.shop)) continue;
     if (n.shop === 'gateboss') { const g = gateInNow(), f = findFoe(g); out.push({ x: n.x, y: n.y, icon: f.icon, label: f.name }); continue; }
+    if (n.shop === 'raidboss') { const f = raidFoe(); out.push({ x: n.x, y: n.y, icon: f.icon, label: f.name }); continue; }
+    const sm = /^(chiefS|raidS|raidD)(\d)$/.exec(n.shop || '');   // 4대 길드 S급 — 협회장실 · 위기 게이트 (밀려나면 벽 쪽 자리로)
+    if (sm) { const B = BIG_GUILDS[+sm[2]]; out.push({ x: n.x, y: n.y, icon: B.icon, label: sm[1] === 'raidD' ? `${B.name} · 밀려남` : `${B.name} S급` }); continue; }
     if (n.shop === 'examiner') {
       const f = examinerNow();
       if (sHunterComing()) {   // S급 — 4대 길드의 헌터가 아직 안 옴: 감독의 말 → 문에서 걸어 들어옴
@@ -2083,10 +2101,10 @@ function wireJourney() {
   });   // 소리는 전투 화면이 한 줄씩 냅니다
   on('retreatBtn',   () => { if (!retreat()) return; if (mapView) mapView.resolve('retreat'); Sound.play('retreat'); render(); });
   on('continueBtn',  () => {
-    const out = State.run && State.run.lastResult && State.run.lastResult.gatein;   // 게이트 보스와의 결과 — 닫으면 협회 로비로
+    const lr = State.run && State.run.lastResult, out = lr && (lr.gatein || lr.raid);   // 게이트 보스 · 위기 게이트와의 결과 — 닫으면 협회 로비 · 광장으로
     dismissResult(); render();
     const port = out && mapView && mapView.world && mapView.world.map.ports.find(p => p.name === 'out');
-    if (port && State.run.mapId === 'gatein') fadeThrough(() => goThroughPort(port));
+    if (port && (State.run.mapId === 'gatein' || State.run.mapId === 'raid')) fadeThrough(() => goThroughPort(port));
   });
   on('toAllocBtn',   openAlloc);       // 결과는 그대로 두고 서랍의 분배판만
   // 결과의 「낀다」 — 새로 얻은 물건을 그 자리에서 끼고, 그 물건의 NEW 표시도 끕니다
@@ -2766,7 +2784,7 @@ function clerkLine(kind) {
     const any = Object.keys(State.meta.mats || {}).some(id => matsOf(id) > 0), made = ITEMS.some(i => i.craft && owns(i.id));
     return pick(!any ? MAT_TALK.none : made ? MAT_TALK.again : MAT_TALK.first);
   }
-  if (kind === 'assoc') return pick(!hunterGrade() ? ASSOC_TALK.none : canTakeTest() ? ASSOC_TALK.again : ASSOC_TALK.done);
+  if (kind === 'assoc') return pick(!hunterGrade() ? ASSOC_TALK.none : hunterGrade() > HUNTER_GRADES.length ? ASSOC_TALK.top : canTakeTest() ? ASSOC_TALK.again : ASSOC_TALK.done);
   if (kind === 'hire') return pick(HIRE_TALK);
   if (kind === 'guild') return pick(guildOwned() ? GUILD_TALK.own : GUILD_TALK.sale);
   if (kind === 'gate') return pick(gatesDoneCount() ? GATE_TALK.back : GATE_TALK.idle);
@@ -2875,11 +2893,12 @@ function renderShop() {
 // 맨 위는 핵 — 모든 몬스터가 남기는 팔 것 (격마다 한 가지). 가진 격만 한 줄씩, 「모두 판다」 한 번으로 다 팝니다. 만드는 데는 쓰지 않습니다.
 // ---------- 헌터 협회 · 등록 창구 (상점 창을 같이 씀 — shopKind 'assoc') ----------
 // 지금의 나(도시의 Lv.1 그대로)로 F 시험관부터 차례로 싸워, 이긴 데까지가 등급. 회차에 한 번 · 내려가지 않음 (game.js 의 takeHunterTest)
-const CLERK_DESKS = { examiner: { name: '시험관', icon: '🧑‍🏫' }, assoc: { name: '등록 창구', icon: '🧑‍💼' }, ally: { name: '???', icon: ALLIES.hayun.icon }, ally2: { name: '???', icon: ALLIES.danwoo.icon }, bm: { name: '???', icon: '🫥' }, ranking: { name: '길드 순위', icon: '📊' }, gatefind: { name: '게이트 찾기', icon: '🧭' }, trainer: { name: '교관', icon: '🏋️' }, hire: { name: '동료 모집', icon: '👩‍💼' }, gate: { name: '게이트 창구', icon: '🧑‍✈️' }, guild: { name: '길드 장부', icon: '📒' }, bed: { name: '침대', icon: '💤' }, bed2: { name: '침대', icon: '💤' } };   // 백화점 매장이 아닌 창구 — 지도 위 이름표
+const CLERK_DESKS = { chief: { name: '협회장', icon: '🧓' }, examiner: { name: '시험관', icon: '🧑‍🏫' }, assoc: { name: '등록 창구', icon: '🧑‍💼' }, ally: { name: '???', icon: ALLIES.hayun.icon }, ally2: { name: '???', icon: ALLIES.danwoo.icon }, bm: { name: '???', icon: '🫥' }, ranking: { name: '길드 순위', icon: '📊' }, gatefind: { name: '게이트 찾기', icon: '🧭' }, trainer: { name: '교관', icon: '🏋️' }, hire: { name: '동료 모집', icon: '👩‍💼' }, gate: { name: '게이트 창구', icon: '🧑‍✈️' }, guild: { name: '길드 장부', icon: '📒' }, bed: { name: '침대', icon: '💤' }, bed2: { name: '침대', icon: '💤' } };   // 백화점 매장이 아닌 창구 — 지도 위 이름표
 const ASSOC_TALK = {
   none: ['「신규 등록이세요? 시험은 간단해요. 시험관과 한 번씩 붙어 보시면 돼요. F급부터요.」', '「등록증 없이 게이트 근처를 돌아다니시면 곤란해요. …시험 보시게요?」'],
   again: ['「재심사요? 좋아요. 지난번보다 나아지셨는지 볼까요.」', '「등급은 한 번 받으면 안 내려가요. 부담 없이 보세요.」'],
-  done: ['「오늘 심사는 끝났어요. 다음에 다시 오세요. …다음 게이트 다녀오시고요.」']
+  done: ['「오늘 심사는 끝났어요. 다음에 다시 오세요. …다음 게이트 다녀오시고요.」'],
+  top: ['「SS급 헌터님…! 심사요? 저희 시험관으론 더 볼 게 없어요. 사인이라도…」']
 };
 // 등록 창구 — 단추 하나 (사용자 결정 2026-11-19): 누르면 시험장으로 들어가 시험관과 한 명씩 싸움 (game.js 의 startHunterTest · fightExaminer)
 function renderAssoc() {
@@ -2887,7 +2906,7 @@ function renderAssoc() {
   $('shopGold').innerHTML = hunterGrade() ? `🪪 ${gradeName()}급 헌터` : '🪪 미등록';
   const can = canTakeTest();
   $('shopBody').innerHTML = `<div class="shop-say">${CLERK_DESKS.assoc.icon} ${shopSay}</div>
-    <div class="assoc-actions"><button class="btn primary" id="assocTestBtn" ${can ? '' : 'disabled'}>${can ? (hunterGrade() ? '재심사를 받는다' : '시험을 본다') : '이번 회차엔 이미 봤다'}</button></div>`;
+    <div class="assoc-actions"><button class="btn primary" id="assocTestBtn" ${can ? '' : 'disabled'}>${can ? (hunterGrade() ? '재심사를 받는다' : '시험을 본다') : hunterGrade() > HUNTER_GRADES.length ? 'SS급 — 시험관으로 볼 등급 위' : '이번 회차엔 이미 봤다'}</button></div>`;
   const b = $('assocTestBtn');
   if (b) b.addEventListener('click', enterArena);
 }
@@ -2940,6 +2959,76 @@ const S_HUNTER = [
   { hi: ['「…달 길드. 밤에만 움직이는데, 협회 부탁이라 왔어요.」', '「조용히 끝내요. 아프지 않게.」'],
     win: '「…졌네요. S급, 축하해요. 밤이 길어지겠어요.」', lose: '「다음엔 조금 더 오래 버텨 봐요.」' }
 ];
+// ---------- SS급 — 협회장의 부름 · 광장 위기 게이트 (사용자 결정 2026-11-19 · game.js 의 acceptRaid · fightRaid) ----------
+// 협회장실: 협회장 + 4대 길드 S급 넷 → 부탁을 받으면 광장 한가운데 위기 게이트 앞으로 → 안에서 S급 넷이 차례로 밀림 → 나 혼자 보스와. 대사는 제안
+const CHIEF_TALK = [
+  { who: 'chief', text: '「자네가 그 S급 신입인가. 앉으라고 하고 싶지만… 앉을 시간이 없네.」' },
+  { who: 'chief', text: '「한 시간 전, 광장 한가운데에 게이트가 열렸네. 측정기가 끝까지 올라가서 멈췄어. <b>등급을 매길 수가 없는 게이트</b>야.」' },
+  { who: 'chief', text: '「이게 터지면 도시 하나로 안 끝나. <b>나라가 위기</b>일세. 그래서 4대 길드의 S급을 모두 불렀지.」' },
+  { who: 'bg2', text: '「S급이 넷이면 충분하잖아요, 협회장님. 신입까지 왜 부르셨어요?」' },
+  { who: 'chief', text: '「…자네 기록을 봤네. 측정기보다 빨리 오르는 사람은 처음이라. 함께 가 주게.」' },
+  { who: 'chief', text: '「협회 차로 광장 앞까지 모시지. 부탁하네.」' }
+];
+const CHIEF_AGAIN = ['「오늘은 쉬게. 게이트는 협회가 어떻게든 막아 두겠네. …다음에 다시 부탁하지.」'];
+// 협회장실 · 위기 게이트의 S급 — 닿으면 한마디
+const S_WAIT = [
+  { wait: '「홍염이다. 협회장이 신입을 왜 부르는지 모르겠네. 발목만 잡지 마.」', down: '「…쿨럭. 저게 뭐야. 불이 안 붙어.」' },
+  { wait: '(포권한다.) 「청해입니다. 함께 가게 되어 영광입니다.」', down: '「…검이 들어가지 않습니다. 조심하십시오.」' },
+  { wait: '「크라운. 이번 건 상금이 크다더라. 나눠 먹을 생각은 마.」', down: '「…말도 안 돼. 내 방패가 종이처럼…」' },
+  { wait: '「…달 길드. 조용히 끝나면 좋겠네요.」', down: '「…그림자가 찢어졌어요. 이런 건 처음이에요.」' }
+];
+function sHunterLine(shop) {
+  if (isTalkOpen()) return;
+  const i = +shop.slice(-1), down = shop.startsWith('raidD');
+  playTalk([{ who: `bg${i}`, text: S_WAIT[i][down ? 'down' : 'wait'] }], null, { end: '알겠다' });
+}
+function chiefTalk() {
+  if (isTalkOpen() || !ssOpen()) return;
+  if (!canRaid()) { playTalk([{ who: 'chief', text: CHIEF_AGAIN[0] }], null, { end: '알겠다' }); return; }
+  playTalk(CHIEF_TALK, () => {
+    if (!acceptRaid()) return;
+    Sound.play('encounter');
+    fadeThrough(() => goThroughPort({ to: 'city.crisis' }));
+    setTimeout(() => playTalk([{ who: 'me', text: '(광장 한가운데, 하늘까지 닿을 듯한 게이트가 입을 벌리고 있다. S급 넷이 먼저 안으로 들어간다.)' }], null, { end: '따라 들어간다' }), FADE_MS * 2 + 60);
+  }, { end: '간다' });
+}
+// 보스 앞 — S급 넷이 차례로 덤볐다가 밀려남(대사가 한 줄씩 raidKnock) → 맞선다
+const RAID_TALK = [
+  { who: 'raidboss', text: '(게이트 안쪽, 거대한 것이 몸을 일으킨다. 공기가 짓눌린다.)' },
+  { who: 'bg0', text: '「홍염이 먼저 간다! 다 태워 주지!」' },
+  { who: 'me', text: () => { raidKnock(1); return '(불길이 놈의 비늘에 닿자마자 꺼진다. 홍염의 S급이 벽까지 튕겨 나갔다.)'; } },
+  { who: 'bg1', text: '(포권도 없이 몸을 날린다.) 「청해의 일검 —」' },
+  { who: 'me', text: () => { raidKnock(2); return '(검이 부러지는 소리. 청해의 S급이 무릎을 꿇은 채 밀려난다.)'; } },
+  { who: 'bg2', text: '「비켜. 크라운이 끝낸다 — 협회장님, 이거 상금 두 배예요.」' },
+  { who: 'me', text: () => { raidKnock(3); return '(금빛 방패가 한 번에 찌그러졌다. 크라운의 S급이 바닥을 구른다.)'; } },
+  { who: 'bg3', text: '「…그림자로 묶을게요. 그동안 —」' },
+  { who: 'me', text: () => { raidKnock(4); return '(그림자가 찢어진다. 달의 S급까지 쓰러졌다.)'; } },
+  { who: 'bg0', text: '「…야, 신입. 도망쳐. 이건 S급이 상대할 게 아니야.」' },
+  { who: 'me', text: '(…이상하게, 무섭지 않다.)' }
+];
+function raidBossTalk() {
+  if (!raidNow() || isTalkOpen() || State.run.lastResult) return;
+  playTalk(RAID_TALK, () => {
+    const from = logSeq;
+    const r = fightRaid();
+    if (!r) return;
+    startBattle(r, from);
+    render();
+  }, { end: '맞선다' });
+}
+// 위기 게이트의 결과 — 이기면 한국 최초 SS급 (경험치 · 전리품 없음)
+const RAID_WIN_SAY = ['「…불이 안 붙던 놈을, 혼자?」', '(포권한다. 이번엔 깊게.) 「…경의를 표합니다.」', '「…협회장님, 상금 얘기는 없던 걸로 해요.」', '「…밤보다 조용하게 끝났네요.」'];
+function raidResultCard(r) {
+  const say = r.win ? RAID_WIN_SAY.map((t, i) => `<div class="exam-say">${BIG_GUILDS[i].icon} ${t}</div>`).join('') : '';
+  const end = r.win ? '<b>한국 최초 SS급 헌터</b> — 등급이 올랐다 <b>S급 → SS급</b>' : '물러났다 — S급들을 부축해 게이트를 나왔다. 협회가 게이트를 막아 둔다 · 다음 회차에 협회장실에서 다시';
+  return `
+    <div class="result ${r.win ? 'win' : 'lose'} exam-result">
+      <div class="res-head">${r.win ? 'SS급 탄생' : '후퇴'}</div>
+      <div class="res-foe"><span class="res-icon">${r.enemy.icon}</span>${r.enemy.name}<span class="res-turns">${r.turns}턴</span></div>
+      <div class="res-lines">${say}<div class="exam-end ${r.win ? 'up' : 'down'}">${end}</div></div>
+      <div class="res-actions"><button id="continueBtn" class="btn primary thumb">게이트를 나선다${KEY_HINT}</button></div>
+    </div>`;
+}
 const S_WALK_MS = 2400;                // 문에서 시험관 자리까지 걸어 들어오는 시간
 let sEntrance = null;                  // 들어오는 중 — { t0 } (t0 0 = 아직 감독의 말)
 // S급 차례가 되면 지도가 부름 (mapMarks — 결과 창을 닫은 뒤 · 불러온 뒤에도 다시 이어짐)
@@ -3968,7 +4057,7 @@ function pxIcon(name) {
 function heroName() { return State.meta.heroName || '나'; }
 
 const TALK_WHO = { me: () => heroName(), guide: () => '???', nameless: () => '무명의 화신', stranger: () => '???', ally: () => ALLIES.hayun.name, stranger2: () => '???', ally2: () => ALLIES.danwoo.name,
-                   bg0: () => `${BIG_GUILDS[0].name} 길드`, bg1: () => `${BIG_GUILDS[1].name} 길드`, bg2: () => `${BIG_GUILDS[2].name} 길드`, bg3: () => `${BIG_GUILDS[3].name} 길드`, desk: () => '협회 직원', gateboss: () => { const g = gateInNow(); return g ? findFoe(g).name : '게이트 보스'; },
+                   bg0: () => `${BIG_GUILDS[0].name} 길드`, bg1: () => `${BIG_GUILDS[1].name} 길드`, bg2: () => `${BIG_GUILDS[2].name} 길드`, bg3: () => `${BIG_GUILDS[3].name} 길드`, desk: () => '협회 직원', chief: () => '헌터 협회장', raidboss: () => raidFoe().name, gateboss: () => { const g = gateInNow(); return g ? findFoe(g).name : '게이트 보스'; },
                    proctor: () => '시험 감독', examiner: () => (examinerNow() || { name: '시험관' }).name };
 let talkScript = [], talkIndex = 0, talkDone = null, talkOpts = {};
 function isTalkOpen() { const t = $('talk'); return !!t && !t.classList.contains('hidden'); }
@@ -3982,7 +4071,7 @@ function renderTalk() {
   const line = talkScript[talkIndex], last = talkIndex === talkScript.length - 1, ask = line.ask === 'name' || line.ask === 'guild';
   $('talk').dataset.who = line.who;
   $('talkWho').textContent = TALK_WHO[line.who]();
-  $('talkFace').innerHTML = line.who === 'guide' ? guideEye('bob') : line.who === 'me' ? heroSprite() : line.who === 'stranger' || line.who === 'ally' ? allySprite('hayun') : line.who === 'stranger2' || line.who === 'ally2' ? allySprite('danwoo') : line.who === 'examiner' ? `<span class="ally-sprite">${(examinerNow() || {}).icon || '🧑‍🏫'}</span>` : line.who === 'gateboss' ? `<span class="ally-sprite">${(gateInNow() && findFoe(gateInNow()).icon) || '👹'}</span>` : line.who === 'proctor' || line.who === 'desk' ? `<span class="ally-sprite">${CLERK_DESKS.assoc.icon}</span>` : /^bg\d$/.test(line.who) ? `<span class="ally-sprite">${BIG_GUILDS[+line.who.slice(2)].icon}</span>` : '';
+  $('talkFace').innerHTML = line.who === 'guide' ? guideEye('bob') : line.who === 'me' ? heroSprite() : line.who === 'stranger' || line.who === 'ally' ? allySprite('hayun') : line.who === 'stranger2' || line.who === 'ally2' ? allySprite('danwoo') : line.who === 'examiner' ? `<span class="ally-sprite">${(examinerNow() || {}).icon || '🧑‍🏫'}</span>` : line.who === 'chief' ? `<span class="ally-sprite">${CLERK_DESKS.chief.icon}</span>` : line.who === 'raidboss' ? `<span class="ally-sprite">${raidFoe().icon}</span>` : line.who === 'gateboss' ? `<span class="ally-sprite">${(gateInNow() && findFoe(gateInNow()).icon) || '👹'}</span>` : line.who === 'proctor' || line.who === 'desk' ? `<span class="ally-sprite">${CLERK_DESKS.assoc.icon}</span>` : /^bg\d$/.test(line.who) ? `<span class="ally-sprite">${BIG_GUILDS[+line.who.slice(2)].icon}</span>` : '';
   $('talkFace').classList.toggle('hidden', line.who === 'nameless');
   $('talkBody').innerHTML = typeof line.text === 'function' ? line.text() : line.text;
   $('talkName').classList.toggle('hidden', !ask);
@@ -4091,6 +4180,8 @@ const ALLY2_MEET = [
   { who: 'me', text: '(동료가 생겼다.)' }
 ];
 const GUIDE_NOTES = [
+  { id: 'ssCall', when: () => ssOpen(), key: () => 1,   // 도시는 격을 모름 — S급이 된 지 시간이 흘러 광장에 게이트가 열림
+    text: () => '협회가 발칵 뒤집혔대. <b>협회장</b>이 널 직접 찾는대 — 협회 로비 오른쪽 위 <b>협회장실</b>로.' },
   { id: 'trainer', when: () => trainOpen(), key: () => 1,   // 도시는 격을 모름 — 길드에 사람이 늘어 교관이 찾아옴
     text: () => `${State.meta.guild.name || '네 길드'}에 <b>교관</b>이 찾아왔대. 돈이랑 시간을 들이면 동료를 <b>단련</b>시켜 준대 — 끝까지 하면 등급도 오른다나.` },
   { id: 'trainDone', when: () => trainOpen() && trainsDoneCount() > 0, key: () => Math.max(...Object.values(State.meta.training).filter(t => Date.now() >= t.end).map(t => t.end)),

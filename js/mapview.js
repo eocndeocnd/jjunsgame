@@ -11,6 +11,7 @@ const MapView = (function () {
   // 바닥 · 벽 · 물 · 나무 · 바위 · 길 (maps/tiles.png 와 같은 순서) — 나무 · 바위는 바닥 위에 그 모양을 얹습니다
   const TILE_COLOR = ['#ead6a6', '#3f240f', '#1f5a96', '#ead6a6', '#ead6a6', '#f2e2b8'];
   const TREE = 3, ROCK = 4;
+  const RIFT_BIG = 2.2;                                    // 광장 위기 게이트(port.big) — 이상한 게이트 그림의 몇 배
   const RANK_FALLBACK = { 1: '#6b6152', 2: '#4f6b30', 3: '#7a4f2a', 4: '#5c6570', 5: '#5e3a72', 6: '#8c1f24' };   // style.css 가 없을 때 (맵 초안)
   const KIND_COLOR = { elite: '#3f6d2a', boss: '#a8262b', hidden: '#5b2a86' };   // 무대 창 테두리와 같은 색
   const TEMPER_COLOR = { aggro: '#d0473f', passive: '#4a80b8', shy: '#5aa04f' };
@@ -268,7 +269,7 @@ const MapView = (function () {
           }
         } else if (port.edge) {                            // 지도 가장자리 통로(옛 동네 ⇄ 도시) — 칸은 그리지 않고 이름표만
         } else if (port.rift) {                            // 이상한 게이트 — 옛 동네 집 옆 틈 · 새 집 안 · 지하수로 첫 공간 (그림은 mapart 의 drawRift). 닫힌 것(옮기기 전 · 뒤)은 안 그림
-          if (art && open) MapArt.drawRift(ctx, ox + (port.x + port.w / 2) * T, oy + (port.y + port.h) * T, T, performance.now() / 1000);
+          if (art && open) MapArt.drawRift(ctx, ox + (port.x + port.w / 2) * T, oy + (port.y + port.h) * T, T, performance.now() / 1000, port.big ? RIFT_BIG : 1);   // big — 광장 위기 게이트
         } else if (port.unlock && !open && port.unlock !== 'guild') {   // 잠긴 안쪽 문 (백화점 에스컬레이터) — 금빛 기둥 사이로 붉은 줄 (옛 동네의 빈 건물은 지도 그림의 셔터 그대로)
           const x0 = ox + port.x * T, x1 = ox + (port.x + port.w) * T, y = oy + port.y * T, u = T / 16;
           ctx.fillStyle = '#8a6d2c'; ctx.fillRect(x0 + 2 * u, y + 4 * u, 2 * u, 10 * u); ctx.fillRect(x1 - 4 * u, y + 4 * u, 2 * u, 10 * u);
@@ -286,7 +287,7 @@ const MapView = (function () {
           ctx.font = `bold ${Math.max(10, Math.round(T * 0.42))}px system-ui, sans-serif`;
           ctx.textAlign = 'center';
           ctx.textBaseline = below ? 'top' : 'bottom';
-          let tx = ox + (port.x + port.w / 2) * T, ty = below ? oy + (port.y + port.h) * T + 3 : oy + port.y * T - 3 - (revealed ? T * 0.9 : port.rift ? T * 1.7 : 0);   // 나타난 구멍은 ▼ 위에, 이상한 게이트는 그 꼭대기 위에
+          let tx = ox + (port.x + port.w / 2) * T, ty = below ? oy + (port.y + port.h) * T + 3 : oy + port.y * T - 3 - (revealed ? T * 0.9 : port.rift ? T * 1.7 * (port.big ? RIFT_BIG : 1) : 0);   // 나타난 구멍은 ▼ 위에, 이상한 게이트는 그 꼭대기 위에
           if (port.edge && port.arriveY !== undefined) {   // 가장자리 한 줄 전체 통로 — 이름표는 도착 줄 위, 화면 끝에 잘리지 않게 안쪽으로 붙여
             ty = oy + (+port.arriveY - 1) * T - 3; ctx.textBaseline = 'bottom';
             if (port.arrive === 'right') { ctx.textAlign = 'left'; tx = ox + port.x * T + 3; }
@@ -474,7 +475,7 @@ const MapView = (function () {
       npcHere: n => deskHere(n.shop),   // 협회 로비의 「???」(제4격 보스 뒤) · 동료 모집 · 게이트 창구(제5격 보스 뒤)
       portOpen: p => (!p.opensAfter || isDowned(p.opensAfter)) && (!p.needsCity || (!!State.meta && !!State.meta.cityOpen)) && (p.unlock !== 'armor' || armorOpen()) && (p.unlock !== 'guild' || (guildLevel() >= 1 && guildLevel() <= 3)) && (p.unlock !== 'guildCity' || guildLevel() >= 4) && (p.unlock !== 'arena' || !!(State.run && State.run.test)) && (p.unlock !== 'bm' || bmOpen())
         && (p.unlock !== 'home2' || !!State.meta.home2) && (p.unlock !== 'home1' || !State.meta.home2)          // 새 집을 사면 열리고 옛 원룸은 잠김
-        && (p.unlock !== 'gatein' || !!gateInNow())
+        && (p.unlock !== 'gatein' || !!gateInNow()) && (p.unlock !== 'chief' || ssOpen()) && (p.unlock !== 'crisis' || !!raidNow())
         && (p.unlock !== 'portal' || !!State.meta.portalMoved) && (p.unlock !== 'portalOld' || !State.meta.portalMoved),   // 이상한 게이트 — 옮긴 뒤엔 새 집 안
       // 내 길드 — 지은 이름으로 (1~3단계는 옛 동네, 4단계부터는 미래 도시 가운데 빈터 · 옛 동네 건물은 「옛 사무실」)
       portLabel: p => {

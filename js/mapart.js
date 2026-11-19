@@ -555,6 +555,12 @@
     carpet: ['#4a2a6a', '#42265e', '#543078', '#3a2052'], gold: '#a080d0', goldDim: '#604a80', wine: '#4a2a6a', red: '#c04aa0', glow: '#c890ff',
     line: '#0c0a10', wall: '#2a2434', velvet: '#16121c', steel: ['#b8b0c8', '#8a82a0', '#d8d0ec', '#5a5270']
   };
+  // 광장 위기 게이트 안 (theme 'raid') — 검붉은 바위 · 타오르는 빛
+  const STC_RAID = {
+    ivory: ['#40282a', '#3a2426', '#4a2e30', '#321e20'], seam: '#241416', dark: ['#1c1012', '#180d0f', '#211315', '#120a0b'],
+    carpet: ['#6a1e22', '#5e1a1e', '#782428', '#521618'], gold: '#e0704a', goldDim: '#80402a', wine: '#6a1e22', red: '#e04030', glow: '#ff9060',
+    line: '#0e0808', wall: '#34201f', velvet: '#1a0e0f', steel: ['#c8b0a8', '#a08880', '#ecd0c8', '#6a5048']
+  };
   let APT = false;                                                                 // 새 집을 샀나 — 게임이 setHome2 로 알려 줌. 그 전엔 오른쪽 빈터 그대로
   let BMO = false;                                                                 // 암시장 셔터가 올라가 있나 — 게임이 setMarket 으로 알려 줌 (회차마다 반반)
   let GLV = 0;                                                                     // 내 길드의 단계 (0 = 아직 안 삼) — 게임이 setGuild 로 알려 줌. 바뀌면 그 길드가 나오는 지도를 다시 그림
@@ -2298,8 +2304,14 @@
     return (riftFrames[f] = cv);
   }
   // cx — 문 가운데(화면 픽셀), by — 문 아래 가장자리. t 는 초
-  function drawRift(ctx, cx, by, T, t) {
-    const u = T / P, spr = riftSprite(Math.floor(t * 8) % 8), gy = by - RIFT_H * u * 0.45, pulse = 0.75 + 0.25 * Math.sin(t * 2.3);
+  function drawRift(ctx, cx, by, T, t, k = 1) {                                    // k — 크기 (광장 위기 게이트는 크게 · 붉은 빛을 더함)
+    const u = T / P * k;
+    if (k > 1) {
+      const rg = ctx.createRadialGradient(cx, by - RIFT_H * u * 0.45, 4 * u, cx, by - RIFT_H * u * 0.45, 34 * u);
+      rg.addColorStop(0, `rgba(255,70,40,${(0.35 + 0.15 * Math.sin(t * 3)).toFixed(2)})`); rg.addColorStop(1, 'rgba(255,70,40,0)');
+      ctx.fillStyle = rg; ctx.fillRect(cx - 34 * u, by - RIFT_H * u * 0.45 - 34 * u, 68 * u, 68 * u);
+    }
+    const spr = riftSprite(Math.floor(t * 8) % 8), gy = by - RIFT_H * u * 0.45, pulse = 0.75 + 0.25 * Math.sin(t * 2.3);
     const gr = ctx.createRadialGradient(cx, gy, 2 * u, cx, gy, 26 * u);
     gr.addColorStop(0, `rgba(150,110,255,${(0.32 * pulse).toFixed(2)})`); gr.addColorStop(1, 'rgba(150,110,255,0)');
     ctx.fillStyle = gr; ctx.fillRect(cx - 26 * u, gy - 26 * u, 52 * u, 52 * u);
@@ -2373,7 +2385,7 @@
   // 덩어리 하나 (CH×CH 칸) — 캔버스에 한 번 그려 둠. 용암이 있으면 용암 점만 칠한 빛 판(.glow)도 — 움직이는 것(liveGround)이 일렁이게 얹음
   function chunk(m, cx, cy) {
     const th = m.props && m.props.theme;
-    STC = th === 'hq' ? STC_HQ : th === 'home' ? STC_HOME : th === 'home2' ? STC_HOME2 : th === 'bm' ? STC_BM : th === 'gate' ? STC_GATE : th === 'guild' ? STC_GUILD[Math.max(0, Math.min(4, GLV - 1))] : STC_DEPT;   // 가게 안의 빛깔 — 헌터백화점 · 헌터 협회 · 내 길드(단계마다)
+    STC = th === 'hq' ? STC_HQ : th === 'home' ? STC_HOME : th === 'home2' ? STC_HOME2 : th === 'bm' ? STC_BM : th === 'gate' ? STC_GATE : th === 'raid' ? STC_RAID : th === 'guild' ? STC_GUILD[Math.max(0, Math.min(4, GLV - 1))] : STC_DEPT;   // 가게 안의 빛깔 — 헌터백화점 · 헌터 협회 · 내 길드(단계마다)
     const w = Math.min(CH, m.w - cx * CH), h = Math.min(CH, m.h - cy * CH), pw = w * P;
     const cv = document.createElement('canvas');
     cv.width = pw; cv.height = h * P;

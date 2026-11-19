@@ -1257,6 +1257,7 @@ const CITY = {
     { kind: 'bikes', x: 3, y: 43, w: 2, h: 1, tone: 1 }
   ],
   start: [1, 43],                                            // 옛 동네에서 넘어와 서는 곳 곁
+  crisis: [22, 16],                                          // 광장 한가운데 — 위기 게이트 (SS급 이야기 · 협회장의 부탁을 받은 회차에만 나타남)
   edges: [{ name: 'oldtown', x: 0, y: 42, w: 1, h: 3, to: 'oldtown.city', label: '← 옛 동네', arrive: 'right' }]
 };
 function townMap(C, name) {
@@ -1349,6 +1350,8 @@ function townMap(C, name) {
     if (B.f !== undefined) B.f += 1;
   });
   // 이상한 게이트 — 나에게만 보임 (그림은 mapview 의 rift). 들어가면 지하수로 첫 공간의 같은 게이트 앞
+  // 광장 위기 게이트 (SS급 이야기 — 사용자 결정 2026-11-19) — 열리기 전엔 없는 문(appears), 그림은 이상한 게이트를 크게(big)
+  if (C.crisis) ports.push({ name: 'crisis', label: '위기 게이트', x: C.crisis[0] + PD.l, y: C.crisis[1] + PD.t, w: 2, h: 1, to: 'raid.out', rift: true, appears: true, big: true, unlock: 'crisis' });
   if (C.gate) ports.push({ name: 'gate', x: C.gate[0] + PD.l, y: C.gate[1] + PD.t, w: 2, h: 1, to: 'sewer.city', rift: true, unlock: 'portalOld' });   // 길잡이가 새 집 안으로 옮기면 닫힘
   // 지도 가장자리 통로 — 그리지 않고 이름표만 (mapview 의 edge). 넘어가면 그 지도의 같은 이름 통로 안쪽(arrive 쪽)에 섬
   // 통로는 그 가장자리 한 줄 전체(위 끝 ~ 아래 끝) — 화면 끝 어느 줄에 닿아도 넘어감 (사용자 결정 2026-11-19). 도착하는 줄 · 이름표는 적어 둔 자리(e.y ~ e.h)의 가운데
@@ -1482,7 +1485,8 @@ const ASSOC = {
   signs: [],
   // 등록 창구 왼쪽 — 시험장 문 (시험 중에만 열림 · 들어가는 건 등록 창구의 「시험을 본다」로 — ui 의 enterArena)
   links: [{ name: 'arena', x: 11, y: 0, w: 2, to: 'arena.out', label: '시험장', unlock: 'arena' },
-          { name: 'gatein', x: 20, y: 0, w: 2, to: 'gatein.out', label: '게이트', unlock: 'gatein' }]   // 게이트 찾기에서 고른 게이트 — 그때만 열림 (ui 의 enterFoundGate)
+          { name: 'gatein', x: 20, y: 0, w: 2, to: 'gatein.out', label: '게이트', unlock: 'gatein' },
+          { name: 'chief', x: 31, y: 0, w: 1, to: 'chief.out', label: '협회장실', unlock: 'chief' }]   // 협회장실 — S급 + 제14격 보스 뒤 (SS급 이야기)   // 게이트 찾기에서 고른 게이트 — 그때만 열림 (ui 의 enterFoundGate)
 };
 // ---------- 게이트 안 (게이트 찾기 — 사용자 결정 2026-11-19) — 어둑한 굴, 안쪽 끝에 게이트 보스 ----------
 const GATEIN = {
@@ -1496,6 +1500,34 @@ const GATEIN = {
   signs: []
 };
 const gateinInterior = () => storeInterior(GATEIN);
+// ---------- 협회장실 (SS급 이야기 — 사용자 결정 2026-11-19) — 위 벽에 문장, 큰 책상 뒤 협회장, 양옆에 4대 길드 S급 넷 ----------
+const CHIEF = {
+  title: '헌터 협회 · 협회장실', w: 11, h: 7, to: 'assoc.chief', theme: 'hq', outLabel: '로비로',
+  wall: [{ x: 0, w: 3, kind: 'board' }, { x: 3, w: 5, kind: 'crest' }, { x: 8, w: 3, kind: 'board' }],
+  props: [
+    { kind: 'counter', x: 3, y: 0, w: 2 }, { kind: 'counter', x: 6, y: 0, w: 2 },        // 협회장 책상 — 사이 (5, 0)
+    { kind: 'plant', x: 0, y: 0, w: 1 }, { kind: 'plant', x: 10, y: 0, w: 1 },
+    { kind: 'bench', x: 0, y: 5, w: 2 }, { kind: 'bench', x: 9, y: 5, w: 2 }
+  ],
+  clerks: [{ x: 5, y: 0, shop: 'chief', label: '협회장' },
+           { x: 1, y: 2, shop: 'chiefS0', label: '' }, { x: 2, y: 4, shop: 'chiefS1', label: '' }, { x: 8, y: 4, shop: 'chiefS2', label: '' }, { x: 9, y: 2, shop: 'chiefS3', label: '' }],
+  signs: []
+};
+const chiefInterior = () => storeInterior(CHIEF);
+// ---------- 광장 게이트 안 (SS급 이야기) — 검붉은 굴. 안쪽 끝에 보스, 그 앞에 S급 넷(밀려나면 벽 쪽 자리로) ----------
+const RAID = {
+  title: '광장 게이트 안', w: 15, h: 11, to: 'city.crisis', theme: 'raid', outLabel: '광장으로',
+  wall: [],
+  props: [
+    { kind: 'pillar', x: 2, y: 2 }, { kind: 'pillar', x: 12, y: 2 }, { kind: 'pillar', x: 2, y: 7 }, { kind: 'pillar', x: 12, y: 7 },
+    { kind: 'plant', x: 0, y: 10, w: 1 }, { kind: 'plant', x: 14, y: 10, w: 1 }
+  ],
+  clerks: [{ x: 7, y: 1, shop: 'raidboss', label: '보스' },
+           { x: 3, y: 5, shop: 'raidS0', label: '' }, { x: 5, y: 3, shop: 'raidS1', label: '' }, { x: 9, y: 3, shop: 'raidS2', label: '' }, { x: 11, y: 5, shop: 'raidS3', label: '' },
+           { x: 0, y: 3, shop: 'raidD0', label: '' }, { x: 1, y: 8, shop: 'raidD1', label: '' }, { x: 13, y: 8, shop: 'raidD2', label: '' }, { x: 14, y: 3, shop: 'raidD3', label: '' }],
+  signs: []
+};
+const raidInterior = () => storeInterior(RAID);
 // ---------- 헌터 협회 · 시험장 (사용자 결정 2026-11-19) — 등록 시험의 시험관과 한 명씩 싸우는 곳 ----------
 // 위 벽에 현황판 · 문장 · 현황판, 가운데 깔개 끝에 시험관(지금 차례 — 이기면 다음 등급이 섬), 둘레에 기둥 · 구경하는 의자
 const ARENA = {
@@ -1596,11 +1628,11 @@ const guild2Interior = () => storeInterior(GUILD2);
 
 // 뽑을 지도 전부 — { 파일 이름: 만드는 함수 }
 function allMaps(data) {
-  const out = { sewer: sewer(data), overworld: overworld(data), hub: hub(data), oldtown: oldtown(), city: city(), dept: deptInterior(), dept2: dept2Interior(), assoc: assocInterior(), guild: guildInterior(), guild2: guild2Interior(), home: homeInterior(), arena: arenaInterior(), bm: bmInterior(), home2: home2Interior(), gatein: gateinInterior() };
+  const out = { sewer: sewer(data), overworld: overworld(data), hub: hub(data), oldtown: oldtown(), city: city(), dept: deptInterior(), dept2: dept2Interior(), assoc: assocInterior(), guild: guildInterior(), guild2: guild2Interior(), home: homeInterior(), arena: arenaInterior(), bm: bmInterior(), home2: home2Interior(), gatein: gateinInterior(), chief: chiefInterior(), raid: raidInterior() };
   for (const s of SECRET_ROOMS) out[s.id] = secretRoom(data, s);
   for (const b of BUILDINGS) out[b.id] = buildingInterior(data, b);
   REALMS.forEach((r, i) => { out[r.name] = realm(data, r, i); });
   return out;
 }
 
-module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, looksPng, encodePng, generate, sewer, overworld, hub, oldtown, city, deptInterior, dept2Interior, assocInterior, guildInterior, guild2Interior, homeInterior, home2Interior, arenaInterior, bmInterior, gateinInterior, storeInterior, OLDTOWN, CITY, DEPT, DEPT2, ASSOC, GUILD, GUILD2, HOME, HOME2, ARENA, BM, GATEIN, CITY_BIO, secretRoom, buildingInterior, allMaps, layoutFromPlan, HUB_DOORS, REALMS, SEWER, SECRET_ROOMS, BUILDINGS, BUILD, DOORWAY, CARPET, RUIN };
+module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, looksPng, encodePng, generate, sewer, overworld, hub, oldtown, city, deptInterior, dept2Interior, assocInterior, guildInterior, guild2Interior, homeInterior, home2Interior, arenaInterior, bmInterior, gateinInterior, chiefInterior, raidInterior, storeInterior, OLDTOWN, CITY, DEPT, DEPT2, ASSOC, GUILD, GUILD2, HOME, HOME2, ARENA, BM, GATEIN, CHIEF, RAID, CITY_BIO, secretRoom, buildingInterior, allMaps, layoutFromPlan, HUB_DOORS, REALMS, SEWER, SECRET_ROOMS, BUILDINGS, BUILD, DOORWAY, CARPET, RUIN };

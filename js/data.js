@@ -2498,6 +2498,9 @@ const HUNTER_GRADES = [
   { id: 'S', rank: 7, level: 9600000 }
 ];
 function examinerStats(g) { return enemyStats(HUNTER_GRADES[g - 1].level); }
+// S급 위 (사용자 결정 2026-11-19) — 시험관이 아니라 다른 길로 얻음. SS = 협회장의 부름 → 광장 위기 게이트에서 4대 길드 S급 넷이 밀린 보스를 혼자 잡음 (game.js 의 fightRaid)
+// rank — 이 격의 보스를 꺾은 뒤 · level — 그 보스의 세기. 시뮬(시드 4개): 14격 보스를 꺾은 직후 1e13 은 늘 이기고 4e13 은 반쯤 → 2e13. SSS · 맨 위 한 단계는 아직
+const TOP_GRADES = [{ id: 'SS', rank: 14, level: 2e13 }];
 // 4대 길드 (사용자 결정 2026-11-19 — 이름 홍염 · 청해 · 크라운 · 달). 차례는 도시 지도의 길드 건물 tone 0~3 과 같음.
 // S급 시험관은 그 길드의 S급 헌터가 와서 맡음 — 시험마다 차례로 돌아감 (game.js 의 examinerFoe). 사람 이름 · 그림은 나중에 (지금은 이모지)
 // 암시장의 거래에 드는 것 — 보스가 가끔 떨어뜨림 (이름은 가칭. 특수장비의 「보석」과 헷갈리지 않게 원석)

@@ -240,6 +240,8 @@ const State = {
     heroName: '',                // 주인공의 이름 — 첫 회차가 끝나 도시에서 처음 눈을 뜰 때 정합니다 (없으면 「나」)
     hunterGrade: 0,              // 헌터 등급 — 0 미등록 · 1~7 = F~S (data.js 의 HUNTER_GRADES). 헌터 협회 시험으로 오르고 내려가지 않음
     testedRun: 0,                // 등록 시험을 본 회차 — 한 회차에 한 번
+    ssDone: false,               // SS급이 됐는가 (광장 위기 게이트 — 한국 최초 SS급)
+    ssLostRun: null,             // 위기 게이트에서 진 회차 — 그 회차엔 다시 못 감 (다음 회차에 협회장실에서 다시)
     sExams: 0,                   // S급 시험관을 만난 횟수 — 4대 길드가 이 차례로 돌아가며 옴 (BIG_GUILDS)
     bmGems: 0,                   // 검은 원석 — 암시장에 돈을 맡길 때 하나씩 (보스가 가끔)
     gatePts: 0,                  // 게이트 실적 — 돌아온 게이트의 등급(F 1 … S 7)을 더한 것 (길드 순위 점수)
@@ -659,7 +661,9 @@ function load() {
     for (const k of FIXED_SETTINGS) State.meta.settings[k] = defaultSettings()[k];
     State.meta.tutorialDone = !!data.tutorialDone;
     State.meta.heroName = typeof data.heroName === 'string' ? data.heroName.replace(/[<>&"'`\\]/g, '').trim().slice(0, 8) : '';
-    State.meta.hunterGrade = Math.max(0, Math.min(HUNTER_GRADES.length, Math.floor(num(data.hunterGrade))));
+    State.meta.ssDone = !!data.ssDone;
+    State.meta.ssLostRun = data.ssLostRun == null ? null : num(data.ssLostRun);
+    State.meta.hunterGrade = Math.max(0, Math.min(HUNTER_GRADES.length + (State.meta.ssDone ? TOP_GRADES.length : 0), Math.floor(num(data.hunterGrade))));
     State.meta.testedRun = Math.max(0, Math.floor(num(data.testedRun)));
     State.meta.sExams = Math.max(0, Math.floor(num(data.sExams)));
     State.meta.bmGems = Math.max(0, Math.floor(num(data.bmGems)));
@@ -761,6 +765,8 @@ function freshMeta() {
     heroName: '',
     hunterGrade: 0,
     testedRun: 0,
+    ssDone: false,
+    ssLostRun: null,
     sExams: 0,
     bmGems: 0,
     gatePts: 0,
@@ -1532,7 +1538,8 @@ function joinAlly(id = 'hayun') {
 }
 function allyNow() { return State.meta.ally && ALLIES[State.meta.ally] ? ALLIES[State.meta.ally] : null; }
 // 때가 되어야 서 있는 창구 · 사람 (지도 — mapview 의 npcHere · ui 의 mapMarks)
-function deskHere(shop) { return shop === 'ally' ? allyWaiting() : shop === 'ally2' ? ally2Waiting() : shop === 'bm' ? bmOpen() && !State.run.bmDone : shop === 'ranking' ? rankingOpen() : shop === 'gatefind' ? gatesOpen() : shop === 'trainer' ? trainOpen() : shop === 'gateboss' ? !!gateInNow() : shop === 'hire' || shop === 'gate' ? gatesOpen() : shop === 'guild' ? guildOwned() : shop === 'examiner' ? !!examinerNow() : true; }
+function deskHere(shop) { return shop === 'chief' ? ssOpen() : /^chiefS\d$/.test(shop) ? ssOpen() && !State.run.raid : /^raidS\d$/.test(shop) ? !!raidNow() && raidNow().knocked <= +shop.slice(5)
+  : /^raidD\d$/.test(shop) ? !!State.run.raid && (State.run.raid.done || State.run.raid.knocked > +shop.slice(5)) : shop === 'raidboss' ? !!raidNow() : shop === 'ally' ? allyWaiting() : shop === 'ally2' ? ally2Waiting() : shop === 'bm' ? bmOpen() && !State.run.bmDone : shop === 'ranking' ? rankingOpen() : shop === 'gatefind' ? gatesOpen() : shop === 'trainer' ? trainOpen() : shop === 'gateboss' ? !!gateInNow() : shop === 'hire' || shop === 'gate' ? gatesOpen() : shop === 'guild' ? guildOwned() : shop === 'examiner' ? !!examinerNow() : true; }
 // 제5격 보스를 한 번이라도 꺾으면 협회의 「동료 모집」 · 「게이트 창구」가 열림
 function gatesOpen() { return !!State.meta.cityOpen && rankBossBeaten(5); }
 // 동료 모집 창구에 서 있는 사람 — 내 등급까지 (고용한 사람도 「함께하는 중」으로 남김)
@@ -1708,6 +1715,34 @@ function giveStonesLowest(n) {
   return slot;
 }
 // 받는다 — 다 끝난 게이트의 핵 · 강화석. → { gate, cores, core, stones, slot } 또는 null
+// ---------- SS급 — 협회장의 부름 · 광장 위기 게이트 (사용자 결정 2026-11-19) ----------
+// S급이고 제14격 보스를 꺾었으면 협회 로비 오른쪽 위 협회장실이 열림 (도시 쪽 까닭: S급이 된 지 시간이 흘러, 등급을 못 매기는 게이트가 광장에 열림 — 도시는 격을 모름).
+// 협회장의 부탁을 받으면 광장 한가운데 위기 게이트가 열리고, 안에서 4대 길드 S급 넷이 차례로 밀린 뒤 내가 보스와 싸움 — 이기면 한국 최초 SS급.
+// 지면 그 회차엔 끝 (다음 회차에 협회장실에서 다시). 보상은 등급 SS(길드 순위 점수의 등급 몫도)뿐 — 사용자 결정
+function ssOpen() { return !!State.meta.cityOpen && hunterGrade() === HUNTER_GRADES.length && rankBossBeaten(TOP_GRADES[0].rank) && !State.meta.ssDone; }
+function canRaid() { return ssOpen() && !!State.run && !State.run.over && !State.run.raid && State.meta.ssLostRun !== State.meta.runCount; }
+function acceptRaid() { if (!canRaid()) return false; State.run.raid = { knocked: 0, done: false }; save(); return true; }
+function raidNow() { const r = State.run && State.run.raid; return r && !r.done ? r : null; }
+function raidKnock(n) { const r = raidNow(); if (r && n > r.knocked) r.knocked = n; }   // S급 n 명이 밀려남 (대사가 한 줄씩 부름)
+function raidFoe() { const G = TOP_GRADES[0]; return { id: 'raidSS', name: '광장 게이트의 주인', icon: '🐉', kind: 'boss', raidBoss: true, noLv: true, level: G.level, ...enemyStats(G.level) }; }
+function fightRaid(rng = Math.random) {
+  const run = State.run, raid = raidNow();
+  if (!raid || run.lastResult) return null;
+  const foe = raidFoe(), hero = heroStats(), log = [];
+  const r = simulateBattle(hero, foe, rng, log);
+  raid.done = true; raid.knocked = BIG_GUILDS.length;
+  if (r.win) {
+    State.meta.hunterGrade = HUNTER_GRADES.length + 1; State.meta.ssDone = true;
+    pushLog('drop', '광장 게이트의 주인을 혼자 쓰러뜨렸다 — 한국 최초의 SS급 헌터.');
+  } else {
+    State.meta.ssLostRun = State.meta.runCount;
+    pushLog('info', '광장 게이트에서 물러났다 — 협회가 게이트를 막아 둔다. 다음 회차에 협회장실에서 다시.');
+  }
+  run.lastResult = { raid: true, enemy: foe, win: !!r.win, turns: r.turns, drops: [], replay: { log, heroMax: hero.life, foeMax: foe.life } };
+  save();
+  return run.lastResult;
+}
+
 // ---------- 훈련소 (도시 계획 7번 · 12격 — 사용자 결정 2026-11-19) — 길드 안 교관 ----------
 // 돈을 내면 실제 시간(단계 n 은 n 시간)이 흐른 뒤 단련 단계가 하나 오름 — 능력 +10%. 10단계를 채우면 등급이 한 번 오름 (S 는 그대로)
 // 단련 중인 동료는 함께 가기 · 게이트 · 길드 사무를 못 함 (함께 가는 동료 · 게이트 · 사무 중인 동료는 단련 못 함)
@@ -1758,7 +1793,7 @@ function foundGates(now = Date.now(), rng = Math.random) {
   if (!gatesOpen()) return [];
   const day = todayKey(now), m = State.meta;
   if (!m.found || m.found.day !== day) {
-    const top = Math.max(1, hunterGrade()), foes = ENEMIES.filter(e => e.zoneIndex < bestRankNow() && (e.kind === 'normal' || e.kind === 'elite'));
+    const top = Math.min(HUNTER_GRADES.length, Math.max(1, hunterGrade())), foes = ENEMIES.filter(e => e.zoneIndex < bestRankNow() && (e.kind === 'normal' || e.kind === 'elite'));
     const list = [];
     for (let i = 0; i < RULES.FIND_GATES; i++) {
       const up = top < HUNTER_GRADES.length && rng() < RULES.FIND_UP;
@@ -1850,9 +1885,9 @@ function deptWares(section) {
 // 산다 — 도시가 열린 뒤, 들어와 있는 것만. 성공하면 true. (어느 지도에 서 있는지는 묻지 않습니다 — 창은 점원에게 닿아야 열립니다)
 // ---------- 헌터 협회 — 등록 · 등급 시험 (docs/CITY-PLAN.md 3) ----------
 function hunterGrade() { return num(State.meta.hunterGrade); }
-function gradeName(g = hunterGrade()) { return g > 0 ? HUNTER_GRADES[g - 1].id : ''; }
+function gradeName(g = hunterGrade()) { return g > HUNTER_GRADES.length ? TOP_GRADES[g - HUNTER_GRADES.length - 1].id : g > 0 ? HUNTER_GRADES[g - 1].id : ''; }   // 8 = SS (TOP_GRADES)
 // 시험은 도시에서 · 한 회차에 한 번 (진 싸움을 다시 굴려 보지 못하게)
-function canTakeTest() { return !!State.meta.cityOpen && !!State.run && !State.run.over && num(State.meta.testedRun) !== State.meta.runCount; }
+function canTakeTest() { return !!State.meta.cityOpen && !!State.run && !State.run.over && hunterGrade() <= HUNTER_GRADES.length && num(State.meta.testedRun) !== State.meta.runCount; }   // SS 부터는 시험으로 볼 것이 없음
 // 지금의 나(도시의 Lv.1 그대로 — 사용자 결정)로 F 시험관부터 차례로 싸웁니다. 지면 거기서 멈추고, 이긴 데까지가 등급 (내려가지는 않음)
 // 한꺼번에 — 시뮬 · 시험이 씀 (사람은 시험장에서 한 명씩: startHunterTest → fightExaminer)
 function takeHunterTest(rng = Math.random) {
