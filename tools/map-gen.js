@@ -1474,14 +1474,28 @@ const ASSOC = {
     { kind: 'bench', x: 2, y: 5, w: 4 }, { kind: 'bench', x: 7, y: 5, w: 3 }, { kind: 'bench', x: 2, y: 10, w: 4 }, { kind: 'bench', x: 7, y: 10, w: 3 }, { kind: 'bench', x: 2, y: 15, w: 4 },
     { kind: 'bench', x: 23, y: 5, w: 3 }, { kind: 'bench', x: 27, y: 5, w: 4 }, { kind: 'bench', x: 23, y: 10, w: 3 }, { kind: 'bench', x: 27, y: 10, w: 4 }, { kind: 'bench', x: 27, y: 15, w: 4 },
     { kind: 'kiosk', x: 13, y: 18 }, { kind: 'kiosk', x: 19, y: 18 },
-    { kind: 'kiosk', x: 8, y: 14 }                                                         // 길드 순위판 — 앞 (8, 15)
+    { kind: 'kiosk', x: 8, y: 14 },                                                        // 길드 순위판 — 앞 (8, 15)
+    { kind: 'counter', x: 22, y: 15, w: 2 }, { kind: 'counter', x: 25, y: 15, w: 2 }      // 게이트 찾기 — 사이 (24, 15)
   ],
-  clerks: [{ x: 8, y: 15, shop: 'ranking', label: '길드 순위' }, { x: 16, y: 0, shop: 'assoc', label: '등록 창구' }, { x: 26, y: 4, shop: 'ally', label: '???' },   // ??? — 제4격 보스 뒤에만 서 있는 사람 (첫 동료)
+  clerks: [{ x: 8, y: 15, shop: 'ranking', label: '길드 순위' }, { x: 24, y: 15, shop: 'gatefind', label: '게이트 찾기' }, { x: 16, y: 0, shop: 'assoc', label: '등록 창구' }, { x: 26, y: 4, shop: 'ally', label: '???' },   // ??? — 제4격 보스 뒤에만 서 있는 사람 (첫 동료)
            { x: 5, y: 0, shop: 'hire', label: '동료 모집' }, { x: 27, y: 0, shop: 'gate', label: '게이트 창구' }],   // 제5격 보스 뒤에 열림 (game.js 의 deskHere)
   signs: [],
   // 등록 창구 왼쪽 — 시험장 문 (시험 중에만 열림 · 들어가는 건 등록 창구의 「시험을 본다」로 — ui 의 enterArena)
-  links: [{ name: 'arena', x: 11, y: 0, w: 2, to: 'arena.out', label: '시험장', unlock: 'arena' }]
+  links: [{ name: 'arena', x: 11, y: 0, w: 2, to: 'arena.out', label: '시험장', unlock: 'arena' },
+          { name: 'gatein', x: 20, y: 0, w: 2, to: 'gatein.out', label: '게이트', unlock: 'gatein' }]   // 게이트 찾기에서 고른 게이트 — 그때만 열림 (ui 의 enterFoundGate)
 };
+// ---------- 게이트 안 (게이트 찾기 — 사용자 결정 2026-11-19) — 어둑한 굴, 안쪽 끝에 게이트 보스 ----------
+const GATEIN = {
+  title: '게이트 안', w: 11, h: 9, to: 'assoc.gatein', theme: 'gate', outLabel: '협회로',
+  wall: [],
+  props: [
+    { kind: 'pillar', x: 1, y: 1 }, { kind: 'pillar', x: 9, y: 1 }, { kind: 'pillar', x: 1, y: 5 }, { kind: 'pillar', x: 9, y: 5 },
+    { kind: 'plant', x: 0, y: 8, w: 1 }, { kind: 'plant', x: 10, y: 8, w: 1 }
+  ],
+  clerks: [{ x: 5, y: 1, shop: 'gateboss', label: '보스' }],
+  signs: []
+};
+const gateinInterior = () => storeInterior(GATEIN);
 // ---------- 헌터 협회 · 시험장 (사용자 결정 2026-11-19) — 등록 시험의 시험관과 한 명씩 싸우는 곳 ----------
 // 위 벽에 현황판 · 문장 · 현황판, 가운데 깔개 끝에 시험관(지금 차례 — 이기면 다음 등급이 섬), 둘레에 기둥 · 구경하는 의자
 const ARENA = {
@@ -1582,11 +1596,11 @@ const guild2Interior = () => storeInterior(GUILD2);
 
 // 뽑을 지도 전부 — { 파일 이름: 만드는 함수 }
 function allMaps(data) {
-  const out = { sewer: sewer(data), overworld: overworld(data), hub: hub(data), oldtown: oldtown(), city: city(), dept: deptInterior(), dept2: dept2Interior(), assoc: assocInterior(), guild: guildInterior(), guild2: guild2Interior(), home: homeInterior(), arena: arenaInterior(), bm: bmInterior(), home2: home2Interior() };
+  const out = { sewer: sewer(data), overworld: overworld(data), hub: hub(data), oldtown: oldtown(), city: city(), dept: deptInterior(), dept2: dept2Interior(), assoc: assocInterior(), guild: guildInterior(), guild2: guild2Interior(), home: homeInterior(), arena: arenaInterior(), bm: bmInterior(), home2: home2Interior(), gatein: gateinInterior() };
   for (const s of SECRET_ROOMS) out[s.id] = secretRoom(data, s);
   for (const b of BUILDINGS) out[b.id] = buildingInterior(data, b);
   REALMS.forEach((r, i) => { out[r.name] = realm(data, r, i); });
   return out;
 }
 
-module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, looksPng, encodePng, generate, sewer, overworld, hub, oldtown, city, deptInterior, dept2Interior, assocInterior, guildInterior, guild2Interior, homeInterior, home2Interior, arenaInterior, bmInterior, storeInterior, OLDTOWN, CITY, DEPT, DEPT2, ASSOC, GUILD, GUILD2, HOME, HOME2, ARENA, BM, CITY_BIO, secretRoom, buildingInterior, allMaps, layoutFromPlan, HUB_DOORS, REALMS, SEWER, SECRET_ROOMS, BUILDINGS, BUILD, DOORWAY, CARPET, RUIN };
+module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, looksPng, encodePng, generate, sewer, overworld, hub, oldtown, city, deptInterior, dept2Interior, assocInterior, guildInterior, guild2Interior, homeInterior, home2Interior, arenaInterior, bmInterior, gateinInterior, storeInterior, OLDTOWN, CITY, DEPT, DEPT2, ASSOC, GUILD, GUILD2, HOME, HOME2, ARENA, BM, GATEIN, CITY_BIO, secretRoom, buildingInterior, allMaps, layoutFromPlan, HUB_DOORS, REALMS, SEWER, SECRET_ROOMS, BUILDINGS, BUILD, DOORWAY, CARPET, RUIN };

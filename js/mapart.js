@@ -549,6 +549,12 @@
   };
   // 새 집 아파트 (미래 도시 오른쪽 빈터) — 따뜻한 베이지 유리 · 금빛 띠
   const APT_TONE = { glass: '#2a2f3a', glass2: '#3c4252', accent: '#f0c890', light: '#fff0d0', roof: '#cfc6b4' };
+  // 게이트 안 (theme 'gate') — 검푸른 바위 바닥 · 보랏빛 균열 빛
+  const STC_GATE = {
+    ivory: ['#3a3448', '#342e42', '#423a52', '#2c2638'], seam: '#221c2c', dark: ['#18141f', '#14111b', '#1d1825', '#100d16'],
+    carpet: ['#4a2a6a', '#42265e', '#543078', '#3a2052'], gold: '#a080d0', goldDim: '#604a80', wine: '#4a2a6a', red: '#c04aa0', glow: '#c890ff',
+    line: '#0c0a10', wall: '#2a2434', velvet: '#16121c', steel: ['#b8b0c8', '#8a82a0', '#d8d0ec', '#5a5270']
+  };
   let APT = false;                                                                 // 새 집을 샀나 — 게임이 setHome2 로 알려 줌. 그 전엔 오른쪽 빈터 그대로
   let BMO = false;                                                                 // 암시장 셔터가 올라가 있나 — 게임이 setMarket 으로 알려 줌 (회차마다 반반)
   let GLV = 0;                                                                     // 내 길드의 단계 (0 = 아직 안 삼) — 게임이 setGuild 로 알려 줌. 바뀌면 그 길드가 나오는 지도를 다시 그림
@@ -2367,7 +2373,7 @@
   // 덩어리 하나 (CH×CH 칸) — 캔버스에 한 번 그려 둠. 용암이 있으면 용암 점만 칠한 빛 판(.glow)도 — 움직이는 것(liveGround)이 일렁이게 얹음
   function chunk(m, cx, cy) {
     const th = m.props && m.props.theme;
-    STC = th === 'hq' ? STC_HQ : th === 'home' ? STC_HOME : th === 'home2' ? STC_HOME2 : th === 'bm' ? STC_BM : th === 'guild' ? STC_GUILD[Math.max(0, Math.min(4, GLV - 1))] : STC_DEPT;   // 가게 안의 빛깔 — 헌터백화점 · 헌터 협회 · 내 길드(단계마다)
+    STC = th === 'hq' ? STC_HQ : th === 'home' ? STC_HOME : th === 'home2' ? STC_HOME2 : th === 'bm' ? STC_BM : th === 'gate' ? STC_GATE : th === 'guild' ? STC_GUILD[Math.max(0, Math.min(4, GLV - 1))] : STC_DEPT;   // 가게 안의 빛깔 — 헌터백화점 · 헌터 협회 · 내 길드(단계마다)
     const w = Math.min(CH, m.w - cx * CH), h = Math.min(CH, m.h - cy * CH), pw = w * P;
     const cv = document.createElement('canvas');
     cv.width = pw; cv.height = h * P;

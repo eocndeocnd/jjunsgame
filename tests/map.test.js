@@ -1325,7 +1325,7 @@ test('헌터 협회 안 — 도시의 협회 문으로 들어가면 1층 로비,
   assert.equal(out.to, 'city.association');
   assert.equal(assoc.props.theme, 'hq');
   const desk = assoc.npcs.filter(n => n.shop);
-  assert.deepEqual(desk.map(n => n.shop), ['ranking', 'assoc', 'ally', 'hire', 'gate']);   // ranking — 길드 순위판 (10격 칸) · ally — 제4격 보스 뒤에만 서 있는 첫 동료 · hire · gate — 제5격 보스 뒤
+  assert.deepEqual(desk.map(n => n.shop), ['ranking', 'gatefind', 'assoc', 'ally', 'hire', 'gate']);   // ranking — 길드 순위판 (10격 칸) · gatefind — 게이트 찾기 · ally — 제4격 보스 뒤에만 서 있는 첫 동료 · hire · gate — 제5격 보스 뒤
 });
 
 test('패시브 — 골드로 사면 영원히 · 값은 이번 회차를 시작할 때의 격 · 회차가 끝나면 골드는 사라짐', () => {
@@ -1391,7 +1391,9 @@ test('동료 여럿 · 게이트 — 제5격 보스 뒤 모집 · 함께 갈 한
     out.poor = hireAlly('minjae');
     State.meta.won = 1e12;
     out.hire = [hireAlly('minjae'), hireAlly('minjae'), hireAlly('jiu'), State.meta.allies.slice(), State.meta.ally];
-    // 함께 가는 동료는 게이트에 못 감 · E급 동료는 D급 게이트에 못 감
+    // 내가 깬 등급만 (게이트 찾기 — 2026-11-19) · 함께 가는 동료는 게이트에 못 감 · E급 동료는 D급 게이트에 못 감
+    out.locked = sendToGate('minjae', 'E', 0);
+    State.meta.gateClear = ['F', 'E', 'D'];
     out.send = [sendToGate('hayun', 'F', 0), sendToGate('minjae', 'D', 0), sendToGate('minjae', 'E', 0), sendToGate('minjae', 'F', 0)];
     out.comp = [setCompanion('minjae'), setCompanion('hayun'), State.meta.ally];
     out.stats = [heroStats().ally, heroStats().allyHeal];
@@ -1416,6 +1418,7 @@ test('동료 여럿 · 게이트 — 제5격 보스 뒤 모집 · 함께 갈 한
   assert.deepEqual(r.list, ['seojin', 'minjae']);
   assert.equal(r.poor, false);
   assert.deepEqual(r.hire, [true, false, false, ['hayun', 'minjae'], 'hayun']);
+  assert.equal(r.locked, false, '안 깬 등급엔 못 보냄');
   assert.deepEqual(r.send, [false, false, true, false]);
   assert.deepEqual(r.comp, [false, true, 'hayun']);
   assert.deepEqual(r.stats, [0.3, 0]);
@@ -1432,7 +1435,7 @@ test('길드 — 제7격 보스 뒤 빈 건물이 매물 · 사서 이름 · 사
   const r = run(`
     currentSlot = 0; State.meta = freshMeta(); State.meta.cityOpen = true; startRun();
     const beat = n => State.meta.bossesBeaten.push(zoneBoss(ZONES.findIndex(z => z.rank === n)).id);
-    beat(4); beat(5); joinAlly('hayun'); State.meta.hunterGrade = 3; State.meta.won = 1e15; hireAlly('seojin'); hireAlly('minjae');
+    beat(4); beat(5); joinAlly('hayun'); State.meta.hunterGrade = 3; State.meta.won = 1e15; hireAlly('seojin'); hireAlly('minjae'); State.meta.gateClear = ['F', 'E', 'D'];
     const out = { before: [guildForSale(), buyGuild(), deskHere('guild')] };
     beat(7);
     out.sale = guildForSale();
@@ -1466,6 +1469,52 @@ test('길드 — 제7격 보스 뒤 빈 건물이 매물 · 사서 이름 · 사
   assert.deepEqual(r.unseat, [true, false, true]);
   assert.deepEqual(r.max, [5, null]);
   assert.deepEqual(r.load, ['새벽', 5, ['minjae']]);
+});
+
+test('게이트 찾기 — 5격 뒤 · 하루에 셋(내 등급 근처) · 내가 깨면 보상 + 그 등급 자동사냥 열림, 지면 그 회차엔 못 들어감', () => {
+  const run = loadGame();
+  const r = run(`
+    currentSlot = 0; State.meta = freshMeta(); State.meta.cityOpen = true; startRun();
+    const beat = n => State.meta.bossesBeaten.push(zoneBoss(ZONES.findIndex(z => z.rank === n)).id);
+    const out = { closed: foundGates().length };
+    for (let n = 1; n <= 5; n++) beat(n); State.meta.bestZone = 5; State.meta.hunterGrade = 4;
+    const day1 = Date.parse('2026-11-19T12:00:00');
+    const list = foundGates(day1);
+    out.list = [list.length, list.every(g => { const n = gateInfo(g.grade).rank; return n >= 2 && n <= 5; }), list.every(g => getEnemy(g.foe).zoneIndex < 5)];
+    out.same = foundGates(day1 + 3600e3) === list;
+    // 진다 — 그 회차엔 못 들어감
+    State.run.level = 1;
+    out.enter = [enterFound(0, day1), enterFound(1, day1), !!gateInNow()];
+    const lose = fightFound(() => 0.99);
+    out.lose = [lose.gatein, lose.win, list[0].lostRun === State.meta.runCount, gateInNow(), canEnterFound(0, day1)];
+    dismissResult(); leaveFound();
+    // 이긴다 — 보상 · 자동사냥
+    State.run.level = 1e9;
+    const g1 = list[1], type = g1.reward.type, won0 = State.meta.won, gem0 = State.meta.bmGems;
+    enterFound(1, day1);
+    const win = fightFound(() => 0.5);
+    out.win = [win.win, g1.cleared, gateUnlocked(g1.grade), win.opened, canEnterFound(1, day1), !!win.reward.text];
+    out.below = [gateUnlocked('F'), gateUnlocked(HUNTER_GRADES[gateInfo(g1.grade).rank].id)];
+    out.got = type === 'won' ? State.meta.won > won0 : type === 'gem' ? State.meta.bmGems > gem0 : true;
+    dismissResult(); leaveFound();
+    startRun(); out.retry = canEnterFound(0, day1);
+    out.next = foundGates(day1 + 24 * 3600e3) !== list;
+    return out;
+  `);
+  assert.equal(r.closed, 0);
+  assert.deepEqual(r.list, [3, true, true]);
+  assert.equal(r.same, true);
+  assert.deepEqual(r.enter, [true, false, true]);
+  assert.deepEqual(r.lose, [true, false, true, null, false]);
+  assert.deepEqual(r.win, [true, true, true, true, false, true]);
+  assert.equal(r.got, true);
+  assert.deepEqual(r.below, [true, false], '깬 등급의 아래는 열리고 위는 안 열림');
+  assert.equal(r.retry, true);
+  assert.equal(r.next, true);
+  const assoc = loadMap('assoc'), gi = loadMap('gatein');
+  const link = assoc.ports.find(p => p.name === 'gatein');
+  assert.deepEqual([link.to, link.unlock, gi.ports.find(p => p.name === 'out').to], ['gatein.out', 'gatein', 'assoc.gatein']);
+  assert.deepEqual(gi.npcs.filter(n => n.shop).map(n => n.shop), ['gateboss']);
 });
 
 test('새 집 — 11격 보스 뒤 「분양」 · 돈으로 사면 원룸은 잠기고, 길잡이가 이상한 게이트를 새 집 안으로 · 그 뒤 회차는 새 집 안에서', () => {

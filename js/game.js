@@ -246,6 +246,8 @@ const State = {
     home2: false,                // 새 집(미래 도시 오른쪽 빈터의 아파트)을 샀나 — 사면 옛 원룸은 잠김
     portalMoved: false,          // 길잡이가 이상한 게이트를 새 집 안으로 옮겼나 — 그 뒤 회차는 새 집 안에서 시작
     rankPassed: [],              // 넘어서 상금을 받은 4대 길드 id (BIG_GUILDS)
+    gateClear: [],               // 내가 직접 깬 게이트 등급 id (F … S) — 게이트 창구에서 그 등급에만 동료를 보낼 수 있음
+    found: null,                 // 오늘의 게이트 (게이트 찾기) — { day: 'YYYY-MM-DD', list: [{ grade, foe, reward: { type, n }, cleared, lostRun }] }
     passives: {},                // 골드로 산 패시브 — id → 단계 (data.js 의 PASSIVES). 영구
     ally: null,                  // 그 공간에 함께 가는 동료 id (data.js 의 ALLIES) — 늘 한 명 · 없을 수 있음
     allies: [],                  // 내 동료 id 들 (이야기로 만난 동료 · 고용한 동료)
@@ -662,6 +664,10 @@ function load() {
     State.meta.home2 = !!data.home2;
     State.meta.portalMoved = !!data.home2 && !!data.portalMoved;
     State.meta.rankPassed = (Array.isArray(data.rankPassed) ? data.rankPassed : []).filter(id => BIG_GUILDS.some(B => B.id === id));
+    State.meta.gateClear = (Array.isArray(data.gateClear) ? data.gateClear : []).filter(id => gateInfo(id));
+    State.meta.found = data.found && typeof data.found.day === 'string' && Array.isArray(data.found.list)
+      ? { day: data.found.day, list: data.found.list.filter(g => g && gateInfo(g.grade) && getEnemy(g.foe) && g.reward && FIND_REWARDS.includes(g.reward.type)).map(g => ({ grade: g.grade, foe: g.foe, reward: { type: g.reward.type, n: Math.max(1, Math.floor(num(g.reward.n))) }, cleared: !!g.cleared, lostRun: g.lostRun == null ? null : num(g.lostRun) })) }
+      : null;
     State.meta.allies = [...new Set((Array.isArray(data.allies) ? data.allies : []).concat(data.ally ? [data.ally] : []))].filter(id => ALLIES[id]);
     State.meta.gates = {};
     for (const [id, g] of Object.entries(data.gates && typeof data.gates === 'object' ? data.gates : {})) {
@@ -750,6 +756,8 @@ function freshMeta() {
     home2: false,
     portalMoved: false,
     rankPassed: [],
+    gateClear: [],
+    found: null,
     passives: {},
     ally: null,
     allies: [],
@@ -1509,7 +1517,7 @@ function joinAlly(id = 'hayun') {
 }
 function allyNow() { return State.meta.ally && ALLIES[State.meta.ally] ? ALLIES[State.meta.ally] : null; }
 // 때가 되어야 서 있는 창구 · 사람 (지도 — mapview 의 npcHere · ui 의 mapMarks)
-function deskHere(shop) { return shop === 'ally' ? allyWaiting() : shop === 'ally2' ? ally2Waiting() : shop === 'bm' ? bmOpen() && !State.run.bmDone : shop === 'ranking' ? rankingOpen() : shop === 'hire' || shop === 'gate' ? gatesOpen() : shop === 'guild' ? guildOwned() : shop === 'examiner' ? !!examinerNow() : true; }
+function deskHere(shop) { return shop === 'ally' ? allyWaiting() : shop === 'ally2' ? ally2Waiting() : shop === 'bm' ? bmOpen() && !State.run.bmDone : shop === 'ranking' ? rankingOpen() : shop === 'gatefind' ? gatesOpen() : shop === 'gateboss' ? !!gateInNow() : shop === 'hire' || shop === 'gate' ? gatesOpen() : shop === 'guild' ? guildOwned() : shop === 'examiner' ? !!examinerNow() : true; }
 // 제5격 보스를 한 번이라도 꺾으면 협회의 「동료 모집」 · 「게이트 창구」가 열림
 function gatesOpen() { return !!State.meta.cityOpen && rankBossBeaten(5); }
 // 동료 모집 창구에 서 있는 사람 — 내 등급까지 (고용한 사람도 「함께하는 중」으로 남김)
@@ -1542,7 +1550,7 @@ function gatesDoneCount(now = Date.now()) { return Object.keys(State.meta.gates 
 // 보낸다 — 함께 가는 동료가 아니고, 그 게이트 등급이 동료 등급 이하일 때
 function sendToGate(id, gateId, now = Date.now()) {
   const a = ALLIES[id], g = gateInfo(gateId);
-  if (!gatesOpen() || !a || !g || !allyOwned(id) || State.meta.ally === id || gateOf(id) || seatedAlly(id) || g.rank > allyGradeN(a)) return false;
+  if (!gatesOpen() || !a || !g || !gateUnlocked(gateId) || !allyOwned(id) || State.meta.ally === id || gateOf(id) || seatedAlly(id) || g.rank > allyGradeN(a)) return false;
   State.meta.gates[id] = { gate: gateId, start: now, end: now + g.ms };
   pushLog('info', `${a.name}${josa(a.name, '이', '가')} ${gateId}급 게이트에 들어갔다 — ${g.hours}시간 뒤에 돌아온다.`);
   save();
@@ -1685,6 +1693,87 @@ function giveStonesLowest(n) {
   return slot;
 }
 // 받는다 — 다 끝난 게이트의 핵 · 강화석. → { gate, cores, core, stones, slot } 또는 null
+// ---------- 게이트 찾기 (사용자 결정 2026-11-19) — 협회 로비의 창구. 하루마다 게이트 3개, 내가 들어가 보스를 깸 ----------
+// 깨면 미리 보이던 보상 하나 + 그 등급을 게이트 창구 자동사냥에 엶 (내가 깬 등급만 동료를 보낼 수 있음). 지면 그 회차엔 그 게이트에 다시 못 들어감
+const FIND_REWARDS = ['cores', 'stones', 'gem', 'won'];
+// 깬 등급과 그 아래가 모두 열림 — 오늘의 게이트는 내 등급 근처만 나오므로, 낮은 등급 동료도 보낼 수 있게
+function gateUnlocked(gateId) { const g = gateInfo(gateId); return !!g && (State.meta.gateClear || []).some(id => gateInfo(id).rank >= g.rank); }
+function todayKey(now = Date.now()) { const d = new Date(now); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
+// 오늘의 게이트 — 날짜가 바뀌면 새로 (못 깬 어제 것은 사라짐)
+function foundGates(now = Date.now(), rng = Math.random) {
+  if (!gatesOpen()) return [];
+  const day = todayKey(now), m = State.meta;
+  if (!m.found || m.found.day !== day) {
+    const top = Math.max(1, hunterGrade()), foes = ENEMIES.filter(e => e.zoneIndex < bestRankNow() && (e.kind === 'normal' || e.kind === 'elite'));
+    const list = [];
+    for (let i = 0; i < RULES.FIND_GATES; i++) {
+      const up = top < HUNTER_GRADES.length && rng() < RULES.FIND_UP;
+      const lo = Math.max(1, top - 2), n = up ? top + 1 : lo + Math.floor(rng() * (top - lo + 1));
+      const grade = HUNTER_GRADES[n - 1].id, foe = foes[Math.floor(rng() * foes.length)];
+      const type = FIND_REWARDS[Math.floor(rng() * FIND_REWARDS.length)];
+      list.push({ grade, foe: foe.id, reward: { type, n: findRewardN(type, grade) }, cleared: false, lostRun: null });
+    }
+    m.found = { day, list };
+    save();
+  }
+  return m.found.list;
+}
+// 보상의 양 — 그 등급 게이트에 동료를 보낸 것만큼(핵 · 강화석), 원석은 등급이 높으면 둘, 돈은 그 핵을 판 값
+function findRewardN(type, grade) {
+  const g = gateInfo(grade);
+  if (type === 'cores') return g.cores;
+  if (type === 'stones') return g.stones;
+  if (type === 'gem') return g.rank >= 5 ? 2 : 1;
+  return Math.round(CORES[`core${g.rank}`].sell * g.cores);
+}
+// 게이트 보스 — 가 본 격의 몬스터 하나, 세기는 그 등급 시험관만큼 (레벨은 안 보여 줌)
+function findFoe(gate) {
+  const e = getEnemy(gate.foe), n = gateInfo(gate.grade).rank;
+  return { id: `gate_${gate.foe}`, name: `${gate.grade}급 게이트 · ${e.name}`, icon: e.icon, kind: 'boss', gateBoss: true, noLv: true, grade: gate.grade, level: HUNTER_GRADES[n - 1].level, ...examinerStats(n) };
+}
+function canEnterFound(i, now = Date.now()) {
+  const g = foundGates(now)[i];
+  return !!g && !g.cleared && g.lostRun !== State.meta.runCount && !!State.run && !State.run.over && !State.run.gateIn;
+}
+function enterFound(i, now = Date.now()) {
+  if (!canEnterFound(i, now)) return false;
+  State.run.gateIn = { i, day: State.meta.found.day, done: false };
+  save();
+  return true;
+}
+function gateInNow() { const t = State.run && State.run.gateIn; return t && !t.done && State.meta.found && State.meta.found.day === t.day ? State.meta.found.list[t.i] : null; }
+function fightFound(rng = Math.random) {
+  const run = State.run, g = gateInNow();
+  if (!g || run.lastResult) return null;
+  const foe = findFoe(g), hero = heroStats(), log = [];
+  const r = simulateBattle(hero, foe, rng, log);
+  run.gateIn.done = true;
+  let reward = null;
+  if (r.win) {
+    g.cleared = true;
+    const opened = !gateUnlocked(g.grade);
+    if (opened) State.meta.gateClear = (State.meta.gateClear || []).concat(g.grade);
+    reward = giveFindReward(g);
+    pushLog('drop', `${g.grade}급 게이트를 깼다 — ${reward.text}.${opened ? ` 이제 ${g.grade}급 게이트에 동료를 보낼 수 있다.` : ''}`);
+    run.lastResult = { gatein: true, enemy: foe, win: true, turns: r.turns, grade: g.grade, opened, reward, drops: [], replay: { log, heroMax: hero.life, foeMax: foe.life } };
+  } else {
+    g.lostRun = State.meta.runCount;
+    pushLog('info', `${g.grade}급 게이트에서 물러났다 — 이번 회차엔 다시 못 들어간다.`);
+    run.lastResult = { gatein: true, enemy: foe, win: false, turns: r.turns, grade: g.grade, drops: [], replay: { log, heroMax: hero.life, foeMax: foe.life } };
+  }
+  save();
+  return run.lastResult;
+}
+function giveFindReward(g) {
+  const { type, n } = g.reward, info = gateInfo(g.grade), m = State.meta;
+  if (type === 'cores') { const core = CORES[`core${info.rank}`]; m.mats[core.id] = matsOf(core.id) + n; return { type, n, text: `${core.name} ${fmt(n)}개` }; }
+  if (type === 'stones') { const slot = giveStonesLowest(n); return { type, n, text: `${SLOT_NAMES[slot]} 강화석 ${fmt(n)}개` }; }
+  if (type === 'gem') { m.bmGems = num(m.bmGems) + n; return { type, n, text: `${BM_GEM.name} ${n}개` }; }
+  m.won = num(m.won) + n; return { type, n, text: fmtWon(n) };
+}
+// 게이트 안에서 나섬 — 싸웠든 안 싸웠든 끝 (안 싸웠으면 그 게이트는 그대로)
+function leaveFound() { if (State.run && State.run.gateIn) { State.run.gateIn = null; save(); } }
+
 function claimGate(id, now = Date.now()) {
   if (!gateDone(id, now)) return null;
   const g = gateInfo(gateOf(id).gate), core = CORES[`core${g.rank}`];
