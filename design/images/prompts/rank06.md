@@ -161,7 +161,7 @@ If a name describes a different kind of object than its type, draw the object fr
 | 6 | 갉는 팔찌 | 팔찌 | 세계수를 먹는 벌레 | `assets/items/worldworm_3.png` ✅ |
 | 7 | 고룡의 심장석 | 특수장비 | 고대룡 | `assets/items/elderdragon_4.png` ✅ |
 
-## 시트 6-D — 무기 · 보조무기 · 투구 · 갑옷 · 장갑 · 신발 (6개)
+## 시트 6-D — 무기 · 보조무기 · 투구 · 갑옷 · 장갑 · 신발 (6개) ✅ 다 자름
 
 저장할 이름: `design/images/sheets/rank06-D.png`
 
@@ -206,12 +206,12 @@ If a name describes a different kind of object than its type, draw the object fr
 
 | 칸 | 장비 | 부위 | 나온 곳 | 잘라서 둘 곳 |
 |---|---|---|---|---|
-| 1 | 플라즈마 절단검 | 무기 | 헌터백화점 | `assets/items/dept_plasma.png` |
-| 2 | 이동식 방벽 | 보조무기 | 헌터백화점 | `assets/items/dept_barrier.png` |
-| 3 | 전면 차폐 헬멧 | 투구 | 헌터백화점 | `assets/items/dept_helm6.png` |
-| 4 | 역장 내장 갑주 | 갑옷 | 헌터백화점 | `assets/items/dept_vest6.png` |
-| 5 | 파쇄 건틀릿 | 장갑 | 헌터백화점 | `assets/items/dept_glove6.png` |
-| 6 | 중력 완충 부츠 | 신발 | 헌터백화점 | `assets/items/dept_boots6.png` |
+| 1 | 플라즈마 절단검 | 무기 | 헌터백화점 | `assets/items/dept_plasma.png` ✅ |
+| 2 | 이동식 방벽 | 보조무기 | 헌터백화점 | `assets/items/dept_barrier.png` ✅ |
+| 3 | 전면 차폐 헬멧 | 투구 | 헌터백화점 | `assets/items/dept_helm6.png` ✅ |
+| 4 | 역장 내장 갑주 | 갑옷 | 헌터백화점 | `assets/items/dept_vest6.png` ✅ |
+| 5 | 파쇄 건틀릿 | 장갑 | 헌터백화점 | `assets/items/dept_glove6.png` ✅ |
+| 6 | 중력 완충 부츠 | 신발 | 헌터백화점 | `assets/items/dept_boots6.png` ✅ |
 
 ## 하나씩 뽑기 (시트가 잘 안 될 때)
 

@@ -2,7 +2,7 @@
 
 > 자동으로 만든 파일입니다 (`node tools/cli.js images`). 손으로 고치지 마세요. 쓰는 법은 같은 폴더의 `README.md`.
 
-## 시트 7-A — 무기 · 보조무기 · 투구 (8개)
+## 시트 7-A — 무기 · 보조무기 · 투구 (8개) ✅ 다 자름
 
 저장할 이름: `design/images/sheets/rank07-A.png`
 
@@ -46,16 +46,16 @@ If a name describes a different kind of object than its type, draw the object fr
 
 | 칸 | 장비 | 부위 | 나온 곳 | 잘라서 둘 곳 |
 |---|---|---|---|---|
-| 1 | 청룡언월도 | 무기 | 관우 | `assets/items/guanyu_0.png` |
-| 2 | 병법의 죽간 | 무기 | 손자 | `assets/items/sunzi_0.png` |
-| 3 | 쌍룡검 | 무기 | 이순신 | `assets/items/yisunsin_0.png` |
-| 4 | 천구의 | 보조무기 | 히파티아 | `assets/items/hypatia_0.png` |
-| 5 | 마르지 않는 뿔병 | 보조무기 | 필경사 | `assets/items/scribe_0.png` |
-| 6 | 검투사의 방패 | 보조무기 | 스파르타쿠스 | `assets/items/spartacus_1.png` |
-| 7 | 정복자의 투구 | 투구 | 알렉산드로스 | `assets/items/alexander_0.png` |
-| 8 | 기록자의 두건 | 투구 | 헤로도토스 | `assets/items/herodotos_0.png` |
+| 1 | 청룡언월도 | 무기 | 관우 | `assets/items/guanyu_0.png` ✅ |
+| 2 | 병법의 죽간 | 무기 | 손자 | `assets/items/sunzi_0.png` ✅ |
+| 3 | 쌍룡검 | 무기 | 이순신 | `assets/items/yisunsin_0.png` ✅ |
+| 4 | 천구의 | 보조무기 | 히파티아 | `assets/items/hypatia_0.png` ✅ |
+| 5 | 마르지 않는 뿔병 | 보조무기 | 필경사 | `assets/items/scribe_0.png` ✅ |
+| 6 | 검투사의 방패 | 보조무기 | 스파르타쿠스 | `assets/items/spartacus_1.png` ✅ |
+| 7 | 정복자의 투구 | 투구 | 알렉산드로스 | `assets/items/alexander_0.png` ✅ |
+| 8 | 기록자의 두건 | 투구 | 헤로도토스 | `assets/items/herodotos_0.png` ✅ |
 
-## 시트 7-B — 투구 · 갑옷 · 어깨 · 장갑 · 허리띠 (8개)
+## 시트 7-B — 투구 · 갑옷 · 어깨 · 장갑 · 허리띠 (8개) ✅ 다 자름
 
 저장할 이름: `design/images/sheets/rank07-B.png`
 
@@ -101,16 +101,16 @@ If a name describes a different kind of object than its type, draw the object fr
 
 | 칸 | 장비 | 부위 | 나온 곳 | 잘라서 둘 곳 |
 |---|---|---|---|---|
-| 1 | 사자 투구 | 투구 | 마초 | `assets/items/machao_0.png` |
-| 2 | 두정갑 | 갑옷 | 이순신 | `assets/items/yisunsin_1.png` |
-| 3 | 아두를 품은 흉갑 | 갑옷 | 조운 | `assets/items/zhaoyun_0.png` |
-| 4 | 초원의 어깨가리개 | 어깨 | 칭기즈 칸 | `assets/items/genghis_0.png` |
-| 5 | 성녀의 견갑 | 어깨 | 잔 다르크 | `assets/items/joan_0.png` |
-| 6 | 잉크 물든 장갑 | 장갑 | 필경사 | `assets/items/scribe_2.png` |
-| 7 | 천 하룻밤의 띠 | 허리띠 | 이름 없는 이야기꾼 | `assets/items/storyteller_2.png` |
-| 8 | 술 호리병 허리띠 | 허리띠 | 장비 | `assets/items/zhangfei_0.png` |
+| 1 | 사자 투구 | 투구 | 마초 | `assets/items/machao_0.png` ✅ |
+| 2 | 두정갑 | 갑옷 | 이순신 | `assets/items/yisunsin_1.png` ✅ |
+| 3 | 아두를 품은 흉갑 | 갑옷 | 조운 | `assets/items/zhaoyun_0.png` ✅ |
+| 4 | 초원의 어깨가리개 | 어깨 | 칭기즈 칸 | `assets/items/genghis_0.png` ✅ |
+| 5 | 성녀의 견갑 | 어깨 | 잔 다르크 | `assets/items/joan_0.png` ✅ |
+| 6 | 잉크 물든 장갑 | 장갑 | 필경사 | `assets/items/scribe_2.png` ✅ |
+| 7 | 천 하룻밤의 띠 | 허리띠 | 이름 없는 이야기꾼 | `assets/items/storyteller_2.png` ✅ |
+| 8 | 술 호리병 허리띠 | 허리띠 | 장비 | `assets/items/zhangfei_0.png` ✅ |
 
-## 시트 7-C — 각반 · 신발 · 망토 · 반지 (7개)
+## 시트 7-C — 각반 · 신발 · 망토 · 반지 (7개) ✅ 다 자름
 
 저장할 이름: `design/images/sheets/rank07-C.png`
 
@@ -154,13 +154,13 @@ If a name describes a different kind of object than its type, draw the object fr
 
 | 칸 | 장비 | 부위 | 나온 곳 | 잘라서 둘 곳 |
 |---|---|---|---|---|
-| 1 | 설계도 각반 | 각반 | 레오나르도 다 빈치 | `assets/items/davinci_2.png` |
-| 2 | 비행 장치 | 신발 | 레오나르도 다 빈치 | `assets/items/davinci_1.png` |
-| 3 | 천리마의 등자 | 신발 | 칭기즈 칸 | `assets/items/genghis_1.png` |
-| 4 | 여행자의 망토 | 망토 | 헤로도토스 | `assets/items/herodotos_2.png` |
-| 5 | 이야기꾼의 해진 외투 | 망토 | 이름 없는 이야기꾼 | `assets/items/storyteller_1.png` |
-| 6 | 유레카의 원 | 반지 | 아르키메데스 | `assets/items/archimedes_1.png` |
-| 7 | 노장의 깍지 | 반지 | 황충 | `assets/items/huangzhong_0.png` |
+| 1 | 설계도 각반 | 각반 | 레오나르도 다 빈치 | `assets/items/davinci_2.png` ✅ |
+| 2 | 비행 장치 | 신발 | 레오나르도 다 빈치 | `assets/items/davinci_1.png` ✅ |
+| 3 | 천리마의 등자 | 신발 | 칭기즈 칸 | `assets/items/genghis_1.png` ✅ |
+| 4 | 여행자의 망토 | 망토 | 헤로도토스 | `assets/items/herodotos_2.png` ✅ |
+| 5 | 이야기꾼의 해진 외투 | 망토 | 이름 없는 이야기꾼 | `assets/items/storyteller_1.png` ✅ |
+| 6 | 유레카의 원 | 반지 | 아르키메데스 | `assets/items/archimedes_1.png` ✅ |
+| 7 | 노장의 깍지 | 반지 | 황충 | `assets/items/huangzhong_0.png` ✅ |
 
 ## 시트 7-D — 목걸이 · 팔찌 · 특수장비 (7개)
 
