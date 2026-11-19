@@ -1178,7 +1178,7 @@ const OLDTOWN = {
   // 옥상은 대부분 정사각형(가로 4칸 · 깊이 7칸) — 직사각형 옥상은 위 줄 오른쪽 끝 한 채만. 생김새는 종류마다 매기는 번호 v 로 모두 다르게 (js/mapart.js 의 oldPal)
   buildings: [
     // 위 줄 — 문은 가운데 골목길(y 7 ~ 9)을 봄
-    { kind: 'villa', roof: 'tank', x: 2, y: 0, w: 4, h: 7, door: { x: 3, w: 1, name: 'home', label: '집', to: 'home.out' } },   // 안은 HOME (원룸)
+    { kind: 'villa', roof: 'tank', x: 2, y: 0, w: 4, h: 7, door: { x: 3, w: 1, name: 'home', label: '집', to: 'home.out', unlock: 'home1' } },   // 안은 HOME (원룸) — 새 집을 사면 잠김 (이사)
     { kind: 'back', annex: true, x: 6, y: 0, w: 2, h: 2 },                                                              // 집 바로 옆 틈 — 이상한 게이트가 이 벽 앞에 섬 (사용자 결정)
     { kind: 'shabby', x: 8, y: 0, w: 4, h: 7, door: { x: 9, w: 2, name: 'myguild', label: '빈 건물', to: 'guild.out', unlock: 'guild' } },   // 사들여 내 길드로 키울 곳 (도시 계획 6번 — 1~3단계. 4단계부터는 미래 도시로 옮기고 「옛 사무실」 — 그림은 mapart)
     { kind: 'store', x: 13, y: 0, w: 4, h: 7 },
@@ -1235,6 +1235,8 @@ const CITY = {
     { kind: 'guild', tone: 3, x: 37, y: 27, w: 8, h: 9, door: { x: 40, w: 2, name: 'guild4', label: '달 길드' } },
     // 가운데 빈터 — 내 길드가 4단계부터 여기에 (사용자 결정 2026-11-19). 그 전엔 빈터 그대로 (overLot — 겉모습은 빈터, 그림은 mapart 가 길드 단계대로)
     { kind: 'mineCity', overLot: true, f: 4, x: 16, y: 45, w: 14, h: 7, door: { x: 21, w: 4, name: 'myguild2', label: '', to: 'guild2.out', unlock: 'guildCity' } },
+    // 오른쪽 빈터 — 새 집 (고급 아파트, 사용자 결정 2026-11-19). 사기 전엔 빈터 그대로 · 「분양」 (overLot — 그림은 mapart 가 산 뒤에 아파트로)
+    { kind: 'aptCity', overLot: true, f: 4, x: 33, y: 45, w: 11, h: 7, door: { x: 37, w: 3, name: 'home2', label: '', to: 'home2.out', unlock: 'home2' } },
     // 둘레 — 걷지 못하는 곳의 빌딩들 (왼쪽 둘째 길 아래는 옛 동네로 가는 보도가 이어져 보이게 비움)
     // 둘레 빌딩 — 양옆만 (위아래 끝의 빌딩은 없앰 — 사용자 결정 2026-11-18). 옥상이 정사각형(가로 4칸 · 깊이 7칸 · 벽면 3칸 — facade), 지도 가장자리까지
     { kind: 'tower', tone: 0, x: -9, y: 2, w: 4, h: 7 }, { kind: 'tower', tone: 1, x: -9, y: 10, w: 4, h: 7 }, { kind: 'tower', tone: 2, x: -9, y: 26, w: 4, h: 7 },
@@ -1348,7 +1350,7 @@ function townMap(C, name) {
     if (B.f !== undefined) B.f += 1;
   });
   // 이상한 게이트 — 나에게만 보임 (그림은 mapview 의 rift). 들어가면 지하수로 첫 공간의 같은 게이트 앞
-  if (C.gate) ports.push({ name: 'gate', x: C.gate[0] + PD.l, y: C.gate[1] + PD.t, w: 2, h: 1, to: 'sewer.city', rift: true });
+  if (C.gate) ports.push({ name: 'gate', x: C.gate[0] + PD.l, y: C.gate[1] + PD.t, w: 2, h: 1, to: 'sewer.city', rift: true, unlock: 'portalOld' });   // 길잡이가 새 집 안으로 옮기면 닫힘
   // 지도 가장자리 통로 — 그리지 않고 이름표만 (mapview 의 edge). 넘어가면 그 지도의 같은 이름 통로 안쪽(arrive 쪽)에 섬
   for (const e of C.edges) ports.push({ name: e.name, label: e.label, x: e.x + PD.l, y: e.y + PD.t, w: e.w, h: e.h, to: e.to, edge: true, arrive: e.arrive });
   return buildTmj({ w: W, h: H, tiles, look: lk, ports, npcs: [{ name: 'start', x: sx + PD.l, y: sy + PD.t }],
@@ -1425,7 +1427,7 @@ function storeInterior(D) {
   // 안쪽 문 — 바닥 칸 위에 선 문 (에스컬레이터 앞 등). unlock 이 있으면 게임이 열렸는지 봄 (닫히면 벽처럼)
   for (const l of D.links || []) {
     for (let i = 0; i < l.w; i++) if (!inFloor(l.x + i, l.y) || tiles[at(l.x + i, l.y)] !== FLOOR) throw new Error(`${D.title} — ${l.name} 문 자리가 빈 바닥이 아님`);
-    ports.push({ name: l.name, label: l.label, x: l.x + SIDE, y: l.y + TOP, w: l.w, h: 1, to: l.to, door: true, ...(l.unlock ? { unlock: l.unlock } : {}) });
+    ports.push({ name: l.name, label: l.label, x: l.x + SIDE, y: l.y + TOP, w: l.w, h: 1, to: l.to, ...(l.rift ? { rift: true } : { door: true }), ...(l.unlock ? { unlock: l.unlock } : {}) });
   }
   const start = { name: 'start', x: out.x + (out.w >> 1), y: out.y - 1 };
   const npcs = [start];
@@ -1542,6 +1544,24 @@ const HOME = {
   signs: []
 };
 const homeInterior = () => storeInterior(HOME);
+// ---------- 새 집 — 미래 도시의 고급 아파트 (도시 계획 7번 · 11격, 사용자 결정 2026-11-19) ----------
+// 위 벽에 통유리창 셋(밖으로 미래 도시의 밤). 왼쪽 위 큰 침대 · 오른쪽 위 책상 · 가운데 소파 둘 · 냉장고 · 화분.
+// 오른쪽 위 구석 — 길잡이가 옮겨 온 이상한 게이트 (portal — 옮긴 뒤에만 열림 · 그 뒤 회차는 여기서 시작)
+const HOME2 = {
+  title: '새 집', w: 13, h: 8, to: 'city.home2', theme: 'home2', outLabel: '도시로',
+  wall: [{ x: 0, w: 4, kind: 'window' }, { x: 5, w: 3, kind: 'window' }, { x: 9, w: 4, kind: 'window' }],
+  props: [
+    { kind: 'bed', x: 0, y: 0, w: 2, h: 3 },
+    { kind: 'desk', x: 8, y: 0, w: 2 },
+    { kind: 'bench', x: 1, y: 5, w: 2 }, { kind: 'bench', x: 9, y: 5, w: 2 },
+    { kind: 'fridge', x: 12, y: 3, w: 1, h: 2 },
+    { kind: 'plant', x: 0, y: 7, w: 1 }, { kind: 'plant', x: 12, y: 7, w: 1 }
+  ],
+  clerks: [{ x: 2, y: 1, shop: 'bed2', label: '침대' }],
+  links: [{ name: 'portal', x: 11, y: 0, w: 2, to: 'sewer.city', rift: true, unlock: 'portal' }],
+  signs: []
+};
+const home2Interior = () => storeInterior(HOME2);
 // 4단계부터 — 미래 도시 가운데 빈터의 새 건물 안. 더 넓게, 기둥 · 의자를 더 (자리는 그대로 다섯)
 const GUILD2 = {
   title: '내 길드', w: 21, h: 12, to: 'city.myguild2', theme: 'guild',
@@ -1562,11 +1582,11 @@ const guild2Interior = () => storeInterior(GUILD2);
 
 // 뽑을 지도 전부 — { 파일 이름: 만드는 함수 }
 function allMaps(data) {
-  const out = { sewer: sewer(data), overworld: overworld(data), hub: hub(data), oldtown: oldtown(), city: city(), dept: deptInterior(), dept2: dept2Interior(), assoc: assocInterior(), guild: guildInterior(), guild2: guild2Interior(), home: homeInterior(), arena: arenaInterior(), bm: bmInterior() };
+  const out = { sewer: sewer(data), overworld: overworld(data), hub: hub(data), oldtown: oldtown(), city: city(), dept: deptInterior(), dept2: dept2Interior(), assoc: assocInterior(), guild: guildInterior(), guild2: guild2Interior(), home: homeInterior(), arena: arenaInterior(), bm: bmInterior(), home2: home2Interior() };
   for (const s of SECRET_ROOMS) out[s.id] = secretRoom(data, s);
   for (const b of BUILDINGS) out[b.id] = buildingInterior(data, b);
   REALMS.forEach((r, i) => { out[r.name] = realm(data, r, i); });
   return out;
 }
 
-module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, looksPng, encodePng, generate, sewer, overworld, hub, oldtown, city, deptInterior, dept2Interior, assocInterior, guildInterior, guild2Interior, homeInterior, arenaInterior, bmInterior, storeInterior, OLDTOWN, CITY, DEPT, DEPT2, ASSOC, GUILD, GUILD2, HOME, ARENA, BM, CITY_BIO, secretRoom, buildingInterior, allMaps, layoutFromPlan, HUB_DOORS, REALMS, SEWER, SECRET_ROOMS, BUILDINGS, BUILD, DOORWAY, CARPET, RUIN };
+module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, looksPng, encodePng, generate, sewer, overworld, hub, oldtown, city, deptInterior, dept2Interior, assocInterior, guildInterior, guild2Interior, homeInterior, home2Interior, arenaInterior, bmInterior, storeInterior, OLDTOWN, CITY, DEPT, DEPT2, ASSOC, GUILD, GUILD2, HOME, HOME2, ARENA, BM, CITY_BIO, secretRoom, buildingInterior, allMaps, layoutFromPlan, HUB_DOORS, REALMS, SEWER, SECRET_ROOMS, BUILDINGS, BUILD, DOORWAY, CARPET, RUIN };

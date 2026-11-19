@@ -1876,6 +1876,9 @@ function onMapEvents(evs) {
     } else if (e.type === 'shop' && e.npc.shop === 'examiner') {   // 시험장 — 지금 차례의 시험관
       examinerTalk();
       changed = true;
+    } else if (e.type === 'shop' && e.npc.shop === 'bed2') {   // 새 집 침대 — 혼잣말 한마디
+      if (!isTalkOpen()) playTalk([{ who: 'me', text: home2Line() }], null, { end: '일어난다' });
+      changed = true;
     } else if (e.type === 'shop' && e.npc.shop === 'bed') {   // 우리 집 침대 — 혼잣말 한마디 (분위기만)
       if (!isTalkOpen()) playTalk([{ who: 'me', text: homeLine() }], null, { end: '일어난다' });
       changed = true;
@@ -1908,6 +1911,18 @@ function onMapEvents(evs) {
         else if (guildForSale()) { if (!isShopOpen()) { Sound.play('encounter'); openShop('guild'); } }
         else pushLog('info', '빈 건물 — 셔터가 내려져 있다. 바랜 「임대」 종이가 붙어 있다.');
       }
+      changed = true;
+    } else if (e.type === 'closed' && e.port.unlock === 'home2') {   // 미래 도시 오른쪽 빈터 — 새 집 (11격 뒤 「분양」)
+      if (Date.now() - closedSaidAt > 2000) {
+        closedSaidAt = Date.now();
+        if (home2ForSale()) { if (!isShopOpen()) { Sound.play('encounter'); openShop('home2'); } }
+        else pushLog('info', '가림막 친 빈터다. 「주거 단지 — 공사 예정」.');
+      }
+      changed = true;
+    } else if (e.type === 'closed' && e.port.unlock === 'home1') {   // 옛 원룸 — 이사 나감
+      if (Date.now() - closedSaidAt > 2000) { closedSaidAt = Date.now(); pushLog('info', '이사 나온 원룸 — 문에 새 세입자의 이름표가 붙어 있다.'); }
+      changed = true;
+    } else if (e.type === 'closed' && (e.port.unlock === 'portalOld' || e.port.unlock === 'portal')) {   // 옮기기 전 · 옮긴 뒤의 빈 자리 — 아무것도 없음
       changed = true;
     } else if (e.type === 'closed' && e.port.unlock === 'bm') {   // 암시장 셔터 — 9격 전 · 후드티가 없는 회차
       if (Date.now() - closedSaidAt > 2000) {
@@ -1975,7 +1990,8 @@ function mapMarks() {
 function renderMapLayer(onMap, frame) {
   document.body.classList.toggle('facing', !!frame);
   if (typeof MapArt !== 'undefined' && MapArt.setGuild) MapArt.setGuild(guildLevel());
-  if (typeof MapArt !== 'undefined' && MapArt.setMarket) MapArt.setMarket(bmOpen());   // 암시장 — 후드티가 와 있는 회차엔 셔터가 반쯤 올라감   // 내 길드의 겉모습 · 안의 빛깔 (단계가 바뀌면 다시 그림)
+  if (typeof MapArt !== 'undefined' && MapArt.setMarket) MapArt.setMarket(bmOpen());
+  if (typeof MapArt !== 'undefined' && MapArt.setHome2) MapArt.setHome2(!!State.meta.home2);   // 새 집 — 산 뒤엔 오른쪽 빈터에 아파트   // 암시장 — 후드티가 와 있는 회차엔 셔터가 반쯤 올라감   // 내 길드의 겉모습 · 안의 빛깔 (단계가 바뀌면 다시 그림)
   if (onMap) syncMap();
   if (onMap && mapView.world) mapView.world.player.speedMul = passiveMult('stride');   // 패시브 「발걸음」
   // 아무도 마주하지 않으면 창 없이 지도만 — 화신 문이 있으면 위에 작게 (떠돌이 상인은 지도 위 🎒 에 닿으면 상점 — 예전 「들른다」 단추는 뺌)
@@ -2713,7 +2729,7 @@ let shopKind = 'merchant';   // 'merchant' 또는 백화점 매장 이름
 let shopSay = '';            // 점원의 한마디 — 창을 열 때 한 번 고릅니다 (사고 나서 다시 그려도 그대로)
 const isDeptShop = () => shopKind !== 'merchant';
 // 지금 연 상점이 아직 그 자리에 있나 (상인이 떠났거나 도시가 아니면 닫습니다)
-function shopHere() { return shopKind === 'ranking' ? rankingOpen() : shopKind === 'bm' ? bmOpen() : shopKind === 'assoc' ? !!State.meta.cityOpen : shopKind === 'hire' || shopKind === 'gate' ? gatesOpen() : shopKind === 'guild' ? guildForSale() || guildOwned() : isDeptShop() ? !!State.meta.cityOpen && !!DEPT_SECTIONS[shopKind] : merchantHere(); }
+function shopHere() { return shopKind === 'home2' ? home2ForSale() : shopKind === 'ranking' ? rankingOpen() : shopKind === 'bm' ? bmOpen() : shopKind === 'assoc' ? !!State.meta.cityOpen : shopKind === 'hire' || shopKind === 'gate' ? gatesOpen() : shopKind === 'guild' ? guildForSale() || guildOwned() : isDeptShop() ? !!State.meta.cityOpen && !!DEPT_SECTIONS[shopKind] : merchantHere(); }
 // 점원은 등록증도 없는 손님을 수상쩍어하지만 묻지 않습니다
 const CLERK_TALK = {
   noLicense: ['「헌터 등록증 먼저 보여 주시겠어요? …없으시면 팔 수가 없어요. 협회는 길 건너 큰 건물이에요.」', '「등록 안 된 분께는 무기를 못 팔아요. 규정이라서요. 협회에서 시험부터 보고 오세요.」'],
@@ -2729,7 +2745,7 @@ const MAT_TALK = {
 function clerkLine(kind) {
   const pick = list => list[Math.floor(Math.random() * list.length)];
   if (kind === 'stones') return pick(STONE_TALK);
-  if (kind === 'ranking') return '';
+  if (kind === 'ranking' || kind === 'home2') return '';
   if (kind === 'bm') return pick(!num(State.meta.bmGems) ? BM_TALK.noGem : !bmPool().length ? BM_TALK.none : BM_TALK.hi);
   if (kind === 'mats') {
     const any = Object.keys(State.meta.mats || {}).some(id => matsOf(id) > 0), made = ITEMS.some(i => i.craft && owns(i.id));
@@ -2772,6 +2788,7 @@ function renderShop() {
   if (shopKind === 'stones') { renderStoneShop(); return; }
   if (shopKind === 'bm') { renderBlackMarket(); return; }
   if (shopKind === 'ranking') { renderRanking(); return; }
+  if (shopKind === 'home2') { renderHome2Sale(); return; }
   const dept = isDeptShop();
   // 지갑 — 백화점(도시)은 돈(원), 떠돌이 상인(그 공간)은 골드
   const gold = num(dept ? State.meta.won : State.meta.gold);
@@ -2841,7 +2858,7 @@ function renderShop() {
 // 맨 위는 핵 — 모든 몬스터가 남기는 팔 것 (격마다 한 가지). 가진 격만 한 줄씩, 「모두 판다」 한 번으로 다 팝니다. 만드는 데는 쓰지 않습니다.
 // ---------- 헌터 협회 · 등록 창구 (상점 창을 같이 씀 — shopKind 'assoc') ----------
 // 지금의 나(도시의 Lv.1 그대로)로 F 시험관부터 차례로 싸워, 이긴 데까지가 등급. 회차에 한 번 · 내려가지 않음 (game.js 의 takeHunterTest)
-const CLERK_DESKS = { examiner: { name: '시험관', icon: '🧑‍🏫' }, assoc: { name: '등록 창구', icon: '🧑‍💼' }, ally: { name: '???', icon: ALLIES.hayun.icon }, ally2: { name: '???', icon: ALLIES.danwoo.icon }, bm: { name: '???', icon: '🫥' }, ranking: { name: '길드 순위', icon: '📊' }, hire: { name: '동료 모집', icon: '👩‍💼' }, gate: { name: '게이트 창구', icon: '🧑‍✈️' }, guild: { name: '길드 장부', icon: '📒' }, bed: { name: '침대', icon: '💤' } };   // 백화점 매장이 아닌 창구 — 지도 위 이름표
+const CLERK_DESKS = { examiner: { name: '시험관', icon: '🧑‍🏫' }, assoc: { name: '등록 창구', icon: '🧑‍💼' }, ally: { name: '???', icon: ALLIES.hayun.icon }, ally2: { name: '???', icon: ALLIES.danwoo.icon }, bm: { name: '???', icon: '🫥' }, ranking: { name: '길드 순위', icon: '📊' }, hire: { name: '동료 모집', icon: '👩‍💼' }, gate: { name: '게이트 창구', icon: '🧑‍✈️' }, guild: { name: '길드 장부', icon: '📒' }, bed: { name: '침대', icon: '💤' }, bed2: { name: '침대', icon: '💤' } };   // 백화점 매장이 아닌 창구 — 지도 위 이름표
 const ASSOC_TALK = {
   none: ['「신규 등록이세요? 시험은 간단해요. 시험관과 한 번씩 붙어 보시면 돼요. F급부터요.」', '「등록증 없이 게이트 근처를 돌아다니시면 곤란해요. …시험 보시게요?」'],
   again: ['「재심사요? 좋아요. 지난번보다 나아지셨는지 볼까요.」', '「등급은 한 번 받으면 안 내려가요. 부담 없이 보세요.」'],
@@ -3035,6 +3052,16 @@ const GUILD_NAME_TALK = [
   { who: 'me', text: () => `(오늘부터 「${(State.meta.guild && State.meta.guild.name) || '내 길드'}」.)` }
 ];
 // 우리 집 침대에 앉으면 — 그때그때의 나에 맞는 혼잣말 하나 (사용자 결정 2026-11-19 — 집은 분위기만). 대사는 제안
+// 새 집 침대 — 혼잣말 (대사는 제안)
+function home2Line() {
+  const pick = a => a[Math.floor(Math.random() * a.length)];
+  return pick([
+    '(…천장이 높다. 아직 내 집 같지가 않다.)',
+    '(통유리 너머로 도시의 불빛. 옛 동네 지붕은 여기선 안 보인다.)',
+    '(침대가 삐걱거리지 않는다. 조금 허전하다.)',
+    State.meta.portalMoved ? '(방 한쪽 벽이 일렁인다. 그 문이 이제 집 안에 있다.)' : '(냉장고가 두 칸이다. 채울 게 없다.)'
+  ]);
+}
 function homeLine() {
   const m = State.meta, g = hunterGrade(), pick = a => a[Math.floor(Math.random() * a.length)];
   const lines = [
@@ -3120,6 +3147,39 @@ function renderGuild() {
 const STONE_TALK = ['「가지신 장비랑 같은 재료면 녹여서 강화석으로 뽑아 드려요. 손이 좀 가지만요.」', '「이 가죽이면… 신발 쪽 강화석이 나오겠네요. 잠깐만요.」'];
 // 바꿀 수 있는 재료 — 그 재료로 만드는 장비 중 이미 가진 것이 있는 재료
 function stoneMats() { return Object.values(MATERIALS).filter(mat => ITEMS.some(i => i.craft && i.craft.mat === mat.id && owns(i.id))); }
+// ---------- 새 집 — 미래 도시 오른쪽 빈터의 「분양」 (도시 계획 7번 · 11격, 사용자 결정 2026-11-19 · game.js 의 buyHome2 · movePortal) ----------
+// 사면 이사 → 길잡이가 「이제 네가 충분히 강해졌고, 화신도 거들어서」 이상한 게이트를 새 집 안으로 옮김 (사용자 결정 — 옮길 수 있는 까닭). 대사는 제안
+const HOME2_SALE_SAY = '🏢 「분양 사무소예요. 헌터분들 전용 단지라 보안은 확실해요. 게이트 경보도 이 동네가 제일 늦게 울리고요.」';
+function renderHome2Sale() {
+  $('shopTitle').textContent = '헌터들의 도시 · 분양 사무소';
+  const won = num(State.meta.won), price = home2Price();
+  $('shopGold').innerHTML = fmtWon(won);
+  $('shopBody').innerHTML = `<div class="shop-say">${HOME2_SALE_SAY}</div>
+    <div class="adm-note">통유리 창 · 큰 침대 · 소파 — 도시 한복판의 새 집. 사면 옛 동네 원룸에서 이사한다.</div>
+    <div class="assoc-actions"><button class="btn primary" id="home2Buy" ${won >= price ? '' : 'disabled'}><b>산다</b> ${fmtWon(price)}</button></div>
+    <p class="hint">값은 이번 회차를 시작할 때 내 격의 핵 ${RULES.HOME2_COST}개어치</p>`;
+  $('home2Buy').addEventListener('click', () => {
+    if (!buyHome2()) return;
+    Sound.play('rankUp');
+    closeShop();
+    // 새 집 안으로 들어가서 — 길잡이가 게이트를 옮기자고 함 → 옮겨 줘 → 방 한쪽 벽에 그 문
+    const door = mapView && mapView.world && mapView.world.map.ports.find(p => p.name === 'home2');
+    if (door) fadeThrough(() => goThroughPort(door));
+    setTimeout(() => playTalk(PORTAL_TALK, () => {
+      if (movePortal()) Sound.play('encounter');
+      render();
+      playTalk([{ who: 'me', text: '(…방 한쪽 벽이 일렁이더니, 골목의 그 문이 거기 열렸다.)' }], null, { end: '좋아' });
+    }, { end: '옮겨 줘' }), door ? FADE_MS * 2 + 60 : 0);
+  });
+}
+const PORTAL_TALK = [
+  { who: 'guide', text: '…이사했네. 여기, 좋다. 창이 커.' },
+  { who: 'guide', text: '있잖아 — 골목의 그 문 말이야. 이리로 옮길 수 있을 것 같아.' },
+  { who: 'me', text: '(그 이상한 게이트를?)' },
+  { who: 'guide', text: () => { const av = activeAvatar(); return `처음엔 못 했어. 문이 너무 무거웠거든. 근데 이젠 네가 충분히 강해졌고 — ${av ? `${av.name}${josa(av.name, '이', '가')} 문을 같이 붙잡아 주겠대` : '네가 삼킨 격들이 문을 같이 붙잡아 줄 거야'}.`; } },
+  { who: 'guide', text: '그러면 집을 나서지 않아도 돼. 방 한쪽에서 바로 그 공간으로. — 옮겨 줄까?' }
+];
+
 // ---------- 길드 순위 — 협회 로비 순위판 (도시 계획 7번 · 10격, 사용자 결정 2026-11-19 · game.js 의 guildScore · claimRank) ----------
 // 4대 길드를 넘으면, 순위판에 닿을 때 그 길드 사람이 한마디 + 협회 직원이 상금. 대사는 제안
 // 크라운 — 자신만만 · 돈 많음 · 뒤가 구린 부정부패 길드 (사용자 결정). 청해 — 무협을 이어받은 길드 (단우가 떠난 곳)
@@ -3919,6 +3979,8 @@ const ALLY2_MEET = [
   { who: 'me', text: '(동료가 생겼다.)' }
 ];
 const GUIDE_NOTES = [
+  { id: 'home2Sale', when: () => home2ForSale(), key: () => 1,   // 도시는 격을 모름 — 시간이 지나 분양을 시작함
+    text: () => '도시 오른쪽 아래 빈터 있잖아. 가림막에 <b>「분양」</b> 현수막이 걸렸대 — 헌터 전용 고급 아파트래. 원룸에서 <b>이사</b> 갈래? 비싸겠지만.' },
   { id: 'ranking', when: () => rankingOpen(), key: () => 1,   // 도시는 격을 모름 — 협회가 「새로 걸었다」
     text: () => `협회 로비에 <b>길드 순위판</b>이 새로 걸렸대. 4대 길드 — 홍염 · 청해 · 크라운 · 달${guildOwned() ? ` — 사이에 ${State.meta.guild.name || '네 길드'} 이름도 올라갔다던데` : '. 네 길드가 있으면 거기 이름이 올라간대'}.` },
   { id: 'rank', when: () => rankPending().length > 0, key: () => (State.meta.rankPassed || []).length + rankPending().length,

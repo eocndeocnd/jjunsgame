@@ -1093,8 +1093,8 @@ test('도시 — 옛 동네(집 앞에서 시작 · 골목 막다른 곳의 이�
   // 있어야 하는 건물
   const oldBlds = checkTown(old, dOld), cityBlds = checkTown(city, dCity);
   assert.deepEqual(old.ports.filter(q => q.door).map(q => q.name).sort(), ['blackmarket', 'home', 'myguild']);
-  assert.deepEqual(city.ports.filter(q => q.door).map(q => q.name).sort(), ['association', 'dept', 'guild1', 'guild2', 'guild3', 'guild4', 'myguild2']);
-  assert.deepEqual(city.ports.filter(q => q.door && q.to).map(q => q.name).sort(), ['association', 'dept', 'myguild2'], '열린 문은 헌터 협회 · 헌터백화점 · 내 길드(4단계부터 — unlock guildCity)');
+  assert.deepEqual(city.ports.filter(q => q.door).map(q => q.name).sort(), ['association', 'dept', 'guild1', 'guild2', 'guild3', 'guild4', 'home2', 'myguild2']);
+  assert.deepEqual(city.ports.filter(q => q.door && q.to).map(q => q.name).sort(), ['association', 'dept', 'home2', 'myguild2'], '열린 문은 헌터 협회 · 헌터백화점 · 내 길드(4단계부터 — unlock guildCity) · 새 집(산 뒤 — unlock home2)');
   assert.deepEqual(old.ports.filter(q => q.door && q.to).map(q => q.name), ['home', 'myguild', 'blackmarket'], '옛 동네에서 열리는 문은 집 · 내 길드 · 암시장 (길드 · 암시장은 게임이 잠금 — unlock guild · bm)');
   const bmDoor = old.ports.find(q => q.name === 'blackmarket'), bm = loadMap('bm');
   assert.deepEqual([bmDoor.to, bmDoor.unlock, bm.ports.find(q => q.name === 'out').to], ['bm.out', 'bm', 'oldtown.blackmarket']);
@@ -1465,6 +1465,33 @@ test('길드 — 제7격 보스 뒤 빈 건물이 매물 · 사서 이름 · 사
   assert.deepEqual(r.unseat, [true, false, true]);
   assert.deepEqual(r.max, [5, null]);
   assert.deepEqual(r.load, ['새벽', 5, ['minjae']]);
+});
+
+test('새 집 — 11격 보스 뒤 「분양」 · 돈으로 사면 원룸은 잠기고, 길잡이가 이상한 게이트를 새 집 안으로 · 그 뒤 회차는 새 집 안에서', () => {
+  const run = loadGame();
+  const r = run(`
+    currentSlot = 0; State.meta = freshMeta(); State.meta.cityOpen = true; startRun();
+    const out = { before: [home2ForSale(), buyHome2(), State.run.mapId] };
+    State.meta.bossesBeaten.push(zoneBoss(ZONES.findIndex(z => z.rank === 11)).id);
+    State.meta.won = 0;
+    out.poor = [home2ForSale(), buyHome2()];
+    State.meta.won = home2Price() + 5;
+    out.buy = [buyHome2(), State.meta.won, State.meta.home2, home2ForSale(), State.meta.portalMoved];
+    out.move = [movePortal(), movePortal(), State.meta.portalMoved];
+    startRun(); out.start = State.run.mapId;
+    return out;
+  `);
+  assert.deepEqual(r.before, [false, false, 'oldtown']);
+  assert.deepEqual(r.poor, [true, false]);
+  assert.deepEqual(r.buy, [true, 5, true, false, false]);
+  assert.deepEqual(r.move, [true, false, true]);
+  assert.equal(r.start, 'home2');
+  const h2 = loadMap('home2'), old = loadMap('oldtown'), city = loadMap('city');
+  const portal = h2.ports.find(p => p.name === 'portal');
+  assert.deepEqual([portal.rift, portal.unlock, portal.to, h2.ports.find(p => p.name === 'out').to], [true, 'portal', 'sewer.city', 'city.home2']);
+  assert.deepEqual([old.ports.find(p => p.name === 'gate').unlock, old.ports.find(p => p.name === 'home').unlock], ['portalOld', 'home1']);
+  const door = city.ports.find(p => p.name === 'home2');
+  assert.deepEqual([door.to, door.unlock], ['home2.out', 'home2']);
 });
 
 test('길드 순위 — 점수(단계 · 동료 등급 · 길드장 등급 · 게이트 실적), 달 < 크라운 < 청해 < 홍염 을 넘으면 상금(돈 · 원석) 한 번씩', () => {

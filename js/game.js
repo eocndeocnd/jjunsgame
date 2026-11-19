@@ -243,6 +243,8 @@ const State = {
     sExams: 0,                   // S급 시험관을 만난 횟수 — 4대 길드가 이 차례로 돌아가며 옴 (BIG_GUILDS)
     bmGems: 0,                   // 검은 원석 — 암시장에 돈을 맡길 때 하나씩 (보스가 가끔)
     gatePts: 0,                  // 게이트 실적 — 돌아온 게이트의 등급(F 1 … S 7)을 더한 것 (길드 순위 점수)
+    home2: false,                // 새 집(미래 도시 오른쪽 빈터의 아파트)을 샀나 — 사면 옛 원룸은 잠김
+    portalMoved: false,          // 길잡이가 이상한 게이트를 새 집 안으로 옮겼나 — 그 뒤 회차는 새 집 안에서 시작
     rankPassed: [],              // 넘어서 상금을 받은 4대 길드 id (BIG_GUILDS)
     passives: {},                // 골드로 산 패시브 — id → 단계 (data.js 의 PASSIVES). 영구
     ally: null,                  // 그 공간에 함께 가는 동료 id (data.js 의 ALLIES) — 늘 한 명 · 없을 수 있음
@@ -657,6 +659,8 @@ function load() {
     State.meta.sExams = Math.max(0, Math.floor(num(data.sExams)));
     State.meta.bmGems = Math.max(0, Math.floor(num(data.bmGems)));
     State.meta.gatePts = Math.max(0, Math.floor(num(data.gatePts)));
+    State.meta.home2 = !!data.home2;
+    State.meta.portalMoved = !!data.home2 && !!data.portalMoved;
     State.meta.rankPassed = (Array.isArray(data.rankPassed) ? data.rankPassed : []).filter(id => BIG_GUILDS.some(B => B.id === id));
     State.meta.allies = [...new Set((Array.isArray(data.allies) ? data.allies : []).concat(data.ally ? [data.ally] : []))].filter(id => ALLIES[id]);
     State.meta.gates = {};
@@ -743,6 +747,8 @@ function freshMeta() {
     sExams: 0,
     bmGems: 0,
     gatePts: 0,
+    home2: false,
+    portalMoved: false,
     rankPassed: [],
     passives: {},
     ally: null,
@@ -1076,7 +1082,8 @@ function freshRun() {
 function startRun() {
   State.meta.runCount += 1;
   State.run = freshRun();
-  if (State.meta.cityOpen) State.run.mapId = 'oldtown';   // 도시가 열린 뒤로는 옛 동네의 집 앞에서 — 골목의 이상한 게이트로 그 공간에 들어감
+  if (State.meta.home2 && !State.meta.portalMoved) State.meta.portalMoved = true;   // 이사하고 길잡이의 말을 다 못 들은 채 끝났으면 — 다음 회차엔 옮겨져 있음
+  if (State.meta.cityOpen) State.run.mapId = State.meta.portalMoved ? 'home2' : 'oldtown';   // 도시가 열린 뒤로는 옛 동네의 집 앞에서 — 골목의 이상한 게이트로 그 공간에 들어감 (이사해서 게이트를 옮긴 뒤로는 새 집 안에서)
   State.run.merchant = rollMerchant(0);
   State.run.priceRank = bestRankNow();   // 이번 회차 패시브 값의 눈금
   if (State.meta.autoAlloc) commitPoints();
@@ -1576,6 +1583,26 @@ function guildScoreParts() {
   const S = RULES.GUILD_SCORE, m = State.meta;
   const allies = (m.allies || []).reduce((n, id) => n + (ALLIES[id] ? allyGradeN(ALLIES[id]) : 0), 0);
   return { level: guildLevel() * S.level, ally: allies * S.ally, grade: hunterGrade() * S.grade, gate: num(m.gatePts) * S.gate };
+}
+// ---------- 새 집 (도시 계획 7번 · 11격 — 사용자 결정 2026-11-19) — 미래 도시 오른쪽 빈터의 아파트 ----------
+function home2ForSale() { return !State.meta.home2 && !!State.meta.cityOpen && rankBossBeaten(RULES.HOME2_RANK); }
+function home2Price() { return Math.round(coreWorth(RULES.HOME2_COST)); }
+function buyHome2() {
+  const price = home2Price();
+  if (!home2ForSale() || num(State.meta.won) < price) return false;
+  State.meta.won -= price;
+  State.meta.home2 = true;
+  pushLog('drop', `미래 도시의 새 아파트를 샀다 — ${fmtWon(price)}. 원룸에서 이사했다.`);
+  save();
+  return true;
+}
+// 길잡이가 이상한 게이트를 새 집 안으로 — 그 뒤로 옛 동네 골목의 게이트는 닫히고, 회차는 새 집 안에서 시작
+function movePortal() {
+  if (!State.meta.home2 || State.meta.portalMoved) return false;
+  State.meta.portalMoved = true;
+  pushLog('info', '이상한 게이트가 새 집 안으로 옮겨 왔다.');
+  save();
+  return true;
 }
 function rankingOpen() { return !!State.meta.cityOpen && rankBossBeaten(RULES.RANKING_RANK); }
 function guildScore() { if (!guildOwned()) return 0; const p = guildScoreParts(); return p.level + p.ally + p.grade + p.gate; }

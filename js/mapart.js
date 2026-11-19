@@ -541,6 +541,15 @@
     carpet: ['#3a2440', '#34203a', '#42284a', '#2c1a32'], gold: '#9a86b0', goldDim: '#5a4a6a', wine: '#3a2440', red: '#a04a6a', glow: '#c08aff',
     line: '#0e0c10', wall: '#6a6470', velvet: '#1a1420', steel: ['#c8c4cc', '#9a94a2', '#e8e4ee', '#5e5866']
   };
+  // 새 집 (theme 'home2') — 밝은 나무 마루 · 흰 벽 · 짙은 남색 깔개 · 금빛 테
+  const STC_HOME2 = {
+    plank: true, ivory: ['#d9b98a', '#cfae7e', '#e2c497', '#c09e70'], seam: '#9a7a52', dark: ['#2a2f3a', '#252a34', '#30364a', '#1e222c'],
+    carpet: ['#2c3a5a', '#283452', '#324266', '#22304a'], gold: '#e0c070', goldDim: '#9a8048', wine: '#2c3a5a', red: '#c05a4a', glow: '#ffe0a0',
+    line: '#14161c', wall: '#f2efe8', velvet: '#1e222c', steel: ['#eef0f4', '#c4c8d0', '#ffffff', '#8a909c']
+  };
+  // 새 집 아파트 (미래 도시 오른쪽 빈터) — 따뜻한 베이지 유리 · 금빛 띠
+  const APT_TONE = { glass: '#2a2f3a', glass2: '#3c4252', accent: '#f0c890', light: '#fff0d0', roof: '#cfc6b4' };
+  let APT = false;                                                                 // 새 집을 샀나 — 게임이 setHome2 로 알려 줌. 그 전엔 오른쪽 빈터 그대로
   let BMO = false;                                                                 // 암시장 셔터가 올라가 있나 — 게임이 setMarket 으로 알려 줌 (회차마다 반반)
   let GLV = 0;                                                                     // 내 길드의 단계 (0 = 아직 안 삼) — 게임이 setGuild 로 알려 줌. 바뀌면 그 길드가 나오는 지도를 다시 그림
   let STC = STC_DEPT;                                                              // 덩어리를 그릴 때마다 그 지도의 것으로 (chunk)
@@ -1307,7 +1316,7 @@
   const prepared = new WeakMap();
   function prep(m) {
     const A0 = prepared.get(m.look);
-    if (A0 && (!A0.mine || A0.glv === GLV) && (!A0.bm || A0.bmo === BMO)) return A0;
+    if (A0 && (!A0.mine || A0.glv === GLV) && (!A0.bm || A0.bmo === BMO) && (!A0.apt || A0.aptOn === APT)) return A0;
     const dist = new Float32Array(m.w * m.h).fill(99), q = [];
     for (let k = 0; k < m.w * m.h; k++) if (m.tile[k] !== POOL) { dist[k] = 0; q.push(k); }
     for (let n = 0; n < q.length; n++) {
@@ -1329,8 +1338,8 @@
       // 내 길드(문 myguild) — 단계마다 다른 건물로: 0 · 1 허름한 빈 건물(1은 「임대」를 떼고 불을 켬) · 2 · 3 고친 옛 건물(mine) · 4 · 5 미래 건물(mineNew)
       // 미래 도시 가운데 빈터(mineCity · overLot) — 4단계부터 미래 건물(4 청록 · 5 흰 · 금). 그 전엔 칸이 빈터 그대로 (cellOf 가 건물로 안 봄)
       const my = !!door && (door.name === 'myguild' || door.name === 'myguild2');
-      const kind = b.kind === 'mineCity' ? 'mineNew' : my ? (GLV <= 1 ? 'shabby' : 'mine') : b.kind;
-      buildings.push({ x0: b.x, y0: b.y, w: b.w, h: b.h, door, kind, roof: b.roof, tone: b.tone, v: b.v, roofOnly: !!b.roofOnly, f: b.f, G: null, my, glv: b.kind === 'mineCity' ? GLV : Math.min(3, GLV), over: !!b.overLot, hang: b.over | 0,
+      const kind = b.kind === 'mineCity' ? 'mineNew' : b.kind === 'aptCity' ? 'apt' : my ? (GLV <= 1 ? 'shabby' : 'mine') : b.kind;
+      buildings.push({ x0: b.x, y0: b.y, w: b.w, h: b.h, door, kind, roof: b.roof, tone: b.tone, v: b.v, roofOnly: !!b.roofOnly, f: b.f, G: null, my, glv: b.kind === 'mineCity' ? GLV : Math.min(3, GLV), over: b.overLot ? (b.kind === 'aptCity' ? 'home' : 'guild') : false, hang: b.over | 0,
                        bmo: !!door && door.name === 'blackmarket' && BMO });
     }
     for (let k = 0; k < m.w * m.h; k++) {
@@ -1376,7 +1385,7 @@
       ps[k] = thick ? POOL_SLACK : 0.12;
     }
     for (let y = m.h - 1; y >= 0; y--) for (let x = 0; x < m.w; x++) { const k = y * m.w + x; if (pv[k] === 1) run[k] = Math.min(9, 1 + (y + 1 < m.h ? run[k + m.w] : 0)); }
-    const A = { dist, chunks: new Map(), bAt, buildings, noProp, pv, pb, ps, run, glv: GLV, bmo: BMO, bm: buildings.some(b => b.door && b.door.name === 'blackmarket'),
+    const A = { dist, chunks: new Map(), bAt, buildings, noProp, pv, pb, ps, run, glv: GLV, bmo: BMO, bm: buildings.some(b => b.door && b.door.name === 'blackmarket'), apt: buildings.some(b => b.over === 'home'), aptOn: APT,
                 mine: (m.props && m.props.theme === 'guild') || buildings.some(b => b.my) };
     if (m.props && m.props.city) cityPrep(m, A);
     prepared.set(m.look, A);
@@ -1391,7 +1400,8 @@
   function cellOf(m, A, tx, ty) {
     const k = ty * m.w + tx, t = m.tile[k], raw = m.look[k] & 15;
     const e = { t, raw, ter: terOf(raw), bio: m.look[k] >> 4 };
-    if (raw === BUILD || (GLV >= 4 && A.bAt[k] >= 0 && A.buildings[A.bAt[k]].over)) { e.b = A.bAt[k]; return e; }   // 빈터 위의 내 길드 — 4단계부터
+    const ob = A.bAt[k] >= 0 ? A.buildings[A.bAt[k]] : null;
+    if (raw === BUILD || (ob && (ob.over === 'guild' ? GLV >= 4 : ob.over === 'home' ? APT : false))) { e.b = A.bAt[k]; return e; }   // 빈터 위의 내 길드(4단계부터) · 새 집(산 뒤)
     if (raw === RUIN) {                                                  // 무너진 성벽 조각 — 그 조각(이어진 RUIN 칸)의 칸 범위
       const isR = (x, y) => x >= 0 && y >= 0 && x < m.w && y < m.h && (m.look[y * m.w + x] & 15) === RUIN;
       let c0 = tx, c1 = tx, r0 = ty, r1 = ty;
@@ -1738,7 +1748,8 @@
     villa:  { F: 50, old: true, roof: '#6f9a78', wall: '#a35f48', trim: '#e3ddd2' },   // 빨간 벽돌 빌라 — 초록 방수 옥상 · 1층은 필로티
     shabby: { F: 58, old: true, roof: '#7d786f', wall: '#8d8679', trim: '#a39c8f' },   // 허름한 빈 건물 — 막아 둔 창 · 녹 · 「임대」
     mine:   { F: 62, old: true, roof: '#8f949a', wall: '#d2c9b6', trim: '#ece6d8' },   // 내 길드 2 · 3단계 — 고친 창 · 새 칠 · (3) 간판 · 차양 · 꽃상자
-    mineNew: { F: 92, cut: 4 },                                                       // 내 길드 4 · 5단계 — 미래 건물 (4 청록 유리 · 5 흰 · 금 · 별 문장)
+    mineNew: { F: 92, cut: 4 },
+    apt:    { F: 92, cut: 4 },                                                        // 새 집 — 고급 아파트 (층마다 발코니)                                                       // 내 길드 4 · 5단계 — 미래 건물 (4 청록 유리 · 5 흰 · 금 · 별 문장)
     store:  { F: 44, old: true, roof: '#938d83', wall: '#bdb6a8', trim: '#d8d2c4' },   // 낡은 가게 — 네온 간판
     back:   { F: 44, old: true, roof: '#8a867e', wall: '#8f8b84', trim: '#a8a49c' }    // 낡은 뒤 건물
   };
@@ -1777,6 +1788,7 @@
     } else if (B.kind === 'guild') G.tone = GUILD_TONE[(B.tone || 0) % 4];
     else if (B.kind === 'tower') G.tone = TOWER_TONE[(B.tone || 0) % 3];
     else if (B.kind === 'mineNew') G.tone = MY_TONE[B.glv >= 5 ? 1 : 0];
+    else if (B.kind === 'apt') G.tone = APT_TONE;
     else if (B.kind === 'dept') G.tone = DEPT_TONE;
     if (!G.old) return G;
     G.pal = oldPal(B);
@@ -1860,7 +1872,7 @@
       return c;
     }
     const R = Math.min(cw, rh) / 2 - 10;
-    if (B.kind === 'tower') {                                                       // 둘레의 빌딩 — 옥상 정원이거나 태양 유리
+    if (B.kind === 'tower' || B.kind === 'apt') {                                   // 둘레의 빌딩 · 새 집 — 옥상 정원이거나 태양 유리
       const kind = hash(B.x0, B.y0, 352);
       if (px > x0 + 8 && px < x1 - 9 && py > 8 && py < rh - 9) {
         if (kind < 0.5) {
@@ -1929,6 +1941,13 @@
     if (fx === q1 || fx === q3) return c3(T.accent);
     if (fx === q1 + 1 || fx === q3 + 1) return mix(c3(T.accent), WHITE, 0.4);
     if (fx === q1 - 1 || fx === q3 + 2) return mix(c3(T.glass), c3(T.accent), 0.35);
+    if (B.kind === 'apt') {                                                         // 새 집 — 층마다 밝은 발코니 판 · 난간, 창은 따뜻한 불빛
+      const fl = (fy - 3) % 12;
+      if (fy >= 3 && fl === 0) return c3('#ece4d4');
+      if (fy >= 3 && fl === 1) return c3('#b8ae9c');
+      if (fy >= 3 && (fl === 9 || fl === 10) && fx % 4 !== 0) return c3('#d8d0c0');
+      if (fy >= 3 && fl >= 3 && fl <= 8 && fx % 12 > 2 && fx % 12 < 10) return mix(c3(T.light), c3('#f0b060'), hash(Math.floor(fx / 12), Math.floor(fy / 12), 905) * 0.5);
+    }
     if (B.kind === 'mineNew') {                                                     // 내 길드 — 가운데 별 문장 (5단계는 금빛 테 · 빛나는 별)
       const ex = fx - (W >> 1) + 0.5, ey = fy - 22, ax = Math.abs(ex), ay = Math.abs(ey);
       if (ax <= 12 && ay <= 12) {
@@ -2348,7 +2367,7 @@
   // 덩어리 하나 (CH×CH 칸) — 캔버스에 한 번 그려 둠. 용암이 있으면 용암 점만 칠한 빛 판(.glow)도 — 움직이는 것(liveGround)이 일렁이게 얹음
   function chunk(m, cx, cy) {
     const th = m.props && m.props.theme;
-    STC = th === 'hq' ? STC_HQ : th === 'home' ? STC_HOME : th === 'bm' ? STC_BM : th === 'guild' ? STC_GUILD[Math.max(0, Math.min(4, GLV - 1))] : STC_DEPT;   // 가게 안의 빛깔 — 헌터백화점 · 헌터 협회 · 내 길드(단계마다)
+    STC = th === 'hq' ? STC_HQ : th === 'home' ? STC_HOME : th === 'home2' ? STC_HOME2 : th === 'bm' ? STC_BM : th === 'guild' ? STC_GUILD[Math.max(0, Math.min(4, GLV - 1))] : STC_DEPT;   // 가게 안의 빛깔 — 헌터백화점 · 헌터 협회 · 내 길드(단계마다)
     const w = Math.min(CH, m.w - cx * CH), h = Math.min(CH, m.h - cy * CH), pw = w * P;
     const cv = document.createElement('canvas');
     cv.width = pw; cv.height = h * P;
@@ -2922,7 +2941,8 @@
 
   const setGuild = n => { GLV = n | 0; };
   const setMarket = b => { BMO = !!b; };
-  const api = { setGuild, setMarket, has: m => !!(m && m.look), drawGround, drawTrees, drawOver, liveGround, liveAir, drawRift, paintTree, texture, bake, propOf, TW, TH, TREE_STYLES, TREE_PAL, cached: m => (prepared.get(m.look) || { chunks: new Map() }).chunks.size, P, CH, VOID, GRASS, DIRT, COBBLE, TILES, WATER, LAVA, OBSID, SNOW, ROCKY, PAVE, CANAL };
+  const setHome2 = b => { APT = !!b; };
+  const api = { setGuild, setMarket, setHome2, has: m => !!(m && m.look), drawGround, drawTrees, drawOver, liveGround, liveAir, drawRift, paintTree, texture, bake, propOf, TW, TH, TREE_STYLES, TREE_PAL, cached: m => (prepared.get(m.look) || { chunks: new Map() }).chunks.size, P, CH, VOID, GRASS, DIRT, COBBLE, TILES, WATER, LAVA, OBSID, SNOW, ROCKY, PAVE, CANAL };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.MapArt = api;
 })(typeof window !== 'undefined' ? window : globalThis);

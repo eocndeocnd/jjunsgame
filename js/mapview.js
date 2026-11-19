@@ -265,8 +265,8 @@ const MapView = (function () {
             ctx.fillStyle = '#ffd76a'; ctx.fill();
           }
         } else if (port.edge) {                            // 지도 가장자리 통로(옛 동네 ⇄ 도시) — 칸은 그리지 않고 이름표만
-        } else if (port.rift) {                            // 이상한 게이트 — 옛 동네 집 옆 틈 · 지하수로 첫 공간 (그림은 mapart 의 drawRift)
-          if (art) MapArt.drawRift(ctx, ox + (port.x + port.w / 2) * T, oy + (port.y + port.h) * T, T, performance.now() / 1000);
+        } else if (port.rift) {                            // 이상한 게이트 — 옛 동네 집 옆 틈 · 새 집 안 · 지하수로 첫 공간 (그림은 mapart 의 drawRift). 닫힌 것(옮기기 전 · 뒤)은 안 그림
+          if (art && open) MapArt.drawRift(ctx, ox + (port.x + port.w / 2) * T, oy + (port.y + port.h) * T, T, performance.now() / 1000);
         } else if (port.unlock && !open && port.unlock !== 'guild') {   // 잠긴 안쪽 문 (백화점 에스컬레이터) — 금빛 기둥 사이로 붉은 줄 (옛 동네의 빈 건물은 지도 그림의 셔터 그대로)
           const x0 = ox + port.x * T, x1 = ox + (port.x + port.w) * T, y = oy + port.y * T, u = T / 16;
           ctx.fillStyle = '#8a6d2c'; ctx.fillRect(x0 + 2 * u, y + 4 * u, 2 * u, 10 * u); ctx.fillRect(x1 - 4 * u, y + 4 * u, 2 * u, 10 * u);
@@ -465,7 +465,9 @@ const MapView = (function () {
       postAlive: id => { const f = getEnemy(id); return !!f && !isDowned(id) && isRevealed(f); },   // 이 여정에 꺾었거나 아직 안 나타난 히든은 없음
       // 꺾어야 열리는 문 · 도시가 열린 뒤에만 있는 문 (지하수로 첫 공간의 도시로 나가는 게이트 — needsCity)
       npcHere: n => deskHere(n.shop),   // 협회 로비의 「???」(제4격 보스 뒤) · 동료 모집 · 게이트 창구(제5격 보스 뒤)
-      portOpen: p => (!p.opensAfter || isDowned(p.opensAfter)) && (!p.needsCity || (!!State.meta && !!State.meta.cityOpen)) && (p.unlock !== 'armor' || armorOpen()) && (p.unlock !== 'guild' || (guildLevel() >= 1 && guildLevel() <= 3)) && (p.unlock !== 'guildCity' || guildLevel() >= 4) && (p.unlock !== 'arena' || !!(State.run && State.run.test)) && (p.unlock !== 'bm' || bmOpen()),
+      portOpen: p => (!p.opensAfter || isDowned(p.opensAfter)) && (!p.needsCity || (!!State.meta && !!State.meta.cityOpen)) && (p.unlock !== 'armor' || armorOpen()) && (p.unlock !== 'guild' || (guildLevel() >= 1 && guildLevel() <= 3)) && (p.unlock !== 'guildCity' || guildLevel() >= 4) && (p.unlock !== 'arena' || !!(State.run && State.run.test)) && (p.unlock !== 'bm' || bmOpen())
+        && (p.unlock !== 'home2' || !!State.meta.home2) && (p.unlock !== 'home1' || !State.meta.home2)          // 새 집을 사면 열리고 옛 원룸은 잠김
+        && (p.unlock !== 'portal' || !!State.meta.portalMoved) && (p.unlock !== 'portalOld' || !State.meta.portalMoved),   // 이상한 게이트 — 옮긴 뒤엔 새 집 안
       // 내 길드 — 지은 이름으로 (1~3단계는 옛 동네, 4단계부터는 미래 도시 가운데 빈터 · 옛 동네 건물은 「옛 사무실」)
       portLabel: p => {
         const g = State.meta && State.meta.guild, name = g && (g.name || '내 길드');
