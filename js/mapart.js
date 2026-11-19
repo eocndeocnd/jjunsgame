@@ -535,6 +535,13 @@
     carpet: ['#7a4a5a', '#704352', '#845264', '#623a48'], gold: '#c8b48a', goldDim: '#8a7a5a', wine: '#7a4a5a', red: '#c0504a', glow: '#ffd98a',
     line: '#1a140f', wall: '#e6dcc4', velvet: '#2a2018', steel: ['#e8e4dc', '#b8b2a6', '#ffffff', '#7a7468']
   };
+  // 암시장 (theme 'bm') — 젖은 콘크리트 바닥 · 어둑한 벽 · 자줏빛 등
+  const STC_BM = {
+    ivory: ['#4a4650', '#44404a', '#524e58', '#3c3842'], seam: '#2e2b33', dark: ['#1e1a22', '#1a161e', '#241f28', '#141016'],
+    carpet: ['#3a2440', '#34203a', '#42284a', '#2c1a32'], gold: '#9a86b0', goldDim: '#5a4a6a', wine: '#3a2440', red: '#a04a6a', glow: '#c08aff',
+    line: '#0e0c10', wall: '#6a6470', velvet: '#1a1420', steel: ['#c8c4cc', '#9a94a2', '#e8e4ee', '#5e5866']
+  };
+  let BMO = false;                                                                 // 암시장 셔터가 올라가 있나 — 게임이 setMarket 으로 알려 줌 (회차마다 반반)
   let GLV = 0;                                                                     // 내 길드의 단계 (0 = 아직 안 삼) — 게임이 setGuild 로 알려 줌. 바뀌면 그 길드가 나오는 지도를 다시 그림
   let STC = STC_DEPT;                                                              // 덩어리를 그릴 때마다 그 지도의 것으로 (chunk)
   const STORE_KINDS = { counter: 1, case: 1, rope: 1, plant: 1, bench: 1, pillar: 1, kiosk: 1, desk: 1, bed: 1, fridge: 1 };
@@ -1300,7 +1307,7 @@
   const prepared = new WeakMap();
   function prep(m) {
     const A0 = prepared.get(m.look);
-    if (A0 && (!A0.mine || A0.glv === GLV)) return A0;
+    if (A0 && (!A0.mine || A0.glv === GLV) && (!A0.bm || A0.bmo === BMO)) return A0;
     const dist = new Float32Array(m.w * m.h).fill(99), q = [];
     for (let k = 0; k < m.w * m.h; k++) if (m.tile[k] !== POOL) { dist[k] = 0; q.push(k); }
     for (let n = 0; n < q.length; n++) {
@@ -1323,7 +1330,8 @@
       // 미래 도시 가운데 빈터(mineCity · overLot) — 4단계부터 미래 건물(4 청록 · 5 흰 · 금). 그 전엔 칸이 빈터 그대로 (cellOf 가 건물로 안 봄)
       const my = !!door && (door.name === 'myguild' || door.name === 'myguild2');
       const kind = b.kind === 'mineCity' ? 'mineNew' : my ? (GLV <= 1 ? 'shabby' : 'mine') : b.kind;
-      buildings.push({ x0: b.x, y0: b.y, w: b.w, h: b.h, door, kind, roof: b.roof, tone: b.tone, v: b.v, roofOnly: !!b.roofOnly, f: b.f, G: null, my, glv: b.kind === 'mineCity' ? GLV : Math.min(3, GLV), over: !!b.overLot, hang: b.over | 0 });
+      buildings.push({ x0: b.x, y0: b.y, w: b.w, h: b.h, door, kind, roof: b.roof, tone: b.tone, v: b.v, roofOnly: !!b.roofOnly, f: b.f, G: null, my, glv: b.kind === 'mineCity' ? GLV : Math.min(3, GLV), over: !!b.overLot, hang: b.over | 0,
+                       bmo: !!door && door.name === 'blackmarket' && BMO });
     }
     for (let k = 0; k < m.w * m.h; k++) {
       if ((m.look[k] & 15) !== BUILD || bAt[k] >= 0) continue;
@@ -1368,7 +1376,7 @@
       ps[k] = thick ? POOL_SLACK : 0.12;
     }
     for (let y = m.h - 1; y >= 0; y--) for (let x = 0; x < m.w; x++) { const k = y * m.w + x; if (pv[k] === 1) run[k] = Math.min(9, 1 + (y + 1 < m.h ? run[k + m.w] : 0)); }
-    const A = { dist, chunks: new Map(), bAt, buildings, noProp, pv, pb, ps, run, glv: GLV,
+    const A = { dist, chunks: new Map(), bAt, buildings, noProp, pv, pb, ps, run, glv: GLV, bmo: BMO, bm: buildings.some(b => b.door && b.door.name === 'blackmarket'),
                 mine: (m.props && m.props.theme === 'guild') || buildings.some(b => b.my) };
     if (m.props && m.props.city) cityPrep(m, A);
     prepared.set(m.look, A);
@@ -2179,7 +2187,11 @@
       return c;
     }
     // 뒤 건물 — 낡은 벽, 드문드문 작은 창 · 실외기 · 세로 배관 (어떤 것은 빛바랜 광고지). 문이 있으면(암시장이 들어설 자리) 내린 셔터
-    if (door && fx >= door.x0 + 3 && fx < door.x1 - 3 && fy >= 4) return fx === door.x0 + 3 || fx === door.x1 - 4 ? c3('#3c3a40') : fy % 2 ? c3('#5d5a55') : c3('#4c4945');
+    if (door && fx >= door.x0 + 3 && fx < door.x1 - 3 && fy >= 4) {
+      const mid = 4 + Math.floor((F - 4) * 0.45);
+      if (B.bmo && fy >= mid && fx > door.x0 + 3 && fx < door.x1 - 4) return mix(c3('#2a1830'), c3('#7a4a9a'), Math.min(1, (fy - mid) / Math.max(1, F - mid)));   // 암시장 — 셔터를 반쯤 올림, 아래로 자줏빛
+      return fx === door.x0 + 3 || fx === door.x1 - 4 ? c3('#3c3a40') : fy % 2 ? c3('#5d5a55') : c3('#4c4945');
+    }
     if (!door && (fx === (W >> 2) || fx === (W >> 2) + 1)) return fx === (W >> 2) ? c3('#6d6a64') : c3('#8a8780');
     if (!door && S.poster) {                                                        // 빛바랜 광고지 — 가운데 위, 찢긴 귀퉁이
       const px0 = (W >> 1) - 7, py0 = 5, qx = fx - px0, qy = fy - py0;
@@ -2336,7 +2348,7 @@
   // 덩어리 하나 (CH×CH 칸) — 캔버스에 한 번 그려 둠. 용암이 있으면 용암 점만 칠한 빛 판(.glow)도 — 움직이는 것(liveGround)이 일렁이게 얹음
   function chunk(m, cx, cy) {
     const th = m.props && m.props.theme;
-    STC = th === 'hq' ? STC_HQ : th === 'home' ? STC_HOME : th === 'guild' ? STC_GUILD[Math.max(0, Math.min(4, GLV - 1))] : STC_DEPT;   // 가게 안의 빛깔 — 헌터백화점 · 헌터 협회 · 내 길드(단계마다)
+    STC = th === 'hq' ? STC_HQ : th === 'home' ? STC_HOME : th === 'bm' ? STC_BM : th === 'guild' ? STC_GUILD[Math.max(0, Math.min(4, GLV - 1))] : STC_DEPT;   // 가게 안의 빛깔 — 헌터백화점 · 헌터 협회 · 내 길드(단계마다)
     const w = Math.min(CH, m.w - cx * CH), h = Math.min(CH, m.h - cy * CH), pw = w * P;
     const cv = document.createElement('canvas');
     cv.width = pw; cv.height = h * P;
@@ -2909,7 +2921,8 @@
   }
 
   const setGuild = n => { GLV = n | 0; };
-  const api = { setGuild, has: m => !!(m && m.look), drawGround, drawTrees, drawOver, liveGround, liveAir, drawRift, paintTree, texture, bake, propOf, TW, TH, TREE_STYLES, TREE_PAL, cached: m => (prepared.get(m.look) || { chunks: new Map() }).chunks.size, P, CH, VOID, GRASS, DIRT, COBBLE, TILES, WATER, LAVA, OBSID, SNOW, ROCKY, PAVE, CANAL };
+  const setMarket = b => { BMO = !!b; };
+  const api = { setGuild, setMarket, has: m => !!(m && m.look), drawGround, drawTrees, drawOver, liveGround, liveAir, drawRift, paintTree, texture, bake, propOf, TW, TH, TREE_STYLES, TREE_PAL, cached: m => (prepared.get(m.look) || { chunks: new Map() }).chunks.size, P, CH, VOID, GRASS, DIRT, COBBLE, TILES, WATER, LAVA, OBSID, SNOW, ROCKY, PAVE, CANAL };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.MapArt = api;
 })(typeof window !== 'undefined' ? window : globalThis);

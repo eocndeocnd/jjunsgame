@@ -839,6 +839,15 @@ kbd {
 .ally-row > .btn span { font-size: 10px; font-weight: 400; }
 .assoc-actions .btn:has(> span) { display: inline-flex; flex-direction: column; align-items: center; gap: 1px; }
 .assoc-actions .btn > span { font-size: 10px; font-weight: 400; }
+/* 암시장 — 골목의 후드티 (ui.js 의 renderBlackMarket) */
+.bm-deal { padding: 8px 10px; border: 2px solid var(--line); background: var(--paper-hi); }
+.bm-deal input[type=range] { width: 100%; margin: 8px 0; accent-color: #7a4a9a; }
+.bm-amt { font-size: 14px; } .bm-amt small { opacity: 0.7; margin-left: 6px; }
+.bm-odds { font-size: 13px; }
+.bm-result { display: flex; gap: 6px; margin: 6px 0; }
+.bm-roll { flex: 1; padding: 6px; text-align: center; border: 2px solid var(--line); background: #e4dcea; font-size: 13px; }
+.bm-roll.ok { background: #dff3e6; border-color: #1f7a4a; font-weight: bold; }
+.bm-got { margin: 6px 0; }
 /* 시험장 — 시험관과의 결과 (ui.js 의 examinerResultCard) */
 .exam-result .exam-end { padding: 8px 10px; border: 2px solid var(--line); background: var(--paper-hi); font-size: 13px; text-align: center; }
 .exam-result .exam-say { padding: 6px 10px; margin-bottom: 6px; font-size: 13px; text-align: center; }

@@ -1182,7 +1182,7 @@ const OLDTOWN = {
     { kind: 'back', annex: true, x: 6, y: 0, w: 2, h: 2 },                                                              // 집 바로 옆 틈 — 이상한 게이트가 이 벽 앞에 섬 (사용자 결정)
     { kind: 'shabby', x: 8, y: 0, w: 4, h: 7, door: { x: 9, w: 2, name: 'myguild', label: '빈 건물', to: 'guild.out', unlock: 'guild' } },   // 사들여 내 길드로 키울 곳 (도시 계획 6번 — 1~3단계. 4단계부터는 미래 도시로 옮기고 「옛 사무실」 — 그림은 mapart)
     { kind: 'store', x: 13, y: 0, w: 4, h: 7 },
-    { kind: 'back', annex: true, x: 17, y: 0, w: 2, h: 2, door: { x: 17, w: 2, name: 'blackmarket' } },               // 암시장이 들어설 골목 — 닫힌 셔터 (이름표 없음)
+    { kind: 'back', annex: true, x: 17, y: 0, w: 2, h: 2, door: { x: 17, w: 2, name: 'blackmarket', to: 'bm.out', unlock: 'bm' } },   // 암시장 — 셔터 (이름표 없음). 9격 뒤 · 후드티가 와 있는 회차에만 반쯤 올라감
     { kind: 'villa', x: 19, y: 0, w: 5, h: 7 },                                                                         // 위 줄 오른쪽 끝 — 지도 끝까지
     // 아래 줄
     { kind: 'villa', roof: 'tank', x: 1, y: 10, w: 4, h: 7 }, { kind: 'back', x: 7, y: 10, w: 4, h: 7 }, { kind: 'store', x: 13, y: 10, w: 4, h: 7 },
@@ -1493,6 +1493,20 @@ const ARENA = {
   signs: []
 };
 const arenaInterior = () => storeInterior(ARENA);
+// ---------- 암시장 — 옛 동네 골목 셔터 안 (도시 계획 7번 · 9격, 사용자 결정 2026-11-19) ----------
+// 어둑한 창고방: 벽에 지명수배 같은 종이 판 둘, 양옆에 빼돌린 무기 · 방패 진열장, 맨 안쪽 상자 사이에 후드티
+const BM = {
+  title: '골목 안', w: 9, h: 6, to: 'oldtown.blackmarket', theme: 'bm', outLabel: '골목으로',
+  wall: [{ x: 0, w: 4, kind: 'board' }, { x: 5, w: 4, kind: 'board' }],
+  props: [
+    { kind: 'counter', x: 2, y: 0, w: 2 }, { kind: 'counter', x: 5, y: 0, w: 2 },        // 후드티 — 사이 (4, 0)
+    { kind: 'case', x: 0, y: 2, w: 2, tone: 3 }, { kind: 'case', x: 7, y: 2, w: 2, tone: 6 },
+    { kind: 'plant', x: 0, y: 5, w: 1 }
+  ],
+  clerks: [{ x: 4, y: 0, shop: 'bm', label: '???' }],
+  signs: []
+};
+const bmInterior = () => storeInterior(BM);
 const assocInterior = () => storeInterior(ASSOC);
 // ---------- 내 길드 (도시 계획 6번) — 옛 동네의 빈 건물 안 ----------
 // 위 벽: 의뢰 게시판 · 길드 깃발(3단계부터) · 의뢰 게시판. 가운데 위에 길드 장부(창구), 양옆에 사무 책상 다섯 — 책상 아래 칸에 앉은 동료(seats).
@@ -1547,11 +1561,11 @@ const guild2Interior = () => storeInterior(GUILD2);
 
 // 뽑을 지도 전부 — { 파일 이름: 만드는 함수 }
 function allMaps(data) {
-  const out = { sewer: sewer(data), overworld: overworld(data), hub: hub(data), oldtown: oldtown(), city: city(), dept: deptInterior(), dept2: dept2Interior(), assoc: assocInterior(), guild: guildInterior(), guild2: guild2Interior(), home: homeInterior(), arena: arenaInterior() };
+  const out = { sewer: sewer(data), overworld: overworld(data), hub: hub(data), oldtown: oldtown(), city: city(), dept: deptInterior(), dept2: dept2Interior(), assoc: assocInterior(), guild: guildInterior(), guild2: guild2Interior(), home: homeInterior(), arena: arenaInterior(), bm: bmInterior() };
   for (const s of SECRET_ROOMS) out[s.id] = secretRoom(data, s);
   for (const b of BUILDINGS) out[b.id] = buildingInterior(data, b);
   REALMS.forEach((r, i) => { out[r.name] = realm(data, r, i); });
   return out;
 }
 
-module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, looksPng, encodePng, generate, sewer, overworld, hub, oldtown, city, deptInterior, dept2Interior, assocInterior, guildInterior, guild2Interior, homeInterior, arenaInterior, storeInterior, OLDTOWN, CITY, DEPT, DEPT2, ASSOC, GUILD, GUILD2, HOME, ARENA, CITY_BIO, secretRoom, buildingInterior, allMaps, layoutFromPlan, HUB_DOORS, REALMS, SEWER, SECRET_ROOMS, BUILDINGS, BUILD, DOORWAY, CARPET, RUIN };
+module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, looksPng, encodePng, generate, sewer, overworld, hub, oldtown, city, deptInterior, dept2Interior, assocInterior, guildInterior, guild2Interior, homeInterior, arenaInterior, bmInterior, storeInterior, OLDTOWN, CITY, DEPT, DEPT2, ASSOC, GUILD, GUILD2, HOME, ARENA, BM, CITY_BIO, secretRoom, buildingInterior, allMaps, layoutFromPlan, HUB_DOORS, REALMS, SEWER, SECRET_ROOMS, BUILDINGS, BUILD, DOORWAY, CARPET, RUIN };

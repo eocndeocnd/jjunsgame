@@ -241,6 +241,7 @@ const State = {
     hunterGrade: 0,              // 헌터 등급 — 0 미등록 · 1~7 = F~S (data.js 의 HUNTER_GRADES). 헌터 협회 시험으로 오르고 내려가지 않음
     testedRun: 0,                // 등록 시험을 본 회차 — 한 회차에 한 번
     sExams: 0,                   // S급 시험관을 만난 횟수 — 4대 길드가 이 차례로 돌아가며 옴 (BIG_GUILDS)
+    bmGems: 0,                   // 검은 원석 — 암시장에 돈을 맡길 때 하나씩 (보스가 가끔)
     passives: {},                // 골드로 산 패시브 — id → 단계 (data.js 의 PASSIVES). 영구
     ally: null,                  // 그 공간에 함께 가는 동료 id (data.js 의 ALLIES) — 늘 한 명 · 없을 수 있음
     allies: [],                  // 내 동료 id 들 (이야기로 만난 동료 · 고용한 동료)
@@ -652,6 +653,7 @@ function load() {
     State.meta.hunterGrade = Math.max(0, Math.min(HUNTER_GRADES.length, Math.floor(num(data.hunterGrade))));
     State.meta.testedRun = Math.max(0, Math.floor(num(data.testedRun)));
     State.meta.sExams = Math.max(0, Math.floor(num(data.sExams)));
+    State.meta.bmGems = Math.max(0, Math.floor(num(data.bmGems)));
     State.meta.allies = [...new Set((Array.isArray(data.allies) ? data.allies : []).concat(data.ally ? [data.ally] : []))].filter(id => ALLIES[id]);
     State.meta.gates = {};
     for (const [id, g] of Object.entries(data.gates && typeof data.gates === 'object' ? data.gates : {})) {
@@ -735,6 +737,7 @@ function freshMeta() {
     hunterGrade: 0,
     testedRun: 0,
     sExams: 0,
+    bmGems: 0,
     passives: {},
     ally: null,
     allies: [],
@@ -1055,6 +1058,8 @@ function freshRun() {
     mapAt: null,         // 그 지도 위에 서 있던 칸 { x, y } — 불러오면 여기서 이어 걷습니다
     mapMobs: null,       // 지도마다 서 있는 몬스터 { 지도 id: [{ m, a, x, y, au }] } — 아래 packMobs. 없으면 그 지도에 처음 들어설 때 새로 섭니다
     merchant: null,      // 이번 회차의 떠돌이 상인 — { zone, wares, bought } (없으면 null)
+    bm: Math.random() < RULES.BM_HERE,   // 이번 회차에 암시장 후드티가 와 있나 (반반 — 암시장이 열린 뒤에만 뜻이 있음)
+    bmDone: false,       // 이번 회차에 이미 거래했나 — 한 번 맡기면 후드티는 사라짐
     over: false,
     victory: false,
     walkedOut: false,    // 스스로 걸어 나와 끝난 회차인가 (leaveSpace) — 끝 화면의 글이 다름
@@ -1423,6 +1428,53 @@ function allyOwned(id) { return (State.meta.allies || []).includes(id); }
 // 제4격 보스를 한 번이라도 꺾었고 아직 하윤을 못 만났으면, 협회 로비에서 기다림 (ui 의 talk → joinAlly)
 function allyWaiting() { return !allyOwned('hayun') && !!State.meta.cityOpen && rankBossBeaten(4); }
 // 둘째 이야기 동료 단우 — 제8격 보스를 꺾었고 내 길드가 있으면, 길드 사무실에 찾아와 기다림 (도시는 격을 모름 — 찾아온 까닭은 「내 길드」)
+// ---------- 암시장 (도시 계획 7번 · 9격 — 사용자 결정 2026-11-19) ----------
+// 옛 동네 골목의 셔터 — 제9격 보스를 꺾은 뒤, 회차마다 반반으로 후드티가 와 있음. 검은 원석 하나와 돈을 맡기면,
+// 맡긴 비율만큼의 확률로 두 번 굴려 하나라도 되면 내가 아직 없는 전리품(가 본 격까지)을 구해 옴. 맡긴 돈은 돌려받지 못함
+function bmUnlocked() { return !!State.meta.cityOpen && rankBossBeaten(RULES.BM_RANK); }
+function bmOpen() { return bmUnlocked() && !!State.run && !State.run.over && !!State.run.bm; }
+function bmPool() {
+  const out = [];
+  for (let r = 1; r <= bestRankNow(); r++) for (const id of RANK_ITEMS[r] || []) {
+    const it = getItem(id);
+    if (it && !owns(id) && !it.store && !it.craft && !it.ware) out.push(id);
+  }
+  return out;
+}
+// 굴림 한 번의 확률 — 맡긴 돈 ÷ 가진 돈 (가진 돈이 없으면 0)
+function bmChance(amount) {
+  const won = num(State.meta.won);
+  return won > 0 ? RULES.BM_ROLL_MAX * Math.min(1, Math.max(0, amount) / won) : 0;
+}
+function bmDeal(amount, rng = Math.random) {
+  const run = State.run, m = State.meta;
+  amount = Math.floor(num(amount));
+  if (!bmOpen() || run.bmDone || num(m.bmGems) < 1 || amount < 1 || amount > num(m.won)) return null;
+  const pool = bmPool();
+  if (!pool.length) return null;
+  const p = bmChance(amount), rolls = [];
+  for (let i = 0; i < RULES.BM_ROLLS; i++) rolls.push(rng() < p);
+  m.bmGems -= 1;
+  m.won -= amount;
+  run.bmDone = true;
+  let item = null;
+  if (rolls.some(Boolean)) {
+    item = getItem(pool[Math.floor(rng() * pool.length)]);
+    m.owned[item.id] = 1;
+    markFresh(item);
+    autoEquipIfBetter(item);
+    pushLog('drop', `암시장에서 『${item.name}』${josa(item.name, '을', '를')} 구했다 — ${fmtWon(amount)} · ${BM_GEM.name} 1개`);
+  } else pushLog('info', `암시장 — ${fmtWon(amount)}${josa(fmtWon(amount), '과', '와')} ${BM_GEM.name}${josa(BM_GEM.name, '을', '를')} 맡겼지만 빈손이었다.`);
+  save();
+  return { p, rolls, item, amount };
+}
+// 보스를 꺾으면 가끔 검은 원석 (암시장이 열린 뒤부터)
+function rollBmGem(rng = Math.random) {
+  if (!bmUnlocked() || rng() >= RULES.BM_GEM_CHANCE) return false;
+  State.meta.bmGems = num(State.meta.bmGems) + 1;
+  pushLog('drop', `${BM_GEM.icon} ${BM_GEM.name}${josa(BM_GEM.name, '을', '를')} 주웠다 (가진 것 ${State.meta.bmGems}개).`);
+  return true;
+}
 function ally2Waiting() { return !allyOwned('danwoo') && !!State.meta.cityOpen && rankBossBeaten(8) && guildOwned(); }
 // 동료가 늘어남 — 함께 가는 동료가 없으면 바로 함께 감
 function addAlly(id) {
@@ -1438,7 +1490,7 @@ function joinAlly(id = 'hayun') {
 }
 function allyNow() { return State.meta.ally && ALLIES[State.meta.ally] ? ALLIES[State.meta.ally] : null; }
 // 때가 되어야 서 있는 창구 · 사람 (지도 — mapview 의 npcHere · ui 의 mapMarks)
-function deskHere(shop) { return shop === 'ally' ? allyWaiting() : shop === 'ally2' ? ally2Waiting() : shop === 'hire' || shop === 'gate' ? gatesOpen() : shop === 'guild' ? guildOwned() : shop === 'examiner' ? !!examinerNow() : true; }
+function deskHere(shop) { return shop === 'ally' ? allyWaiting() : shop === 'ally2' ? ally2Waiting() : shop === 'bm' ? bmOpen() && !State.run.bmDone : shop === 'hire' || shop === 'gate' ? gatesOpen() : shop === 'guild' ? guildOwned() : shop === 'examiner' ? !!examinerNow() : true; }
 // 제5격 보스를 한 번이라도 꺾으면 협회의 「동료 모집」 · 「게이트 창구」가 열림
 function gatesOpen() { return !!State.meta.cityOpen && rankBossBeaten(5); }
 // 동료 모집 창구에 서 있는 사람 — 내 등급까지 (고용한 사람도 「함께하는 중」으로 남김)
@@ -1881,6 +1933,7 @@ function engage() {
   }
 
   if (enemy.kind === 'boss') {
+    if (rollBmGem()) run.lastResult.gem = 1;   // 암시장의 검은 원석 — 가끔
     // 처음 꺾은 보스라면 영구 경험치 배수가 하나 늘어납니다
     if (!State.meta.bossesBeaten.includes(enemy.id)) {
       State.meta.bossesBeaten.push(enemy.id);

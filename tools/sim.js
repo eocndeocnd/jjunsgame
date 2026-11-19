@@ -102,6 +102,8 @@ function simShop() {
   if (typeof allyWaiting === 'function' && allyWaiting()) joinAlly();   // 제4격 보스 뒤 — 로비의 동료
   // 제8격 보스 뒤 — 단우 (게임에선 내 길드가 있어야 찾아옴. 시뮬은 길드를 사지 않으므로 길드가 있는 사람으로 침)
   if (typeof ally2Waiting === 'function' && State.meta.cityOpen && rankBossBeaten(8) && !allyOwned('danwoo')) joinAlly('danwoo');
+  // 암시장 — 후드티가 와 있고 원석이 있으면 가진 돈의 30% 를 맡김 (사람이 할 법한 만큼)
+  if (typeof bmDeal === 'function' && bmOpen() && State.meta.bmGems > 0) bmDeal(Math.floor(State.meta.won * 0.3));
   let bought = 0;
   if (typeof sellAllCores === 'function') sellAllCores();   // 핵은 모두 팝니다 — 그 돈으로 만들고 삽니다
   if (typeof craftItem === 'function') {

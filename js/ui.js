@@ -1421,6 +1421,7 @@ function resultCard(r, run) {
     if (r.devoured > 0) lines.push(row('삼킨 격', `시작 에너지 +${r.devoured}`));
     if (r.refund > 0) lines.push(row('에너지', `+${r.refund}`));
     if (r.openedSpecial) lines.push(row('특수장비 칸', `열렸다 ${r.openedSpecial}/${SPECIAL_SLOT_MAX}`));
+    if (r.gem) lines.push(row('원석', `${BM_GEM.icon} ${BM_GEM.name} +1`, `가진 것 ${fmt(State.meta.bmGems)}`));
   } else {
     lines.push(row('에너지', `−${r.penalty}`, `남은 ${run.energy}`));
   }
@@ -1908,6 +1909,12 @@ function onMapEvents(evs) {
         else pushLog('info', '빈 건물 — 셔터가 내려져 있다. 바랜 「임대」 종이가 붙어 있다.');
       }
       changed = true;
+    } else if (e.type === 'closed' && e.port.unlock === 'bm') {   // 암시장 셔터 — 9격 전 · 후드티가 없는 회차
+      if (Date.now() - closedSaidAt > 2000) {
+        closedSaidAt = Date.now();
+        pushLog('info', bmUnlocked() ? '골목 셔터 — 오늘은 내려져 있다. 안쪽에서 아무 기척도 없다.' : '골목 안쪽의 낡은 셔터 — 녹슨 자물쇠가 걸려 있다.');
+      }
+      changed = true;
     } else if (e.type === 'closed' && e.port.unlock === 'guildCity') {   // 미래 도시 가운데 빈터 — 4단계 전
       if (Date.now() - closedSaidAt > 2000) {
         closedSaidAt = Date.now();
@@ -1967,7 +1974,8 @@ function mapMarks() {
 // 지도를 못 읽었을 때(onMap 이 아님)도 무대의 글은 같은 자리에 뜹니다.
 function renderMapLayer(onMap, frame) {
   document.body.classList.toggle('facing', !!frame);
-  if (typeof MapArt !== 'undefined' && MapArt.setGuild) MapArt.setGuild(guildLevel());   // 내 길드의 겉모습 · 안의 빛깔 (단계가 바뀌면 다시 그림)
+  if (typeof MapArt !== 'undefined' && MapArt.setGuild) MapArt.setGuild(guildLevel());
+  if (typeof MapArt !== 'undefined' && MapArt.setMarket) MapArt.setMarket(bmOpen());   // 암시장 — 후드티가 와 있는 회차엔 셔터가 반쯤 올라감   // 내 길드의 겉모습 · 안의 빛깔 (단계가 바뀌면 다시 그림)
   if (onMap) syncMap();
   if (onMap && mapView.world) mapView.world.player.speedMul = passiveMult('stride');   // 패시브 「발걸음」
   // 아무도 마주하지 않으면 창 없이 지도만 — 화신 문이 있으면 위에 작게 (떠돌이 상인은 지도 위 🎒 에 닿으면 상점 — 예전 「들른다」 단추는 뺌)
@@ -2705,7 +2713,7 @@ let shopKind = 'merchant';   // 'merchant' 또는 백화점 매장 이름
 let shopSay = '';            // 점원의 한마디 — 창을 열 때 한 번 고릅니다 (사고 나서 다시 그려도 그대로)
 const isDeptShop = () => shopKind !== 'merchant';
 // 지금 연 상점이 아직 그 자리에 있나 (상인이 떠났거나 도시가 아니면 닫습니다)
-function shopHere() { return shopKind === 'assoc' ? !!State.meta.cityOpen : shopKind === 'hire' || shopKind === 'gate' ? gatesOpen() : shopKind === 'guild' ? guildForSale() || guildOwned() : isDeptShop() ? !!State.meta.cityOpen && !!DEPT_SECTIONS[shopKind] : merchantHere(); }
+function shopHere() { return shopKind === 'bm' ? bmOpen() : shopKind === 'assoc' ? !!State.meta.cityOpen : shopKind === 'hire' || shopKind === 'gate' ? gatesOpen() : shopKind === 'guild' ? guildForSale() || guildOwned() : isDeptShop() ? !!State.meta.cityOpen && !!DEPT_SECTIONS[shopKind] : merchantHere(); }
 // 점원은 등록증도 없는 손님을 수상쩍어하지만 묻지 않습니다
 const CLERK_TALK = {
   noLicense: ['「헌터 등록증 먼저 보여 주시겠어요? …없으시면 팔 수가 없어요. 협회는 길 건너 큰 건물이에요.」', '「등록 안 된 분께는 무기를 못 팔아요. 규정이라서요. 협회에서 시험부터 보고 오세요.」'],
@@ -2721,6 +2729,7 @@ const MAT_TALK = {
 function clerkLine(kind) {
   const pick = list => list[Math.floor(Math.random() * list.length)];
   if (kind === 'stones') return pick(STONE_TALK);
+  if (kind === 'bm') return pick(!num(State.meta.bmGems) ? BM_TALK.noGem : !bmPool().length ? BM_TALK.none : BM_TALK.hi);
   if (kind === 'mats') {
     const any = Object.keys(State.meta.mats || {}).some(id => matsOf(id) > 0), made = ITEMS.some(i => i.craft && owns(i.id));
     return pick(!any ? MAT_TALK.none : made ? MAT_TALK.again : MAT_TALK.first);
@@ -2735,6 +2744,7 @@ function clerkLine(kind) {
 }
 function openShop(kind = 'merchant') {
   shopKind = kind;
+  bmLast = null;
   if (!shopHere()) return;
   shopSay = isDeptShop() ? clerkLine(kind) : '';
   shopSlot = SLOT_IDS.includes(selectedSlot) ? selectedSlot : SLOT_IDS[0];
@@ -2759,6 +2769,7 @@ function renderShop() {
   if (shopKind === 'guild') { renderGuild(); return; }
   if (shopKind === 'mats') { renderMatShop(); return; }
   if (shopKind === 'stones') { renderStoneShop(); return; }
+  if (shopKind === 'bm') { renderBlackMarket(); return; }
   const dept = isDeptShop();
   // 지갑 — 백화점(도시)은 돈(원), 떠돌이 상인(그 공간)은 골드
   const gold = num(dept ? State.meta.won : State.meta.gold);
@@ -2828,7 +2839,7 @@ function renderShop() {
 // 맨 위는 핵 — 모든 몬스터가 남기는 팔 것 (격마다 한 가지). 가진 격만 한 줄씩, 「모두 판다」 한 번으로 다 팝니다. 만드는 데는 쓰지 않습니다.
 // ---------- 헌터 협회 · 등록 창구 (상점 창을 같이 씀 — shopKind 'assoc') ----------
 // 지금의 나(도시의 Lv.1 그대로)로 F 시험관부터 차례로 싸워, 이긴 데까지가 등급. 회차에 한 번 · 내려가지 않음 (game.js 의 takeHunterTest)
-const CLERK_DESKS = { examiner: { name: '시험관', icon: '🧑‍🏫' }, assoc: { name: '등록 창구', icon: '🧑‍💼' }, ally: { name: '???', icon: ALLIES.hayun.icon }, ally2: { name: '???', icon: ALLIES.danwoo.icon }, hire: { name: '동료 모집', icon: '👩‍💼' }, gate: { name: '게이트 창구', icon: '🧑‍✈️' }, guild: { name: '길드 장부', icon: '📒' }, bed: { name: '침대', icon: '💤' } };   // 백화점 매장이 아닌 창구 — 지도 위 이름표
+const CLERK_DESKS = { examiner: { name: '시험관', icon: '🧑‍🏫' }, assoc: { name: '등록 창구', icon: '🧑‍💼' }, ally: { name: '???', icon: ALLIES.hayun.icon }, ally2: { name: '???', icon: ALLIES.danwoo.icon }, bm: { name: '???', icon: '🫥' }, hire: { name: '동료 모집', icon: '👩‍💼' }, gate: { name: '게이트 창구', icon: '🧑‍✈️' }, guild: { name: '길드 장부', icon: '📒' }, bed: { name: '침대', icon: '💤' } };   // 백화점 매장이 아닌 창구 — 지도 위 이름표
 const ASSOC_TALK = {
   none: ['「신규 등록이세요? 시험은 간단해요. 시험관과 한 번씩 붙어 보시면 돼요. F급부터요.」', '「등록증 없이 게이트 근처를 돌아다니시면 곤란해요. …시험 보시게요?」'],
   again: ['「재심사요? 좋아요. 지난번보다 나아지셨는지 볼까요.」', '「등급은 한 번 받으면 안 내려가요. 부담 없이 보세요.」'],
@@ -3107,6 +3118,62 @@ function renderGuild() {
 const STONE_TALK = ['「가지신 장비랑 같은 재료면 녹여서 강화석으로 뽑아 드려요. 손이 좀 가지만요.」', '「이 가죽이면… 신발 쪽 강화석이 나오겠네요. 잠깐만요.」'];
 // 바꿀 수 있는 재료 — 그 재료로 만드는 장비 중 이미 가진 것이 있는 재료
 function stoneMats() { return Object.values(MATERIALS).filter(mat => ITEMS.some(i => i.craft && i.craft.mat === mat.id && owns(i.id))); }
+// ---------- 암시장 — 옛 동네 골목의 후드티 (도시 계획 7번 · 9격, 사용자 결정 2026-11-19 · game.js 의 bmDeal) ----------
+// 검은 원석 하나 + 맡길 돈(가진 돈의 몇 %) → 굴림 두 번, 하나라도 되면 내가 아직 없는 전리품. 한 번 맡기면 후드티는 그 회차엔 사라짐. 대사는 제안
+const BM_TALK = {
+  hi: ['「…찾는 거 있어? 게이트에서 \'떨어진\' 물건들이야. 출처는 묻지 마.」', '「돈은 먼저. 물건은 운. 그게 여기 규칙이야.」', '「원석 가져왔어? 그거 없인 길이 안 열려. 어떤 길인지는 묻지 말고.」'],
+  noGem: ['「빈손이네. 검은 원석 — 보스 놈들이 가끔 흘리는 거. 그거 하나는 있어야 움직여.」'],
+  none: ['「…당신, 더 구할 게 없는데? 가 본 데 건 다 가졌어. 더 깊이 가 보든가.」']
+};
+let bmPct = 30, bmLast = null;   // 맡길 돈의 비율(%) · 방금 한 거래 (창을 다시 열면 비움)
+function renderBlackMarket() {
+  $('shopTitle').textContent = '골목 안 · ???';
+  const won = num(State.meta.won), gems = num(State.meta.bmGems);
+  $('shopGold').innerHTML = `${fmtWon(won)} · ${BM_GEM.icon} ${fmt(gems)}`;
+  const say = `<div class="shop-say">${CLERK_DESKS.bm.icon} ${shopSay}</div>`;
+  if (bmLast) {
+    const r = bmLast;
+    const rolls = r.rolls.map((ok, i) => `<div class="bm-roll ${ok ? 'ok' : ''}">${i + 1}번째 — ${ok ? '찾았다' : '빗나갔다'}</div>`).join('');
+    const got = r.item ? `
+      <div class="inv-item ware bm-got">
+        <span class="inv-art">${itemArt(r.item)}</span>
+        <div class="inv-body"><div class="inv-head">${itemTag(r.item)}<span class="inv-name">${r.item.name}</span></div>
+          <div class="inv-stats">제${r.item.rank.n}격 · ${SLOT_NAMES[r.item.slot] || ''}</div></div>
+      </div>` : '';
+    $('shopBody').innerHTML = say + `<div class="bm-result">${rolls}</div>${got}
+      <div class="shop-say">${CLERK_DESKS.bm.icon} ${r.item ? '「거래 끝. …어디서 났냐고 물으면, 주웠다고 해.」' : '「운이 없었네. 돈은 이미 흘러갔어. 다음에 또 와 — 내가 있으면.」'}</div>`;
+    return;
+  }
+  if (State.run.bmDone) { $('shopBody').innerHTML = say + '<div class="adm-note">오늘 거래는 끝났다.</div>'; return; }
+  const pool = bmPool();
+  const can = gems >= 1 && won >= 1 && pool.length > 0;
+  $('shopBody').innerHTML = say + `
+    <div class="bm-deal">
+      <div class="bm-amt">맡길 돈 <b id="bmAmt"></b> <small id="bmPctTxt"></small></div>
+      <input type="range" id="bmPct" min="1" max="100" step="1" value="${bmPct}" ${can ? '' : 'disabled'}>
+      <div class="bm-odds">한 번 굴림 <b id="bmP"></b> · 두 번 중 하나라도 <b id="bmP2"></b></div>
+      <p class="hint">${BM_GEM.icon} ${BM_GEM.name} 1개 · 맡긴 돈은 찾든 못 찾든 돌려받지 못한다 · 나오는 것은 가 본 격까지의 전리품 중 아직 없는 것 (${fmt(pool.length)}가지)<br>거래는 한 번 — 맡기고 나면 후드티는 사라진다</p>
+      <div class="assoc-actions"><button class="btn primary" id="bmGo" ${can ? '' : 'disabled'}>맡긴다</button></div>
+    </div>`;
+  const amountOf = () => Math.max(1, Math.floor(won * bmPct / 100));
+  const paint = () => {
+    const p = bmChance(amountOf()), p2 = 1 - Math.pow(1 - p, RULES.BM_ROLLS);
+    $('bmAmt').textContent = fmtWon(amountOf());
+    $('bmPctTxt').textContent = `가진 돈의 ${bmPct}%`;
+    $('bmP').textContent = `${Math.round(p * 1000) / 10}%`;
+    $('bmP2').textContent = `${Math.round(p2 * 1000) / 10}%`;
+  };
+  paint();
+  $('bmPct').addEventListener('input', e => { bmPct = Math.max(1, Math.min(100, +e.target.value || 1)); paint(); });
+  $('bmGo').addEventListener('click', () => {
+    const r = bmDeal(amountOf());
+    if (!r) return;
+    bmLast = r;
+    Sound.play(r.item ? 'rankUp' : 'retreat');
+    render();
+  });
+}
+
 function renderStoneShop() {
   $('shopTitle').textContent = `헌터백화점 · ${DEPT_SECTIONS.stones.name}`;
   $('shopGold').innerHTML = '';
@@ -3810,6 +3877,8 @@ const ALLY2_MEET = [
   { who: 'me', text: '(동료가 생겼다.)' }
 ];
 const GUIDE_NOTES = [
+  { id: 'bm', when: () => bmUnlocked(), key: () => 1,   // 도시는 격을 모름 — 「요즘」 골목에 드나드는 사람
+    text: () => `집 옆 골목 안쪽 셔터 있잖아. 요즘 <b>가끔</b> 반쯤 올라가 있대. 후드 쓴 사람이 앉아서 — 돈만 맡기면 <b>못 구한 물건</b>을 구해 준다나. 대신 ${BM_GEM.icon} <b>${BM_GEM.name}</b>이 있어야 한대. 보스들이 가끔 흘리는 거.` },
   { id: 'ally2', when: () => ally2Waiting(), key: () => 1,
     text: () => `${(State.meta.guild && State.meta.guild.name) || '네 길드'} 사무실에 누가 와 있대. 낡은 도복 차림으로 — 길드장을 기다린다던데.` },
   { id: 'guildSale', when: () => guildForSale(), key: () => 1,

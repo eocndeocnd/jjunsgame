@@ -1095,7 +1095,10 @@ test('도시 — 옛 동네(집 앞에서 시작 · 골목 막다른 곳의 이�
   assert.deepEqual(old.ports.filter(q => q.door).map(q => q.name).sort(), ['blackmarket', 'home', 'myguild']);
   assert.deepEqual(city.ports.filter(q => q.door).map(q => q.name).sort(), ['association', 'dept', 'guild1', 'guild2', 'guild3', 'guild4', 'myguild2']);
   assert.deepEqual(city.ports.filter(q => q.door && q.to).map(q => q.name).sort(), ['association', 'dept', 'myguild2'], '열린 문은 헌터 협회 · 헌터백화점 · 내 길드(4단계부터 — unlock guildCity)');
-  assert.deepEqual(old.ports.filter(q => q.door && q.to).map(q => q.name), ['home', 'myguild'], '옛 동네에서 열리는 문은 집 · 내 길드 (길드는 게임이 잠금 — unlock guild)');
+  assert.deepEqual(old.ports.filter(q => q.door && q.to).map(q => q.name), ['home', 'myguild', 'blackmarket'], '옛 동네에서 열리는 문은 집 · 내 길드 · 암시장 (길드 · 암시장은 게임이 잠금 — unlock guild · bm)');
+  const bmDoor = old.ports.find(q => q.name === 'blackmarket'), bm = loadMap('bm');
+  assert.deepEqual([bmDoor.to, bmDoor.unlock, bm.ports.find(q => q.name === 'out').to], ['bm.out', 'bm', 'oldtown.blackmarket']);
+  assert.deepEqual(bm.npcs.filter(n => n.shop).map(n => n.shop), ['bm']);
   const home = loadMap('home');
   assert.equal(home.ports.find(q => q.name === 'out').to, 'oldtown.home');
   assert.deepEqual(home.npcs.filter(n => n.shop).map(n => n.shop), ['bed']);
@@ -1462,6 +1465,41 @@ test('길드 — 제7격 보스 뒤 빈 건물이 매물 · 사서 이름 · 사
   assert.deepEqual(r.unseat, [true, false, true]);
   assert.deepEqual(r.max, [5, null]);
   assert.deepEqual(r.load, ['새벽', 5, ['minjae']]);
+});
+
+test('암시장 — 9격 보스 뒤 · 회차마다 반반, 검은 원석 1개 + 맡긴 돈 비율의 확률로 두 번 굴려 아직 없는 전리품(가 본 격까지), 거래는 회차에 한 번', () => {
+  const run = loadGame();
+  const r = run(`
+    currentSlot = 0; State.meta = freshMeta(); State.meta.cityOpen = true; startRun();
+    const beat = n => State.meta.bossesBeaten.push(zoneBoss(ZONES.findIndex(z => z.rank === n)).id);
+    State.run.bm = true;
+    const out = { before: [bmUnlocked(), bmOpen(), rollBmGem(() => 0)] };
+    beat(9); State.meta.bestZone = ZONES.findIndex(z => z.rank === 9) + 1;
+    out.open = [bmUnlocked(), bmOpen(), deskHere('bm')];
+    State.meta.won = 1000;
+    out.noGem = bmDeal(500);
+    out.gem = [rollBmGem(() => 0.99), rollBmGem(() => 0.1), State.meta.bmGems];
+    out.odds = [bmChance(1000), bmChance(500), bmChance(2000)];
+    const pool = bmPool();
+    out.pool = [pool.length > 0, pool.every(id => !owns(id) && getItem(id).rank.n <= 9 && !getItem(id).store && !getItem(id).craft)];
+    const miss = bmDeal(400, () => 0.9);
+    out.miss = [miss.rolls, miss.item, State.meta.won, State.meta.bmGems, State.run.bmDone, deskHere('bm'), bmDeal(100)];
+    State.run.bmDone = false; State.meta.bmGems = 1;
+    let k = 0; const seq = [0.9, 0.1, 0];
+    const hit = bmDeal(600, () => seq[k++]);
+    out.hit = [hit.rolls, !!hit.item && owns(hit.item.id), State.meta.won];
+    State.run.bm = false; State.run.bmDone = false; out.away = [bmOpen(), deskHere('bm')];
+    return out;
+  `);
+  assert.deepEqual(r.before, [false, false, false]);
+  assert.deepEqual(r.open, [true, true, true]);
+  assert.equal(r.noGem, null);
+  assert.deepEqual(r.gem, [false, true, 1]);
+  assert.deepEqual(r.odds, [0.5, 0.25, 0.5]);
+  assert.deepEqual(r.pool, [true, true]);
+  assert.deepEqual(r.miss, [[false, false], null, 600, 0, true, false, null]);
+  assert.deepEqual(r.hit, [[false, true], true, 0]);
+  assert.deepEqual(r.away, [false, false]);
 });
 
 test('둘째 동료 단우 — 제8격 보스 뒤 · 내 길드가 있어야 사무실에서 기다림, 버티기는 한 싸움에 한 번', () => {
