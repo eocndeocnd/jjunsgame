@@ -555,6 +555,12 @@
     carpet: ['#4a2a6a', '#42265e', '#543078', '#3a2052'], gold: '#a080d0', goldDim: '#604a80', wine: '#4a2a6a', red: '#c04aa0', glow: '#c890ff',
     line: '#0c0a10', wall: '#2a2434', velvet: '#16121c', steel: ['#b8b0c8', '#8a82a0', '#d8d0ec', '#5a5270']
   };
+  // 하늘의 금 너머 (theme 'void') — 검푸른 허공 · 보랏빛 · 별빛
+  const STC_VOID = {
+    ivory: ['#1c1f3a', '#181b34', '#222644', '#14162c'], seam: '#0c0e1e', dark: ['#08091a', '#060716', '#0a0c20', '#040510'],
+    carpet: ['#3a2a70', '#342664', '#44327e', '#2c205a'], gold: '#b8a0ff', goldDim: '#5a4a9a', wine: '#3a2a70', red: '#e06ad0', glow: '#d8c8ff',
+    line: '#020208', wall: '#141630', velvet: '#0a0b1c', steel: ['#c8c8f0', '#9a9ad0', '#ececff', '#5a5a90']
+  };
   // 카이로 게이트 안 (theme 'sand') — 누런 모래 바위 · 금빛
   const STC_SAND = {
     ivory: ['#8a7048', '#806640', '#967a50', '#745c38'], seam: '#5a4628', dark: ['#3a2c18', '#342814', '#40301c', '#2c2010'],
@@ -2391,7 +2397,7 @@
   // 덩어리 하나 (CH×CH 칸) — 캔버스에 한 번 그려 둠. 용암이 있으면 용암 점만 칠한 빛 판(.glow)도 — 움직이는 것(liveGround)이 일렁이게 얹음
   function chunk(m, cx, cy) {
     const th = m.props && m.props.theme;
-    STC = th === 'hq' ? STC_HQ : th === 'home' ? STC_HOME : th === 'home2' ? STC_HOME2 : th === 'bm' ? STC_BM : th === 'gate' ? STC_GATE : th === 'raid' ? STC_RAID : th === 'sand' ? STC_SAND : th === 'guild' ? STC_GUILD[Math.max(0, Math.min(4, GLV - 1))] : STC_DEPT;   // 가게 안의 빛깔 — 헌터백화점 · 헌터 협회 · 내 길드(단계마다)
+    STC = th === 'hq' ? STC_HQ : th === 'home' ? STC_HOME : th === 'home2' ? STC_HOME2 : th === 'bm' ? STC_BM : th === 'gate' ? STC_GATE : th === 'raid' ? STC_RAID : th === 'sand' ? STC_SAND : th === 'void' ? STC_VOID : th === 'guild' ? STC_GUILD[Math.max(0, Math.min(4, GLV - 1))] : STC_DEPT;   // 가게 안의 빛깔 — 헌터백화점 · 헌터 협회 · 내 길드(단계마다)
     const w = Math.min(CH, m.w - cx * CH), h = Math.min(CH, m.h - cy * CH), pw = w * P;
     const cv = document.createElement('canvas');
     cv.width = pw; cv.height = h * P;

@@ -1543,6 +1543,35 @@ test('SSS급 — SS + 17격 보스 뒤 협회장실 다시 · 뉴욕 → 파리 
   assert.deepEqual(r.win, ['true,true,true', true, 9, 'SSS', 2, false, 9 * 20]);
 });
 
+test('EX급 — SSS + 아자토스(20격) 뒤 협회장실 · 옛 동네 → 광장 → 하늘의 금 너머를 연달아 이기면 EX(10), 외신은 그 차례에만 섬, 나서면 없던 일', () => {
+  const run = loadGame();
+  const r = run(`
+    currentSlot = 0; State.meta = freshMeta(); State.meta.cityOpen = true; startRun();
+    const beat = n => State.meta.bossesBeaten.push(zoneBoss(ZONES.findIndex(z => z.rank === n)).id);
+    for (let n = 1; n <= 19; n++) beat(n);
+    State.meta.hunterGrade = 9; State.meta.topDone = 2;
+    const out = { notYet: chiefCalls() };
+    beat(20);
+    const strong = () => { const _hs = heroStats; heroStats = () => Object.assign(_hs(), { life: 1e30, damage: 1e30, defense: 1e30 }); return () => { heroStats = _hs; }; };
+    out.open = [topTier(), deskHere('chiefS0'), deskHere('exboss0')];
+    acceptRaid();
+    out.first = [raidFight().map, raidFight().at, deskHere('exboss0'), deskHere('exboss1'), raidFoe().name];
+    let undo = strong();
+    const a = fightRaid(); State.run.lastResult = null;
+    out.step = [a.win, a.nextAt, deskHere('exboss0'), deskHere('exboss1')];
+    const b = fightRaid(); State.run.lastResult = null;
+    const c = fightRaid();
+    undo();
+    out.win = [b.nextAt, c.last, hunterGrade(), gradeName(), State.meta.topDone, chiefCalls(), guildScoreParts().grade];
+    return out;
+  `);
+  assert.equal(r.notYet, false);
+  assert.deepEqual(r.open, [2, true, false]);
+  assert.deepEqual(r.first, ['oldtown', 'oldtown.home', true, false, '슈브니구라스']);
+  assert.deepEqual(r.step, [true, 'city.crisis', false, true]);
+  assert.deepEqual(r.win, ['sky.out', true, 10, 'EX', 3, false, 10 * 20]);
+});
+
 test('훈련소 — 12격 뒤 · 길드가 있어야, 돈을 내면 단계만큼 시간이 흐른 뒤 능력 +10%, 10단계면 등급 한 번 · 단련 중엔 동행 · 게이트 · 사무 못 함', () => {
   const run = loadGame();
   const r = run(`

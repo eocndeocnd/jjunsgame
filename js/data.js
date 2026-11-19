@@ -2499,16 +2499,21 @@ const HUNTER_GRADES = [
 ];
 function examinerStats(g) { return enemyStats(HUNTER_GRADES[g - 1].level); }
 // S급 위 (사용자 결정 2026-11-19) — 시험관이 아니라 협회장의 부름으로 (game.js 의 topTier · fightRaid). rank — 이 격의 보스를 꺾은 뒤 · fights — 차례로 다 이겨야 (한 번에)
-//   city — 이름 · map — 그 게이트 안 지도 · level — 보스의 세기 (시뮬로 「그 격 직후에 대개 이김」)
+//   city — 이름 · map — 싸우는 지도 · at — 그 차례가 되면 서는 곳 (문 이름) · level — 보스의 세기 (시뮬로 「그 격 직후에 대개 이김」)
 //   SS 나라 — 광장 위기 게이트 하나, 4대 길드 S급 넷이 밀리고 나 혼자 (시드 4개: 14격 직후 1e13 늘 · 4e13 반쯤 → 2e13)
 //   SSS 세계 — 연합의 이동 게이트로 세 도시를 연달아 (시드 6개: 17격 직후 8e15 늘 · 1.6e16 대개 · 3.2e16 반쯤)
-//   EX 지구 — 클리어 뒤, 벽 너머의 것들이 지구로 밀려옴 (사용자 결정 — 아직 안 만듦)
+//   EX 지구 — 엔딩 직전: 아자토스(20격)를 꺾어 마지막 벽이 무너지고, 하늘의 금으로 외신이 지구에 내려옴. 모두가 길을 열고 마지막은 나 혼자 → 엔딩
+//     옛 동네 → 광장 → 하늘의 금 너머 (시드 6개: 클리어 직후 1.3e18 늘 · 2.6e18 거의 늘 · 5.1e18 반쯤)
 const TOP_GRADES = [
-  { id: 'SS', rank: 14, fights: [{ city: '광장', map: 'raid', name: '광장 게이트의 주인', icon: '🐉', level: 2e13 }] },
+  { id: 'SS', rank: 14, fights: [{ city: '광장', map: 'raid', at: 'city.crisis', name: '광장 게이트의 주인', icon: '🐉', level: 2e13 }] },
   { id: 'SSS', rank: 17, fights: [
-    { city: '뉴욕', map: 'w1', name: '뉴욕 게이트의 주인', icon: '🦑', level: 4e15 },
-    { city: '파리', map: 'w2', name: '파리 게이트의 주인', icon: '🦇', level: 8e15 },
-    { city: '카이로', map: 'w3', name: '카이로 게이트의 주인', icon: '🦂', level: 1.6e16 }] }
+    { city: '뉴욕', map: 'w1', at: 'w1.out', name: '뉴욕 게이트의 주인', icon: '🦑', level: 4e15 },
+    { city: '파리', map: 'w2', at: 'w2.out', name: '파리 게이트의 주인', icon: '🦇', level: 8e15 },
+    { city: '카이로', map: 'w3', at: 'w3.out', name: '카이로 게이트의 주인', icon: '🦂', level: 1.6e16 }] },
+  { id: 'EX', rank: 20, fights: [
+    { city: '옛 동네', map: 'oldtown', at: 'oldtown.home', name: '슈브니구라스', icon: '🐐', level: 6e17 },
+    { city: '광장', map: 'city', at: 'city.crisis', name: '니알라토텝', icon: '🎭', level: 1.2e18 },
+    { city: '하늘의 금', map: 'sky', at: 'sky.out', name: '요그소토스', icon: '🔮', level: 2.4e18 }] }
 ];
 // 4대 길드 (사용자 결정 2026-11-19 — 이름 홍염 · 청해 · 크라운 · 달). 차례는 도시 지도의 길드 건물 tone 0~3 과 같음.
 // S급 시험관은 그 길드의 S급 헌터가 와서 맡음 — 시험마다 차례로 돌아감 (game.js 의 examinerFoe). 사람 이름 · 그림은 나중에 (지금은 이모지)

@@ -1210,6 +1210,7 @@ const OLDTOWN = {
   pylons: [],
   start: [3, 7],                                             // 집 문 앞 골목길
   gate: [6, 2],                                              // 이상한 게이트 — 집 바로 옆 틈 (두 칸 폭)
+  npcs: [{ x: 12, y: 9, shop: 'exboss0', label: '' }],      // EX — 골목길 한가운데 내려온 외신 (그 차례에만 섬)
   edges: [{ name: 'city', x: 23, y: 8, w: 1, h: 3, to: 'city.oldtown', label: '헌터들의 도시 →', arrive: 'left' }]   // 도착 · 이름표는 골목길 가운데 줄 (y 9)
 };
 const CITY = {
@@ -1258,6 +1259,7 @@ const CITY = {
   ],
   start: [1, 43],                                            // 옛 동네에서 넘어와 서는 곳 곁
   crisis: [22, 16],                                          // 광장 한가운데 — 위기 게이트 (SS급 이야기 · 협회장의 부탁을 받은 회차에만 나타남)
+  npcs: [{ x: 22, y: 15, shop: 'exboss1', label: '' }],     // EX — 광장에 내려온 외신 (그 차례에만 섬 · game.js 의 deskHere)
   edges: [{ name: 'oldtown', x: 0, y: 42, w: 1, h: 3, to: 'oldtown.city', label: '← 옛 동네', arrive: 'right' }]
 };
 function townMap(C, name) {
@@ -1356,7 +1358,11 @@ function townMap(C, name) {
   // 지도 가장자리 통로 — 그리지 않고 이름표만 (mapview 의 edge). 넘어가면 그 지도의 같은 이름 통로 안쪽(arrive 쪽)에 섬
   // 통로는 그 가장자리 한 줄 전체(위 끝 ~ 아래 끝) — 화면 끝 어느 줄에 닿아도 넘어감 (사용자 결정 2026-11-19). 도착하는 줄 · 이름표는 적어 둔 자리(e.y ~ e.h)의 가운데
   for (const e of C.edges) ports.push({ name: e.name, label: e.label, x: e.x + PD.l, y: PD.t, w: e.w, h: C.h, to: e.to, edge: true, arrive: e.arrive, arriveY: e.y + PD.t + (e.h >> 1) });
-  return buildTmj({ w: W, h: H, tiles, look: lk, ports, npcs: [{ name: 'start', x: sx + PD.l, y: sy + PD.t }],
+  const townNpcs = (C.npcs || []).map(n => {                                    // 때가 되어야 서는 사람 — 걷는 곳의 맨땅에만 (그 전엔 그냥 땅)
+    if (!inWalk(n.x, n.y) || tiles[at(n.x, n.y)] !== FLOOR) throw new Error(`${name} — 사람 (${n.x}, ${n.y}) 자리가 빈 땅이 아님`);
+    return { name: 'clerk', x: n.x + PD.l, y: n.y + PD.t, shop: n.shop, label: n.label };
+  });
+  return buildTmj({ w: W, h: H, tiles, look: lk, ports, npcs: [{ name: 'start', x: sx + PD.l, y: sy + PD.t }, ...townNpcs],
     props: { title: C.title, city: true, walk: `${PD.l},${PD.t},${C.w},${C.h}`, blds: JSON.stringify(blds), ...(clutter.length ? { clutter: JSON.stringify(clutter) } : {}) } });
 }
 const oldtown = () => townMap(OLDTOWN, '옛 동네');
@@ -1529,17 +1535,18 @@ const RAID = {
 };
 const raidInterior = () => storeInterior(RAID);
 // ---------- 세계의 게이트 안 (SSS 이야기 — 사용자 결정 2026-11-19) — 뉴욕 · 파리 · 카이로. 안쪽 끝에 보스 하나, 나가면 협회 로비(협회장실 문 앞) ----------
-const worldGate = (title, theme) => ({
-  title, w: 13, h: 9, to: 'assoc.chief', theme, outLabel: '협회로',
+const worldGate = (title, theme, to = 'assoc.chief', outLabel = '협회로', plants = true) => ({
+  title, w: 13, h: 9, to, theme, outLabel,
   wall: [],
   props: [
     { kind: 'pillar', x: 2, y: 2 }, { kind: 'pillar', x: 10, y: 2 }, { kind: 'pillar', x: 2, y: 6 }, { kind: 'pillar', x: 10, y: 6 },
-    { kind: 'plant', x: 0, y: 8, w: 1 }, { kind: 'plant', x: 12, y: 8, w: 1 }
+    ...(plants ? [{ kind: 'plant', x: 0, y: 8, w: 1 }, { kind: 'plant', x: 12, y: 8, w: 1 }] : [])
   ],
   clerks: [{ x: 6, y: 1, shop: 'raidboss', label: '보스' }],
   signs: []
 });
 const W1 = worldGate('뉴욕 게이트 안', 'gate'), W2 = worldGate('파리 게이트 안', 'raid'), W3 = worldGate('카이로 게이트 안', 'sand');
+const SKY = worldGate('하늘의 금 너머', 'void', 'city.crisis', '광장으로', false);   // EX 마지막 — 요그소토스 (나가면 광장)
 // ---------- 헌터 협회 · 시험장 (사용자 결정 2026-11-19) — 등록 시험의 시험관과 한 명씩 싸우는 곳 ----------
 // 위 벽에 현황판 · 문장 · 현황판, 가운데 깔개 끝에 시험관(지금 차례 — 이기면 다음 등급이 섬), 둘레에 기둥 · 구경하는 의자
 const ARENA = {
@@ -1640,11 +1647,11 @@ const guild2Interior = () => storeInterior(GUILD2);
 
 // 뽑을 지도 전부 — { 파일 이름: 만드는 함수 }
 function allMaps(data) {
-  const out = { sewer: sewer(data), overworld: overworld(data), hub: hub(data), oldtown: oldtown(), city: city(), dept: deptInterior(), dept2: dept2Interior(), assoc: assocInterior(), guild: guildInterior(), guild2: guild2Interior(), home: homeInterior(), arena: arenaInterior(), bm: bmInterior(), home2: home2Interior(), gatein: gateinInterior(), chief: chiefInterior(), raid: raidInterior(), w1: storeInterior(W1), w2: storeInterior(W2), w3: storeInterior(W3) };
+  const out = { sewer: sewer(data), overworld: overworld(data), hub: hub(data), oldtown: oldtown(), city: city(), dept: deptInterior(), dept2: dept2Interior(), assoc: assocInterior(), guild: guildInterior(), guild2: guild2Interior(), home: homeInterior(), arena: arenaInterior(), bm: bmInterior(), home2: home2Interior(), gatein: gateinInterior(), chief: chiefInterior(), raid: raidInterior(), w1: storeInterior(W1), w2: storeInterior(W2), w3: storeInterior(W3), sky: storeInterior(SKY) };
   for (const s of SECRET_ROOMS) out[s.id] = secretRoom(data, s);
   for (const b of BUILDINGS) out[b.id] = buildingInterior(data, b);
   REALMS.forEach((r, i) => { out[r.name] = realm(data, r, i); });
   return out;
 }
 
-module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, looksPng, encodePng, generate, sewer, overworld, hub, oldtown, city, deptInterior, dept2Interior, assocInterior, guildInterior, guild2Interior, homeInterior, home2Interior, arenaInterior, bmInterior, gateinInterior, chiefInterior, raidInterior, storeInterior, OLDTOWN, CITY, DEPT, DEPT2, ASSOC, GUILD, GUILD2, HOME, HOME2, ARENA, BM, GATEIN, CHIEF, RAID, W1, W2, W3, CITY_BIO, secretRoom, buildingInterior, allMaps, layoutFromPlan, HUB_DOORS, REALMS, SEWER, SECRET_ROOMS, BUILDINGS, BUILD, DOORWAY, CARPET, RUIN };
+module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, looksPng, encodePng, generate, sewer, overworld, hub, oldtown, city, deptInterior, dept2Interior, assocInterior, guildInterior, guild2Interior, homeInterior, home2Interior, arenaInterior, bmInterior, gateinInterior, chiefInterior, raidInterior, storeInterior, OLDTOWN, CITY, DEPT, DEPT2, ASSOC, GUILD, GUILD2, HOME, HOME2, ARENA, BM, GATEIN, CHIEF, RAID, W1, W2, W3, SKY, CITY_BIO, secretRoom, buildingInterior, allMaps, layoutFromPlan, HUB_DOORS, REALMS, SEWER, SECRET_ROOMS, BUILDINGS, BUILD, DOORWAY, CARPET, RUIN };

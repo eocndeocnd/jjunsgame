@@ -240,7 +240,7 @@ const State = {
     heroName: '',                // 주인공의 이름 — 첫 회차가 끝나 도시에서 처음 눈을 뜰 때 정합니다 (없으면 「나」)
     hunterGrade: 0,              // 헌터 등급 — 0 미등록 · 1~7 = F~S (data.js 의 HUNTER_GRADES). 헌터 협회 시험으로 오르고 내려가지 않음
     testedRun: 0,                // 등록 시험을 본 회차 — 한 회차에 한 번
-    topDone: 0,                  // S 위 등급을 몇 개 얻었나 (0 · 1 SS · 2 SSS — data.js 의 TOP_GRADES, 협회장의 부름)
+    topDone: 0,                  // S 위 등급을 몇 개 얻었나 (0 · 1 SS · 2 SSS · 3 EX — data.js 의 TOP_GRADES, 협회장의 부름. 3 이면 엔딩을 봄)
     topLostRun: null,            // 협회장의 부탁에서 진 회차 — 그 회차엔 다시 못 감 (다음 회차에 협회장실에서 처음부터)
     sExams: 0,                   // S급 시험관을 만난 횟수 — 4대 길드가 이 차례로 돌아가며 옴 (BIG_GUILDS)
     bmGems: 0,                   // 검은 원석 — 암시장에 돈을 맡길 때 하나씩 (보스가 가끔)
@@ -1538,7 +1538,8 @@ function joinAlly(id = 'hayun') {
 }
 function allyNow() { return State.meta.ally && ALLIES[State.meta.ally] ? ALLIES[State.meta.ally] : null; }
 // 때가 되어야 서 있는 창구 · 사람 (지도 — mapview 의 npcHere · ui 의 mapMarks)
-function deskHere(shop) { return shop === 'chief' ? chiefCalls() : /^chiefS\d$/.test(shop) ? topTier() === 0 && !State.run.raid : /^raidS\d$/.test(shop) ? !!raidNow() && raidNow().tier === 0 && raidNow().knocked <= +shop.slice(5)
+function deskHere(shop) { return shop === 'chief' ? chiefCalls() : /^chiefS\d$/.test(shop) ? (topTier() === 0 || topTier() === 2) && !State.run.raid
+  : /^exboss\d$/.test(shop) ? !!raidNow() && raidNow().tier === 2 && raidNow().step === +shop.slice(6) : /^raidS\d$/.test(shop) ? !!raidNow() && raidNow().tier === 0 && raidNow().knocked <= +shop.slice(5)
   : /^raidD\d$/.test(shop) ? !!State.run.raid && State.run.raid.tier === 0 && (State.run.raid.done || State.run.raid.knocked > +shop.slice(5)) : shop === 'raidboss' ? !!raidNow() : shop === 'ally' ? allyWaiting() : shop === 'ally2' ? ally2Waiting() : shop === 'bm' ? bmOpen() && !State.run.bmDone : shop === 'ranking' ? rankingOpen() : shop === 'gatefind' ? gatesOpen() : shop === 'trainer' ? trainOpen() : shop === 'gateboss' ? !!gateInNow() : shop === 'hire' || shop === 'gate' ? gatesOpen() : shop === 'guild' ? guildOwned() : shop === 'examiner' ? !!examinerNow() : true; }
 // 제5격 보스를 한 번이라도 꺾으면 협회의 「동료 모집」 · 「게이트 창구」가 열림
 function gatesOpen() { return !!State.meta.cityOpen && rankBossBeaten(5); }
@@ -1718,8 +1719,9 @@ function giveStonesLowest(n) {
 // ---------- S급 위 — 협회장의 부름 (사용자 결정 2026-11-19 · data.js 의 TOP_GRADES) ----------
 // 바로 아래 등급이고 그 등급의 격 보스를 꺾었으면 협회 로비 오른쪽 위 협회장실이 열림 (도시 쪽 까닭: 시간이 흘러 등급을 못 매기는 게이트가 열림 — 도시는 격을 모름).
 // SS(나라): 광장 한가운데 위기 게이트 — 안에서 4대 길드 S급 넷이 차례로 밀리고 나 혼자. SSS(세계): 연합의 이동 게이트로 뉴욕 · 파리 · 카이로를 연달아, 셋 다 이겨야.
+// EX(지구 — 엔딩 직전): 아자토스를 꺾은 뒤 하늘의 금으로 외신이 내려옴 — 옛 동네 → 광장 → 하늘의 금 너머, 모두가 길을 열고 마지막은 나 혼자. 이기면 엔딩.
 // 지면 그 회차엔 끝 (다음 회차에 협회장실에서 처음부터). 보상은 등급(길드 순위 점수의 등급 몫도)뿐 — 사용자 결정
-function topTier() {   // 지금 협회장이 부르는 S 위 등급의 번호 (0 SS · 1 SSS) — 없으면 -1
+function topTier() {   // 지금 협회장이 부르는 S 위 등급의 번호 (0 SS · 1 SSS · 2 EX) — 없으면 -1
   const t = num(State.meta.topDone), G = TOP_GRADES[t];
   return !!State.meta.cityOpen && !!G && hunterGrade() === HUNTER_GRADES.length + t && rankBossBeaten(G.rank) ? t : -1;
 }
@@ -1745,13 +1747,13 @@ function fightRaid(rng = Math.random) {
     raid.done = true; raid.knocked = BIG_GUILDS.length;
     if (r.win) {
       State.meta.hunterGrade = HUNTER_GRADES.length + raid.tier + 1; State.meta.topDone = raid.tier + 1;
-      pushLog('drop', raid.tier === 0 ? '광장 게이트의 주인을 혼자 쓰러뜨렸다 — 한국 최초의 SS급 헌터.' : `세 도시의 게이트를 모두 닫았다 — 세계 최초의 ${G.id}급 헌터.`);
+      pushLog('drop', raid.tier === 0 ? '광장 게이트의 주인을 혼자 쓰러뜨렸다 — 한국 최초의 SS급 헌터.' : raid.tier === 1 ? `세 도시의 게이트를 모두 닫았다 — 세계 최초의 ${G.id}급 헌터.` : `하늘의 금을 닫았다 — 지구를 구한 ${G.id}급 헌터.`);
     } else {
       State.meta.topLostRun = State.meta.runCount;
       pushLog('info', `${f.city} 게이트에서 물러났다 — 다음 회차에 협회장실에서 다시.`);
     }
   }
-  run.lastResult = { raid: true, tier: raid.tier, city: f.city, next: next && next.map, nextCity: next && next.city, last: !!r.win && last,
+  run.lastResult = { raid: true, tier: raid.tier, city: f.city, next: next && next.map, nextAt: next && next.at, nextCity: next && next.city, last: !!r.win && last,
                      enemy: foe, win: !!r.win, turns: r.turns, drops: [], replay: { log, heroMax: hero.life, foeMax: foe.life } };
   save();
   return run.lastResult;
