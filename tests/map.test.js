@@ -1478,23 +1478,23 @@ test('SS급 — S급 + 14격 보스 뒤 협회장실 · 부탁을 받으면 광�
     const beat = n => State.meta.bossesBeaten.push(zoneBoss(ZONES.findIndex(z => z.rank === n)).id);
     for (let n = 1; n <= 14; n++) beat(n);
     State.meta.hunterGrade = 6;
-    const out = { notS: [ssOpen(), deskHere('chief')] };
+    const out = { notS: [chiefCalls(), deskHere('chief')] };
     State.meta.hunterGrade = 7;
-    out.open = [ssOpen(), deskHere('chief'), deskHere('chiefS0'), canRaid(), deskHere('raidboss')];
+    out.open = [chiefCalls(), deskHere('chief'), deskHere('chiefS0'), canRaid(), deskHere('raidboss')];
     // 진다 — 그 회차엔 다시 못 감
     out.accept = [acceptRaid(), acceptRaid(), deskHere('chiefS0'), deskHere('raidboss'), deskHere('raidS0'), deskHere('raidD0')];
     raidKnock(2);
     out.knock = [deskHere('raidS0'), deskHere('raidS1'), deskHere('raidS2'), deskHere('raidD0'), deskHere('raidD1'), deskHere('raidD2')];
     State.run.level = 1;
     const lose = fightRaid(() => 0.5);
-    out.lose = [lose.raid, lose.win, hunterGrade(), State.meta.ssLostRun === State.meta.runCount, !!raidNow(), canRaid(), deskHere('raidD3')];
+    out.lose = [lose.raid, lose.win, hunterGrade(), State.meta.topLostRun === State.meta.runCount, !!raidNow(), canRaid(), deskHere('raidD3')];
     // 다음 회차 — 다시 · 이긴다
     startRun(); State.run.lastResult = null;
     out.again = [canRaid(), acceptRaid()];
     const _hs = heroStats; heroStats = () => Object.assign(_hs(), { life: 1e30, damage: 1e30, defense: 1e30 });
     const win = fightRaid();
     heroStats = _hs;
-    out.win = [win.win, hunterGrade(), gradeName(), State.meta.ssDone, ssOpen(), canTakeTest(), guildScoreParts().grade];
+    out.win = [win.win, hunterGrade(), gradeName(), State.meta.topDone, chiefCalls(), canTakeTest(), guildScoreParts().grade];
     return out;
   `);
   assert.deepEqual(r.notS, [false, false]);
@@ -1503,11 +1503,44 @@ test('SS급 — S급 + 14격 보스 뒤 협회장실 · 부탁을 받으면 광�
   assert.deepEqual(r.knock, [false, false, true, true, true, false]);
   assert.deepEqual(r.lose, [true, false, 7, true, false, false, true]);
   assert.deepEqual(r.again, [true, true]);
-  assert.deepEqual(r.win, [true, 8, 'SS', true, false, false, 8 * 20]);
-  // 저장 — SS 는 ssDone 이 있어야 (없으면 S 까지)
+  assert.deepEqual(r.win, [true, 8, 'SS', 1, false, false, 8 * 20]);
+  // 저장 — SS 는 topDone 이 있어야 (없으면 S 까지 · 옛 이름 ssDone 도 읽음)
   const load = ss => loadGame({ [slotKey(1)]: JSON.stringify({ runCount: 30, cityOpen: true, hunterGrade: 8, ssDone: ss }) })(`currentSlot = 1; blockSaving(); load(); return [hunterGrade(), gradeName()];`);
   assert.deepEqual(load(true), [8, 'SS']);
   assert.deepEqual(load(false), [7, 'S']);
+});
+
+test('SSS급 — SS + 17격 보스 뒤 협회장실 다시 · 뉴욕 → 파리 → 카이로를 연달아 다 이겨야 SSS(9), 중간에 지면 다음 회차에 처음부터', () => {
+  const run = loadGame();
+  const r = run(`
+    currentSlot = 0; State.meta = freshMeta(); State.meta.cityOpen = true; startRun();
+    const beat = n => State.meta.bossesBeaten.push(zoneBoss(ZONES.findIndex(z => z.rank === n)).id);
+    for (let n = 1; n <= 17; n++) beat(n);
+    State.meta.hunterGrade = 8; State.meta.topDone = 1;
+    const strong = () => { const _hs = heroStats; heroStats = () => Object.assign(_hs(), { life: 1e30, damage: 1e30, defense: 1e30 }); return () => { heroStats = _hs; }; };
+    const out = { open: [topTier(), chiefCalls(), deskHere('chiefS0'), canRaid()] };
+    acceptRaid();
+    out.first = [raidNow().tier, raidFoe().name, deskHere('raidS0'), deskHere('raidboss')];
+    let undo = strong();
+    const w1 = fightRaid();
+    out.w1 = [w1.win, w1.last, w1.next, w1.nextCity, !!raidNow(), raidFoe().name, hunterGrade()];
+    State.run.lastResult = null;
+    undo();
+    State.run.level = 1;
+    const w2 = fightRaid(() => 0.5);
+    out.lose = [w2.win, w2.city, !!raidNow(), canRaid(), State.meta.topLostRun === State.meta.runCount, hunterGrade()];
+    startRun(); State.run.lastResult = null;
+    acceptRaid(); undo = strong();
+    const res = [fightRaid()]; State.run.lastResult = null; res.push(fightRaid()); State.run.lastResult = null; res.push(fightRaid());
+    undo();
+    out.win = [res.map(x => x.win).join(), res[2].last, hunterGrade(), gradeName(), State.meta.topDone, chiefCalls(), guildScoreParts().grade];
+    return out;
+  `);
+  assert.deepEqual(r.open, [1, true, false, true]);
+  assert.deepEqual(r.first, [1, '뉴욕 게이트의 주인', false, true]);
+  assert.deepEqual(r.w1, [true, false, 'w2', '파리', true, '파리 게이트의 주인', 8]);
+  assert.deepEqual(r.lose, [false, '파리', false, false, true, 8]);
+  assert.deepEqual(r.win, ['true,true,true', true, 9, 'SSS', 2, false, 9 * 20]);
 });
 
 test('훈련소 — 12격 뒤 · 길드가 있어야, 돈을 내면 단계만큼 시간이 흐른 뒤 능력 +10%, 10단계면 등급 한 번 · 단련 중엔 동행 · 게이트 · 사무 못 함', () => {

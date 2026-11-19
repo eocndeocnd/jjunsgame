@@ -2498,9 +2498,18 @@ const HUNTER_GRADES = [
   { id: 'S', rank: 7, level: 9600000 }
 ];
 function examinerStats(g) { return enemyStats(HUNTER_GRADES[g - 1].level); }
-// S급 위 (사용자 결정 2026-11-19) — 시험관이 아니라 다른 길로 얻음. SS = 협회장의 부름 → 광장 위기 게이트에서 4대 길드 S급 넷이 밀린 보스를 혼자 잡음 (game.js 의 fightRaid)
-// rank — 이 격의 보스를 꺾은 뒤 · level — 그 보스의 세기. 시뮬(시드 4개): 14격 보스를 꺾은 직후 1e13 은 늘 이기고 4e13 은 반쯤 → 2e13. SSS · 맨 위 한 단계는 아직
-const TOP_GRADES = [{ id: 'SS', rank: 14, level: 2e13 }];
+// S급 위 (사용자 결정 2026-11-19) — 시험관이 아니라 협회장의 부름으로 (game.js 의 topTier · fightRaid). rank — 이 격의 보스를 꺾은 뒤 · fights — 차례로 다 이겨야 (한 번에)
+//   city — 이름 · map — 그 게이트 안 지도 · level — 보스의 세기 (시뮬로 「그 격 직후에 대개 이김」)
+//   SS 나라 — 광장 위기 게이트 하나, 4대 길드 S급 넷이 밀리고 나 혼자 (시드 4개: 14격 직후 1e13 늘 · 4e13 반쯤 → 2e13)
+//   SSS 세계 — 연합의 이동 게이트로 세 도시를 연달아 (시드 6개: 17격 직후 8e15 늘 · 1.6e16 대개 · 3.2e16 반쯤)
+//   EX 지구 — 클리어 뒤, 벽 너머의 것들이 지구로 밀려옴 (사용자 결정 — 아직 안 만듦)
+const TOP_GRADES = [
+  { id: 'SS', rank: 14, fights: [{ city: '광장', map: 'raid', name: '광장 게이트의 주인', icon: '🐉', level: 2e13 }] },
+  { id: 'SSS', rank: 17, fights: [
+    { city: '뉴욕', map: 'w1', name: '뉴욕 게이트의 주인', icon: '🦑', level: 4e15 },
+    { city: '파리', map: 'w2', name: '파리 게이트의 주인', icon: '🦇', level: 8e15 },
+    { city: '카이로', map: 'w3', name: '카이로 게이트의 주인', icon: '🦂', level: 1.6e16 }] }
+];
 // 4대 길드 (사용자 결정 2026-11-19 — 이름 홍염 · 청해 · 크라운 · 달). 차례는 도시 지도의 길드 건물 tone 0~3 과 같음.
 // S급 시험관은 그 길드의 S급 헌터가 와서 맡음 — 시험마다 차례로 돌아감 (game.js 의 examinerFoe). 사람 이름 · 그림은 나중에 (지금은 이모지)
 // 암시장의 거래에 드는 것 — 보스가 가끔 떨어뜨림 (이름은 가칭. 특수장비의 「보석」과 헷갈리지 않게 원석)

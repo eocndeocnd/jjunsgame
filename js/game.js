@@ -240,8 +240,8 @@ const State = {
     heroName: '',                // 주인공의 이름 — 첫 회차가 끝나 도시에서 처음 눈을 뜰 때 정합니다 (없으면 「나」)
     hunterGrade: 0,              // 헌터 등급 — 0 미등록 · 1~7 = F~S (data.js 의 HUNTER_GRADES). 헌터 협회 시험으로 오르고 내려가지 않음
     testedRun: 0,                // 등록 시험을 본 회차 — 한 회차에 한 번
-    ssDone: false,               // SS급이 됐는가 (광장 위기 게이트 — 한국 최초 SS급)
-    ssLostRun: null,             // 위기 게이트에서 진 회차 — 그 회차엔 다시 못 감 (다음 회차에 협회장실에서 다시)
+    topDone: 0,                  // S 위 등급을 몇 개 얻었나 (0 · 1 SS · 2 SSS — data.js 의 TOP_GRADES, 협회장의 부름)
+    topLostRun: null,            // 협회장의 부탁에서 진 회차 — 그 회차엔 다시 못 감 (다음 회차에 협회장실에서 처음부터)
     sExams: 0,                   // S급 시험관을 만난 횟수 — 4대 길드가 이 차례로 돌아가며 옴 (BIG_GUILDS)
     bmGems: 0,                   // 검은 원석 — 암시장에 돈을 맡길 때 하나씩 (보스가 가끔)
     gatePts: 0,                  // 게이트 실적 — 돌아온 게이트의 등급(F 1 … S 7)을 더한 것 (길드 순위 점수)
@@ -661,9 +661,9 @@ function load() {
     for (const k of FIXED_SETTINGS) State.meta.settings[k] = defaultSettings()[k];
     State.meta.tutorialDone = !!data.tutorialDone;
     State.meta.heroName = typeof data.heroName === 'string' ? data.heroName.replace(/[<>&"'`\\]/g, '').trim().slice(0, 8) : '';
-    State.meta.ssDone = !!data.ssDone;
-    State.meta.ssLostRun = data.ssLostRun == null ? null : num(data.ssLostRun);
-    State.meta.hunterGrade = Math.max(0, Math.min(HUNTER_GRADES.length + (State.meta.ssDone ? TOP_GRADES.length : 0), Math.floor(num(data.hunterGrade))));
+    State.meta.topDone = Math.max(0, Math.min(TOP_GRADES.length, Math.floor(num(data.topDone)) || (data.ssDone ? 1 : 0)));   // ssDone — 옛 이름 (SS 만 있던 때)
+    State.meta.topLostRun = data.topLostRun == null ? null : num(data.topLostRun);
+    State.meta.hunterGrade = Math.max(0, Math.min(HUNTER_GRADES.length + State.meta.topDone, Math.floor(num(data.hunterGrade))));
     State.meta.testedRun = Math.max(0, Math.floor(num(data.testedRun)));
     State.meta.sExams = Math.max(0, Math.floor(num(data.sExams)));
     State.meta.bmGems = Math.max(0, Math.floor(num(data.bmGems)));
@@ -765,8 +765,8 @@ function freshMeta() {
     heroName: '',
     hunterGrade: 0,
     testedRun: 0,
-    ssDone: false,
-    ssLostRun: null,
+    topDone: 0,
+    topLostRun: null,
     sExams: 0,
     bmGems: 0,
     gatePts: 0,
@@ -1538,8 +1538,8 @@ function joinAlly(id = 'hayun') {
 }
 function allyNow() { return State.meta.ally && ALLIES[State.meta.ally] ? ALLIES[State.meta.ally] : null; }
 // 때가 되어야 서 있는 창구 · 사람 (지도 — mapview 의 npcHere · ui 의 mapMarks)
-function deskHere(shop) { return shop === 'chief' ? ssOpen() : /^chiefS\d$/.test(shop) ? ssOpen() && !State.run.raid : /^raidS\d$/.test(shop) ? !!raidNow() && raidNow().knocked <= +shop.slice(5)
-  : /^raidD\d$/.test(shop) ? !!State.run.raid && (State.run.raid.done || State.run.raid.knocked > +shop.slice(5)) : shop === 'raidboss' ? !!raidNow() : shop === 'ally' ? allyWaiting() : shop === 'ally2' ? ally2Waiting() : shop === 'bm' ? bmOpen() && !State.run.bmDone : shop === 'ranking' ? rankingOpen() : shop === 'gatefind' ? gatesOpen() : shop === 'trainer' ? trainOpen() : shop === 'gateboss' ? !!gateInNow() : shop === 'hire' || shop === 'gate' ? gatesOpen() : shop === 'guild' ? guildOwned() : shop === 'examiner' ? !!examinerNow() : true; }
+function deskHere(shop) { return shop === 'chief' ? chiefCalls() : /^chiefS\d$/.test(shop) ? topTier() === 0 && !State.run.raid : /^raidS\d$/.test(shop) ? !!raidNow() && raidNow().tier === 0 && raidNow().knocked <= +shop.slice(5)
+  : /^raidD\d$/.test(shop) ? !!State.run.raid && State.run.raid.tier === 0 && (State.run.raid.done || State.run.raid.knocked > +shop.slice(5)) : shop === 'raidboss' ? !!raidNow() : shop === 'ally' ? allyWaiting() : shop === 'ally2' ? ally2Waiting() : shop === 'bm' ? bmOpen() && !State.run.bmDone : shop === 'ranking' ? rankingOpen() : shop === 'gatefind' ? gatesOpen() : shop === 'trainer' ? trainOpen() : shop === 'gateboss' ? !!gateInNow() : shop === 'hire' || shop === 'gate' ? gatesOpen() : shop === 'guild' ? guildOwned() : shop === 'examiner' ? !!examinerNow() : true; }
 // 제5격 보스를 한 번이라도 꺾으면 협회의 「동료 모집」 · 「게이트 창구」가 열림
 function gatesOpen() { return !!State.meta.cityOpen && rankBossBeaten(5); }
 // 동료 모집 창구에 서 있는 사람 — 내 등급까지 (고용한 사람도 「함께하는 중」으로 남김)
@@ -1715,30 +1715,44 @@ function giveStonesLowest(n) {
   return slot;
 }
 // 받는다 — 다 끝난 게이트의 핵 · 강화석. → { gate, cores, core, stones, slot } 또는 null
-// ---------- SS급 — 협회장의 부름 · 광장 위기 게이트 (사용자 결정 2026-11-19) ----------
-// S급이고 제14격 보스를 꺾었으면 협회 로비 오른쪽 위 협회장실이 열림 (도시 쪽 까닭: S급이 된 지 시간이 흘러, 등급을 못 매기는 게이트가 광장에 열림 — 도시는 격을 모름).
-// 협회장의 부탁을 받으면 광장 한가운데 위기 게이트가 열리고, 안에서 4대 길드 S급 넷이 차례로 밀린 뒤 내가 보스와 싸움 — 이기면 한국 최초 SS급.
-// 지면 그 회차엔 끝 (다음 회차에 협회장실에서 다시). 보상은 등급 SS(길드 순위 점수의 등급 몫도)뿐 — 사용자 결정
-function ssOpen() { return !!State.meta.cityOpen && hunterGrade() === HUNTER_GRADES.length && rankBossBeaten(TOP_GRADES[0].rank) && !State.meta.ssDone; }
-function canRaid() { return ssOpen() && !!State.run && !State.run.over && !State.run.raid && State.meta.ssLostRun !== State.meta.runCount; }
-function acceptRaid() { if (!canRaid()) return false; State.run.raid = { knocked: 0, done: false }; save(); return true; }
+// ---------- S급 위 — 협회장의 부름 (사용자 결정 2026-11-19 · data.js 의 TOP_GRADES) ----------
+// 바로 아래 등급이고 그 등급의 격 보스를 꺾었으면 협회 로비 오른쪽 위 협회장실이 열림 (도시 쪽 까닭: 시간이 흘러 등급을 못 매기는 게이트가 열림 — 도시는 격을 모름).
+// SS(나라): 광장 한가운데 위기 게이트 — 안에서 4대 길드 S급 넷이 차례로 밀리고 나 혼자. SSS(세계): 연합의 이동 게이트로 뉴욕 · 파리 · 카이로를 연달아, 셋 다 이겨야.
+// 지면 그 회차엔 끝 (다음 회차에 협회장실에서 처음부터). 보상은 등급(길드 순위 점수의 등급 몫도)뿐 — 사용자 결정
+function topTier() {   // 지금 협회장이 부르는 S 위 등급의 번호 (0 SS · 1 SSS) — 없으면 -1
+  const t = num(State.meta.topDone), G = TOP_GRADES[t];
+  return !!State.meta.cityOpen && !!G && hunterGrade() === HUNTER_GRADES.length + t && rankBossBeaten(G.rank) ? t : -1;
+}
+function chiefCalls() { return topTier() >= 0; }
+function canRaid() { return chiefCalls() && !!State.run && !State.run.over && !State.run.raid && State.meta.topLostRun !== State.meta.runCount; }
+function acceptRaid() { if (!canRaid()) return false; State.run.raid = { tier: topTier(), step: 0, knocked: 0, done: false }; save(); return true; }
 function raidNow() { const r = State.run && State.run.raid; return r && !r.done ? r : null; }
-function raidKnock(n) { const r = raidNow(); if (r && n > r.knocked) r.knocked = n; }   // S급 n 명이 밀려남 (대사가 한 줄씩 부름)
-function raidFoe() { const G = TOP_GRADES[0]; return { id: 'raidSS', name: '광장 게이트의 주인', icon: '🐉', kind: 'boss', raidBoss: true, noLv: true, level: G.level, ...enemyStats(G.level) }; }
+function raidKnock(n) { const r = raidNow(); if (r && n > r.knocked) r.knocked = n; }   // SS — S급 n 명이 밀려남 (대사가 한 줄씩 부름)
+function raidFight(r = State.run && State.run.raid) { const G = TOP_GRADES[r ? r.tier : 0]; return G.fights[r ? Math.min(r.step, G.fights.length - 1) : 0]; }   // 지금 차례의 게이트
+function raidFoe() { const f = raidFight(); return { id: `raid_${f.map}`, name: f.name, icon: f.icon, kind: 'boss', raidBoss: true, noLv: true, level: f.level, ...enemyStats(f.level) }; }
+// 지금 차례의 보스와 — 이기면 다음 게이트(있으면), 마지막까지 이기면 등급. 지면 그 회차엔 끝
 function fightRaid(rng = Math.random) {
   const run = State.run, raid = raidNow();
   if (!raid || run.lastResult) return null;
-  const foe = raidFoe(), hero = heroStats(), log = [];
+  const G = TOP_GRADES[raid.tier], f = raidFight(raid), foe = raidFoe(), hero = heroStats(), log = [];
   const r = simulateBattle(hero, foe, rng, log);
-  raid.done = true; raid.knocked = BIG_GUILDS.length;
-  if (r.win) {
-    State.meta.hunterGrade = HUNTER_GRADES.length + 1; State.meta.ssDone = true;
-    pushLog('drop', '광장 게이트의 주인을 혼자 쓰러뜨렸다 — 한국 최초의 SS급 헌터.');
+  const last = raid.step >= G.fights.length - 1;
+  let next = null;
+  if (r.win && !last) {
+    raid.step++; raid.knocked = 0; next = G.fights[raid.step];
+    pushLog('drop', `${f.city} 게이트를 닫았다 — 다음은 ${next.city}.`);
   } else {
-    State.meta.ssLostRun = State.meta.runCount;
-    pushLog('info', '광장 게이트에서 물러났다 — 협회가 게이트를 막아 둔다. 다음 회차에 협회장실에서 다시.');
+    raid.done = true; raid.knocked = BIG_GUILDS.length;
+    if (r.win) {
+      State.meta.hunterGrade = HUNTER_GRADES.length + raid.tier + 1; State.meta.topDone = raid.tier + 1;
+      pushLog('drop', raid.tier === 0 ? '광장 게이트의 주인을 혼자 쓰러뜨렸다 — 한국 최초의 SS급 헌터.' : `세 도시의 게이트를 모두 닫았다 — 세계 최초의 ${G.id}급 헌터.`);
+    } else {
+      State.meta.topLostRun = State.meta.runCount;
+      pushLog('info', `${f.city} 게이트에서 물러났다 — 다음 회차에 협회장실에서 다시.`);
+    }
   }
-  run.lastResult = { raid: true, enemy: foe, win: !!r.win, turns: r.turns, drops: [], replay: { log, heroMax: hero.life, foeMax: foe.life } };
+  run.lastResult = { raid: true, tier: raid.tier, city: f.city, next: next && next.map, nextCity: next && next.city, last: !!r.win && last,
+                     enemy: foe, win: !!r.win, turns: r.turns, drops: [], replay: { log, heroMax: hero.life, foeMax: foe.life } };
   save();
   return run.lastResult;
 }

@@ -475,7 +475,7 @@ const MapView = (function () {
       npcHere: n => deskHere(n.shop),   // 협회 로비의 「???」(제4격 보스 뒤) · 동료 모집 · 게이트 창구(제5격 보스 뒤)
       portOpen: p => (!p.opensAfter || isDowned(p.opensAfter)) && (!p.needsCity || (!!State.meta && !!State.meta.cityOpen)) && (p.unlock !== 'armor' || armorOpen()) && (p.unlock !== 'guild' || (guildLevel() >= 1 && guildLevel() <= 3)) && (p.unlock !== 'guildCity' || guildLevel() >= 4) && (p.unlock !== 'arena' || !!(State.run && State.run.test)) && (p.unlock !== 'bm' || bmOpen())
         && (p.unlock !== 'home2' || !!State.meta.home2) && (p.unlock !== 'home1' || !State.meta.home2)          // 새 집을 사면 열리고 옛 원룸은 잠김
-        && (p.unlock !== 'gatein' || !!gateInNow()) && (p.unlock !== 'chief' || ssOpen()) && (p.unlock !== 'crisis' || !!raidNow())
+        && (p.unlock !== 'gatein' || !!gateInNow()) && (p.unlock !== 'chief' || chiefCalls()) && (p.unlock !== 'crisis' || (!!raidNow() && raidNow().tier === 0))
         && (p.unlock !== 'portal' || !!State.meta.portalMoved) && (p.unlock !== 'portalOld' || !State.meta.portalMoved),   // 이상한 게이트 — 옮긴 뒤엔 새 집 안
       // 내 길드 — 지은 이름으로 (1~3단계는 옛 동네, 4단계부터는 미래 도시 가운데 빈터 · 옛 동네 건물은 「옛 사무실」)
       portLabel: p => {
