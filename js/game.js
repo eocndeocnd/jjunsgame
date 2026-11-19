@@ -247,6 +247,9 @@ const State = {
     portalMoved: false,          // 길잡이가 이상한 게이트를 새 집 안으로 옮겼나 — 그 뒤 회차는 새 집 안에서 시작
     rankPassed: [],              // 넘어서 상금을 받은 4대 길드 id (BIG_GUILDS)
     gateClear: [],               // 내가 직접 깬 게이트 등급 id (F … S) — 게이트 창구에서 그 등급에만 동료를 보낼 수 있음
+    train: {},                   // 동료 단련 단계 — id → 0 … 10 (훈련소)
+    training: {},                // 단련 중 — id → { start, end, to } (ms · 실제 시각)
+    allyUp: {},                  // 10단계를 채워 등급이 한 번 오른 동료 — id → true
     found: null,                 // 오늘의 게이트 (게이트 찾기) — { day: 'YYYY-MM-DD', list: [{ grade, foe, reward: { type, n }, cleared, lostRun }] }
     passives: {},                // 골드로 산 패시브 — id → 단계 (data.js 의 PASSIVES). 영구
     ally: null,                  // 그 공간에 함께 가는 동료 id (data.js 의 ALLIES) — 늘 한 명 · 없을 수 있음
@@ -665,6 +668,14 @@ function load() {
     State.meta.portalMoved = !!data.home2 && !!data.portalMoved;
     State.meta.rankPassed = (Array.isArray(data.rankPassed) ? data.rankPassed : []).filter(id => BIG_GUILDS.some(B => B.id === id));
     State.meta.gateClear = (Array.isArray(data.gateClear) ? data.gateClear : []).filter(id => gateInfo(id));
+    State.meta.train = {}; State.meta.training = {}; State.meta.allyUp = {};
+    for (const id of (Array.isArray(data.allies) ? data.allies : []).concat(data.ally ? [data.ally] : []).filter(id => ALLIES[id])) {
+      const lv = Math.floor(num(data.train && data.train[id]));
+      if (lv > 0) State.meta.train[id] = Math.min(RULES.TRAIN_MAX, lv);
+      const t = data.training && data.training[id];
+      if (t && isFinite(t.start) && isFinite(t.end) && t.to === (State.meta.train[id] || 0) + 1) State.meta.training[id] = { start: +t.start, end: +t.end, to: t.to };
+      if (data.allyUp && data.allyUp[id]) State.meta.allyUp[id] = true;
+    }
     State.meta.found = data.found && typeof data.found.day === 'string' && Array.isArray(data.found.list)
       ? { day: data.found.day, list: data.found.list.filter(g => g && gateInfo(g.grade) && getEnemy(g.foe) && g.reward && FIND_REWARDS.includes(g.reward.type)).map(g => ({ grade: g.grade, foe: g.foe, reward: { type: g.reward.type, n: Math.max(1, Math.floor(num(g.reward.n))) }, cleared: !!g.cleared, lostRun: g.lostRun == null ? null : num(g.lostRun) })) }
       : null;
@@ -758,6 +769,9 @@ function freshMeta() {
     rankPassed: [],
     gateClear: [],
     found: null,
+    train: {},
+    training: {},
+    allyUp: {},
     passives: {},
     ally: null,
     allies: [],
@@ -1090,7 +1104,8 @@ function freshRun() {
 function startRun() {
   State.meta.runCount += 1;
   State.run = freshRun();
-  if (State.meta.home2 && !State.meta.portalMoved) State.meta.portalMoved = true;   // 이사하고 길잡이의 말을 다 못 들은 채 끝났으면 — 다음 회차엔 옮겨져 있음
+  if (State.meta.home2 && !State.meta.portalMoved) State.meta.portalMoved = true;
+  settleTraining();                    // 그새 끝난 단련은 받아 둠 (능력이 이번 회차부터)   // 이사하고 길잡이의 말을 다 못 들은 채 끝났으면 — 다음 회차엔 옮겨져 있음
   if (State.meta.cityOpen) State.run.mapId = State.meta.portalMoved ? 'home2' : 'oldtown';   // 도시가 열린 뒤로는 옛 동네의 집 앞에서 — 골목의 이상한 게이트로 그 공간에 들어감 (이사해서 게이트를 옮긴 뒤로는 새 집 안에서)
   State.run.merchant = rollMerchant(0);
   State.run.priceRank = bestRankNow();   // 이번 회차 패시브 값의 눈금
@@ -1517,7 +1532,7 @@ function joinAlly(id = 'hayun') {
 }
 function allyNow() { return State.meta.ally && ALLIES[State.meta.ally] ? ALLIES[State.meta.ally] : null; }
 // 때가 되어야 서 있는 창구 · 사람 (지도 — mapview 의 npcHere · ui 의 mapMarks)
-function deskHere(shop) { return shop === 'ally' ? allyWaiting() : shop === 'ally2' ? ally2Waiting() : shop === 'bm' ? bmOpen() && !State.run.bmDone : shop === 'ranking' ? rankingOpen() : shop === 'gatefind' ? gatesOpen() : shop === 'gateboss' ? !!gateInNow() : shop === 'hire' || shop === 'gate' ? gatesOpen() : shop === 'guild' ? guildOwned() : shop === 'examiner' ? !!examinerNow() : true; }
+function deskHere(shop) { return shop === 'ally' ? allyWaiting() : shop === 'ally2' ? ally2Waiting() : shop === 'bm' ? bmOpen() && !State.run.bmDone : shop === 'ranking' ? rankingOpen() : shop === 'gatefind' ? gatesOpen() : shop === 'trainer' ? trainOpen() : shop === 'gateboss' ? !!gateInNow() : shop === 'hire' || shop === 'gate' ? gatesOpen() : shop === 'guild' ? guildOwned() : shop === 'examiner' ? !!examinerNow() : true; }
 // 제5격 보스를 한 번이라도 꺾으면 협회의 「동료 모집」 · 「게이트 창구」가 열림
 function gatesOpen() { return !!State.meta.cityOpen && rankBossBeaten(5); }
 // 동료 모집 창구에 서 있는 사람 — 내 등급까지 (고용한 사람도 「함께하는 중」으로 남김)
@@ -1533,13 +1548,13 @@ function hireAlly(id) {
   if (!gatesOpen() || !a || !a.hire || allyOwned(id) || allyGradeN(a) > hunterGrade() || num(State.meta.won) < hirePrice(a)) return false;
   State.meta.won -= hirePrice(a);
   addAlly(id);
-  pushLog('drop', `${a.grade}급 헌터 ${a.name}${josa(a.name, '을', '를')} 동료로 맞았다 — ${fmtWon(hirePrice(a))} (${ALLY_KINDS[a.kind].name}).`);
+  pushLog('drop', `${allyGradeId(a)}급 헌터 ${a.name}${josa(a.name, '을', '를')} 동료로 맞았다 — ${fmtWon(hirePrice(a))} (${ALLY_KINDS[a.kind].name}).`);
   save();
   return true;
 }
 // 함께 갈 동료를 고름 (null — 혼자). 게이트에 간 동료는 못 고름
 function setCompanion(id) {
-  if (id !== null && (!allyOwned(id) || gateOf(id) || seatedAlly(id))) return false;
+  if (id !== null && (!allyOwned(id) || gateOf(id) || seatedAlly(id) || trainingOf(id))) return false;
   State.meta.ally = id;
   save();
   return true;
@@ -1550,7 +1565,7 @@ function gatesDoneCount(now = Date.now()) { return Object.keys(State.meta.gates 
 // 보낸다 — 함께 가는 동료가 아니고, 그 게이트 등급이 동료 등급 이하일 때
 function sendToGate(id, gateId, now = Date.now()) {
   const a = ALLIES[id], g = gateInfo(gateId);
-  if (!gatesOpen() || !a || !g || !gateUnlocked(gateId) || !allyOwned(id) || State.meta.ally === id || gateOf(id) || seatedAlly(id) || g.rank > allyGradeN(a)) return false;
+  if (!gatesOpen() || !a || !g || !gateUnlocked(gateId) || !allyOwned(id) || State.meta.ally === id || gateOf(id) || seatedAlly(id) || trainingOf(id) || g.rank > allyGradeN(a)) return false;
   State.meta.gates[id] = { gate: gateId, start: now, end: now + g.ms };
   pushLog('info', `${a.name}${josa(a.name, '이', '가')} ${gateId}급 게이트에 들어갔다 — ${g.hours}시간 뒤에 돌아온다.`);
   save();
@@ -1666,7 +1681,7 @@ function collectGuild(now = Date.now()) {
 // 앉힌다 — 동행 · 게이트 중이 아닌 동료를 빈 자리에
 function seatAlly(id, now = Date.now()) {
   const g = State.meta.guild;
-  if (!g || !allyOwned(id) || State.meta.ally === id || gateOf(id) || g.seats.includes(id) || g.seats.length >= g.level) return false;
+  if (!g || !allyOwned(id) || State.meta.ally === id || gateOf(id) || trainingOf(id) || g.seats.includes(id) || g.seats.length >= g.level) return false;
   g.seats.push(id);
   g.since[id] = now;
   save();
@@ -1693,6 +1708,45 @@ function giveStonesLowest(n) {
   return slot;
 }
 // 받는다 — 다 끝난 게이트의 핵 · 강화석. → { gate, cores, core, stones, slot } 또는 null
+// ---------- 훈련소 (도시 계획 7번 · 12격 — 사용자 결정 2026-11-19) — 길드 안 교관 ----------
+// 돈을 내면 실제 시간(단계 n 은 n 시간)이 흐른 뒤 단련 단계가 하나 오름 — 능력 +10%. 10단계를 채우면 등급이 한 번 오름 (S 는 그대로)
+// 단련 중인 동료는 함께 가기 · 게이트 · 길드 사무를 못 함 (함께 가는 동료 · 게이트 · 사무 중인 동료는 단련 못 함)
+function trainOpen() { return !!State.meta.cityOpen && rankBossBeaten(RULES.TRAIN_RANK) && guildOwned(); }
+function trainingOf(id) { return (State.meta.training || {})[id] || null; }
+function trainLevel(id) { return (State.meta.train || {})[id] || 0; }
+function trainHours(lv) { return lv; }
+function trainPrice(id) {
+  const a = ALLIES[id], lv = trainLevel(id) + 1;
+  if (!a || lv > RULES.TRAIN_MAX) return null;
+  return Math.round(coreWorth(RULES.TRAIN_CORES * lv) * (1 + 0.25 * (allyGradeN(a) - 1)));
+}
+function startTraining(id, now = Date.now()) {
+  const price = trainPrice(id);
+  if (!trainOpen() || price === null || !allyOwned(id) || State.meta.ally === id || gateOf(id) || seatedAlly(id) || trainingOf(id) || num(State.meta.won) < price) return false;
+  State.meta.won -= price;
+  const to = trainLevel(id) + 1;
+  State.meta.training[id] = { start: now, end: now + trainHours(to) * 3600e3, to };
+  pushLog('info', `${ALLIES[id].name}${josa(ALLIES[id].name, '이', '가')} 단련을 시작했다 — ${to}단계 · ${trainHours(to)}시간 (${fmtWon(price)}).`);
+  save();
+  return true;
+}
+// 다 끝난 단련을 받음 — 단계가 오르고, 10단계면 등급이 한 번 (훈련소 창을 열 때 · 회차를 시작할 때)
+function settleTraining(now = Date.now()) {
+  const done = [];
+  for (const [id, t] of Object.entries(State.meta.training || {})) {
+    if (now < t.end) continue;
+    delete State.meta.training[id];
+    State.meta.train[id] = t.to;
+    const a = ALLIES[id], up = t.to >= RULES.TRAIN_MAX && !State.meta.allyUp[id] && allyGradeN(a) < HUNTER_GRADES.length;
+    if (up) State.meta.allyUp[id] = true;
+    pushLog('drop', `${a.name}의 단련이 끝났다 — ${t.to}단계 (능력 +${Math.round(t.to * RULES.TRAIN_STEP * 100)}%)${up ? ` · 등급이 올랐다 → ${allyGradeId(a)}급` : ''}.`);
+    done.push({ id, to: t.to, up });
+  }
+  if (done.length) save();
+  return done;
+}
+function trainsDoneCount(now = Date.now()) { return Object.values(State.meta.training || {}).filter(t => now >= t.end).length; }
+
 // ---------- 게이트 찾기 (사용자 결정 2026-11-19) — 협회 로비의 창구. 하루마다 게이트 3개, 내가 들어가 보스를 깸 ----------
 // 깨면 미리 보이던 보상 하나 + 그 등급을 게이트 창구 자동사냥에 엶 (내가 깬 등급만 동료를 보낼 수 있음). 지면 그 회차엔 그 게이트에 다시 못 들어감
 const FIND_REWARDS = ['cores', 'stones', 'gem', 'won'];

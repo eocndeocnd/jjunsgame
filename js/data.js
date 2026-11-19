@@ -97,6 +97,12 @@ const RULES = {
   HOME2_COST: 300,        // 값 — 이번 회차를 시작할 때 내 격의 핵 300개어치 (길드 5단계 250 보다 조금 위 — 큰돈 쓸 곳)
   RANKING_RANK: 10,
   // 게이트 찾기 (사용자 결정 2026-11-19): 하루(실제 날짜)마다 게이트 3개 — 내 등급 근처(아래 둘까지, 가끔 하나 위). 내가 들어가 보스를 깨면 보상 하나 + 그 등급을 게이트 창구 자동사냥에 엶
+  // 훈련소 (도시 계획 7번 · 12격 — 사용자 결정 2026-11-19): 길드 안 교관. 돈을 내면 실제 시간이 흘러 동료 능력이 단계마다 +10% (10단계 — 2배)
+  //   단계 n 은 n 시간 · 값은 내 격의 핵 (10 × n)개어치 × 동료 등급마다 +25%. 10단계를 다 채우면 등급이 한 번 오름 (S 는 그대로)
+  TRAIN_RANK: 12,
+  TRAIN_MAX: 10,
+  TRAIN_STEP: 0.1,
+  TRAIN_CORES: 10,
   FIND_GATES: 3,
   FIND_UP: 0.15,          // 하나 위 등급이 나올 확률       // 이 격의 보스를 꺾으면 협회 로비에 순위판이 걸림 (도시에선 「협회가 새로 걸었다」)
   // 재료 (도시 1-다) — 장비를 떨어뜨릴 리 없는 짐승은 장비 대신 제 재료를 줍니다 (data.js 의 MATERIALS).
@@ -2397,8 +2403,12 @@ const ALLIES = {
   eunho:    { id: 'eunho',    name: '은호', grade: 'A', kind: 'strike', icon: '🦹', hire: true },
   rua:      { id: 'rua',      name: '루아', grade: 'S', kind: 'guard',  icon: '🦸', hire: true }
 };
-function allyGradeN(a) { return HUNTER_GRADES.findIndex(g => g.id === a.grade) + 1; }          // F 1 … S 7 (= 그 등급의 격)
-function allyPower(a) { const k = ALLY_KINDS[a.kind]; return Math.round((k.base + k.step * (allyGradeN(a) - 1)) * 1e4) / 1e4; }   // 하윤(D 추가타) 0.3
+// 단련 (훈련소 — game.js 의 startTraining) — 단계 · 10단계를 채워 오른 등급. 저장(State.meta)에서 읽음 (없으면 0)
+const allyTrain = a => (typeof State !== 'undefined' && State.meta && State.meta.train && State.meta.train[a.id]) || 0;
+const allyUp = a => typeof State !== 'undefined' && State.meta && State.meta.allyUp && State.meta.allyUp[a.id] ? 1 : 0;
+function allyGradeN(a) { return Math.min(HUNTER_GRADES.length, HUNTER_GRADES.findIndex(g => g.id === a.grade) + 1 + allyUp(a)); }   // F 1 … S 7 (= 그 등급의 격) — 단련으로 한 번 오를 수 있음
+function allyGradeId(a) { return HUNTER_GRADES[allyGradeN(a) - 1].id; }
+function allyPower(a) { const k = ALLY_KINDS[a.kind]; return Math.round((k.base + k.step * (allyGradeN(a) - 1)) * (1 + RULES.TRAIN_STEP * allyTrain(a)) * 1e4) / 1e4; }   // 하윤(D 추가타) 0.3 · 단련 단계마다 +10%
 function allyWhat(a) { return `${ALLY_KINDS[a.kind].name} — ${ALLY_KINDS[a.kind].desc(allyPower(a))}`; }
 // 길드 (도시 계획 6번) — 옛 동네의 허름한 빈 건물을 사들여 내 길드로. 단계마다 사무 자리가 하나씩(1~5), 겉모습이 바뀜. 이름은 플레이어가 지음
 const GUILD_LEVELS = ['허름한 사무실', '치운 건물', '간판 단 사무실', '번듯한 길드 건물', '도시에서 가장 멋진 길드'];   // 1~5단계 (가칭)

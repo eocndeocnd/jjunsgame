@@ -1471,6 +1471,34 @@ test('길드 — 제7격 보스 뒤 빈 건물이 매물 · 사서 이름 · 사
   assert.deepEqual(r.load, ['새벽', 5, ['minjae']]);
 });
 
+test('훈련소 — 12격 뒤 · 길드가 있어야, 돈을 내면 단계만큼 시간이 흐른 뒤 능력 +10%, 10단계면 등급 한 번 · 단련 중엔 동행 · 게이트 · 사무 못 함', () => {
+  const run = loadGame();
+  const r = run(`
+    currentSlot = 0; State.meta = freshMeta(); State.meta.cityOpen = true; startRun();
+    const beat = n => State.meta.bossesBeaten.push(zoneBoss(ZONES.findIndex(z => z.rank === n)).id);
+    for (let n = 1; n <= 12; n++) beat(n);
+    joinAlly('hayun');
+    const out = { noGuild: [trainOpen(), deskHere('trainer')] };
+    State.meta.guild = { name: '새벽', level: 2, seats: [], since: {} };
+    State.meta.won = 1e15;
+    const p0 = allyPower(ALLIES.hayun);
+    out.busy = startTraining('hayun', 0);                 // 함께 가는 중이면 못 함
+    setCompanion(null);
+    out.start = [trainOpen(), trainPrice('hayun') > 0, startTraining('hayun', 0), startTraining('hayun', 0), setCompanion('hayun'), sendToGate('hayun', 'F', 0)];
+    out.early = settleTraining(3599e3).length;
+    out.done = [settleTraining(3600e3).length, trainLevel('hayun'), Math.round(allyPower(ALLIES.hayun) / p0 * 100)];
+    for (let lv = 2; lv <= 10; lv++) { startTraining('hayun', 0); settleTraining(lv * 3600e3); }
+    out.max = [trainLevel('hayun'), allyGradeId(ALLIES.hayun), trainPrice('hayun'), startTraining('hayun', 0)];
+    return out;
+  `);
+  assert.deepEqual(r.noGuild, [false, false]);
+  assert.equal(r.busy, false);
+  assert.deepEqual(r.start, [true, true, true, false, false, false]);
+  assert.equal(r.early, 0);
+  assert.deepEqual(r.done, [1, 1, 110]);
+  assert.deepEqual(r.max, [10, 'C', null, false]);
+});
+
 test('게이트 찾기 — 5격 뒤 · 하루에 셋(내 등급 근처) · 내가 깨면 보상 + 그 등급 자동사냥 열림, 지면 그 회차엔 못 들어감', () => {
   const run = loadGame();
   const r = run(`
@@ -1645,8 +1673,8 @@ test('내 길드 안 — 옛 동네 빈 건물 문(잠김 · unlock guild) ↔ �
   assert.equal(door.to, 'guild.out');
   assert.equal(door.unlock, 'guild');
   assert.equal(out.to, 'oldtown.myguild');
-  assert.deepEqual(g.npcs.filter(n => n.shop).map(n => n.shop), ['guild', 'ally2']);
-  assert.deepEqual(loadMap('guild2').npcs.filter(n => n.shop).map(n => n.shop), ['guild', 'ally2']);
+  assert.deepEqual(g.npcs.filter(n => n.shop).map(n => n.shop), ['guild', 'ally2', 'trainer']);
+  assert.deepEqual(loadMap('guild2').npcs.filter(n => n.shop).map(n => n.shop), ['guild', 'ally2', 'trainer']);
   assert.equal(g.npcs.filter(n => n.name === 'seat').length, 5);
 });
 

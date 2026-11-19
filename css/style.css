@@ -839,6 +839,10 @@ kbd {
 .ally-row > .btn span { font-size: 10px; font-weight: 400; }
 .assoc-actions .btn:has(> span) { display: inline-flex; flex-direction: column; align-items: center; gap: 1px; }
 .assoc-actions .btn > span { font-size: 10px; font-weight: 400; }
+/* 훈련소 — 단련 단계 막대 (ui.js 의 renderTrainer) */
+.train-bar { display: flex; gap: 2px; margin: 4px 0 2px; }
+.train-bar i { flex: 1; height: 6px; border: 1px solid var(--line); background: var(--paper-hi); }
+.train-bar i.on { background: #c9a24a; } .train-bar i.now { background: repeating-linear-gradient(90deg, #c9a24a 0 3px, var(--paper-hi) 3px 6px); }
 /* 길드 순위판 (ui.js 의 renderRanking) */
 .rank-board { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
 .rank-row { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border: 2px solid var(--line); background: var(--paper-hi); font-size: 14px; }

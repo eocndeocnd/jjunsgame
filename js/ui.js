@@ -2742,7 +2742,7 @@ let shopKind = 'merchant';   // 'merchant' 또는 백화점 매장 이름
 let shopSay = '';            // 점원의 한마디 — 창을 열 때 한 번 고릅니다 (사고 나서 다시 그려도 그대로)
 const isDeptShop = () => shopKind !== 'merchant';
 // 지금 연 상점이 아직 그 자리에 있나 (상인이 떠났거나 도시가 아니면 닫습니다)
-function shopHere() { return shopKind === 'gatefind' ? gatesOpen() : shopKind === 'home2' ? home2ForSale() : shopKind === 'ranking' ? rankingOpen() : shopKind === 'bm' ? bmOpen() : shopKind === 'assoc' ? !!State.meta.cityOpen : shopKind === 'hire' || shopKind === 'gate' ? gatesOpen() : shopKind === 'guild' ? guildForSale() || guildOwned() : isDeptShop() ? !!State.meta.cityOpen && !!DEPT_SECTIONS[shopKind] : merchantHere(); }
+function shopHere() { return shopKind === 'trainer' ? trainOpen() : shopKind === 'gatefind' ? gatesOpen() : shopKind === 'home2' ? home2ForSale() : shopKind === 'ranking' ? rankingOpen() : shopKind === 'bm' ? bmOpen() : shopKind === 'assoc' ? !!State.meta.cityOpen : shopKind === 'hire' || shopKind === 'gate' ? gatesOpen() : shopKind === 'guild' ? guildForSale() || guildOwned() : isDeptShop() ? !!State.meta.cityOpen && !!DEPT_SECTIONS[shopKind] : merchantHere(); }
 // 점원은 등록증도 없는 손님을 수상쩍어하지만 묻지 않습니다
 const CLERK_TALK = {
   noLicense: ['「헌터 등록증 먼저 보여 주시겠어요? …없으시면 팔 수가 없어요. 협회는 길 건너 큰 건물이에요.」', '「등록 안 된 분께는 무기를 못 팔아요. 규정이라서요. 협회에서 시험부터 보고 오세요.」'],
@@ -2760,6 +2760,7 @@ function clerkLine(kind) {
   if (kind === 'stones') return pick(STONE_TALK);
   if (kind === 'ranking' || kind === 'home2') return '';
   if (kind === 'gatefind') return pick(FIND_TALK);
+  if (kind === 'trainer') return pick(TRAIN_TALK);
   if (kind === 'bm') return pick(!num(State.meta.bmGems) ? BM_TALK.noGem : !bmPool().length ? BM_TALK.none : BM_TALK.hi);
   if (kind === 'mats') {
     const any = Object.keys(State.meta.mats || {}).some(id => matsOf(id) > 0), made = ITEMS.some(i => i.craft && owns(i.id));
@@ -2804,6 +2805,7 @@ function renderShop() {
   if (shopKind === 'ranking') { renderRanking(); return; }
   if (shopKind === 'home2') { renderHome2Sale(); return; }
   if (shopKind === 'gatefind') { renderFound(); return; }
+  if (shopKind === 'trainer') { renderTrainer(); return; }
   const dept = isDeptShop();
   // 지갑 — 백화점(도시)은 돈(원), 떠돌이 상인(그 공간)은 골드
   const gold = num(dept ? State.meta.won : State.meta.gold);
@@ -2873,7 +2875,7 @@ function renderShop() {
 // 맨 위는 핵 — 모든 몬스터가 남기는 팔 것 (격마다 한 가지). 가진 격만 한 줄씩, 「모두 판다」 한 번으로 다 팝니다. 만드는 데는 쓰지 않습니다.
 // ---------- 헌터 협회 · 등록 창구 (상점 창을 같이 씀 — shopKind 'assoc') ----------
 // 지금의 나(도시의 Lv.1 그대로)로 F 시험관부터 차례로 싸워, 이긴 데까지가 등급. 회차에 한 번 · 내려가지 않음 (game.js 의 takeHunterTest)
-const CLERK_DESKS = { examiner: { name: '시험관', icon: '🧑‍🏫' }, assoc: { name: '등록 창구', icon: '🧑‍💼' }, ally: { name: '???', icon: ALLIES.hayun.icon }, ally2: { name: '???', icon: ALLIES.danwoo.icon }, bm: { name: '???', icon: '🫥' }, ranking: { name: '길드 순위', icon: '📊' }, gatefind: { name: '게이트 찾기', icon: '🧭' }, hire: { name: '동료 모집', icon: '👩‍💼' }, gate: { name: '게이트 창구', icon: '🧑‍✈️' }, guild: { name: '길드 장부', icon: '📒' }, bed: { name: '침대', icon: '💤' }, bed2: { name: '침대', icon: '💤' } };   // 백화점 매장이 아닌 창구 — 지도 위 이름표
+const CLERK_DESKS = { examiner: { name: '시험관', icon: '🧑‍🏫' }, assoc: { name: '등록 창구', icon: '🧑‍💼' }, ally: { name: '???', icon: ALLIES.hayun.icon }, ally2: { name: '???', icon: ALLIES.danwoo.icon }, bm: { name: '???', icon: '🫥' }, ranking: { name: '길드 순위', icon: '📊' }, gatefind: { name: '게이트 찾기', icon: '🧭' }, trainer: { name: '교관', icon: '🏋️' }, hire: { name: '동료 모집', icon: '👩‍💼' }, gate: { name: '게이트 창구', icon: '🧑‍✈️' }, guild: { name: '길드 장부', icon: '📒' }, bed: { name: '침대', icon: '💤' }, bed2: { name: '침대', icon: '💤' } };   // 백화점 매장이 아닌 창구 — 지도 위 이름표
 const ASSOC_TALK = {
   none: ['「신규 등록이세요? 시험은 간단해요. 시험관과 한 번씩 붙어 보시면 돼요. F급부터요.」', '「등록증 없이 게이트 근처를 돌아다니시면 곤란해요. …시험 보시게요?」'],
   again: ['「재심사요? 좋아요. 지난번보다 나아지셨는지 볼까요.」', '「등급은 한 번 받으면 안 내려가요. 부담 없이 보세요.」'],
@@ -2982,7 +2984,7 @@ const GATE_TALK = {
   idle: ['「게이트 공략 대행 접수예요. 동료분을 보내 두시면 시간 맞춰 돌아와요.」', '「등급보다 높은 게이트는 접수 못 해 드려요. 규정이에요.」'],
   back: ['「돌아온 분이 계세요. 전리품 정산해 뒀어요.」']
 };
-const allyName = a => `<b>${a.name}</b> <small>${a.grade}급</small>`;
+const allyName = a => `<b>${a.name}</b> <small>${allyGradeId(a)}급${allyTrain(a) ? ` · 단련 ${allyTrain(a)}` : ''}</small>`;
 function renderHire() {
   const won = num(State.meta.won);
   $('shopTitle').textContent = '헌터 협회 · 동료 모집';
@@ -3021,6 +3023,7 @@ function renderGates() {
     if (g && gateDone(id, now)) act = `<span class="ally-state">${g.gate}급 게이트에서 돌아옴</span><button class="btn primary" data-claim="${id}">받는다</button>`;
     else if (g) act = `<span class="ally-state">${g.gate}급 게이트 · 남은 ${timeLeft(g.end - now)}</span>`;
     else if (seatedAlly(id)) act = `<span class="ally-state">길드 사무 중 — 길드 장부에서 일으킬 수 있음</span>`;
+    else if (trainingOf(id)) act = `<span class="ally-state">단련 중 — 길드 교관</span>`;
     else if (m.ally === id) act = `<span class="ally-state on">함께 가는 중</span><button class="btn tiny" data-comp="">빼기</button>`;
     else act = `<button class="btn tiny" data-comp="${id}">함께 간다</button>
       <span class="gate-btns"><span class="gate-lbl">게이트에 보낸다 →</span>${HUNTER_GRADES.filter((x, i) => i + 1 <= allyGradeN(a)).map(x => {
@@ -3047,6 +3050,40 @@ function renderGates() {
   body.querySelectorAll('[data-claim]').forEach(b => b.addEventListener('click', () => { if (claimGate(b.dataset.claim)) Sound.play('drop'); render(); }));
   startShopTicker();
 }
+// ---------- 훈련소 — 길드 안 교관 (도시 계획 7번 · 12격, 사용자 결정 2026-11-19 · game.js 의 startTraining · settleTraining) ----------
+// 동료마다 단련 단계 0 … 10 — 단계 n 은 n 시간 · 능력 +10%씩, 10단계를 채우면 등급 한 번. 대사는 제안
+const TRAIN_TALK = ['「교관이다. 길드에 사람이 늘었다길래 와 봤지. 돈 내고 시간 내면, 누구든 한 단계씩은 올려 준다.」', '「단련 중엔 아무 데도 못 간다. 게이트도, 네 옆도. 그게 단련이야.」'];
+function renderTrainer() {
+  const now = Date.now(), m = State.meta;
+  const got = settleTraining(now);
+  if (got.length) Sound.play(got.some(x => x.up) ? 'rankUp' : 'drop');
+  $('shopTitle').textContent = `${m.guild.name || '내 길드'} · 훈련소`;
+  $('shopGold').innerHTML = fmtWon(num(m.won));
+  const rows = (m.allies || []).map(id => {
+    const a = ALLIES[id], lv = trainLevel(id), t = trainingOf(id), price = trainPrice(id);
+    let act;
+    if (t) act = `<span class="ally-state">${t.to}단계 단련 중 · 남은 ${timeLeft(t.end - now)}</span>`;
+    else if (price === null) act = '<span class="ally-state on">단련을 다 했다</span>';
+    else if (m.ally === id) act = '<span class="ally-state">함께 가는 중 — 게이트 창구에서 빼야 단련</span>';
+    else if (gateOf(id)) act = '<span class="ally-state">게이트에 감</span>';
+    else if (seatedAlly(id)) act = '<span class="ally-state">길드 사무 중 — 장부에서 일으켜야 단련</span>';
+    else act = `<button class="btn primary" data-train="${id}" ${num(m.won) >= price ? '' : 'disabled'}><b>${lv + 1}단계 단련</b> <span>· ${trainHours(lv + 1)}시간 · ${fmtWon(price)}</span></button>`;
+    const bar = Array.from({ length: RULES.TRAIN_MAX }, (_, i) => `<i class="${i < lv ? 'on' : t && i === lv ? 'now' : ''}"></i>`).join('');
+    const upNote = !m.allyUp[id] && allyGradeN(a) < HUNTER_GRADES.length ? ` · 10단계면 ${HUNTER_GRADES[allyGradeN(a)].id}급으로` : m.allyUp[id] ? ' · 등급이 올랐다' : '';
+    return `<div class="ally-row">
+      <span class="ally-ic">${a.icon}</span>
+      <div class="ally-body"><div>${allyName(a)}</div><div class="ally-what">${allyWhat(a)}</div>
+        <div class="train-bar">${bar}</div><div class="hint">능력 +${Math.round(lv * RULES.TRAIN_STEP * 100)}%${upNote}</div>
+        <div class="ally-act">${act}</div></div>
+    </div>`;
+  }).join('');
+  $('shopBody').innerHTML = `<div class="shop-say">${CLERK_DESKS.trainer.icon} ${shopSay}</div>
+    ${rows || '<p class="hint">아직 동료가 없다.</p>'}
+    <p class="hint">단계마다 능력 +${Math.round(RULES.TRAIN_STEP * 100)}% · n단계는 n시간 (게임을 꺼 둬도 흐름) · 값은 내 격의 핵 (${RULES.TRAIN_CORES} × 단계)개어치, 동료 등급이 높을수록 비쌈<br>${RULES.TRAIN_MAX}단계를 다 채우면 등급이 한 번 오름 (S급은 그대로) · 단련 중엔 함께 가기 · 게이트 · 길드 사무를 못 함</p>`;
+  $('shopBody').querySelectorAll('[data-train]').forEach(b => b.addEventListener('click', () => { if (startTraining(b.dataset.train)) Sound.play('equip'); render(); }));
+  startShopTicker();
+}
+
 // ---------- 게이트 찾기 — 협회 로비 오른쪽 아래 (사용자 결정 2026-11-19 · game.js 의 foundGates · enterFound · fightFound) ----------
 // 하루(실제 날짜)마다 게이트 셋 — 내가 들어가 보스를 깨면 보상 하나 + 그 등급을 게이트 창구 자동사냥에 엶. 지면 그 회차엔 그 게이트에 다시 못 들어감. 대사는 제안
 const FIND_TALK = ['「오늘 새로 잡힌 게이트예요. 아직 아무도 안 들어갔어요 — 먼저 깨시면 공략 기록은 헌터님 거예요.」', '「직접 깨 보신 등급이어야 동료분들 대행 접수가 돼요. 규정이에요.」'];
@@ -3110,7 +3147,7 @@ function foundResultCard(r) {
 // 시간이 흐르는 창(게이트 · 길드)이 열려 있는 동안 남은 시간 · 쌓인 돈을 다시 그림
 function startShopTicker() {
   if (!gateTicker) gateTicker = setInterval(() => {
-    if (isShopOpen() && (shopKind === 'gate' || shopKind === 'guild')) renderShop();
+    if (isShopOpen() && (shopKind === 'gate' || shopKind === 'guild' || shopKind === 'trainer')) renderShop();
     else { clearInterval(gateTicker); gateTicker = null; }
   }, 20000);
 }
@@ -3177,7 +3214,7 @@ function renderGuild() {
   }
   $('shopTitle').textContent = `${g.name || '내 길드'} · 길드 장부`;
   const L = g.level, rate = guildSeatRate(), pend = guildPending(now);
-  const idle = (State.meta.allies || []).filter(id => State.meta.ally !== id && !gateOf(id) && !g.seats.includes(id));
+  const idle = (State.meta.allies || []).filter(id => State.meta.ally !== id && !gateOf(id) && !trainingOf(id) && !g.seats.includes(id));
   const seats = Array.from({ length: L }, (_, i) => {
     const id = g.seats[i];
     if (id) {
@@ -4054,6 +4091,10 @@ const ALLY2_MEET = [
   { who: 'me', text: '(동료가 생겼다.)' }
 ];
 const GUIDE_NOTES = [
+  { id: 'trainer', when: () => trainOpen(), key: () => 1,   // 도시는 격을 모름 — 길드에 사람이 늘어 교관이 찾아옴
+    text: () => `${State.meta.guild.name || '네 길드'}에 <b>교관</b>이 찾아왔대. 돈이랑 시간을 들이면 동료를 <b>단련</b>시켜 준대 — 끝까지 하면 등급도 오른다나.` },
+  { id: 'trainDone', when: () => trainOpen() && trainsDoneCount() > 0, key: () => Math.max(...Object.values(State.meta.training).filter(t => Date.now() >= t.end).map(t => t.end)),
+    text: () => `단련이 끝난 동료가 있대. ${State.meta.guild.name || '네 길드'}의 <b>교관</b>에게 가 봐.` },
   { id: 'home2Sale', when: () => home2ForSale(), key: () => 1,   // 도시는 격을 모름 — 시간이 지나 분양을 시작함
     text: () => '도시 오른쪽 아래 빈터 있잖아. 가림막에 <b>「분양」</b> 현수막이 걸렸대 — 헌터 전용 고급 아파트래. 원룸에서 <b>이사</b> 갈래? 비싸겠지만.' },
   { id: 'ranking', when: () => rankingOpen(), key: () => 1,   // 도시는 격을 모름 — 협회가 「새로 걸었다」
