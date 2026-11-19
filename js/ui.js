@@ -1838,7 +1838,7 @@ function doorStep(data, port) {
     && !data.posts.some(p => inRect(p, x, y) && alive(p.enemy));
   // 지도 가장자리 통로(옛 동네 ⇄ 도시)는 통로 안쪽(arrive 쪽) 가운데 줄부터 — 넘어오자마자 도로 넘어가지 않게
   if (port.arrive === 'left' || port.arrive === 'right') {
-    const x = port.arrive === 'left' ? port.x - 1 : port.x + port.w, mid = port.y + (port.h >> 1);
+    const x = port.arrive === 'left' ? port.x - 1 : port.x + port.w, mid = port.arriveY !== undefined ? +port.arriveY : port.y + (port.h >> 1);   // 한 줄 전체인 통로는 적어 둔 도착 줄
     for (const y of [mid, ...Array.from({ length: port.h }, (_, i) => port.y + i)]) if (free(x, y)) return { x, y };
   }
   for (let x = port.x; x < port.x + port.w; x++) {

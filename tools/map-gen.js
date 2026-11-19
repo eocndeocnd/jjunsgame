@@ -1317,7 +1317,7 @@ function townMap(C, name) {
   if (C.gate) spots.push([C.gate[0], C.gate[1], '게이트'], [C.gate[0] + 1, C.gate[1], '게이트']);
   for (const e of C.edges) for (let j = 0; j < e.h; j++) for (let i = 0; i < e.w; i++) spots.push([e.x + i, e.y + j, `${e.name} 통로`]);
   for (const [x, y, what] of spots) if (!inWalk(x, y) || tiles[at(x, y)] !== FLOOR) throw new Error(`${name} — ${what} (${x}, ${y}) 이(가) 걷는 곳의 맨땅이 아님`);
-  for (const p of ports) for (let i = 0; i < p.w; i++) if (tiles[(p.y + 1) * W + p.x + i] !== FLOOR) throw new Error(`${name} — ${p.name} 문 앞이 막힘`);
+  for (const p of ports) if (!p.edge) for (let i = 0; i < p.w; i++) if (tiles[(p.y + 1) * W + p.x + i] !== FLOOR) throw new Error(`${name} — ${p.name} 문 앞이 막힘`);
   // 걷는 곳의 맨땅은 모두 시작점에서 걸어서 닿아야 함 (자잘한 것 · 나무가 틈을 막아 갇힌 칸이 생기지 않게)
   {
     const seen = new Uint8Array(W * H), q = [at(sx, sy)], open = k => tiles[k] === FLOOR;
@@ -1352,7 +1352,8 @@ function townMap(C, name) {
   // 이상한 게이트 — 나에게만 보임 (그림은 mapview 의 rift). 들어가면 지하수로 첫 공간의 같은 게이트 앞
   if (C.gate) ports.push({ name: 'gate', x: C.gate[0] + PD.l, y: C.gate[1] + PD.t, w: 2, h: 1, to: 'sewer.city', rift: true, unlock: 'portalOld' });   // 길잡이가 새 집 안으로 옮기면 닫힘
   // 지도 가장자리 통로 — 그리지 않고 이름표만 (mapview 의 edge). 넘어가면 그 지도의 같은 이름 통로 안쪽(arrive 쪽)에 섬
-  for (const e of C.edges) ports.push({ name: e.name, label: e.label, x: e.x + PD.l, y: e.y + PD.t, w: e.w, h: e.h, to: e.to, edge: true, arrive: e.arrive });
+  // 통로는 그 가장자리 한 줄 전체(위 끝 ~ 아래 끝) — 화면 끝 어느 줄에 닿아도 넘어감 (사용자 결정 2026-11-19). 도착하는 줄 · 이름표는 적어 둔 자리(e.y ~ e.h)의 가운데
+  for (const e of C.edges) ports.push({ name: e.name, label: e.label, x: e.x + PD.l, y: PD.t, w: e.w, h: C.h, to: e.to, edge: true, arrive: e.arrive, arriveY: e.y + PD.t + (e.h >> 1) });
   return buildTmj({ w: W, h: H, tiles, look: lk, ports, npcs: [{ name: 'start', x: sx + PD.l, y: sy + PD.t }],
     props: { title: C.title, city: true, walk: `${PD.l},${PD.t},${C.w},${C.h}`, blds: JSON.stringify(blds), ...(clutter.length ? { clutter: JSON.stringify(clutter) } : {}) } });
 }

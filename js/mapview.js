@@ -169,7 +169,9 @@ const MapView = (function () {
         const [bx, by, bw, bh] = box;
         const hold = (c, view, a, b, mapLen) => {
           // c — 지도 왼쪽(위쪽) 끝이 화면의 어디에 오나. 바깥은 view/4 까지, 지도 밖(빈 어둠)은 보이지 않게
-          let lo = view - view / 4 - b * T, hi = view / 4 - a * T;
+          // 옛 동네 · 도시(walk 가 있는 지도)는 바깥을 아예 안 보임 — 화면 끝이 곧 걷는 곳의 끝, 거기 닿으면 옆 지도 (사용자 결정 2026-11-19)
+          const edge = m.props.walk ? 0 : view / 4;
+          let lo = view - edge - b * T, hi = edge - a * T;
           lo = Math.max(lo, view - mapLen * T); hi = Math.min(hi, 0);
           return lo > hi ? (lo + hi) / 2 : Math.min(hi, Math.max(lo, c));   // 화면이 걸을 곳보다 넓으면 가운데에
         };
@@ -284,7 +286,12 @@ const MapView = (function () {
           ctx.font = `bold ${Math.max(10, Math.round(T * 0.42))}px system-ui, sans-serif`;
           ctx.textAlign = 'center';
           ctx.textBaseline = below ? 'top' : 'bottom';
-          const tx = ox + (port.x + port.w / 2) * T, ty = below ? oy + (port.y + port.h) * T + 3 : oy + port.y * T - 3 - (revealed ? T * 0.9 : port.rift ? T * 1.7 : 0);   // 나타난 구멍은 ▼ 위에, 이상한 게이트는 그 꼭대기 위에
+          let tx = ox + (port.x + port.w / 2) * T, ty = below ? oy + (port.y + port.h) * T + 3 : oy + port.y * T - 3 - (revealed ? T * 0.9 : port.rift ? T * 1.7 : 0);   // 나타난 구멍은 ▼ 위에, 이상한 게이트는 그 꼭대기 위에
+          if (port.edge && port.arriveY !== undefined) {   // 가장자리 한 줄 전체 통로 — 이름표는 도착 줄 위, 화면 끝에 잘리지 않게 안쪽으로 붙여
+            ty = oy + (+port.arriveY - 1) * T - 3; ctx.textBaseline = 'bottom';
+            if (port.arrive === 'right') { ctx.textAlign = 'left'; tx = ox + port.x * T + 3; }
+            else { ctx.textAlign = 'right'; tx = ox + (port.x + port.w) * T - 3; }
+          }
           ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(28,16,7,0.85)';
           ctx.strokeText(plabel + (open ? '' : ' 🔒'), tx, ty);
           ctx.fillStyle = '#f6e7c3';

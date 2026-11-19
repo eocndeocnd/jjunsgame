@@ -1086,8 +1086,9 @@ test('도시 — 옛 동네(집 앞에서 시작 · 골목 막다른 곳의 이�
   const [ox, , ow] = walkBox(old), [cx] = walkBox(city);
   assert.equal(toCity.x, ox + ow - 1, '옛 동네 걷는 곳의 오른쪽 끝');
   assert.equal(toOld.x, cx, '도시 걷는 곳의 왼쪽 끝');
-  assert.ok(cellsOf(old, toCity).every(i => dOld[i] >= 0) && cellsOf(city, toOld).every(i => dCity[i] >= 0), '두 통로 다 걸어서 닿음');
-  assert.ok(!old.solid[(toCity.y + 1) * old.w + toCity.x - 1] && !city.solid[(toOld.y + 1) * city.w + toOld.x + 1], '넘어와 서는 안쪽 칸이 트임');
+  assert.ok(cellsOf(old, toCity).filter(i => !old.solid[i]).every(i => dOld[i] >= 0) && cellsOf(city, toOld).filter(i => !city.solid[i]).every(i => dCity[i] >= 0), '두 통로 다 걸어서 닿음 (가장자리 한 줄 전체 — 건물 칸 빼고)');
+  assert.deepEqual([toCity.h, toOld.h], [walkBox(old)[3], walkBox(city)[3]], '통로는 가장자리 한 줄 전체 (사용자 결정 2026-11-19)');
+  assert.ok(!old.solid[toCity.arriveY * old.w + toCity.x - 1] && !city.solid[toOld.arriveY * city.w + toOld.x + 1], '넘어와 서는 안쪽 칸이 트임');
   assert.equal(old.props.title, '옛 동네');
   assert.equal(city.props.title, '헌터들의 도시');
   // 있어야 하는 건물
