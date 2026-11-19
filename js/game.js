@@ -1441,10 +1441,16 @@ function bmPool() {
   }
   return out;
 }
-// 굴림 한 번의 확률 — 맡긴 돈 ÷ 가진 돈 (가진 돈이 없으면 0)
+// 굴림 한 번의 최대 확률 — 내 격(이번 회차를 시작할 때의 격)으로: 전부 맡겨 두 번 굴렸을 때 9격 50% → 20격 20%
+function bmRollMax() {
+  const top = RANKS.length, r = Math.max(RULES.BM_RANK, Math.min(top, passiveRank()));
+  const both = RULES.BM_ODDS_TOP + (RULES.BM_ODDS_END - RULES.BM_ODDS_TOP) * (r - RULES.BM_RANK) / Math.max(1, top - RULES.BM_RANK);
+  return 1 - Math.pow(1 - both, 1 / RULES.BM_ROLLS);
+}
+// 굴림 한 번의 확률 — 그 최대 × (맡긴 돈 ÷ 가진 돈) (가진 돈이 없으면 0)
 function bmChance(amount) {
   const won = num(State.meta.won);
-  return won > 0 ? RULES.BM_ROLL_MAX * Math.min(1, Math.max(0, amount) / won) : 0;
+  return won > 0 ? bmRollMax() * Math.min(1, Math.max(0, amount) / won) : 0;
 }
 function bmDeal(amount, rng = Math.random) {
   const run = State.run, m = State.meta;

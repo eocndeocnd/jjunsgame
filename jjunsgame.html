@@ -4574,7 +4574,10 @@ const RULES = {
   // 암시장 (도시 계획 7번 · 9격 — 사용자 결정 2026-11-19): 옛 동네 골목의 후드티. 돈을 맡기면 내가 아직 없는 전리품을 구해 옴
   BM_RANK: 9,             // 이 격의 보스를 한 번이라도 꺾으면 (도시에선 「요즘 가끔」 — 시간이 지난 것으로)
   BM_HERE: 0.5,           // 회차마다 후드티가 와 있을 확률
-  BM_ROLL_MAX: 0.5,       // 굴림 한 번의 확률 = 이 값 × (맡긴 돈 ÷ 가진 돈). 전부 맡겨도 100% 는 아님 (사용자 결정) — 두 번이면 최대 75%
+  // 찾을 확률 — 돈을 전부 맡겼을 때 두 번 중 하나라도 될 확률. 내 격이 오를수록 낮아짐 (사용자 결정 2026-11-19): 9격 50% → 20격 20%, 사이는 고르게
+  // 굴림 한 번의 확률 = (그 격의 한 번 최대) × (맡긴 돈 ÷ 가진 돈) — game.js 의 bmRollMax · bmChance
+  BM_ODDS_TOP: 0.5,
+  BM_ODDS_END: 0.2,
   BM_ROLLS: 2,            // 원석 하나 = 한 번 맡기기 = 굴림 두 번 (둘 중 하나만 되면 얻음)
   BM_GEM_CHANCE: 0.2,     // 보스를 꺾을 때 검은 원석이 나올 확률 (암시장이 열린 뒤부터)
   // 재료 (도시 1-다) — 장비를 떨어뜨릴 리 없는 짐승은 장비 대신 제 재료를 줍니다 (data.js 의 MATERIALS).
@@ -9169,10 +9172,16 @@ function bmPool() {
   }
   return out;
 }
-// 굴림 한 번의 확률 — 맡긴 돈 ÷ 가진 돈 (가진 돈이 없으면 0)
+// 굴림 한 번의 최대 확률 — 내 격(이번 회차를 시작할 때의 격)으로: 전부 맡겨 두 번 굴렸을 때 9격 50% → 20격 20%
+function bmRollMax() {
+  const top = RANKS.length, r = Math.max(RULES.BM_RANK, Math.min(top, passiveRank()));
+  const both = RULES.BM_ODDS_TOP + (RULES.BM_ODDS_END - RULES.BM_ODDS_TOP) * (r - RULES.BM_RANK) / Math.max(1, top - RULES.BM_RANK);
+  return 1 - Math.pow(1 - both, 1 / RULES.BM_ROLLS);
+}
+// 굴림 한 번의 확률 — 그 최대 × (맡긴 돈 ÷ 가진 돈) (가진 돈이 없으면 0)
 function bmChance(amount) {
   const won = num(State.meta.won);
-  return won > 0 ? RULES.BM_ROLL_MAX * Math.min(1, Math.max(0, amount) / won) : 0;
+  return won > 0 ? bmRollMax() * Math.min(1, Math.max(0, amount) / won) : 0;
 }
 function bmDeal(amount, rng = Math.random) {
   const run = State.run, m = State.meta;

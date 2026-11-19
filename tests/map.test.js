@@ -1479,7 +1479,9 @@ test('암시장 — 9격 보스 뒤 · 회차마다 반반, 검은 원석 1개 +
     State.meta.won = 1000;
     out.noGem = bmDeal(500);
     out.gem = [rollBmGem(() => 0.99), rollBmGem(() => 0.1), State.meta.bmGems];
-    out.odds = [bmChance(1000), bmChance(500), bmChance(2000)];
+    const both = p => 1 - Math.pow(1 - p, 2);
+    out.odds = [both(bmChance(1000)), bmChance(500) / bmChance(1000), bmChance(2000) === bmChance(1000)];
+    State.run.priceRank = 20; out.odds20 = both(bmRollMax()); State.run.priceRank = 14; out.odds14 = both(bmRollMax()); State.run.priceRank = 9;
     const pool = bmPool();
     out.pool = [pool.length > 0, pool.every(id => !owns(id) && getItem(id).rank.n <= 9 && !getItem(id).store && !getItem(id).craft)];
     const miss = bmDeal(400, () => 0.9);
@@ -1495,7 +1497,9 @@ test('암시장 — 9격 보스 뒤 · 회차마다 반반, 검은 원석 1개 +
   assert.deepEqual(r.open, [true, true, true]);
   assert.equal(r.noGem, null);
   assert.deepEqual(r.gem, [false, true, 1]);
-  assert.deepEqual(r.odds, [0.5, 0.25, 0.5]);
+  assert.ok(Math.abs(r.odds[0] - 0.5) < 1e-9 && Math.abs(r.odds[1] - 0.5) < 1e-9 && r.odds[2], '9격 — 전부 맡기면 두 번 합쳐 50%, 절반이면 한 번 확률도 절반');
+  assert.ok(Math.abs(r.odds20 - 0.2) < 1e-9, '20격 — 20%');
+  assert.ok(r.odds14 < 0.5 && r.odds14 > 0.2, '사이는 고르게 내려감');
   assert.deepEqual(r.pool, [true, true]);
   assert.deepEqual(r.miss, [[false, false], null, 600, 0, true, false, null]);
   assert.deepEqual(r.hit, [[false, true], true, 0]);
