@@ -2336,7 +2336,7 @@ function rollDrops(enemyId, auraMult = 1) {
 
 // ---------- 재료 ----------
 // 재료를 주는 몬스터(foe.mat)를 꺾으면 1개, 전리품 확률만큼 하나 더 — 행운 · 전리품 장비 · 기운이 여기에도 듭니다.
-// 몬스터는 그 격의 핵(CORES)도 남깁니다 — 종류만큼(일반 1 · 정예 4 · 히든 5 · 보스 10), 기운을 두른 상대는 그 배수만큼 더. 일반은 CORE_NORMAL(30%) 의 확률로만 (2026-11-20)
+// 몬스터는 그 격의 핵(CORES)도 남깁니다 — 일반 1 · 정예 2 · 히든 5 · 보스 5 (정예 · 보스는 골드 배수의 CORE_BIG 반), 기운을 두른 상대는 그 배수만큼 더. 일반은 CORE_NORMAL(30%) 의 확률로만 (2026-11-20)
 // → [{ mat, n }, …] — 핵이 먼저, 짐승이면 그 뒤에 제 재료
 function matsOf(id) { return Math.max(0, Math.floor(num(State.meta.mats && State.meta.mats[id]))); }
 function rollMats(enemyId, auraMult = 1) {
@@ -2344,7 +2344,8 @@ function rollMats(enemyId, auraMult = 1) {
   if (!foe) return out;
   const give = (mat, n) => { State.meta.mats[mat.id] = matsOf(mat.id) + n; out.push({ mat, n }); };
   const core = foe.rank && CORES[`core${foe.rank.n}`];
-  if (core && (foe.kind !== 'normal' || Math.random() < RULES.CORE_NORMAL)) give(core, Math.max(1, Math.round(KINDS[foe.kind].gold * auraMult * passiveMult('miner'))));
+  const big = foe.kind === 'elite' || foe.kind === 'boss' ? RULES.CORE_BIG : 1;   // 정예 · 보스는 반 (2026-11-20)
+  if (core && (foe.kind !== 'normal' || Math.random() < RULES.CORE_NORMAL)) give(core, Math.max(1, Math.round(KINDS[foe.kind].gold * big * auraMult * passiveMult('miner'))));
   const mat = MATERIALS[foe.mat];
   if (mat) give(mat, 1 + (Math.random() < dropChanceFor(foe, auraMult) ? 1 : 0));
   return out;
