@@ -110,12 +110,12 @@ If a name describes a different kind of object than its type, draw the object fr
 | 7 | 청룡의 비늘 허리띠 | 허리띠 | 청룡 | `assets/items/azuredragon_0.png` |
 | 8 | 산삼 뿌리 띠 | 허리띠 | 천년 산삼 동자 | `assets/items/sansam2_0.png` |
 
-## 시트 11-C — 각반 · 신발 · 망토 · 반지 (7개)
+## 시트 11-C — 각반 · 신발 · 망토 · 반지 (8개)
 
 저장할 이름: `design/images/sheets/rank11-C.png`
 
 ```text
-Make ONE square image, 1024x1024: a sprite sheet of 7 separate game item icons in a 3x3 grid.
+Make ONE square image, 1024x1024: a sprite sheet of 8 separate game item icons in a 3x3 grid.
 
 HARD RULES — breaking any of these makes the image unusable:
 1. NO TEXT ANYWHERE. Do not write item names, type names, captions, labels or numbers — not in Korean, not in English.
@@ -131,7 +131,7 @@ BACKGROUND: one flat solid magenta (#FF00FF) everywhere. No gradient, no checker
 Do not use magenta or hot pink on the items themselves.
 
 LAYOUT: an invisible 3 x 3 grid of equal square cells (do not draw it). Exactly one item per cell, centered, filling about 70% of its cell,
-never touching the cell edges. Fill the cells left to right, top to bottom, in the order listed. Leave the last 2 cells empty (plain magenta).
+never touching the cell edges. Fill the cells left to right, top to bottom, in the order listed. Leave the last 1 cell empty (plain magenta).
 
 TIER LOOK: high-tier gear — mythic and ornate: gold or silver trim, engraved patterns, gems, a soft glow.
 
@@ -148,8 +148,9 @@ If a name describes a different kind of object than its type, draw the object fr
 3. BOOTS / SHOES 「불을 밟는 신」 — loot from the monster 「화린」. plain look; mood: pointed, piercing.
 4. BOOTS / SHOES 「허물 벗은 신」 — loot from the monster 「백년 영사」. plain look; mood: sinister, a touch of blood red.
 5. CLOAK / CAPE 「빙잠사 망토」 — loot from the monster 「빙잠」. plain look; mood: sturdy, protective.
-6. RING 「금잠 반지」 — loot from the monster 「금잠고」. plain look; mood: pointed, piercing.
-7. RING 「주작의 불씨 반지」 — loot from the monster 「주작」. more refined and menacing; mood: heavy, blunt, massive.
+6. CLOAK / CAPE 「아홉 꼬리 목도리」 — loot from the monster 「구미호」. more refined and menacing; mood: sinister, a touch of blood red.
+7. RING 「금잠 반지」 — loot from the monster 「금잠고」. plain look; mood: pointed, piercing.
+8. RING 「주작의 불씨 반지」 — loot from the monster 「주작」. more refined and menacing; mood: heavy, blunt, massive.
 ```
 
 | 칸 | 장비 | 부위 | 나온 곳 | 잘라서 둘 곳 |
@@ -159,8 +160,9 @@ If a name describes a different kind of object than its type, draw the object fr
 | 3 | 불을 밟는 신 | 신발 | 화린 | `assets/items/hwarin2_1.png` |
 | 4 | 허물 벗은 신 | 신발 | 백년 영사 | `assets/items/yeongsa2_1.png` |
 | 5 | 빙잠사 망토 | 망토 | 빙잠 | `assets/items/bingjam2_1.png` |
-| 6 | 금잠 반지 | 반지 | 금잠고 | `assets/items/geumjam2_0.png` |
-| 7 | 주작의 불씨 반지 | 반지 | 주작 | `assets/items/vermilionbird_0.png` |
+| 6 | 아홉 꼬리 목도리 | 망토 | 구미호 | `assets/items/gumiho2_1.png` |
+| 7 | 금잠 반지 | 반지 | 금잠고 | `assets/items/geumjam2_0.png` |
+| 8 | 주작의 불씨 반지 | 반지 | 주작 | `assets/items/vermilionbird_0.png` |
 
 ## 시트 11-D — 목걸이 · 팔찌 · 특수장비 (7개)
 

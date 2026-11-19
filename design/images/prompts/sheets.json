@@ -1251,6 +1251,11 @@
     "id": "alexander_0",
     "name": "정복자의 투구",
     "file": "assets/items/alexander_0.png"
+   },
+   {
+    "id": "herodotos_0",
+    "name": "기록자의 두건",
+    "file": "assets/items/herodotos_0.png"
    }
   ]
  },
@@ -1262,11 +1267,6 @@
    3
   ],
   "cells": [
-   {
-    "id": "herodotos_0",
-    "name": "기록자의 두건",
-    "file": "assets/items/herodotos_0.png"
-   },
    {
     "id": "machao_0",
     "name": "사자 투구",
@@ -1296,6 +1296,16 @@
     "id": "scribe_2",
     "name": "잉크 물든 장갑",
     "file": "assets/items/scribe_2.png"
+   },
+   {
+    "id": "storyteller_2",
+    "name": "천 하룻밤의 띠",
+    "file": "assets/items/storyteller_2.png"
+   },
+   {
+    "id": "zhangfei_0",
+    "name": "술 호리병 허리띠",
+    "file": "assets/items/zhangfei_0.png"
    }
   ]
  },
@@ -1307,16 +1317,6 @@
    3
   ],
   "cells": [
-   {
-    "id": "storyteller_2",
-    "name": "천 하룻밤의 띠",
-    "file": "assets/items/storyteller_2.png"
-   },
-   {
-    "id": "zhangfei_0",
-    "name": "술 호리병 허리띠",
-    "file": "assets/items/zhangfei_0.png"
-   },
    {
     "id": "davinci_2",
     "name": "설계도 각반",
@@ -1341,6 +1341,16 @@
     "id": "storyteller_1",
     "name": "이야기꾼의 해진 외투",
     "file": "assets/items/storyteller_1.png"
+   },
+   {
+    "id": "archimedes_1",
+    "name": "유레카의 원",
+    "file": "assets/items/archimedes_1.png"
+   },
+   {
+    "id": "huangzhong_0",
+    "name": "노장의 깍지",
+    "file": "assets/items/huangzhong_0.png"
    }
   ]
  },
@@ -1353,24 +1363,24 @@
   ],
   "cells": [
    {
-    "id": "archimedes_1",
-    "name": "유레카의 원",
-    "file": "assets/items/archimedes_1.png"
-   },
-   {
-    "id": "huangzhong_0",
-    "name": "노장의 깍지",
-    "file": "assets/items/huangzhong_0.png"
-   },
-   {
     "id": "yisunsin_2",
     "name": "난중일기",
     "file": "assets/items/yisunsin_2.png"
    },
    {
+    "id": "chest_library_cord",
+    "name": "두루마리 끈 팔찌",
+    "file": "assets/items/chest_library_cord.png"
+   },
+   {
     "id": "hypatia_2",
     "name": "천문 팔찌",
     "file": "assets/items/hypatia_2.png"
+   },
+   {
+    "id": "spartacus_2",
+    "name": "끊어진 족쇄",
+    "file": "assets/items/spartacus_2.png"
    },
    {
     "id": "alexander_4",
@@ -1436,11 +1446,6 @@
     "id": "arthur_1",
     "name": "펜드래건의 갑주",
     "file": "assets/items/arthur_1.png"
-   },
-   {
-    "id": "auraknight_1",
-    "name": "오러가 밴 흉갑",
-    "file": "assets/items/auraknight_1.png"
    }
   ]
  },
@@ -1452,6 +1457,16 @@
    3
   ],
   "cells": [
+   {
+    "id": "auraknight_1",
+    "name": "오러가 밴 흉갑",
+    "file": "assets/items/auraknight_1.png"
+   },
+   {
+    "id": "berserker_0",
+    "name": "곰가죽 어깨덮개",
+    "file": "assets/items/berserker_0.png"
+   },
    {
     "id": "dragonknight_0",
     "name": "용비늘 견갑",
@@ -1476,7 +1491,17 @@
     "id": "roland_1",
     "name": "론세스바예스의 허리띠",
     "file": "assets/items/roland_1.png"
-   },
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank08-C.png",
+  "rank": 8,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
    {
     "id": "chest_camelot_greaves",
     "name": "원탁 기사의 정강이받이",
@@ -1496,17 +1521,7 @@
     "id": "dragonknight_1",
     "name": "하늘을 딛는 용의 등자",
     "file": "assets/items/dragonknight_1.png"
-   }
-  ]
- },
- {
-  "sheet": "design/images/sheets/rank08-C.png",
-  "rank": 8,
-  "grid": [
-   3,
-   3
-  ],
-  "cells": [
+   },
    {
     "id": "elcid_0",
     "name": "바비에카를 몬 박차",
@@ -1521,7 +1536,17 @@
     "id": "templar_1",
     "name": "흰 성전 망토",
     "file": "assets/items/templar_1.png"
-   },
+   }
+  ]
+ },
+ {
+  "sheet": "design/images/sheets/rank08-D.png",
+  "rank": 8,
+  "grid": [
+   3,
+   3
+  ],
+  "cells": [
    {
     "id": "gawain_0",
     "name": "정오의 고리",
@@ -1541,6 +1566,11 @@
     "id": "paladin_1",
     "name": "축성된 성표",
     "file": "assets/items/paladin_1.png"
+   },
+   {
+    "id": "berserker_1",
+    "name": "곰 발톱 팔찌",
+    "file": "assets/items/berserker_1.png"
    },
    {
     "id": "tristan_0",
@@ -2001,6 +2031,11 @@
     "id": "bingjam2_1",
     "name": "빙잠사 망토",
     "file": "assets/items/bingjam2_1.png"
+   },
+   {
+    "id": "gumiho2_1",
+    "name": "아홉 꼬리 목도리",
+    "file": "assets/items/gumiho2_1.png"
    },
    {
     "id": "geumjam2_0",
@@ -2553,6 +2588,16 @@
     "file": "assets/items/paimon2_0.png"
    },
    {
+    "id": "beelzebub2_0",
+    "name": "파리 떼의 관",
+    "file": "assets/items/beelzebub2_0.png"
+   },
+   {
+    "id": "moloch2_0",
+    "name": "황소 머리 투구",
+    "file": "assets/items/moloch2_0.png"
+   },
+   {
     "id": "beelzebub2_1",
     "name": "파리 날개 갑의",
     "file": "assets/items/beelzebub2_1.png"
@@ -2593,6 +2638,16 @@
     "file": "assets/items/chest_cocytus_gloves.png"
    },
    {
+    "id": "moloch2_1",
+    "name": "제단 불에 그을린 손",
+    "file": "assets/items/moloch2_1.png"
+   },
+   {
+    "id": "astaroth2_1",
+    "name": "독사 허리띠",
+    "file": "assets/items/astaroth2_1.png"
+   },
+   {
     "id": "zagan_0",
     "name": "쇠를 금화로 바꾸는 띠",
     "file": "assets/items/zagan_0.png"
@@ -2606,11 +2661,6 @@
     "id": "vine_0",
     "name": "탑을 허무는 각반",
     "file": "assets/items/vine_0.png"
-   },
-   {
-    "id": "astaroth2_0",
-    "name": "독사를 탄 신",
-    "file": "assets/items/astaroth2_0.png"
    }
   ]
  },
@@ -2622,6 +2672,11 @@
    3
   ],
   "cells": [
+   {
+    "id": "astaroth2_0",
+    "name": "독사를 탄 신",
+    "file": "assets/items/astaroth2_0.png"
+   },
    {
     "id": "lucifer2_1",
     "name": "빛을 잃은 여섯 날개",
@@ -2688,6 +2743,11 @@
     "file": "assets/items/athena_0.png"
    },
    {
+    "id": "loki2_0",
+    "name": "거짓의 단검",
+    "file": "assets/items/loki2_0.png"
+   },
+   {
     "id": "anubis2_1",
     "name": "재칼의 가면",
     "file": "assets/items/anubis2_1.png"
@@ -2706,11 +2766,6 @@
     "id": "anubis2_0",
     "name": "방부사의 어깨띠",
     "file": "assets/items/anubis2_0.png"
-   },
-   {
-    "id": "hera_0",
-    "name": "공작 깃 견갑",
-    "file": "assets/items/hera_0.png"
    }
   ]
  },
@@ -2722,6 +2777,11 @@
    3
   ],
   "cells": [
+   {
+    "id": "hera_0",
+    "name": "공작 깃 견갑",
+    "file": "assets/items/hera_0.png"
+   },
    {
     "id": "apollo_0",
     "name": "리라를 켜는 손",
@@ -2781,6 +2841,11 @@
     "id": "bastet2_0",
     "name": "고양이의 눈",
     "file": "assets/items/bastet2_0.png"
+   },
+   {
+    "id": "hades2_2",
+    "name": "케르베로스의 사슬",
+    "file": "assets/items/hades2_2.png"
    },
    {
     "id": "isis2_0",
@@ -3276,6 +3341,11 @@
     "id": "abhoth2_0",
     "name": "끓는 진흙 갑주",
     "file": "assets/items/abhoth2_0.png"
+   },
+   {
+    "id": "azathoth2_1",
+    "name": "무(無)의 갑주",
+    "file": "assets/items/azathoth2_1.png"
    }
   ]
  },
@@ -3287,11 +3357,6 @@
    3
   ],
   "cells": [
-   {
-    "id": "azathoth2_1",
-    "name": "무(無)의 갑주",
-    "file": "assets/items/azathoth2_1.png"
-   },
    {
     "id": "daoloth_0",
     "name": "장막을 찢는 견갑",
@@ -3326,6 +3391,11 @@
     "id": "abhoth2_1",
     "name": "녹아내리는 신",
     "file": "assets/items/abhoth2_1.png"
+   },
+   {
+    "id": "ghroth_1",
+    "name": "별을 깨우며 걷는 신",
+    "file": "assets/items/ghroth_1.png"
    }
   ]
  },
@@ -3337,11 +3407,6 @@
    3
   ],
   "cells": [
-   {
-    "id": "ghroth_1",
-    "name": "별을 깨우며 걷는 신",
-    "file": "assets/items/ghroth_1.png"
-   },
    {
     "id": "nyarlathotep2_0",
     "name": "검은 파라오의 의복",
@@ -3361,6 +3426,11 @@
     "id": "yogsothoth2_0",
     "name": "모든 문의 열쇠",
     "file": "assets/items/yogsothoth2_0.png"
+   },
+   {
+    "id": "azathoth2_2",
+    "name": "백치의 왕관",
+    "file": "assets/items/azathoth2_2.png"
    },
    {
     "id": "yogsothoth2_1",
