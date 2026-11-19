@@ -1760,7 +1760,7 @@ function fightRaid(rng = Math.random) {
 }
 
 // ---------- 훈련소 (도시 계획 7번 · 12격 — 사용자 결정 2026-11-19) — 길드 안 교관 ----------
-// 돈을 내면 실제 시간(단계 n 은 n 시간)이 흐른 뒤 단련 단계가 하나 오름 — 능력 +10%. 10단계를 채우면 등급이 한 번 오름 (S 는 그대로)
+// 돈을 내면 실제 시간(단계 n 은 n 시간)이 흐른 뒤 단련 단계가 하나 오름 — 능력 +10%. 10단계를 채우면 등급이 한 번 오름 (S 는 SS 로 · SS 는 그대로)
 // 단련 중인 동료는 함께 가기 · 게이트 · 길드 사무를 못 함 (함께 가는 동료 · 게이트 · 사무 중인 동료는 단련 못 함)
 function trainOpen() { return !!State.meta.cityOpen && rankBossBeaten(RULES.TRAIN_RANK) && guildOwned(); }
 function trainingOf(id) { return (State.meta.training || {})[id] || null; }
@@ -1788,7 +1788,7 @@ function settleTraining(now = Date.now()) {
     if (now < t.end) continue;
     delete State.meta.training[id];
     State.meta.train[id] = t.to;
-    const a = ALLIES[id], up = t.to >= RULES.TRAIN_MAX && !State.meta.allyUp[id] && allyGradeN(a) < HUNTER_GRADES.length;
+    const a = ALLIES[id], up = t.to >= RULES.TRAIN_MAX && !State.meta.allyUp[id] && allyGradeN(a) < RULES.ALLY_TOP;
     if (up) State.meta.allyUp[id] = true;
     pushLog('drop', `${a.name}의 단련이 끝났다 — ${t.to}단계 (능력 +${Math.round(t.to * RULES.TRAIN_STEP * 100)}%)${up ? ` · 등급이 올랐다 → ${allyGradeId(a)}급` : ''}.`);
     done.push({ id, to: t.to, up });
@@ -1809,12 +1809,12 @@ function foundGates(now = Date.now(), rng = Math.random) {
   if (!gatesOpen()) return [];
   const day = todayKey(now), m = State.meta;
   if (!m.found || m.found.day !== day) {
-    const top = Math.min(HUNTER_GRADES.length, Math.max(1, hunterGrade())), foes = ENEMIES.filter(e => e.zoneIndex < bestRankNow() && (e.kind === 'normal' || e.kind === 'elite'));
+    const top = Math.min(GATE_IDS.length, Math.max(1, hunterGrade())), foes = ENEMIES.filter(e => e.zoneIndex < bestRankNow() && (e.kind === 'normal' || e.kind === 'elite'));
     const list = [];
     for (let i = 0; i < RULES.FIND_GATES; i++) {
-      const up = top < HUNTER_GRADES.length && rng() < RULES.FIND_UP;
+      const up = top < HUNTER_GRADES.length && rng() < RULES.FIND_UP;   // 하나 위는 S 까지 — SS급 게이트는 내가 SS급이 되어야 나옴
       const lo = Math.max(1, top - 2), n = up ? top + 1 : lo + Math.floor(rng() * (top - lo + 1));
-      const grade = HUNTER_GRADES[n - 1].id, foe = foes[Math.floor(rng() * foes.length)];
+      const grade = gradeAt(n).id, foe = foes[Math.floor(rng() * foes.length)];
       const type = FIND_REWARDS[Math.floor(rng() * FIND_REWARDS.length)];
       list.push({ grade, foe: foe.id, reward: { type, n: findRewardN(type, grade) }, cleared: false, lostRun: null });
     }
@@ -1834,7 +1834,7 @@ function findRewardN(type, grade) {
 // 게이트 보스 — 가 본 격의 몬스터 하나, 세기는 그 등급 시험관만큼 (레벨은 안 보여 줌)
 function findFoe(gate) {
   const e = getEnemy(gate.foe), n = gateInfo(gate.grade).rank;
-  return { id: `gate_${gate.foe}`, name: `${gate.grade}급 게이트 · ${e.name}`, icon: e.icon, kind: 'boss', gateBoss: true, noLv: true, grade: gate.grade, level: HUNTER_GRADES[n - 1].level, ...examinerStats(n) };
+  return { id: `gate_${gate.foe}`, name: `${gate.grade}급 게이트 · ${e.name}`, icon: e.icon, kind: 'boss', gateBoss: true, noLv: true, grade: gate.grade, level: gradeLevel(n), ...enemyStats(gradeLevel(n)) };
 }
 function canEnterFound(i, now = Date.now()) {
   const g = foundGates(now)[i];
@@ -2336,7 +2336,7 @@ function rollDrops(enemyId, auraMult = 1) {
 
 // ---------- 재료 ----------
 // 재료를 주는 몬스터(foe.mat)를 꺾으면 1개, 전리품 확률만큼 하나 더 — 행운 · 전리품 장비 · 기운이 여기에도 듭니다.
-// 모든 몬스터는 그 격의 핵(CORES)도 남깁니다 — 종류만큼(일반 1 · 정예 4 · 히든 5 · 보스 10), 기운을 두른 상대는 그 배수만큼 더.
+// 몬스터는 그 격의 핵(CORES)도 남깁니다 — 종류만큼(일반 1 · 정예 4 · 히든 5 · 보스 10), 기운을 두른 상대는 그 배수만큼 더. 일반은 CORE_NORMAL(30%) 의 확률로만 (2026-11-20)
 // → [{ mat, n }, …] — 핵이 먼저, 짐승이면 그 뒤에 제 재료
 function matsOf(id) { return Math.max(0, Math.floor(num(State.meta.mats && State.meta.mats[id]))); }
 function rollMats(enemyId, auraMult = 1) {
@@ -2344,7 +2344,7 @@ function rollMats(enemyId, auraMult = 1) {
   if (!foe) return out;
   const give = (mat, n) => { State.meta.mats[mat.id] = matsOf(mat.id) + n; out.push({ mat, n }); };
   const core = foe.rank && CORES[`core${foe.rank.n}`];
-  if (core) give(core, Math.max(1, Math.round(KINDS[foe.kind].gold * auraMult * passiveMult('miner'))));
+  if (core && (foe.kind !== 'normal' || Math.random() < RULES.CORE_NORMAL)) give(core, Math.max(1, Math.round(KINDS[foe.kind].gold * auraMult * passiveMult('miner'))));
   const mat = MATERIALS[foe.mat];
   if (mat) give(mat, 1 + (Math.random() < dropChanceFor(foe, auraMult) ? 1 : 0));
   return out;

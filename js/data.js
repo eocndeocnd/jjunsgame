@@ -64,6 +64,8 @@ const RULES = {
   WON_SCALE: 1000,
   // 핵 1개 판 값 = 그 격 일반 한 마리 골드 몫의 이만큼 배 (× WON_SCALE) — 1격 1만 · 2격 1.9만 · 3격 3.6만 · 4격 6.9만 원 …
   CORE_SELL: 2,
+  CORE_NORMAL: 0.3,       // 일반 몬스터가 핵을 남길 확률 (사용자 결정 2026-11-20 — 「핵이 너무 잘 나옴」, 도시 돈 벌이는 반쯤이면 됨). 정예 · 히든 · 보스는 반드시
+  ALLY_TOP: 8,            // 동료 등급의 끝 — SS (단련 10단계로 S 가 SS 로 · SS급 게이트, 사용자 결정 2026-11-20)
   // 헌터백화점의 물건 값 = 그 격 일반 몬스터 한 번 골드 몫의 이만큼 배 × WON_SCALE
   //   (1격 24만 · 2격 46만 · 3격 87만 · 4격 165만 · 5격 313만 · 6격 594만 원) — **그 격의 핵 24개에 하나.**
   // 이 값의 잣대는 「첫 회차에 번 돈으로, 2회차를 시작할 때 1격 무기 하나를 살 수 있나」입니다 (시뮬로 첫 회차에 모으는 핵은 18~50개 — 보스를 꺾은 판은 35개 넘게. 12판 중 10판이 2회차에 하나를 삽니다).
@@ -98,7 +100,7 @@ const RULES = {
   RANKING_RANK: 10,
   // 게이트 찾기 (사용자 결정 2026-11-19): 하루(실제 날짜)마다 게이트 3개 — 내 등급 근처(아래 둘까지, 가끔 하나 위). 내가 들어가 보스를 깨면 보상 하나 + 그 등급을 게이트 창구 자동사냥에 엶
   // 훈련소 (도시 계획 7번 · 12격 — 사용자 결정 2026-11-19): 길드 안 교관. 돈을 내면 실제 시간이 흘러 동료 능력이 단계마다 +10% (10단계 — 2배)
-  //   단계 n 은 n 시간 · 값은 내 격의 핵 (10 × n)개어치 × 동료 등급마다 +25%. 10단계를 다 채우면 등급이 한 번 오름 (S 는 그대로)
+  //   단계 n 은 n 시간 · 값은 내 격의 핵 (10 × n)개어치 × 동료 등급마다 +25%. 10단계를 다 채우면 등급이 한 번 오름 (SS 는 그대로 — RULES.ALLY_TOP)
   TRAIN_RANK: 12,
   TRAIN_MAX: 10,
   TRAIN_STEP: 0.1,
@@ -2406,16 +2408,17 @@ const ALLIES = {
 // 단련 (훈련소 — game.js 의 startTraining) — 단계 · 10단계를 채워 오른 등급. 저장(State.meta)에서 읽음 (없으면 0)
 const allyTrain = a => (typeof State !== 'undefined' && State.meta && State.meta.train && State.meta.train[a.id]) || 0;
 const allyUp = a => typeof State !== 'undefined' && State.meta && State.meta.allyUp && State.meta.allyUp[a.id] ? 1 : 0;
-function allyGradeN(a) { return Math.min(HUNTER_GRADES.length, HUNTER_GRADES.findIndex(g => g.id === a.grade) + 1 + allyUp(a)); }   // F 1 … S 7 (= 그 등급의 격) — 단련으로 한 번 오를 수 있음
-function allyGradeId(a) { return HUNTER_GRADES[allyGradeN(a) - 1].id; }
+function allyGradeN(a) { return Math.min(RULES.ALLY_TOP, gradeIndex(a.grade) + allyUp(a)); }   // F 1 … S 7 · SS 8 (= 그 등급의 격) — 단련으로 한 번 오를 수 있음
+function allyGradeId(a) { return gradeAt(allyGradeN(a)).id; }
 function allyPower(a) { const k = ALLY_KINDS[a.kind]; return Math.round((k.base + k.step * (allyGradeN(a) - 1)) * (1 + RULES.TRAIN_STEP * allyTrain(a)) * 1e4) / 1e4; }   // 하윤(D 추가타) 0.3 · 단련 단계마다 +10%
 function allyWhat(a) { return `${ALLY_KINDS[a.kind].name} — ${ALLY_KINDS[a.kind].desc(allyPower(a))}`; }
 // 길드 (도시 계획 6번) — 옛 동네의 허름한 빈 건물을 사들여 내 길드로. 단계마다 사무 자리가 하나씩(1~5), 겉모습이 바뀜. 이름은 플레이어가 지음
 const GUILD_LEVELS = ['허름한 사무실', '치운 건물', '간판 단 사무실', '번듯한 길드 건물', '도시에서 가장 멋진 길드'];   // 1~5단계 (가칭)
 // 게이트 — 등급마다 하나, 동료 등급 이하만. 보내면 실제 시간이 흐른 뒤(게임을 꺼도) 그 격의 핵 · 강화석을 가져옴. 다 끝나도 받을 때까지 그대로 (쌓이지 않음)
-const GATE_HOURS = { F: 1, E: 2, D: 3, C: 4, B: 5, A: 6, S: 8 };   // 사용자 결정 2026-11-19 — 1~8시간
+const GATE_HOURS = { F: 1, E: 2, D: 3, C: 4, B: 5, A: 6, S: 8, SS: 10 };   // 사용자 결정 2026-11-19 — 1~8시간 · SS 10시간 (2026-11-20 — SS급이 되어 게이트 찾기에서 깨면 열림)
+const GATE_IDS = Object.keys(GATE_HOURS);                                     // 게이트가 있는 등급 — 차례대로 (F … SS)
 function gateInfo(id) {
-  const n = HUNTER_GRADES.findIndex(g => g.id === id) + 1, hours = GATE_HOURS[id];
+  const n = gradeIndex(id), hours = GATE_HOURS[id];
   if (!n || !hours) return null;
   return { id, rank: n, hours, ms: hours * 3600e3, cores: Math.round(RULES.GATE_CORES * hours), stones: RULES.GATE_STONES * n * hours };
 }
@@ -2504,6 +2507,16 @@ function examinerStats(g) { return enemyStats(HUNTER_GRADES[g - 1].level); }
 //   SSS 세계 — 연합의 이동 게이트로 세 도시를 연달아 (시드 6개: 17격 직후 8e15 늘 · 1.6e16 대개 · 3.2e16 반쯤)
 //   EX 지구 — 엔딩 직전: 아자토스(20격)를 꺾어 마지막 벽이 무너지고, 하늘의 금으로 외신이 지구에 내려옴. 모두가 길을 열고 마지막은 나 혼자 → 엔딩
 //     옛 동네 → 광장 → 하늘의 금 너머 (시드 6개: 클리어 직후 1.3e18 늘 · 2.6e18 거의 늘 · 5.1e18 반쯤)
+// 등급 번호 n (1 F … 7 S · 8 SS · 9 SSS · 10 EX) ↔ 등급 — 시험 등급(HUNTER_GRADES) 뒤에 S 위 등급(TOP_GRADES)
+function gradeAt(n) { return n <= HUNTER_GRADES.length ? HUNTER_GRADES[n - 1] : TOP_GRADES[n - HUNTER_GRADES.length - 1]; }
+function gradeIndex(id) {
+  const i = HUNTER_GRADES.findIndex(g => g.id === id);
+  if (i >= 0) return i + 1;
+  const j = TOP_GRADES.findIndex(g => g.id === id);
+  return j >= 0 ? HUNTER_GRADES.length + j + 1 : 0;
+}
+// S 위 등급의 세기 — 그 등급의 첫 싸움 (SS급 게이트 보스도 이만큼)
+function gradeLevel(n) { return n <= HUNTER_GRADES.length ? HUNTER_GRADES[n - 1].level : gradeAt(n).fights[0].level; }
 const TOP_GRADES = [
   { id: 'SS', rank: 14, fights: [{ city: '광장', map: 'raid', at: 'city.crisis', name: '광장 게이트의 주인', icon: '🐉', level: 2e13 }] },
   { id: 'SSS', rank: 17, fights: [

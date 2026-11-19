@@ -3184,7 +3184,7 @@ function renderGates() {
     else if (trainingOf(id)) act = `<span class="ally-state">단련 중 — 길드 교관</span>`;
     else if (m.ally === id) act = `<span class="ally-state on">함께 가는 중</span><button class="btn tiny" data-comp="">빼기</button>`;
     else act = `<button class="btn tiny" data-comp="${id}">함께 간다</button>
-      <span class="gate-btns"><span class="gate-lbl">게이트에 보낸다 →</span>${HUNTER_GRADES.filter((x, i) => i + 1 <= allyGradeN(a)).map(x => {
+      <span class="gate-btns"><span class="gate-lbl">게이트에 보낸다 →</span>${GATE_IDS.map(id => ({ id })).filter((x, i) => i + 1 <= allyGradeN(a)).map(x => {
         const info = gateInfo(x.id), open = gateUnlocked(x.id);
         return `<button class="btn tiny" data-gate="${id}:${x.id}" ${open ? '' : 'disabled'} title="${open ? `${info.hours}시간 · 제${info.rank}격의 핵 ${info.cores}개 · 강화석 ${fmt(info.stones)}개` : '내가 이 등급 게이트를 한 번 깨야 보낼 수 있다 (게이트 찾기)'}">${x.id}급 · ${open ? `${info.hours}시간` : '🔒'}</button>`;
       }).join('')}</span>`;
@@ -3193,7 +3193,7 @@ function renderGates() {
       <div class="ally-body"><div>${allyName(a)}</div><div class="ally-what">${allyWhat(a)}</div><div class="ally-act">${act}</div></div>
     </div>`;
   }).join('');
-  const table = HUNTER_GRADES.map(x => { const i = gateInfo(x.id); return `${x.id} ${i.hours}시간 — 제${i.rank}격의 핵 ${i.cores} · 강화석 ${fmt(i.stones)}`; }).join('<br>');
+  const table = GATE_IDS.map(id => ({ id })).map(x => { const i = gateInfo(x.id); return `${x.id} ${i.hours}시간 — 제${i.rank}격의 핵 ${i.cores} · 강화석 ${fmt(i.stones)}`; }).join('<br>');
   $('shopBody').innerHTML = `<div class="shop-say">${CLERK_DESKS.gate.icon} ${shopSay}</div>
     ${rows || '<p class="hint">아직 동료가 없다 — 왼쪽 <b>동료 모집</b>에서.</p>'}
     <p class="hint">그 공간에 함께 가는 동료는 한 명 — 함께 가는 동안에는 게이트에 못 간다.<br>게이트는 동료 등급까지 · <b>내가 직접 깬 등급과 그 아래만</b> (오른쪽 아래 <b>게이트 찾기</b>) · 게임을 꺼 둬도 시간이 흐른다 · 돌아오면 받을 때까지 기다린다.</p>
@@ -3227,7 +3227,7 @@ function renderTrainer() {
     else if (seatedAlly(id)) act = '<span class="ally-state">길드 사무 중 — 장부에서 일으켜야 단련</span>';
     else act = `<button class="btn primary" data-train="${id}" ${num(m.won) >= price ? '' : 'disabled'}><b>${lv + 1}단계 단련</b> <span>· ${trainHours(lv + 1)}시간 · ${fmtWon(price)}</span></button>`;
     const bar = Array.from({ length: RULES.TRAIN_MAX }, (_, i) => `<i class="${i < lv ? 'on' : t && i === lv ? 'now' : ''}"></i>`).join('');
-    const upNote = !m.allyUp[id] && allyGradeN(a) < HUNTER_GRADES.length ? ` · 10단계면 ${HUNTER_GRADES[allyGradeN(a)].id}급으로` : m.allyUp[id] ? ' · 등급이 올랐다' : '';
+    const upNote = !m.allyUp[id] && allyGradeN(a) < RULES.ALLY_TOP ? ` · 10단계면 ${gradeAt(allyGradeN(a) + 1).id}급으로` : m.allyUp[id] ? ' · 등급이 올랐다' : '';
     return `<div class="ally-row">
       <span class="ally-ic">${a.icon}</span>
       <div class="ally-body"><div>${allyName(a)}</div><div class="ally-what">${allyWhat(a)}</div>
@@ -3237,7 +3237,7 @@ function renderTrainer() {
   }).join('');
   $('shopBody').innerHTML = `<div class="shop-say">${CLERK_DESKS.trainer.icon} ${shopSay}</div>
     ${rows || '<p class="hint">아직 동료가 없다.</p>'}
-    <p class="hint">단계마다 능력 +${Math.round(RULES.TRAIN_STEP * 100)}% · n단계는 n시간 (게임을 꺼 둬도 흐름) · 값은 내 격의 핵 (${RULES.TRAIN_CORES} × 단계)개어치, 동료 등급이 높을수록 비쌈<br>${RULES.TRAIN_MAX}단계를 다 채우면 등급이 한 번 오름 (S급은 그대로) · 단련 중엔 함께 가기 · 게이트 · 길드 사무를 못 함</p>`;
+    <p class="hint">단계마다 능력 +${Math.round(RULES.TRAIN_STEP * 100)}% · n단계는 n시간 (게임을 꺼 둬도 흐름) · 값은 내 격의 핵 (${RULES.TRAIN_CORES} × 단계)개어치, 동료 등급이 높을수록 비쌈<br>${RULES.TRAIN_MAX}단계를 다 채우면 등급이 한 번 오름 (S급은 SS급으로 · SS급은 그대로) · 단련 중엔 함께 가기 · 게이트 · 길드 사무를 못 함</p>`;
   $('shopBody').querySelectorAll('[data-train]').forEach(b => b.addEventListener('click', () => { if (startTraining(b.dataset.train)) Sound.play('equip'); render(); }));
   startShopTicker();
 }
@@ -3264,7 +3264,7 @@ function renderFound() {
         <div class="ally-what">보상 ${FIND_REWARD_ICON[g.reward.type]} ${findRewardText(g)}</div><div class="ally-act">${act}</div></div>
     </div>`;
   }).join('');
-  const opened = HUNTER_GRADES.filter(x => gateUnlocked(x.id)).map(x => x.id).join(' · ') || '없음';   // 깬 등급과 그 아래
+  const opened = GATE_IDS.filter(id => gateUnlocked(id)).join(' · ') || '없음';   // 깬 등급과 그 아래
   $('shopBody').innerHTML = `<div class="shop-say">${CLERK_DESKS.gatefind.icon} ${shopSay}</div>${rows}
     <p class="hint">내일이 되면 새 게이트 셋 (못 깬 것은 사라짐) · 지면 그 회차엔 그 게이트에 다시 못 들어감<br>자동사냥이 열린 등급(깬 등급과 그 아래): <b>${opened}</b></p>`;
   $('shopBody').querySelectorAll('[data-enter]').forEach(b => b.addEventListener('click', () => enterFoundGate(+b.dataset.enter)));

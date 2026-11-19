@@ -4566,6 +4566,8 @@ const RULES = {
   WON_SCALE: 1000,
   // 핵 1개 판 값 = 그 격 일반 한 마리 골드 몫의 이만큼 배 (× WON_SCALE) — 1격 1만 · 2격 1.9만 · 3격 3.6만 · 4격 6.9만 원 …
   CORE_SELL: 2,
+  CORE_NORMAL: 0.3,       // 일반 몬스터가 핵을 남길 확률 (사용자 결정 2026-11-20 — 「핵이 너무 잘 나옴」, 도시 돈 벌이는 반쯤이면 됨). 정예 · 히든 · 보스는 반드시
+  ALLY_TOP: 8,            // 동료 등급의 끝 — SS (단련 10단계로 S 가 SS 로 · SS급 게이트, 사용자 결정 2026-11-20)
   // 헌터백화점의 물건 값 = 그 격 일반 몬스터 한 번 골드 몫의 이만큼 배 × WON_SCALE
   //   (1격 24만 · 2격 46만 · 3격 87만 · 4격 165만 · 5격 313만 · 6격 594만 원) — **그 격의 핵 24개에 하나.**
   // 이 값의 잣대는 「첫 회차에 번 돈으로, 2회차를 시작할 때 1격 무기 하나를 살 수 있나」입니다 (시뮬로 첫 회차에 모으는 핵은 18~50개 — 보스를 꺾은 판은 35개 넘게. 12판 중 10판이 2회차에 하나를 삽니다).
@@ -4600,7 +4602,7 @@ const RULES = {
   RANKING_RANK: 10,
   // 게이트 찾기 (사용자 결정 2026-11-19): 하루(실제 날짜)마다 게이트 3개 — 내 등급 근처(아래 둘까지, 가끔 하나 위). 내가 들어가 보스를 깨면 보상 하나 + 그 등급을 게이트 창구 자동사냥에 엶
   // 훈련소 (도시 계획 7번 · 12격 — 사용자 결정 2026-11-19): 길드 안 교관. 돈을 내면 실제 시간이 흘러 동료 능력이 단계마다 +10% (10단계 — 2배)
-  //   단계 n 은 n 시간 · 값은 내 격의 핵 (10 × n)개어치 × 동료 등급마다 +25%. 10단계를 다 채우면 등급이 한 번 오름 (S 는 그대로)
+  //   단계 n 은 n 시간 · 값은 내 격의 핵 (10 × n)개어치 × 동료 등급마다 +25%. 10단계를 다 채우면 등급이 한 번 오름 (SS 는 그대로 — RULES.ALLY_TOP)
   TRAIN_RANK: 12,
   TRAIN_MAX: 10,
   TRAIN_STEP: 0.1,
@@ -6908,16 +6910,17 @@ const ALLIES = {
 // 단련 (훈련소 — game.js 의 startTraining) — 단계 · 10단계를 채워 오른 등급. 저장(State.meta)에서 읽음 (없으면 0)
 const allyTrain = a => (typeof State !== 'undefined' && State.meta && State.meta.train && State.meta.train[a.id]) || 0;
 const allyUp = a => typeof State !== 'undefined' && State.meta && State.meta.allyUp && State.meta.allyUp[a.id] ? 1 : 0;
-function allyGradeN(a) { return Math.min(HUNTER_GRADES.length, HUNTER_GRADES.findIndex(g => g.id === a.grade) + 1 + allyUp(a)); }   // F 1 … S 7 (= 그 등급의 격) — 단련으로 한 번 오를 수 있음
-function allyGradeId(a) { return HUNTER_GRADES[allyGradeN(a) - 1].id; }
+function allyGradeN(a) { return Math.min(RULES.ALLY_TOP, gradeIndex(a.grade) + allyUp(a)); }   // F 1 … S 7 · SS 8 (= 그 등급의 격) — 단련으로 한 번 오를 수 있음
+function allyGradeId(a) { return gradeAt(allyGradeN(a)).id; }
 function allyPower(a) { const k = ALLY_KINDS[a.kind]; return Math.round((k.base + k.step * (allyGradeN(a) - 1)) * (1 + RULES.TRAIN_STEP * allyTrain(a)) * 1e4) / 1e4; }   // 하윤(D 추가타) 0.3 · 단련 단계마다 +10%
 function allyWhat(a) { return `${ALLY_KINDS[a.kind].name} — ${ALLY_KINDS[a.kind].desc(allyPower(a))}`; }
 // 길드 (도시 계획 6번) — 옛 동네의 허름한 빈 건물을 사들여 내 길드로. 단계마다 사무 자리가 하나씩(1~5), 겉모습이 바뀜. 이름은 플레이어가 지음
 const GUILD_LEVELS = ['허름한 사무실', '치운 건물', '간판 단 사무실', '번듯한 길드 건물', '도시에서 가장 멋진 길드'];   // 1~5단계 (가칭)
 // 게이트 — 등급마다 하나, 동료 등급 이하만. 보내면 실제 시간이 흐른 뒤(게임을 꺼도) 그 격의 핵 · 강화석을 가져옴. 다 끝나도 받을 때까지 그대로 (쌓이지 않음)
-const GATE_HOURS = { F: 1, E: 2, D: 3, C: 4, B: 5, A: 6, S: 8 };   // 사용자 결정 2026-11-19 — 1~8시간
+const GATE_HOURS = { F: 1, E: 2, D: 3, C: 4, B: 5, A: 6, S: 8, SS: 10 };   // 사용자 결정 2026-11-19 — 1~8시간 · SS 10시간 (2026-11-20 — SS급이 되어 게이트 찾기에서 깨면 열림)
+const GATE_IDS = Object.keys(GATE_HOURS);                                     // 게이트가 있는 등급 — 차례대로 (F … SS)
 function gateInfo(id) {
-  const n = HUNTER_GRADES.findIndex(g => g.id === id) + 1, hours = GATE_HOURS[id];
+  const n = gradeIndex(id), hours = GATE_HOURS[id];
   if (!n || !hours) return null;
   return { id, rank: n, hours, ms: hours * 3600e3, cores: Math.round(RULES.GATE_CORES * hours), stones: RULES.GATE_STONES * n * hours };
 }
@@ -7006,6 +7009,16 @@ function examinerStats(g) { return enemyStats(HUNTER_GRADES[g - 1].level); }
 //   SSS 세계 — 연합의 이동 게이트로 세 도시를 연달아 (시드 6개: 17격 직후 8e15 늘 · 1.6e16 대개 · 3.2e16 반쯤)
 //   EX 지구 — 엔딩 직전: 아자토스(20격)를 꺾어 마지막 벽이 무너지고, 하늘의 금으로 외신이 지구에 내려옴. 모두가 길을 열고 마지막은 나 혼자 → 엔딩
 //     옛 동네 → 광장 → 하늘의 금 너머 (시드 6개: 클리어 직후 1.3e18 늘 · 2.6e18 거의 늘 · 5.1e18 반쯤)
+// 등급 번호 n (1 F … 7 S · 8 SS · 9 SSS · 10 EX) ↔ 등급 — 시험 등급(HUNTER_GRADES) 뒤에 S 위 등급(TOP_GRADES)
+function gradeAt(n) { return n <= HUNTER_GRADES.length ? HUNTER_GRADES[n - 1] : TOP_GRADES[n - HUNTER_GRADES.length - 1]; }
+function gradeIndex(id) {
+  const i = HUNTER_GRADES.findIndex(g => g.id === id);
+  if (i >= 0) return i + 1;
+  const j = TOP_GRADES.findIndex(g => g.id === id);
+  return j >= 0 ? HUNTER_GRADES.length + j + 1 : 0;
+}
+// S 위 등급의 세기 — 그 등급의 첫 싸움 (SS급 게이트 보스도 이만큼)
+function gradeLevel(n) { return n <= HUNTER_GRADES.length ? HUNTER_GRADES[n - 1].level : gradeAt(n).fights[0].level; }
 const TOP_GRADES = [
   { id: 'SS', rank: 14, fights: [{ city: '광장', map: 'raid', at: 'city.crisis', name: '광장 게이트의 주인', icon: '🐉', level: 2e13 }] },
   { id: 'SSS', rank: 17, fights: [
@@ -9543,7 +9556,7 @@ function fightRaid(rng = Math.random) {
 }
 
 // ---------- 훈련소 (도시 계획 7번 · 12격 — 사용자 결정 2026-11-19) — 길드 안 교관 ----------
-// 돈을 내면 실제 시간(단계 n 은 n 시간)이 흐른 뒤 단련 단계가 하나 오름 — 능력 +10%. 10단계를 채우면 등급이 한 번 오름 (S 는 그대로)
+// 돈을 내면 실제 시간(단계 n 은 n 시간)이 흐른 뒤 단련 단계가 하나 오름 — 능력 +10%. 10단계를 채우면 등급이 한 번 오름 (S 는 SS 로 · SS 는 그대로)
 // 단련 중인 동료는 함께 가기 · 게이트 · 길드 사무를 못 함 (함께 가는 동료 · 게이트 · 사무 중인 동료는 단련 못 함)
 function trainOpen() { return !!State.meta.cityOpen && rankBossBeaten(RULES.TRAIN_RANK) && guildOwned(); }
 function trainingOf(id) { return (State.meta.training || {})[id] || null; }
@@ -9571,7 +9584,7 @@ function settleTraining(now = Date.now()) {
     if (now < t.end) continue;
     delete State.meta.training[id];
     State.meta.train[id] = t.to;
-    const a = ALLIES[id], up = t.to >= RULES.TRAIN_MAX && !State.meta.allyUp[id] && allyGradeN(a) < HUNTER_GRADES.length;
+    const a = ALLIES[id], up = t.to >= RULES.TRAIN_MAX && !State.meta.allyUp[id] && allyGradeN(a) < RULES.ALLY_TOP;
     if (up) State.meta.allyUp[id] = true;
     pushLog('drop', `${a.name}의 단련이 끝났다 — ${t.to}단계 (능력 +${Math.round(t.to * RULES.TRAIN_STEP * 100)}%)${up ? ` · 등급이 올랐다 → ${allyGradeId(a)}급` : ''}.`);
     done.push({ id, to: t.to, up });
@@ -9592,12 +9605,12 @@ function foundGates(now = Date.now(), rng = Math.random) {
   if (!gatesOpen()) return [];
   const day = todayKey(now), m = State.meta;
   if (!m.found || m.found.day !== day) {
-    const top = Math.min(HUNTER_GRADES.length, Math.max(1, hunterGrade())), foes = ENEMIES.filter(e => e.zoneIndex < bestRankNow() && (e.kind === 'normal' || e.kind === 'elite'));
+    const top = Math.min(GATE_IDS.length, Math.max(1, hunterGrade())), foes = ENEMIES.filter(e => e.zoneIndex < bestRankNow() && (e.kind === 'normal' || e.kind === 'elite'));
     const list = [];
     for (let i = 0; i < RULES.FIND_GATES; i++) {
-      const up = top < HUNTER_GRADES.length && rng() < RULES.FIND_UP;
+      const up = top < HUNTER_GRADES.length && rng() < RULES.FIND_UP;   // 하나 위는 S 까지 — SS급 게이트는 내가 SS급이 되어야 나옴
       const lo = Math.max(1, top - 2), n = up ? top + 1 : lo + Math.floor(rng() * (top - lo + 1));
-      const grade = HUNTER_GRADES[n - 1].id, foe = foes[Math.floor(rng() * foes.length)];
+      const grade = gradeAt(n).id, foe = foes[Math.floor(rng() * foes.length)];
       const type = FIND_REWARDS[Math.floor(rng() * FIND_REWARDS.length)];
       list.push({ grade, foe: foe.id, reward: { type, n: findRewardN(type, grade) }, cleared: false, lostRun: null });
     }
@@ -9617,7 +9630,7 @@ function findRewardN(type, grade) {
 // 게이트 보스 — 가 본 격의 몬스터 하나, 세기는 그 등급 시험관만큼 (레벨은 안 보여 줌)
 function findFoe(gate) {
   const e = getEnemy(gate.foe), n = gateInfo(gate.grade).rank;
-  return { id: `gate_${gate.foe}`, name: `${gate.grade}급 게이트 · ${e.name}`, icon: e.icon, kind: 'boss', gateBoss: true, noLv: true, grade: gate.grade, level: HUNTER_GRADES[n - 1].level, ...examinerStats(n) };
+  return { id: `gate_${gate.foe}`, name: `${gate.grade}급 게이트 · ${e.name}`, icon: e.icon, kind: 'boss', gateBoss: true, noLv: true, grade: gate.grade, level: gradeLevel(n), ...enemyStats(gradeLevel(n)) };
 }
 function canEnterFound(i, now = Date.now()) {
   const g = foundGates(now)[i];
@@ -10119,7 +10132,7 @@ function rollDrops(enemyId, auraMult = 1) {
 
 // ---------- 재료 ----------
 // 재료를 주는 몬스터(foe.mat)를 꺾으면 1개, 전리품 확률만큼 하나 더 — 행운 · 전리품 장비 · 기운이 여기에도 듭니다.
-// 모든 몬스터는 그 격의 핵(CORES)도 남깁니다 — 종류만큼(일반 1 · 정예 4 · 히든 5 · 보스 10), 기운을 두른 상대는 그 배수만큼 더.
+// 몬스터는 그 격의 핵(CORES)도 남깁니다 — 종류만큼(일반 1 · 정예 4 · 히든 5 · 보스 10), 기운을 두른 상대는 그 배수만큼 더. 일반은 CORE_NORMAL(30%) 의 확률로만 (2026-11-20)
 // → [{ mat, n }, …] — 핵이 먼저, 짐승이면 그 뒤에 제 재료
 function matsOf(id) { return Math.max(0, Math.floor(num(State.meta.mats && State.meta.mats[id]))); }
 function rollMats(enemyId, auraMult = 1) {
@@ -10127,7 +10140,7 @@ function rollMats(enemyId, auraMult = 1) {
   if (!foe) return out;
   const give = (mat, n) => { State.meta.mats[mat.id] = matsOf(mat.id) + n; out.push({ mat, n }); };
   const core = foe.rank && CORES[`core${foe.rank.n}`];
-  if (core) give(core, Math.max(1, Math.round(KINDS[foe.kind].gold * auraMult * passiveMult('miner'))));
+  if (core && (foe.kind !== 'normal' || Math.random() < RULES.CORE_NORMAL)) give(core, Math.max(1, Math.round(KINDS[foe.kind].gold * auraMult * passiveMult('miner'))));
   const mat = MATERIALS[foe.mat];
   if (mat) give(mat, 1 + (Math.random() < dropChanceFor(foe, auraMult) ? 1 : 0));
   return out;
@@ -17907,7 +17920,7 @@ function renderGates() {
     else if (trainingOf(id)) act = `<span class="ally-state">단련 중 — 길드 교관</span>`;
     else if (m.ally === id) act = `<span class="ally-state on">함께 가는 중</span><button class="btn tiny" data-comp="">빼기</button>`;
     else act = `<button class="btn tiny" data-comp="${id}">함께 간다</button>
-      <span class="gate-btns"><span class="gate-lbl">게이트에 보낸다 →</span>${HUNTER_GRADES.filter((x, i) => i + 1 <= allyGradeN(a)).map(x => {
+      <span class="gate-btns"><span class="gate-lbl">게이트에 보낸다 →</span>${GATE_IDS.map(id => ({ id })).filter((x, i) => i + 1 <= allyGradeN(a)).map(x => {
         const info = gateInfo(x.id), open = gateUnlocked(x.id);
         return `<button class="btn tiny" data-gate="${id}:${x.id}" ${open ? '' : 'disabled'} title="${open ? `${info.hours}시간 · 제${info.rank}격의 핵 ${info.cores}개 · 강화석 ${fmt(info.stones)}개` : '내가 이 등급 게이트를 한 번 깨야 보낼 수 있다 (게이트 찾기)'}">${x.id}급 · ${open ? `${info.hours}시간` : '🔒'}</button>`;
       }).join('')}</span>`;
@@ -17916,7 +17929,7 @@ function renderGates() {
       <div class="ally-body"><div>${allyName(a)}</div><div class="ally-what">${allyWhat(a)}</div><div class="ally-act">${act}</div></div>
     </div>`;
   }).join('');
-  const table = HUNTER_GRADES.map(x => { const i = gateInfo(x.id); return `${x.id} ${i.hours}시간 — 제${i.rank}격의 핵 ${i.cores} · 강화석 ${fmt(i.stones)}`; }).join('<br>');
+  const table = GATE_IDS.map(id => ({ id })).map(x => { const i = gateInfo(x.id); return `${x.id} ${i.hours}시간 — 제${i.rank}격의 핵 ${i.cores} · 강화석 ${fmt(i.stones)}`; }).join('<br>');
   $('shopBody').innerHTML = `<div class="shop-say">${CLERK_DESKS.gate.icon} ${shopSay}</div>
     ${rows || '<p class="hint">아직 동료가 없다 — 왼쪽 <b>동료 모집</b>에서.</p>'}
     <p class="hint">그 공간에 함께 가는 동료는 한 명 — 함께 가는 동안에는 게이트에 못 간다.<br>게이트는 동료 등급까지 · <b>내가 직접 깬 등급과 그 아래만</b> (오른쪽 아래 <b>게이트 찾기</b>) · 게임을 꺼 둬도 시간이 흐른다 · 돌아오면 받을 때까지 기다린다.</p>
@@ -17950,7 +17963,7 @@ function renderTrainer() {
     else if (seatedAlly(id)) act = '<span class="ally-state">길드 사무 중 — 장부에서 일으켜야 단련</span>';
     else act = `<button class="btn primary" data-train="${id}" ${num(m.won) >= price ? '' : 'disabled'}><b>${lv + 1}단계 단련</b> <span>· ${trainHours(lv + 1)}시간 · ${fmtWon(price)}</span></button>`;
     const bar = Array.from({ length: RULES.TRAIN_MAX }, (_, i) => `<i class="${i < lv ? 'on' : t && i === lv ? 'now' : ''}"></i>`).join('');
-    const upNote = !m.allyUp[id] && allyGradeN(a) < HUNTER_GRADES.length ? ` · 10단계면 ${HUNTER_GRADES[allyGradeN(a)].id}급으로` : m.allyUp[id] ? ' · 등급이 올랐다' : '';
+    const upNote = !m.allyUp[id] && allyGradeN(a) < RULES.ALLY_TOP ? ` · 10단계면 ${gradeAt(allyGradeN(a) + 1).id}급으로` : m.allyUp[id] ? ' · 등급이 올랐다' : '';
     return `<div class="ally-row">
       <span class="ally-ic">${a.icon}</span>
       <div class="ally-body"><div>${allyName(a)}</div><div class="ally-what">${allyWhat(a)}</div>
@@ -17960,7 +17973,7 @@ function renderTrainer() {
   }).join('');
   $('shopBody').innerHTML = `<div class="shop-say">${CLERK_DESKS.trainer.icon} ${shopSay}</div>
     ${rows || '<p class="hint">아직 동료가 없다.</p>'}
-    <p class="hint">단계마다 능력 +${Math.round(RULES.TRAIN_STEP * 100)}% · n단계는 n시간 (게임을 꺼 둬도 흐름) · 값은 내 격의 핵 (${RULES.TRAIN_CORES} × 단계)개어치, 동료 등급이 높을수록 비쌈<br>${RULES.TRAIN_MAX}단계를 다 채우면 등급이 한 번 오름 (S급은 그대로) · 단련 중엔 함께 가기 · 게이트 · 길드 사무를 못 함</p>`;
+    <p class="hint">단계마다 능력 +${Math.round(RULES.TRAIN_STEP * 100)}% · n단계는 n시간 (게임을 꺼 둬도 흐름) · 값은 내 격의 핵 (${RULES.TRAIN_CORES} × 단계)개어치, 동료 등급이 높을수록 비쌈<br>${RULES.TRAIN_MAX}단계를 다 채우면 등급이 한 번 오름 (S급은 SS급으로 · SS급은 그대로) · 단련 중엔 함께 가기 · 게이트 · 길드 사무를 못 함</p>`;
   $('shopBody').querySelectorAll('[data-train]').forEach(b => b.addEventListener('click', () => { if (startTraining(b.dataset.train)) Sound.play('equip'); render(); }));
   startShopTicker();
 }
@@ -17987,7 +18000,7 @@ function renderFound() {
         <div class="ally-what">보상 ${FIND_REWARD_ICON[g.reward.type]} ${findRewardText(g)}</div><div class="ally-act">${act}</div></div>
     </div>`;
   }).join('');
-  const opened = HUNTER_GRADES.filter(x => gateUnlocked(x.id)).map(x => x.id).join(' · ') || '없음';   // 깬 등급과 그 아래
+  const opened = GATE_IDS.filter(id => gateUnlocked(id)).join(' · ') || '없음';   // 깬 등급과 그 아래
   $('shopBody').innerHTML = `<div class="shop-say">${CLERK_DESKS.gatefind.icon} ${shopSay}</div>${rows}
     <p class="hint">내일이 되면 새 게이트 셋 (못 깬 것은 사라짐) · 지면 그 회차엔 그 게이트에 다시 못 들어감<br>자동사냥이 열린 등급(깬 등급과 그 아래): <b>${opened}</b></p>`;
   $('shopBody').querySelectorAll('[data-enter]').forEach(b => b.addEventListener('click', () => enterFoundGate(+b.dataset.enter)));

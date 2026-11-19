@@ -1572,6 +1572,43 @@ test('EX급 — SSS + 아자토스(20격) 뒤 협회장실 · 옛 동네 → 광
   assert.deepEqual(r.win, ['sky.out', true, 10, 'EX', 3, false, 10 * 20]);
 });
 
+test('SS급 게이트 — SS급이면 게이트 찾기에 SS 가 나옴 · 깨면 게이트 창구 SS 열림 · S급 동료는 단련 10단계로 SS, 핵은 일반 30% (정예 · 보스는 반드시)', () => {
+  const run = loadGame();
+  const r = run(`
+    currentSlot = 0; State.meta = freshMeta(); State.meta.cityOpen = true; startRun();
+    const beat = n => State.meta.bossesBeaten.push(zoneBoss(ZONES.findIndex(z => z.rank === n)).id);
+    for (let n = 1; n <= 14; n++) beat(n); State.meta.bestZone = 14;
+    const out = { info: [gateInfo('SS').rank, gateInfo('SS').hours, gradeAt(8).id, gradeIndex('SS'), GATE_IDS.length] };
+    State.meta.hunterGrade = 7;
+    const day = Date.parse('2026-11-20T12:00:00');
+    out.sGrades = [...new Set(Array.from({ length: 30 }, (_, k) => { State.meta.found = null; return foundGates(day, (() => { let x = k + 1; return () => (x = (x * 16807) % 2147483647) / 2147483647; })()).map(g => g.grade); }).flat())].sort().join();
+    State.meta.hunterGrade = 8;
+    out.ssGrades = [...new Set(Array.from({ length: 30 }, (_, k) => { State.meta.found = null; return foundGates(day + 864e5 * (k + 1), (() => { let x = k + 7; return () => (x = (x * 16807) % 2147483647) / 2147483647; })()).map(g => g.grade); }).flat())].sort().join();
+    out.foe = (() => { const f = findFoe({ grade: 'SS', foe: ENEMIES.find(e => e.kind === 'normal').id }); return [f.level === TOP_GRADES[0].fights[0].level, f.name.startsWith('SS급')]; })();
+    // 동료 — S급 루아를 SS 로
+    State.meta.allies = ['rua']; State.meta.train = { rua: 9 }; State.meta.training = { rua: { start: 0, end: 1, to: 10 } };
+    State.meta.guild = { name: '새벽', level: 2, seats: [], since: {} };
+    beat(12); settleTraining(2);
+    out.ally = [allyGradeId(ALLIES.rua), allyGradeN(ALLIES.rua), sendToGate('rua', 'SS', 0)];
+    State.meta.gateClear = ['SS'];
+    out.send = [gateUnlocked('S'), sendToGate('rua', 'SS', 0), gateOf('rua') && gateOf('rua').gate];
+    // 핵 — 일반은 30%, 보스는 반드시
+    const normal = ENEMIES.find(e => e.kind === 'normal' && e.rank && e.rank.n === 1), boss = zoneBoss(0);
+    const _r = Math.random; let k = 0, got = 0;
+    for (let i = 0; i < 100; i++) { Math.random = () => (i + 0.5) / 100; if (rollMats(normal.id).some(x => x.mat.core)) got++; }
+    Math.random = () => 0.99; const bossGot = rollMats(boss.id).some(x => x.mat.core); Math.random = _r;
+    out.core = [got, bossGot];
+    return out;
+  `);
+  assert.deepEqual(r.info, [8, 10, 'SS', 8, 8]);
+  assert.ok(!r.sGrades.includes('SS'), r.sGrades);
+  assert.ok(r.ssGrades.split(',').includes('SS'), r.ssGrades);
+  assert.deepEqual(r.foe, [true, true]);
+  assert.deepEqual(r.ally, ['SS', 8, false]);
+  assert.deepEqual(r.send, [true, true, 'SS']);
+  assert.deepEqual(r.core, [30, true]);
+});
+
 test('훈련소 — 12격 뒤 · 길드가 있어야, 돈을 내면 단계만큼 시간이 흐른 뒤 능력 +10%, 10단계면 등급 한 번 · 단련 중엔 동행 · 게이트 · 사무 못 함', () => {
   const run = loadGame();
   const r = run(`
