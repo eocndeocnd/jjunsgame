@@ -1473,3 +1473,36 @@ test('내 길드 안 — 옛 동네 빈 건물 문(잠김 · unlock guild) ↔ �
   assert.deepEqual(g.npcs.filter(n => n.shop).map(n => n.shop), ['guild']);
   assert.equal(g.npcs.filter(n => n.name === 'seat').length, 5);
 });
+
+test('시험장 — 「시험을 본다」 → 시험관과 한 명씩 (결과는 싸움 결과 모양 · 경험치 · 에너지 그대로), 지면 끝 · 나가면 끝, 회차에 한 번', () => {
+  const run = loadGame();
+  const r = run(`
+    currentSlot = 0; State.meta = freshMeta(); State.meta.cityOpen = true; startRun();
+    State.run.level = 3000; const xp0 = State.run.xp, e0 = State.run.energy;
+    const out = { start: [startHunterTest(), startHunterTest(), canTakeTest(), examinerNow().name] };
+    const r1 = fightExaminer(() => 0.5);
+    out.r1 = [r1.examiner, r1.win, r1.enemy.name, !!r1.replay.log.length, fightExaminer() === null];
+    dismissResult();
+    out.next = examinerNow() && examinerNow().name;
+    let guard = 0; while (State.run.test && !State.run.test.done && guard++ < 10) { fightExaminer(); dismissResult(); }
+    out.done = [State.run.test.done, hunterGrade() >= 1, deskHere('examiner'), State.run.xp === xp0, State.run.energy === e0];
+    leaveArena(); out.left = [State.run.test, startHunterTest()];
+    const lv1 = { ...freshMeta(), cityOpen: true }; State.meta = lv1; startRun();
+    startHunterTest(); leaveArena(); out.forfeit = [State.run.test, hunterGrade(), canTakeTest()];
+    return out;
+  `);
+  assert.deepEqual(r.start, [true, false, false, 'F급 시험관']);
+  assert.deepEqual(r.r1, [true, true, 'F급 시험관', true, true]);
+  assert.equal(r.next, 'E급 시험관');
+  assert.deepEqual(r.done, [true, true, false, true, true]);
+  assert.deepEqual(r.left, [null, false]);
+  assert.deepEqual(r.forfeit, [null, 0, false]);
+});
+
+test('협회 로비 — 등록 창구 왼쪽 시험장 문(시험 중에만 열림) ↔ 시험장, 시험관 자리 하나', () => {
+  const assoc = loadMap('assoc'), arena = loadMap('arena');
+  const door = assoc.ports.find(p => p.name === 'arena'), out = arena.ports.find(p => p.name === 'out');
+  assert.equal(door.to, 'arena.out'); assert.equal(door.unlock, 'arena');
+  assert.equal(out.to, 'assoc.arena');
+  assert.deepEqual(arena.npcs.filter(n => n.shop).map(n => n.shop), ['examiner']);
+});

@@ -793,6 +793,9 @@ function renderJourney() {
   document.body.classList.toggle('meeting', !fighting && !run.lastResult && !run.over && !!run.encounter);
   if (fighting) {
     stage = battleCard(battle);
+  } else if (run.lastResult && run.lastResult.examiner) {
+    stage = examinerResultCard(run.lastResult);
+    if (!run.lastResult.sounded) { run.lastResult.sounded = true; if (run.lastResult.done) Sound.play(run.lastResult.grade > run.lastResult.before ? 'rankUp' : 'retreat'); }
   } else if (run.lastResult) {
     stage = resultCard(run.lastResult, run);
     resultSounds(run.lastResult, run);
@@ -1191,7 +1194,7 @@ function battleCard(b) {
   return `
     <div class="battle k-${foe.kind}" id="battle">
       <div class="bt-side foe">
-        <div class="bt-top"><span class="bt-name">${foe.kind !== 'normal' ? `<span class="grade-tag ${foe.kind}">${KINDS[foe.kind].name}</span>` : ''}${foe.name}<span class="lv">Lv.${fmtLevel(foe.level)}</span></span>
+        <div class="bt-top"><span class="bt-name">${foe.kind !== 'normal' ? `<span class="grade-tag ${foe.kind}">${KINDS[foe.kind].name}</span>` : ''}${foe.name}${foe.examiner ? '' : `<span class="lv">Lv.${fmtLevel(foe.level)}</span>`}</span>
           <span class="bt-hp" id="btFoeHp"></span></div>
         <div class="bt-bar"><div class="bt-fill foe" id="btFoeFill"></div></div>
       </div>
@@ -1787,6 +1790,7 @@ liveMapMobs = () => {
 function goThroughPort(port) {
   const run = State.run;
   const [id, door] = port.to.split('.');
+  if (run.test && id !== 'arena') leaveArena();   // 시험장을 나서면 시험은 거기서 끝 (game.js)
   const data = maps[id];
   Sound.play('zoneMove');
   if (!data) {
@@ -1866,6 +1870,9 @@ function onMapEvents(evs) {
       Sound.play('encounter');
       openShop();
       changed = true;
+    } else if (e.type === 'shop' && e.npc.shop === 'examiner') {   // 시험장 — 지금 차례의 시험관
+      examinerTalk();
+      changed = true;
     } else if (e.type === 'shop' && e.npc.shop === 'bed') {   // 우리 집 침대 — 혼잣말 한마디 (분위기만)
       if (!isTalkOpen()) playTalk([{ who: 'me', text: homeLine() }], null, { end: '일어난다' });
       changed = true;
@@ -1932,6 +1939,7 @@ function mapMarks() {
       continue;
     }
     if (!deskHere(n.shop)) continue;
+    if (n.shop === 'examiner') { const f = examinerNow(); out.push({ x: n.x, y: n.y, icon: f.icon, label: f.name }); continue; }
     const sec = n.shop && (DEPT_SECTIONS[n.shop] || CLERK_DESKS[n.shop]);
     if (sec) out.push({ x: n.x, y: n.y, icon: sec.icon, label: n.label || sec.name });
   }
@@ -2712,7 +2720,6 @@ function openShop(kind = 'merchant') {
   shopKind = kind;
   if (!shopHere()) return;
   shopSay = isDeptShop() ? clerkLine(kind) : '';
-  assocResult = null;
   shopSlot = SLOT_IDS.includes(selectedSlot) ? selectedSlot : SLOT_IDS[0];
   $('shopModal').classList.remove('hidden');
   renderShop();
@@ -2804,43 +2811,66 @@ function renderShop() {
 // 맨 위는 핵 — 모든 몬스터가 남기는 팔 것 (격마다 한 가지). 가진 격만 한 줄씩, 「모두 판다」 한 번으로 다 팝니다. 만드는 데는 쓰지 않습니다.
 // ---------- 헌터 협회 · 등록 창구 (상점 창을 같이 씀 — shopKind 'assoc') ----------
 // 지금의 나(도시의 Lv.1 그대로)로 F 시험관부터 차례로 싸워, 이긴 데까지가 등급. 회차에 한 번 · 내려가지 않음 (game.js 의 takeHunterTest)
-const CLERK_DESKS = { assoc: { name: '등록 창구', icon: '🧑‍💼' }, ally: { name: '???', icon: ALLIES.hayun.icon }, hire: { name: '동료 모집', icon: '👩‍💼' }, gate: { name: '게이트 창구', icon: '🧑‍✈️' }, guild: { name: '길드 장부', icon: '📒' }, bed: { name: '침대', icon: '💤' } };   // 백화점 매장이 아닌 창구 — 지도 위 이름표
+const CLERK_DESKS = { examiner: { name: '시험관', icon: '🧑‍🏫' }, assoc: { name: '등록 창구', icon: '🧑‍💼' }, ally: { name: '???', icon: ALLIES.hayun.icon }, hire: { name: '동료 모집', icon: '👩‍💼' }, gate: { name: '게이트 창구', icon: '🧑‍✈️' }, guild: { name: '길드 장부', icon: '📒' }, bed: { name: '침대', icon: '💤' } };   // 백화점 매장이 아닌 창구 — 지도 위 이름표
 const ASSOC_TALK = {
   none: ['「신규 등록이세요? 시험은 간단해요. 시험관과 한 번씩 붙어 보시면 돼요. F급부터요.」', '「등록증 없이 게이트 근처를 돌아다니시면 곤란해요. …시험 보시게요?」'],
   again: ['「재심사요? 좋아요. 지난번보다 나아지셨는지 볼까요.」', '「등급은 한 번 받으면 안 내려가요. 부담 없이 보세요.」'],
   done: ['「오늘 심사는 끝났어요. 다음에 다시 오세요. …다음 게이트 다녀오시고요.」']
 };
-let assocResult = null;     // 이번에 본 시험 — 창을 다시 열면 비웁니다
+// 등록 창구 — 단추 하나 (사용자 결정 2026-11-19): 누르면 시험장으로 들어가 시험관과 한 명씩 싸움 (game.js 의 startHunterTest · fightExaminer)
 function renderAssoc() {
   $('shopTitle').textContent = '헌터 협회 · 등록 창구';
   $('shopGold').innerHTML = hunterGrade() ? `🪪 ${gradeName()}급 헌터` : '🪪 미등록';
-  const can = canTakeTest(), r = assocResult;
-  const ladder = HUNTER_GRADES.map((g, i) => {
-    const n = i + 1, bout = r && r.bouts.find(b => b.g === n);
-    const cls = n <= hunterGrade() ? 'have' : '', res = bout ? (bout.win ? 'win' : 'lose') : '';
-    return `<div class="grade-row ${cls} ${res}">
-      <span class="grade-id">${g.id}</span>
-      <span class="grade-k">${g.id}급 시험관 <small>Lv.${fmtLevel(g.level)}</small></span>
-      <span class="grade-r">${bout ? (bout.win ? `이김 · ${bout.turns}턴` : `짐 · ${bout.turns}턴`) : n <= hunterGrade() ? '통과' : ''}</span>
-    </div>`;
-  }).join('');
-  const head = !r ? '' : r.grade > r.before
-    ? `<div class="assoc-result up">${r.before ? `등급이 올랐다 — <b>${gradeName(r.before)}급 → ${gradeName(r.grade)}급</b>` : `<b>${gradeName(r.grade)}급 헌터</b>로 등록했다! 이제 백화점에서 살 수 있다`}</div>`
-    : r.grade ? `<div class="assoc-result">그대로 <b>${gradeName(r.grade)}급</b> — 더 세져서 다시 오자</div>`
-    : `<div class="assoc-result down">불합격 — F급 시험관도 못 이겼다. 장비를 갖추고 강해져서 다시 오자</div>`;
+  const can = canTakeTest();
   $('shopBody').innerHTML = `<div class="shop-say">${CLERK_DESKS.assoc.icon} ${shopSay}</div>
-    ${head}
-    <div class="grade-ladder">${ladder}</div>
-    <p class="hint">지금 그대로(도시의 Lv.${fmtLevel(State.run ? State.run.level : 1)}) 시험관과 F급부터 차례로 싸운다 — 지면 거기서 끝, 이긴 데까지가 등급.<br>등급은 내려가지 않는다 · 시험은 회차마다 한 번</p>
     <div class="assoc-actions"><button class="btn primary" id="assocTestBtn" ${can ? '' : 'disabled'}>${can ? (hunterGrade() ? '재심사를 받는다' : '시험을 본다') : '이번 회차엔 이미 봤다'}</button></div>`;
   const b = $('assocTestBtn');
-  if (b) b.addEventListener('click', () => {
-    const res = takeHunterTest();
-    if (!res) return;
-    assocResult = res;
-    Sound.play(res.grade > res.before ? 'rankUp' : res.grade ? 'equip' : 'retreat');
+  if (b) b.addEventListener('click', enterArena);
+}
+// 시험장으로 — 창구 왼쪽 시험장 문을 지나 (시험 중에만 열림)
+function enterArena() {
+  const port = mapView && mapView.world && mapView.world.map.ports.find(p => p.name === 'arena');
+  if (!port || !startHunterTest()) return;
+  closeShop();
+  Sound.play('encounter');
+  fadeThrough(() => goThroughPort(port));
+  setTimeout(() => playTalk(ARENA_INTRO, null, { end: '알겠다' }), FADE_MS * 2 + 60);
+}
+const ARENA_INTRO = [
+  { who: 'proctor', text: '「시험장이에요. F급 시험관부터 한 분씩 나와요. 지면 거기서 끝, 이긴 데까지가 등급이고요.」' },
+  { who: 'proctor', text: '「등급은 한 번 받으면 안 내려가요. 시험관 앞에 서면 시작합니다.」' }
+];
+// 시험관의 한마디 — 맞서기 전 (대사는 제안)
+const EXAMINER_LINES = {
+  F: '「긴장하지 마세요. 기본만 봅니다.」', E: '「F급은 넘었네요. 여기서부터는 조금 아파요.」', D: '「D급 시험관입니다. 봐주는 건 없어요.」',
+  C: '「C급부터는 진짜 헌터 소리 듣습니다. 각오하세요.」', B: '「…신규 등록자가 여기까지? 재밌네요.」', A: '「A급 시험관이 나올 일은 잘 없는데. 와 보시죠.」',
+  S: '「(시험장이 조용해졌다.) …S급 시험은 제가 봅니다.」'
+};
+function examinerTalk() {
+  const foe = examinerNow();
+  if (!foe || isTalkOpen() || State.run.lastResult) return;
+  playTalk([{ who: 'examiner', text: EXAMINER_LINES[foe.grade] || '「시작하죠.」' }], () => {
+    const from = logSeq;
+    const r = fightExaminer();
+    if (!r) return;
+    startBattle(r, from);
     render();
-  });
+  }, { end: '맞선다' });
+}
+// 시험관과의 싸움 결과 — 다음 시험관 · 시험 끝 (경험치 · 전리품 없음)
+function examinerResultCard(r) {
+  const next = !r.done ? examinerFoe(r.g + 1) : null;
+  const up = r.grade > r.before;
+  const end = !r.done ? `다음은 <b>${next.name}</b>.`
+    : up ? (r.before ? `등급이 올랐다 — <b>${gradeName(r.before)}급 → ${gradeName(r.grade)}급</b>` : `<b>${gradeName(r.grade)}급 헌터</b>로 등록했다! 이제 백화점에서 살 수 있다`)
+    : r.grade ? `그대로 <b>${gradeName(r.grade)}급</b> — 더 세져서 다시 오자` : '불합격 — 장비를 갖추고 강해져서 다시 오자';
+  return `
+    <div class="result ${r.win ? 'win' : 'lose'} exam-result">
+      <div class="res-head">${r.win ? '통과' : '탈락'}</div>
+      <div class="res-foe"><span class="res-icon">${r.enemy.icon}</span>${r.enemy.name}<span class="res-turns">${r.turns}턴</span></div>
+      <div class="res-lines"><div class="exam-end ${r.done ? (up ? 'up' : r.grade ? '' : 'down') : ''}">${end}</div></div>
+      <div class="res-actions"><button id="continueBtn" class="btn primary thumb">${r.done ? '시험을 마친다' : '다음 시험관'}${KEY_HINT}</button></div>
+    </div>`;
 }
 
 // ---------- 헌터 협회 · 동료 모집 · 게이트 창구 (도시 계획 5번 — 제5격 보스 뒤. 상점 창을 같이 씀) ----------
@@ -3599,7 +3629,8 @@ function pxIcon(name) {
 // 주인공의 이름 — 정하기 전에는 「나」
 function heroName() { return State.meta.heroName || '나'; }
 
-const TALK_WHO = { me: () => heroName(), guide: () => '???', nameless: () => '무명의 화신', stranger: () => '???', ally: () => ALLIES.hayun.name };
+const TALK_WHO = { me: () => heroName(), guide: () => '???', nameless: () => '무명의 화신', stranger: () => '???', ally: () => ALLIES.hayun.name,
+                   proctor: () => '시험 감독', examiner: () => (examinerNow() || { name: '시험관' }).name };
 let talkScript = [], talkIndex = 0, talkDone = null, talkOpts = {};
 function isTalkOpen() { const t = $('talk'); return !!t && !t.classList.contains('hidden'); }
 // 대사를 차례로 보여 줍니다. 다 보면 done(). opts.skip — 건너뛰기 단추(이름을 묻는 줄은 건너뛰지 않음), opts.end — 마지막 단추 글
@@ -3612,7 +3643,7 @@ function renderTalk() {
   const line = talkScript[talkIndex], last = talkIndex === talkScript.length - 1, ask = line.ask === 'name' || line.ask === 'guild';
   $('talk').dataset.who = line.who;
   $('talkWho').textContent = TALK_WHO[line.who]();
-  $('talkFace').innerHTML = line.who === 'guide' ? guideEye('bob') : line.who === 'me' ? heroSprite() : line.who === 'stranger' || line.who === 'ally' ? allySprite('hayun') : '';
+  $('talkFace').innerHTML = line.who === 'guide' ? guideEye('bob') : line.who === 'me' ? heroSprite() : line.who === 'stranger' || line.who === 'ally' ? allySprite('hayun') : line.who === 'examiner' ? `<span class="ally-sprite">${(examinerNow() || {}).icon || '🧑‍🏫'}</span>` : line.who === 'proctor' ? `<span class="ally-sprite">${CLERK_DESKS.assoc.icon}</span>` : '';
   $('talkFace').classList.toggle('hidden', line.who === 'nameless');
   $('talkBody').innerHTML = typeof line.text === 'function' ? line.text() : line.text;
   $('talkName').classList.toggle('hidden', !ask);

@@ -1425,7 +1425,7 @@ function joinAlly(id = 'hayun') {
 }
 function allyNow() { return State.meta.ally && ALLIES[State.meta.ally] ? ALLIES[State.meta.ally] : null; }
 // 때가 되어야 서 있는 창구 · 사람 (지도 — mapview 의 npcHere · ui 의 mapMarks)
-function deskHere(shop) { return shop === 'ally' ? allyWaiting() : shop === 'hire' || shop === 'gate' ? gatesOpen() : shop === 'guild' ? guildOwned() : true; }
+function deskHere(shop) { return shop === 'ally' ? allyWaiting() : shop === 'hire' || shop === 'gate' ? gatesOpen() : shop === 'guild' ? guildOwned() : shop === 'examiner' ? !!examinerNow() : true; }
 // 제5격 보스를 한 번이라도 꺾으면 협회의 「동료 모집」 · 「게이트 창구」가 열림
 function gatesOpen() { return !!State.meta.cityOpen && rankBossBeaten(5); }
 // 동료 모집 창구에 서 있는 사람 — 내 등급까지 (고용한 사람도 「함께하는 중」으로 남김)
@@ -1572,22 +1572,61 @@ function gradeName(g = hunterGrade()) { return g > 0 ? HUNTER_GRADES[g - 1].id :
 // 시험은 도시에서 · 한 회차에 한 번 (진 싸움을 다시 굴려 보지 못하게)
 function canTakeTest() { return !!State.meta.cityOpen && !!State.run && !State.run.over && num(State.meta.testedRun) !== State.meta.runCount; }
 // 지금의 나(도시의 Lv.1 그대로 — 사용자 결정)로 F 시험관부터 차례로 싸웁니다. 지면 거기서 멈추고, 이긴 데까지가 등급 (내려가지는 않음)
+// 한꺼번에 — 시뮬 · 시험이 씀 (사람은 시험장에서 한 명씩: startHunterTest → fightExaminer)
 function takeHunterTest(rng = Math.random) {
-  if (!canTakeTest()) return null;
-  const hero = heroStats(), bouts = [];
-  let passed = 0;
-  for (let g = 1; g <= HUNTER_GRADES.length; g++) {
-    const r = simulateBattle(hero, examinerStats(g), rng);
-    bouts.push({ g, win: !!r.win, turns: r.turns });
-    if (!r.win) break;
-    passed = g;
-  }
-  const before = hunterGrade();
-  State.meta.hunterGrade = Math.max(before, passed);
-  State.meta.testedRun = State.meta.runCount;
-  if (State.meta.hunterGrade > before) pushLog('drop', before ? `헌터 등급이 ${gradeName(before)}급에서 ${gradeName()}급으로 올랐다.` : `${gradeName()}급 헌터로 등록했다.`);
+  if (!startHunterTest()) return null;
+  const t = State.run.test;
+  while (!t.done) { fightExaminer(rng); dismissResult(); }
+  State.run.test = null;
+  return { bouts: t.bouts, passed: t.passed, before: t.before, grade: State.meta.hunterGrade };
+}
+
+// ---------- 시험장 (사용자 결정 2026-11-19) — 등록 창구에서 「시험을 본다」 → 시험장, 시험관과 한 명씩 진짜로 싸움 ----------
+// 시험관은 그림이 생기기 전까지 이모지. S급 시험관은 나중에 4대 길드의 S급 헌터가 와서 맡는 연출로 (사용자 결정 — 지금은 자리만).
+// 시험관의 레벨은 어디에도 보여 주지 않음 (사용자 결정). 경험치 · 전리품 · 에너지는 그대로.
+const EXAMINER_ICONS = ['🧑‍🏫', '👮', '🤺', '🏋️', '🥋', '🧛', '🤴'];   // F … S
+function examinerFoe(g) {
+  const G = HUNTER_GRADES[g - 1];
+  return { id: `examiner${G.id}`, name: `${G.id}급 시험관`, icon: EXAMINER_ICONS[g - 1], kind: 'normal', examiner: true, grade: G.id, level: G.level, ...examinerStats(g) };
+}
+function startHunterTest() {
+  if (!canTakeTest() || State.run.test) return false;
+  State.run.test = { g: 1, before: hunterGrade(), passed: 0, bouts: [], done: false };
+  State.meta.testedRun = State.meta.runCount;           // 들어서는 순간 이번 회차의 시험 — 중간에 나가도 다시 못 봄
   save();
-  return { bouts, passed, before, grade: State.meta.hunterGrade };
+  return true;
+}
+function examinerNow() { const t = State.run && State.run.test; return t && !t.done ? examinerFoe(t.g) : null; }
+// 지금 시험관과 한 번 — 결과는 싸움 결과와 같은 모양(run.lastResult — examiner: true)이라 싸움 화면이 그대로 보여 줌
+function fightExaminer(rng = Math.random) {
+  const run = State.run, t = run && run.test;
+  if (!t || t.done || run.lastResult) return null;
+  const g = t.g, foe = examinerFoe(g), hero = heroStats(), log = [];
+  const r = simulateBattle(hero, foe, rng, log);
+  t.bouts.push({ g, win: !!r.win, turns: r.turns });
+  if (r.win) { t.passed = g; t.g += 1; }
+  if (!r.win || t.g > HUNTER_GRADES.length) finishHunterTest();
+  run.lastResult = { examiner: true, enemy: foe, win: !!r.win, turns: r.turns, g, done: t.done, before: t.before, grade: hunterGrade(), drops: [],
+                     replay: { log, heroMax: hero.life, foeMax: foe.life } };
+  save();
+  return run.lastResult;
+}
+function finishHunterTest() {
+  const t = State.run.test;
+  if (!t || t.done) return;
+  t.done = true;
+  const before = hunterGrade();
+  State.meta.hunterGrade = Math.max(before, t.passed);
+  if (State.meta.hunterGrade > before) pushLog('drop', before ? `헌터 등급이 ${gradeName(before)}급에서 ${gradeName()}급으로 올랐다.` : `${gradeName()}급 헌터로 등록했다.`);
+  else pushLog('info', t.passed ? `시험을 마쳤다 — 등급은 그대로 ${gradeName()}급.` : '시험을 마쳤다 — F급 시험관도 못 이겼다.');
+}
+// 시험장을 나서면 — 다 못 싸웠어도 거기서 끝 (이번 회차엔 다시 못 봄)
+function leaveArena() {
+  const run = State.run;
+  if (!run || !run.test) return;
+  finishHunterTest();
+  run.test = null;
+  save();
 }
 
 function buyDept(id) {

@@ -1475,8 +1475,24 @@ const ASSOC = {
   ],
   clerks: [{ x: 16, y: 0, shop: 'assoc', label: '등록 창구' }, { x: 26, y: 4, shop: 'ally', label: '???' },   // ??? — 제4격 보스 뒤에만 서 있는 사람 (첫 동료)
            { x: 5, y: 0, shop: 'hire', label: '동료 모집' }, { x: 27, y: 0, shop: 'gate', label: '게이트 창구' }],   // 제5격 보스 뒤에 열림 (game.js 의 deskHere)
+  signs: [],
+  // 등록 창구 왼쪽 — 시험장 문 (시험 중에만 열림 · 들어가는 건 등록 창구의 「시험을 본다」로 — ui 의 enterArena)
+  links: [{ name: 'arena', x: 11, y: 0, w: 2, to: 'arena.out', label: '시험장', unlock: 'arena' }]
+};
+// ---------- 헌터 협회 · 시험장 (사용자 결정 2026-11-19) — 등록 시험의 시험관과 한 명씩 싸우는 곳 ----------
+// 위 벽에 현황판 · 문장 · 현황판, 가운데 깔개 끝에 시험관(지금 차례 — 이기면 다음 등급이 섬), 둘레에 기둥 · 구경하는 의자
+const ARENA = {
+  title: '헌터 협회 · 시험장', w: 13, h: 9, to: 'assoc.arena', theme: 'hq', outLabel: '로비로',
+  wall: [{ x: 1, w: 3, kind: 'screen' }, { x: 4, w: 5, kind: 'crest' }, { x: 9, w: 3, kind: 'screen' }],
+  props: [
+    { kind: 'pillar', x: 2, y: 1 }, { kind: 'pillar', x: 10, y: 1 }, { kind: 'pillar', x: 2, y: 6 }, { kind: 'pillar', x: 10, y: 6 },
+    { kind: 'bench', x: 0, y: 3, w: 2 }, { kind: 'bench', x: 11, y: 3, w: 2 },
+    { kind: 'plant', x: 0, y: 0, w: 1 }, { kind: 'plant', x: 12, y: 0, w: 1 }, { kind: 'plant', x: 0, y: 8, w: 1 }, { kind: 'plant', x: 12, y: 8, w: 1 }
+  ],
+  clerks: [{ x: 6, y: 2, shop: 'examiner', label: '시험관' }],
   signs: []
 };
+const arenaInterior = () => storeInterior(ARENA);
 const assocInterior = () => storeInterior(ASSOC);
 // ---------- 내 길드 (도시 계획 6번) — 옛 동네의 빈 건물 안 ----------
 // 위 벽: 의뢰 게시판 · 길드 깃발(3단계부터) · 의뢰 게시판. 가운데 위에 길드 장부(창구), 양옆에 사무 책상 다섯 — 책상 아래 칸에 앉은 동료(seats).
@@ -1531,11 +1547,11 @@ const guild2Interior = () => storeInterior(GUILD2);
 
 // 뽑을 지도 전부 — { 파일 이름: 만드는 함수 }
 function allMaps(data) {
-  const out = { sewer: sewer(data), overworld: overworld(data), hub: hub(data), oldtown: oldtown(), city: city(), dept: deptInterior(), dept2: dept2Interior(), assoc: assocInterior(), guild: guildInterior(), guild2: guild2Interior(), home: homeInterior() };
+  const out = { sewer: sewer(data), overworld: overworld(data), hub: hub(data), oldtown: oldtown(), city: city(), dept: deptInterior(), dept2: dept2Interior(), assoc: assocInterior(), guild: guildInterior(), guild2: guild2Interior(), home: homeInterior(), arena: arenaInterior() };
   for (const s of SECRET_ROOMS) out[s.id] = secretRoom(data, s);
   for (const b of BUILDINGS) out[b.id] = buildingInterior(data, b);
   REALMS.forEach((r, i) => { out[r.name] = realm(data, r, i); });
   return out;
 }
 
-module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, looksPng, encodePng, generate, sewer, overworld, hub, oldtown, city, deptInterior, dept2Interior, assocInterior, guildInterior, guild2Interior, homeInterior, storeInterior, OLDTOWN, CITY, DEPT, DEPT2, ASSOC, GUILD, GUILD2, HOME, CITY_BIO, secretRoom, buildingInterior, allMaps, layoutFromPlan, HUB_DOORS, REALMS, SEWER, SECRET_ROOMS, BUILDINGS, BUILD, DOORWAY, CARPET, RUIN };
+module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, looksPng, encodePng, generate, sewer, overworld, hub, oldtown, city, deptInterior, dept2Interior, assocInterior, guildInterior, guild2Interior, homeInterior, arenaInterior, storeInterior, OLDTOWN, CITY, DEPT, DEPT2, ASSOC, GUILD, GUILD2, HOME, ARENA, CITY_BIO, secretRoom, buildingInterior, allMaps, layoutFromPlan, HUB_DOORS, REALMS, SEWER, SECRET_ROOMS, BUILDINGS, BUILD, DOORWAY, CARPET, RUIN };

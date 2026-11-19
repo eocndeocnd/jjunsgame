@@ -465,7 +465,7 @@ const MapView = (function () {
       postAlive: id => { const f = getEnemy(id); return !!f && !isDowned(id) && isRevealed(f); },   // 이 여정에 꺾었거나 아직 안 나타난 히든은 없음
       // 꺾어야 열리는 문 · 도시가 열린 뒤에만 있는 문 (지하수로 첫 공간의 도시로 나가는 게이트 — needsCity)
       npcHere: n => deskHere(n.shop),   // 협회 로비의 「???」(제4격 보스 뒤) · 동료 모집 · 게이트 창구(제5격 보스 뒤)
-      portOpen: p => (!p.opensAfter || isDowned(p.opensAfter)) && (!p.needsCity || (!!State.meta && !!State.meta.cityOpen)) && (p.unlock !== 'armor' || armorOpen()) && (p.unlock !== 'guild' || (guildLevel() >= 1 && guildLevel() <= 3)) && (p.unlock !== 'guildCity' || guildLevel() >= 4),
+      portOpen: p => (!p.opensAfter || isDowned(p.opensAfter)) && (!p.needsCity || (!!State.meta && !!State.meta.cityOpen)) && (p.unlock !== 'armor' || armorOpen()) && (p.unlock !== 'guild' || (guildLevel() >= 1 && guildLevel() <= 3)) && (p.unlock !== 'guildCity' || guildLevel() >= 4) && (p.unlock !== 'arena' || !!(State.run && State.run.test)),
       // 내 길드 — 지은 이름으로 (1~3단계는 옛 동네, 4단계부터는 미래 도시 가운데 빈터 · 옛 동네 건물은 「옛 사무실」)
       portLabel: p => {
         const g = State.meta && State.meta.guild, name = g && (g.name || '내 길드');

@@ -839,6 +839,10 @@ kbd {
 .ally-row > .btn span { font-size: 10px; font-weight: 400; }
 .assoc-actions .btn:has(> span) { display: inline-flex; flex-direction: column; align-items: center; gap: 1px; }
 .assoc-actions .btn > span { font-size: 10px; font-weight: 400; }
+/* 시험장 — 시험관과의 결과 (ui.js 의 examinerResultCard) */
+.exam-result .exam-end { padding: 8px 10px; border: 2px solid var(--line); background: var(--paper-hi); font-size: 13px; text-align: center; }
+.exam-result .exam-end.up { background: #dff3e6; border-color: #1f7a4a; }
+.exam-result .exam-end.down { background: #f6e0dc; border-color: #b0202e; }
 .gate-table summary { cursor: pointer; font-size: 11px; color: var(--text-dim); }
 .bt-hero .portrait-ic { font-size: clamp(28px, 9vw, 42px); }
 
@@ -1812,14 +1816,6 @@ body.test-mode::after {
 .passive-max { font-size: 11px; color: var(--text-dim); white-space: nowrap; }
 .leave-gold { color: #b0202e; font-size: 12px; }
 .license-note { margin: 0 0 10px; padding: 8px 10px; border: 2px dashed var(--line); font-size: 12px; line-height: 1.5; background: var(--paper-hi); }
-.grade-ladder { display: flex; flex-direction: column-reverse; gap: 4px; margin: 10px 0; }
-.grade-row { display: grid; grid-template-columns: 28px 1fr auto; align-items: center; gap: 8px; padding: 5px 8px; border: 2px solid var(--line); background: var(--paper-hi); font-size: 12px; }
-.grade-row .grade-id { font-weight: 700; text-align: center; font-size: 14px; }
-.grade-row small { color: var(--text-dim); font-size: 10px; }
-.grade-row .grade-r { font-size: 11px; white-space: nowrap; }
-.grade-row.have { background: #dff3f7; }
-.grade-row.win .grade-r { color: #1f7a4a; font-weight: 700; }
-.grade-row.lose .grade-r { color: #b0202e; font-weight: 700; }
 .assoc-result { margin: 8px 0; padding: 8px 10px; border: 2px solid var(--line); font-size: 13px; text-align: center; background: var(--paper-hi); }
 .assoc-result.up { background: #fff3cf; }
 .assoc-result.down { color: #7a1a22; }
