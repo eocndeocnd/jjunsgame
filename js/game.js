@@ -242,6 +242,8 @@ const State = {
     testedRun: 0,                // 등록 시험을 본 회차 — 한 회차에 한 번
     sExams: 0,                   // S급 시험관을 만난 횟수 — 4대 길드가 이 차례로 돌아가며 옴 (BIG_GUILDS)
     bmGems: 0,                   // 검은 원석 — 암시장에 돈을 맡길 때 하나씩 (보스가 가끔)
+    gatePts: 0,                  // 게이트 실적 — 돌아온 게이트의 등급(F 1 … S 7)을 더한 것 (길드 순위 점수)
+    rankPassed: [],              // 넘어서 상금을 받은 4대 길드 id (BIG_GUILDS)
     passives: {},                // 골드로 산 패시브 — id → 단계 (data.js 의 PASSIVES). 영구
     ally: null,                  // 그 공간에 함께 가는 동료 id (data.js 의 ALLIES) — 늘 한 명 · 없을 수 있음
     allies: [],                  // 내 동료 id 들 (이야기로 만난 동료 · 고용한 동료)
@@ -654,6 +656,8 @@ function load() {
     State.meta.testedRun = Math.max(0, Math.floor(num(data.testedRun)));
     State.meta.sExams = Math.max(0, Math.floor(num(data.sExams)));
     State.meta.bmGems = Math.max(0, Math.floor(num(data.bmGems)));
+    State.meta.gatePts = Math.max(0, Math.floor(num(data.gatePts)));
+    State.meta.rankPassed = (Array.isArray(data.rankPassed) ? data.rankPassed : []).filter(id => BIG_GUILDS.some(B => B.id === id));
     State.meta.allies = [...new Set((Array.isArray(data.allies) ? data.allies : []).concat(data.ally ? [data.ally] : []))].filter(id => ALLIES[id]);
     State.meta.gates = {};
     for (const [id, g] of Object.entries(data.gates && typeof data.gates === 'object' ? data.gates : {})) {
@@ -738,6 +742,8 @@ function freshMeta() {
     testedRun: 0,
     sExams: 0,
     bmGems: 0,
+    gatePts: 0,
+    rankPassed: [],
     passives: {},
     ally: null,
     allies: [],
@@ -1496,7 +1502,7 @@ function joinAlly(id = 'hayun') {
 }
 function allyNow() { return State.meta.ally && ALLIES[State.meta.ally] ? ALLIES[State.meta.ally] : null; }
 // 때가 되어야 서 있는 창구 · 사람 (지도 — mapview 의 npcHere · ui 의 mapMarks)
-function deskHere(shop) { return shop === 'ally' ? allyWaiting() : shop === 'ally2' ? ally2Waiting() : shop === 'bm' ? bmOpen() && !State.run.bmDone : shop === 'hire' || shop === 'gate' ? gatesOpen() : shop === 'guild' ? guildOwned() : shop === 'examiner' ? !!examinerNow() : true; }
+function deskHere(shop) { return shop === 'ally' ? allyWaiting() : shop === 'ally2' ? ally2Waiting() : shop === 'bm' ? bmOpen() && !State.run.bmDone : shop === 'ranking' ? rankingOpen() : shop === 'hire' || shop === 'gate' ? gatesOpen() : shop === 'guild' ? guildOwned() : shop === 'examiner' ? !!examinerNow() : true; }
 // 제5격 보스를 한 번이라도 꺾으면 협회의 「동료 모집」 · 「게이트 창구」가 열림
 function gatesOpen() { return !!State.meta.cityOpen && rankBossBeaten(5); }
 // 동료 모집 창구에 서 있는 사람 — 내 등급까지 (고용한 사람도 「함께하는 중」으로 남김)
@@ -1564,6 +1570,40 @@ function upgradeGuild(now = Date.now()) {
   save();
   return true;
 }
+// ---------- 길드 순위 (도시 계획 7번 · 10격 — 사용자 결정 2026-11-19) — 협회 로비 순위판 ----------
+// 내 길드 점수 = 단계 · 동료 등급 합 · 길드장 등급 · 게이트 실적 (RULES.GUILD_SCORE). 도시가 아는 것만 (격은 모름)
+function guildScoreParts() {
+  const S = RULES.GUILD_SCORE, m = State.meta;
+  const allies = (m.allies || []).reduce((n, id) => n + (ALLIES[id] ? allyGradeN(ALLIES[id]) : 0), 0);
+  return { level: guildLevel() * S.level, ally: allies * S.ally, grade: hunterGrade() * S.grade, gate: num(m.gatePts) * S.gate };
+}
+function rankingOpen() { return !!State.meta.cityOpen && rankBossBeaten(RULES.RANKING_RANK); }
+function guildScore() { if (!guildOwned()) return 0; const p = guildScoreParts(); return p.level + p.ally + p.grade + p.gate; }
+// 넘었는데 아직 상금을 안 받은 4대 길드 — 낮은 점수부터
+function rankPending() {
+  if (!rankingOpen()) return [];
+  const s = guildScore(), done = State.meta.rankPassed || [];
+  return BIG_GUILDS.filter(B => s >= B.score && !done.includes(B.id)).sort((a, b) => a.score - b.score);
+}
+// 순위 — 1위부터 (같은 점수면 4대 길드가 위)
+function guildBoard() {
+  const rows = BIG_GUILDS.map(B => ({ id: B.id, name: `${B.name} 길드`, mark: B.mark, score: B.score }));
+  if (guildOwned()) rows.push({ id: 'mine', name: State.meta.guild.name || '내 길드', mark: '⭐', score: guildScore(), mine: true });
+  return rows.sort((a, b) => b.score - a.score || (a.mine ? 1 : b.mine ? -1 : 0));
+}
+// 그 길드를 넘은 상금 — 돈(내 격의 핵 prize 개어치) + 검은 원석
+function rankPrize(B) { return { won: Math.round(coreWorth(B.prize)), gems: B.gems }; }
+function claimRank(id) {
+  const B = BIG_GUILDS.find(b => b.id === id);
+  if (!B || !rankPending().includes(B)) return null;
+  const p = rankPrize(B);
+  State.meta.rankPassed = (State.meta.rankPassed || []).concat(id);
+  State.meta.won = num(State.meta.won) + p.won;
+  State.meta.bmGems = num(State.meta.bmGems) + p.gems;
+  pushLog('drop', `길드 순위 — ${B.name} 길드를 넘었다. 협회 상금 ${fmtWon(p.won)} · ${BM_GEM.name} ${p.gems}개.`);
+  save();
+  return p;
+}
 function seatedAlly(id) { return !!State.meta.guild && State.meta.guild.seats.includes(id); }
 // 자리 하나가 한 시간에 버는 돈 — 지금 단계 · 내 격으로
 function guildSeatRate() { return coreWorth(RULES.GUILD_INCOME * (1 + 0.5 * (guildLevel() - 1))); }
@@ -1622,6 +1662,7 @@ function claimGate(id, now = Date.now()) {
   if (!gateDone(id, now)) return null;
   const g = gateInfo(gateOf(id).gate), core = CORES[`core${g.rank}`];
   delete State.meta.gates[id];
+  State.meta.gatePts = num(State.meta.gatePts) + g.rank;   // 게이트 실적 (길드 순위)
   State.meta.mats[core.id] = matsOf(core.id) + g.cores;
   const slot = giveStonesLowest(g.stones);
   pushLog('drop', `${ALLIES[id].name}${josa(ALLIES[id].name, '이', '가')} ${g.id}급 게이트에서 돌아왔다 — ${core.name} ${fmt(g.cores)}개 · ${SLOT_NAMES[slot]} 강화석 ${fmt(g.stones)}개`);

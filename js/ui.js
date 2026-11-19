@@ -2713,7 +2713,7 @@ let shopKind = 'merchant';   // 'merchant' 또는 백화점 매장 이름
 let shopSay = '';            // 점원의 한마디 — 창을 열 때 한 번 고릅니다 (사고 나서 다시 그려도 그대로)
 const isDeptShop = () => shopKind !== 'merchant';
 // 지금 연 상점이 아직 그 자리에 있나 (상인이 떠났거나 도시가 아니면 닫습니다)
-function shopHere() { return shopKind === 'bm' ? bmOpen() : shopKind === 'assoc' ? !!State.meta.cityOpen : shopKind === 'hire' || shopKind === 'gate' ? gatesOpen() : shopKind === 'guild' ? guildForSale() || guildOwned() : isDeptShop() ? !!State.meta.cityOpen && !!DEPT_SECTIONS[shopKind] : merchantHere(); }
+function shopHere() { return shopKind === 'ranking' ? rankingOpen() : shopKind === 'bm' ? bmOpen() : shopKind === 'assoc' ? !!State.meta.cityOpen : shopKind === 'hire' || shopKind === 'gate' ? gatesOpen() : shopKind === 'guild' ? guildForSale() || guildOwned() : isDeptShop() ? !!State.meta.cityOpen && !!DEPT_SECTIONS[shopKind] : merchantHere(); }
 // 점원은 등록증도 없는 손님을 수상쩍어하지만 묻지 않습니다
 const CLERK_TALK = {
   noLicense: ['「헌터 등록증 먼저 보여 주시겠어요? …없으시면 팔 수가 없어요. 협회는 길 건너 큰 건물이에요.」', '「등록 안 된 분께는 무기를 못 팔아요. 규정이라서요. 협회에서 시험부터 보고 오세요.」'],
@@ -2729,6 +2729,7 @@ const MAT_TALK = {
 function clerkLine(kind) {
   const pick = list => list[Math.floor(Math.random() * list.length)];
   if (kind === 'stones') return pick(STONE_TALK);
+  if (kind === 'ranking') return '';
   if (kind === 'bm') return pick(!num(State.meta.bmGems) ? BM_TALK.noGem : !bmPool().length ? BM_TALK.none : BM_TALK.hi);
   if (kind === 'mats') {
     const any = Object.keys(State.meta.mats || {}).some(id => matsOf(id) > 0), made = ITEMS.some(i => i.craft && owns(i.id));
@@ -2770,6 +2771,7 @@ function renderShop() {
   if (shopKind === 'mats') { renderMatShop(); return; }
   if (shopKind === 'stones') { renderStoneShop(); return; }
   if (shopKind === 'bm') { renderBlackMarket(); return; }
+  if (shopKind === 'ranking') { renderRanking(); return; }
   const dept = isDeptShop();
   // 지갑 — 백화점(도시)은 돈(원), 떠돌이 상인(그 공간)은 골드
   const gold = num(dept ? State.meta.won : State.meta.gold);
@@ -2839,7 +2841,7 @@ function renderShop() {
 // 맨 위는 핵 — 모든 몬스터가 남기는 팔 것 (격마다 한 가지). 가진 격만 한 줄씩, 「모두 판다」 한 번으로 다 팝니다. 만드는 데는 쓰지 않습니다.
 // ---------- 헌터 협회 · 등록 창구 (상점 창을 같이 씀 — shopKind 'assoc') ----------
 // 지금의 나(도시의 Lv.1 그대로)로 F 시험관부터 차례로 싸워, 이긴 데까지가 등급. 회차에 한 번 · 내려가지 않음 (game.js 의 takeHunterTest)
-const CLERK_DESKS = { examiner: { name: '시험관', icon: '🧑‍🏫' }, assoc: { name: '등록 창구', icon: '🧑‍💼' }, ally: { name: '???', icon: ALLIES.hayun.icon }, ally2: { name: '???', icon: ALLIES.danwoo.icon }, bm: { name: '???', icon: '🫥' }, hire: { name: '동료 모집', icon: '👩‍💼' }, gate: { name: '게이트 창구', icon: '🧑‍✈️' }, guild: { name: '길드 장부', icon: '📒' }, bed: { name: '침대', icon: '💤' } };   // 백화점 매장이 아닌 창구 — 지도 위 이름표
+const CLERK_DESKS = { examiner: { name: '시험관', icon: '🧑‍🏫' }, assoc: { name: '등록 창구', icon: '🧑‍💼' }, ally: { name: '???', icon: ALLIES.hayun.icon }, ally2: { name: '???', icon: ALLIES.danwoo.icon }, bm: { name: '???', icon: '🫥' }, ranking: { name: '길드 순위', icon: '📊' }, hire: { name: '동료 모집', icon: '👩‍💼' }, gate: { name: '게이트 창구', icon: '🧑‍✈️' }, guild: { name: '길드 장부', icon: '📒' }, bed: { name: '침대', icon: '💤' } };   // 백화점 매장이 아닌 창구 — 지도 위 이름표
 const ASSOC_TALK = {
   none: ['「신규 등록이세요? 시험은 간단해요. 시험관과 한 번씩 붙어 보시면 돼요. F급부터요.」', '「등록증 없이 게이트 근처를 돌아다니시면 곤란해요. …시험 보시게요?」'],
   again: ['「재심사요? 좋아요. 지난번보다 나아지셨는지 볼까요.」', '「등급은 한 번 받으면 안 내려가요. 부담 없이 보세요.」'],
@@ -3118,6 +3120,45 @@ function renderGuild() {
 const STONE_TALK = ['「가지신 장비랑 같은 재료면 녹여서 강화석으로 뽑아 드려요. 손이 좀 가지만요.」', '「이 가죽이면… 신발 쪽 강화석이 나오겠네요. 잠깐만요.」'];
 // 바꿀 수 있는 재료 — 그 재료로 만드는 장비 중 이미 가진 것이 있는 재료
 function stoneMats() { return Object.values(MATERIALS).filter(mat => ITEMS.some(i => i.craft && i.craft.mat === mat.id && owns(i.id))); }
+// ---------- 길드 순위 — 협회 로비 순위판 (도시 계획 7번 · 10격, 사용자 결정 2026-11-19 · game.js 의 guildScore · claimRank) ----------
+// 4대 길드를 넘으면, 순위판에 닿을 때 그 길드 사람이 한마디 + 협회 직원이 상금. 대사는 제안
+// 크라운 — 자신만만 · 돈 많음 · 뒤가 구린 부정부패 길드 (사용자 결정). 청해 — 무협을 이어받은 길드 (단우가 떠난 곳)
+const RANK_TALK = {
+  dal: [{ who: 'bg3', text: '「…달 길드예요. 순위판에서 우리 이름 위에 당신 길드가 올라갔더군요.」' },
+        { who: 'bg3', text: '「축하해요. 밤길은… 조심하고요.」' }],
+  crown: [{ who: 'bg2', text: '「크라운 길드 사무장이다. 순위? 숫자 놀음이지. 위에 있는 놈이 아래를 사면 그만이고.」' },
+          { who: 'bg2', text: '「협회 상금 봉투, 좀 두껍지? 우리가 \'협찬\'한 거야. 친하게 지내자고 — 무슨 뜻인지 알지?」' },
+          { who: 'me', text: '(…봉투에서 돈 냄새 말고 다른 냄새가 난다.)' }],
+  cheonghae: [{ who: 'bg1', text: '(포권한다.) 「청해 길드입니다. 신생 길드에 자리를 내줄 줄은 몰랐습니다.」' },
+              { who: 'bg1', text: () => allyOwned('danwoo') ? '「…단우 그 녀석이 옳았던 걸지도 모르겠군요. 안부 전해 주십시오.」' : '「순서 없이 오른 길이라… 언젠가 한 수 겨뤄 봅시다.」' }],
+  hongyeom: [{ who: 'bg0', text: '「…홍염 길드다. 1위를 내준 건 처음이야.」' },
+             { who: 'bg0', text: '「상금은 받아. 그리고 기억해 둬 — 다음 순위판에선 다시 뺏으러 간다.」' },
+             { who: 'desk', text: '「축하드립니다. 이 도시 <b>1위 길드</b>예요. …협회가 생긴 뒤로 이렇게 빨리 오른 길드는 없었어요.」' }]
+};
+const rankPrizeLine = B => { const p = rankPrize(B); return { who: 'desk', text: `「순위 상금이에요 — <b>${fmtWon(p.won)}</b>. 그리고 이건… 넘으신 길드 쪽에서 두고 간 거예요.」 ${BM_GEM.icon} ${BM_GEM.name} ${p.gems}개` }; };
+function renderRanking() {
+  // 새로 넘은 길드가 있으면 — 창을 닫고 그 길드의 한마디 · 상금, 끝나면 다시 순위판 (여럿이면 하나씩)
+  const next = rankPending()[0];
+  if (next) {
+    closeShop();
+    playTalk([...RANK_TALK[next.id], rankPrizeLine(next)], () => { if (claimRank(next.id)) Sound.play('rankUp'); openShop('ranking'); }, { end: '받는다' });
+    return;
+  }
+  $('shopTitle').textContent = '헌터 협회 · 길드 순위';
+  $('shopGold').innerHTML = guildOwned() ? `⭐ ${fmt(guildScore())}점` : '';
+  const rows = guildBoard().map((r, i) => `
+    <div class="rank-row${r.mine ? ' mine' : ''}"><span class="rank-n">${i + 1}위</span><span class="rank-mark">${r.mark}</span><span class="rank-name">${r.name}</span><span class="rank-score">${fmt(r.score)}점</span></div>`).join('');
+  let mine = '<div class="adm-note">내 길드가 없다 — 순위판엔 4대 길드뿐이다.</div>';
+  if (guildOwned()) {
+    const p = guildScoreParts(), up = BIG_GUILDS.filter(B => B.score > guildScore()).sort((a, b) => a.score - b.score)[0];
+    mine = `<div class="rank-parts">
+      <div>길드 단계 <b>${fmt(p.level)}</b></div><div>동료 <b>${fmt(p.ally)}</b></div><div>길드장 등급 <b>${fmt(p.grade)}</b></div><div>게이트 실적 <b>${fmt(p.gate)}</b></div>
+    </div>
+    <p class="hint">${up ? `다음은 <b>${up.name} 길드</b> — ${fmt(up.score - guildScore())}점 남음` : '이 도시 <b>1위</b>다'} · 점수는 길드 단계 × ${RULES.GUILD_SCORE.level} · 동료 등급(F 1 … S 7) × ${RULES.GUILD_SCORE.ally} · 길드장 등급 × ${RULES.GUILD_SCORE.grade} · 게이트에서 돌아온 등급의 합</p>`;
+  }
+  $('shopBody').innerHTML = `<div class="rank-board">${rows}</div>${mine}`;
+}
+
 // ---------- 암시장 — 옛 동네 골목의 후드티 (도시 계획 7번 · 9격, 사용자 결정 2026-11-19 · game.js 의 bmDeal) ----------
 // 검은 원석 하나 + 맡길 돈(가진 돈의 몇 %) → 굴림 두 번, 하나라도 되면 내가 아직 없는 전리품. 한 번 맡기면 후드티는 그 회차엔 사라짐. 대사는 제안
 const BM_TALK = {
@@ -3755,6 +3796,7 @@ function pxIcon(name) {
 function heroName() { return State.meta.heroName || '나'; }
 
 const TALK_WHO = { me: () => heroName(), guide: () => '???', nameless: () => '무명의 화신', stranger: () => '???', ally: () => ALLIES.hayun.name, stranger2: () => '???', ally2: () => ALLIES.danwoo.name,
+                   bg0: () => `${BIG_GUILDS[0].name} 길드`, bg1: () => `${BIG_GUILDS[1].name} 길드`, bg2: () => `${BIG_GUILDS[2].name} 길드`, bg3: () => `${BIG_GUILDS[3].name} 길드`, desk: () => '협회 직원',
                    proctor: () => '시험 감독', examiner: () => (examinerNow() || { name: '시험관' }).name };
 let talkScript = [], talkIndex = 0, talkDone = null, talkOpts = {};
 function isTalkOpen() { const t = $('talk'); return !!t && !t.classList.contains('hidden'); }
@@ -3768,7 +3810,7 @@ function renderTalk() {
   const line = talkScript[talkIndex], last = talkIndex === talkScript.length - 1, ask = line.ask === 'name' || line.ask === 'guild';
   $('talk').dataset.who = line.who;
   $('talkWho').textContent = TALK_WHO[line.who]();
-  $('talkFace').innerHTML = line.who === 'guide' ? guideEye('bob') : line.who === 'me' ? heroSprite() : line.who === 'stranger' || line.who === 'ally' ? allySprite('hayun') : line.who === 'stranger2' || line.who === 'ally2' ? allySprite('danwoo') : line.who === 'examiner' ? `<span class="ally-sprite">${(examinerNow() || {}).icon || '🧑‍🏫'}</span>` : line.who === 'proctor' ? `<span class="ally-sprite">${CLERK_DESKS.assoc.icon}</span>` : '';
+  $('talkFace').innerHTML = line.who === 'guide' ? guideEye('bob') : line.who === 'me' ? heroSprite() : line.who === 'stranger' || line.who === 'ally' ? allySprite('hayun') : line.who === 'stranger2' || line.who === 'ally2' ? allySprite('danwoo') : line.who === 'examiner' ? `<span class="ally-sprite">${(examinerNow() || {}).icon || '🧑‍🏫'}</span>` : line.who === 'proctor' || line.who === 'desk' ? `<span class="ally-sprite">${CLERK_DESKS.assoc.icon}</span>` : /^bg\d$/.test(line.who) ? `<span class="ally-sprite">${BIG_GUILDS[+line.who.slice(2)].icon}</span>` : '';
   $('talkFace').classList.toggle('hidden', line.who === 'nameless');
   $('talkBody').innerHTML = typeof line.text === 'function' ? line.text() : line.text;
   $('talkName').classList.toggle('hidden', !ask);
@@ -3877,6 +3919,10 @@ const ALLY2_MEET = [
   { who: 'me', text: '(동료가 생겼다.)' }
 ];
 const GUIDE_NOTES = [
+  { id: 'ranking', when: () => rankingOpen(), key: () => 1,   // 도시는 격을 모름 — 협회가 「새로 걸었다」
+    text: () => `협회 로비에 <b>길드 순위판</b>이 새로 걸렸대. 4대 길드 — 홍염 · 청해 · 크라운 · 달${guildOwned() ? ` — 사이에 ${State.meta.guild.name || '네 길드'} 이름도 올라갔다던데` : '. 네 길드가 있으면 거기 이름이 올라간대'}.` },
+  { id: 'rank', when: () => rankPending().length > 0, key: () => (State.meta.rankPassed || []).length + rankPending().length,
+    text: () => `협회 로비 <b>길드 순위판</b>에서 ${(State.meta.guild && State.meta.guild.name) || '네 길드'} 이름이 <b>${rankPending()[0].name} 길드</b> 위로 올라갔대. 가 봐 — 상금도 있다던데.` },
   { id: 'bm', when: () => bmUnlocked(), key: () => 1,   // 도시는 격을 모름 — 「요즘」 골목에 드나드는 사람
     text: () => `집 옆 골목 안쪽 셔터 있잖아. 요즘 <b>가끔</b> 반쯤 올라가 있대. 후드 쓴 사람이 앉아서 — 돈만 맡기면 <b>못 구한 물건</b>을 구해 준다나. 대신 ${BM_GEM.icon} <b>${BM_GEM.name}</b>이 있어야 한대. 보스들이 가끔 흘리는 거.` },
   { id: 'ally2', when: () => ally2Waiting(), key: () => 1,

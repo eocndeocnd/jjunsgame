@@ -88,6 +88,11 @@ const RULES = {
   BM_ODDS_END: 0.2,
   BM_ROLLS: 2,            // 원석 하나 = 한 번 맡기기 = 굴림 두 번 (둘 중 하나만 되면 얻음)
   BM_GEM_CHANCE: 0.2,     // 보스를 꺾을 때 검은 원석이 나올 확률 (암시장이 열린 뒤부터)
+  // 길드 순위 (도시 계획 7번 · 10격 — 사용자 결정 2026-11-19): 내 길드 점수 = 단계 × level + 동료 등급 합 × ally + 길드장 등급 × grade + 게이트 실적 × gate
+  //   게이트 실적 = 돌아온 게이트의 등급(F 1 … S 7)을 더한 것. 넘을 4대 길드의 점수는 BIG_GUILDS 의 score
+  //   시뮬(시드 6개, 길드를 바로 사고 올림): 8격 ≈ 420 · 9격 ≈ 730 · 11격 ≈ 1010 에서 다 참 — 그 위(홍염 1200)는 게이트로 (14격쯤 — 사용자 결정 「중반」)
+  GUILD_SCORE: { level: 100, ally: 10, grade: 20, gate: 1 },
+  RANKING_RANK: 10,       // 이 격의 보스를 꺾으면 협회 로비에 순위판이 걸림 (도시에선 「협회가 새로 걸었다」)
   // 재료 (도시 1-다) — 장비를 떨어뜨릴 리 없는 짐승은 장비 대신 제 재료를 줍니다 (data.js 의 MATERIALS).
   // 한 마리에 1개, 전리품 확률만큼 하나 더 (행운 · 기운이 그대로 듦). 재료 MAT_PER_ITEM 개 = 예전에 그 장비를 한 번 주운 셈:
   //   아직 없는 장비면 돈(그 격 일반 CRAFT_PRICE 마리 몫 × WON_SCALE — 1격 4만 · 2격 8만 원: 그 격의 핵 4개)을 얹어 만들고, 이미 가진 장비면 분해했을 때와 같은 강화석으로 바꿉니다.
@@ -2481,11 +2486,12 @@ function examinerStats(g) { return enemyStats(HUNTER_GRADES[g - 1].level); }
 // S급 시험관은 그 길드의 S급 헌터가 와서 맡음 — 시험마다 차례로 돌아감 (game.js 의 examinerFoe). 사람 이름 · 그림은 나중에 (지금은 이모지)
 // 암시장의 거래에 드는 것 — 보스가 가끔 떨어뜨림 (이름은 가칭. 특수장비의 「보석」과 헷갈리지 않게 원석)
 const BM_GEM = { name: '검은 원석', icon: '🔮' };
+// 순위 (사용자 결정 2026-11-19): 달 < 크라운 < 청해 < 홍염 — score 를 넘으면 그 길드의 한마디 + 협회 상금(prize — 내 격의 핵 n개어치 돈) · 검은 원석 gems
 const BIG_GUILDS = [
-  { id: 'hongyeom', name: '홍염', icon: '👺' },
-  { id: 'cheonghae', name: '청해', icon: '🧘' },    // 무협을 이어받은 길드
-  { id: 'crown', name: '크라운', icon: '🤴' },
-  { id: 'dal', name: '달', icon: '🕵️' }
+  { id: 'hongyeom', name: '홍염', icon: '👺', mark: '🔥', score: 1200, prize: 80, gems: 2 },
+  { id: 'cheonghae', name: '청해', icon: '🧘', mark: '🌊', score: 900, prize: 50, gems: 1 },    // 무협을 이어받은 길드
+  { id: 'crown', name: '크라운', icon: '🤴', mark: '👑', score: 650, prize: 60, gems: 1 },     // 자신만만 · 돈 많음 · 뒤가 구린 부정부패 길드 (사용자 결정) — 상금이 더 두꺼움(「협찬」)
+  { id: 'dal', name: '달', icon: '🕵️', mark: '🌙', score: 400, prize: 30, gems: 1 }
 ];
 
 const DEPT_ID = 'dept';

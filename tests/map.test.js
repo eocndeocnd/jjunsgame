@@ -1324,7 +1324,7 @@ test('헌터 협회 안 — 도시의 협회 문으로 들어가면 1층 로비,
   assert.equal(out.to, 'city.association');
   assert.equal(assoc.props.theme, 'hq');
   const desk = assoc.npcs.filter(n => n.shop);
-  assert.deepEqual(desk.map(n => n.shop), ['assoc', 'ally', 'hire', 'gate']);   // ally — 제4격 보스 뒤에만 서 있는 첫 동료 · hire · gate — 제5격 보스 뒤
+  assert.deepEqual(desk.map(n => n.shop), ['ranking', 'assoc', 'ally', 'hire', 'gate']);   // ranking — 길드 순위판 (10격 칸) · ally — 제4격 보스 뒤에만 서 있는 첫 동료 · hire · gate — 제5격 보스 뒤
 });
 
 test('패시브 — 골드로 사면 영원히 · 값은 이번 회차를 시작할 때의 격 · 회차가 끝나면 골드는 사라짐', () => {
@@ -1465,6 +1465,36 @@ test('길드 — 제7격 보스 뒤 빈 건물이 매물 · 사서 이름 · 사
   assert.deepEqual(r.unseat, [true, false, true]);
   assert.deepEqual(r.max, [5, null]);
   assert.deepEqual(r.load, ['새벽', 5, ['minjae']]);
+});
+
+test('길드 순위 — 점수(단계 · 동료 등급 · 길드장 등급 · 게이트 실적), 달 < 크라운 < 청해 < 홍염 을 넘으면 상금(돈 · 원석) 한 번씩', () => {
+  const run = loadGame();
+  const r = run(`
+    currentSlot = 0; State.meta = freshMeta(); State.meta.cityOpen = true; startRun();
+    const out = { none: [guildScore(), rankPending().length, guildBoard().length, deskHere('ranking')] };
+    State.meta.bossesBeaten.push(zoneBoss(ZONES.findIndex(z => z.rank === 10)).id);
+    out.open = deskHere('ranking');
+    State.meta.guild = { name: '새벽', level: 3, seats: [], since: {} };
+    State.meta.allies = ['hayun', 'seojin']; State.meta.hunterGrade = 3; State.meta.gatePts = 7;
+    out.score = [guildScore(), JSON.stringify(guildScoreParts())];
+    out.pend = rankPending().map(B => B.id);
+    State.meta.won = 0; State.meta.bmGems = 0;
+    const p = claimRank('dal');
+    out.claim = [!!p, State.meta.won === p.won && p.won > 0, State.meta.bmGems, claimRank('dal'), claimRank('crown'), rankPending().length];
+    State.meta.guild.level = 5; State.meta.gatePts = 1000;
+    out.all = [rankPending().map(B => B.id), guildBoard()[0].mine];
+    // 게이트 실적 — 돌아오면 그 등급만큼
+    State.meta.gatePts = 0; State.meta.gates = { hayun: { gate: 'D', start: 0, end: 1 } };
+    claimGate('hayun', 2); out.gate = State.meta.gatePts;
+    return out;
+  `);
+  assert.deepEqual(r.none, [0, 0, 4, false]);
+  assert.equal(r.open, true);
+  assert.deepEqual(r.score, [407, JSON.stringify({ level: 300, ally: 40, grade: 60, gate: 7 })]);
+  assert.deepEqual(r.pend, ['dal']);
+  assert.deepEqual(r.claim, [true, true, 1, null, null, 0]);
+  assert.deepEqual(r.all, [['crown', 'cheonghae', 'hongyeom'], true]);
+  assert.equal(r.gate, 3);
 });
 
 test('암시장 — 9격 보스 뒤 · 회차마다 반반, 검은 원석 1개 + 맡긴 돈 비율의 확률로 두 번 굴려 아직 없는 전리품(가 본 격까지), 거래는 회차에 한 번', () => {

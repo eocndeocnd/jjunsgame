@@ -1471,9 +1471,10 @@ const ASSOC = {
     { kind: 'pillar', x: 12, y: 4 }, { kind: 'pillar', x: 20, y: 4 }, { kind: 'pillar', x: 12, y: 9 }, { kind: 'pillar', x: 20, y: 9 }, { kind: 'pillar', x: 12, y: 14 }, { kind: 'pillar', x: 20, y: 14 },
     { kind: 'bench', x: 2, y: 5, w: 4 }, { kind: 'bench', x: 7, y: 5, w: 3 }, { kind: 'bench', x: 2, y: 10, w: 4 }, { kind: 'bench', x: 7, y: 10, w: 3 }, { kind: 'bench', x: 2, y: 15, w: 4 },
     { kind: 'bench', x: 23, y: 5, w: 3 }, { kind: 'bench', x: 27, y: 5, w: 4 }, { kind: 'bench', x: 23, y: 10, w: 3 }, { kind: 'bench', x: 27, y: 10, w: 4 }, { kind: 'bench', x: 27, y: 15, w: 4 },
-    { kind: 'kiosk', x: 13, y: 18 }, { kind: 'kiosk', x: 19, y: 18 }
+    { kind: 'kiosk', x: 13, y: 18 }, { kind: 'kiosk', x: 19, y: 18 },
+    { kind: 'kiosk', x: 8, y: 14 }                                                         // 길드 순위판 — 앞 (8, 15)
   ],
-  clerks: [{ x: 16, y: 0, shop: 'assoc', label: '등록 창구' }, { x: 26, y: 4, shop: 'ally', label: '???' },   // ??? — 제4격 보스 뒤에만 서 있는 사람 (첫 동료)
+  clerks: [{ x: 8, y: 15, shop: 'ranking', label: '길드 순위' }, { x: 16, y: 0, shop: 'assoc', label: '등록 창구' }, { x: 26, y: 4, shop: 'ally', label: '???' },   // ??? — 제4격 보스 뒤에만 서 있는 사람 (첫 동료)
            { x: 5, y: 0, shop: 'hire', label: '동료 모집' }, { x: 27, y: 0, shop: 'gate', label: '게이트 창구' }],   // 제5격 보스 뒤에 열림 (game.js 의 deskHere)
   signs: [],
   // 등록 창구 왼쪽 — 시험장 문 (시험 중에만 열림 · 들어가는 건 등록 창구의 「시험을 본다」로 — ui 의 enterArena)

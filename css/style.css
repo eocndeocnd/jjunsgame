@@ -839,6 +839,12 @@ kbd {
 .ally-row > .btn span { font-size: 10px; font-weight: 400; }
 .assoc-actions .btn:has(> span) { display: inline-flex; flex-direction: column; align-items: center; gap: 1px; }
 .assoc-actions .btn > span { font-size: 10px; font-weight: 400; }
+/* 길드 순위판 (ui.js 의 renderRanking) */
+.rank-board { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
+.rank-row { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border: 2px solid var(--line); background: var(--paper-hi); font-size: 14px; }
+.rank-row.mine { background: #fff4c8; border-color: #c9a24a; font-weight: bold; }
+.rank-n { width: 34px; } .rank-mark { width: 22px; text-align: center; } .rank-name { flex: 1; } .rank-score { font-variant-numeric: tabular-nums; }
+.rank-parts { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; padding: 6px 10px; border: 2px solid var(--line); font-size: 13px; }
 /* 암시장 — 골목의 후드티 (ui.js 의 renderBlackMarket) */
 .bm-deal { padding: 8px 10px; border: 2px solid var(--line); background: var(--paper-hi); }
 .bm-deal input[type=range] { width: 100%; margin: 8px 0; accent-color: #7a4a9a; }
