@@ -529,7 +529,7 @@ const OVERWORLD_AREAS = {
 //   [이름, x, y] 그 칸을 가운데로 그 적의 크기(n × n, data.js ENEMY_SIZE)만큼
 //   [이름, 'gate'] 길을 막는 자리 — overworld-layout.js 의 GATES (그 크기만큼 넓힌 틈을 꼭 맞게 막도록)
 const OVERWORLD_POSTS = [
-  ['트롤 킹', 12, 38],                                               // 숲 북서쪽 시내 상류의 굴 앞 (길은 막지 않음)
+  ['트롤 킹', 12, 38, 'block'],                                      // 숲 북서쪽 바위산 앞 트롤 부락 — 뒤 골짜기의 2격 큰 상자로 가는 길을 막음 (TROLL_VILLAGE, 사용자 결정 2026-11-20)
   ['오크 장군', 43.3, 56.1],                                          // 오크 부락 한가운데 — 오크 전사 · 홉고블린 구역 사이 (ORC_VILLAGE, 사용자 결정 2026-11-20) · 숲의 마녀는 오두막 안 (BUILDINGS)
   ['그리핀 로드', 56, 15], ['히드라', 28, 25],                         // 탑 자리 · 물에 잠긴 안뜰 (카벙클은 몰락한 왕 곁의 숨은 굴 — SECRET_ROOMS)
   ['돌 거인', 98, 39], ['서리 거인', 101, 41], ['불의 거인', 98, 43], ['구름 거인', 95, 41],   // 돌 고리
@@ -569,6 +569,7 @@ const THIN_FOREST = [{ rect: [11, 46.2, 23.6, 52], gap: 4 }];
 // 안에 족장 움막 · 가죽 천막 넷 · 모닥불 · 토템 둘 · 무기 걸이 · 가죽 말림대. 모두 막힌 칸(그림은 js/mapart.js 의 orcPix — 지도 속성 blds),
 // 들어갈 수 없는 소품 (건물로 들어가는 문은 없음). 자리는 장군 2 × 2 의 오른쪽 아래 칸(cx, cy)에서 잰 칸
 const ORC_VILLAGE = {
+  boss: '오크 장군', camp: true,                                  // camp — 가장 약한 구역(오크 전사)이 서쪽 반에 걸침
   // 2026-11-20 줄임 (사용자 결정 — 오크 전사 구역에 비해 너무 컸음: 17 × 20 → 11 × 13, 천막 넷 → 둘)
   rx: 5.6, ry: 6.4, oy: 0.5,                                    // 울타리 타원 (칸) · 가운데를 장군보다 반 칸 아래로
   gates: [Math.PI, 0, Math.PI / 2], gateW: 0.3,                 // 트인 입구 — 서(오크 전사 구역 · 길 쪽) · 동(홉고블린 쪽) · 남(지하수로 구멍 쪽)
@@ -579,6 +580,22 @@ const ORC_VILLAGE = {
     { kind: 'rack', x: 1, y: 4, w: 2, h: 1 }
   ]
 };
+// 트롤 부락 (2격, 사용자 결정 2026-11-20) — 숲 북서쪽 바위산 앞. 트롤 킹이 바위산에 판 좁은 골짜기(nook) 들머리를 몸으로 막고 서 있고,
+// 골짜기 끝 웅덩이 같은 빈터에 2격 큰 보물상자 (트롤 킹을 꺾어야 닿음). 마당은 트롤 킹 아래로, 빛깔은 이끼 낀 잿빛(tone troll).
+// 마당 · 골짜기는 어느 구역도 아님 — 바실리스크는 그 오른쪽(시냇물 쪽)에만. 자리는 트롤 킹 4 × 4 의 가운데(cx, cy)에서 잰 칸
+const TROLL_VILLAGE = {
+  boss: '트롤 킹', tone: 'troll', noArea: true, areaGap: 5,
+  rx: 6.5, ry: 4.8, oy: 2.5,
+  gates: [0, Math.PI, 0.83], gateW: 0.3,                        // 동(바실리스크 쪽) · 서 · 남동(흙길)
+  nook: { x: -2, y: -7, w: 4, h: 5, wall: 2,                     // 트롤 킹 바로 위로 트롤 킹 폭의 골짜기 (양옆은 바위 벽 두 칸)
+          pocket: { x: 0, y: -10, rx: 5, ry: 2.8 } },            // 골짜기 끝 빈터 — 가운데에 큰 상자
+  pieces: [
+    { kind: 'orchut', x: -4, y: 3, w: 4, h: 3 },
+    { kind: 'totem', x: -3, y: 0, w: 1, h: 1 }, { kind: 'totem', x: 2, y: 0, w: 1, h: 1 },
+    { kind: 'fire', x: 4, y: 2, w: 1, h: 1 }
+  ]
+};
+const VILLAGES = [ORC_VILLAGE, TROLL_VILLAGE];
 const OVERWORLD_MERCHANTS = { forest: [34, 58], ruins: [40, 26], giantpass: [70, 46], necropolis: [120, 50], abyss: [128, 37] };
 
 // 칸 모음(구멍 없는 한 덩어리) → 둘레를 시계 방향으로 도는 다각형. 꼭짓점은 칸 모서리 (칸 단위, x · y 에서 잰 값).
@@ -676,43 +693,68 @@ function overworld(data) {
     fillRect(door, FLOOR);
     guard(door.x, door.y + 1, door.w, 2, 2);                   // 문 앞은 트여 있게
   }
-  for (const [name, x, y] of OVERWORLD_POSTS) {
+  for (const [name, x, y, how] of OVERWORLD_POSTS) {
     const e = foes.find(f => f.name === name);
     if (!e) throw new Error(`정해진 자리 — ${name} 이(가) 2~6격에 없음`);
     if (BUILDINGS.some(b => b.boss === name)) throw new Error(`정해진 자리 — ${name} 은(는) 건물 안에 섬 (BUILDINGS)`);
-    const blocks = x === 'gate', n = e.size;
-    if (blocks && !L.GATES[e.id]) throw new Error(`길막 자리 — ${name}(${e.id}) 이(가) GATES 에 없음`);
-    const [px, py] = blocks ? L.GATES[e.id] : L.spotN(x, y, n);
+    const blocks = x === 'gate' || how === 'block', n = e.size;     // block — 정해진 자리에 서서 그 뒤로 가는 길을 막음 (그 길은 VILLAGES 의 nook 이 팜)
+    if (x === 'gate' && !L.GATES[e.id]) throw new Error(`길막 자리 — ${name}(${e.id}) 이(가) GATES 에 없음`);
+    const [px, py] = x === 'gate' ? L.GATES[e.id] : L.spotN(x, y, n);
     posts.push(n > 1 ? { name, x: px, y: py, w: n, h: n, enemy: e.id, blocks } : { name, x: px, y: py, enemy: e.id, blocks });
     guard(px, py, n, n, 2);
   }
-  // 오크 부락 — 마당(흙) · 울타리 · 움막 · 천막 … (ORC_VILLAGE). 마당엔 나무가 안 섬
-  const village = new Uint8Array(w * h), blds = [], VC = {};  // village: 1 마당 흙 · 2 막힌 소품 · VC 부락 가운데 · 둘레 네모
-  {
-    const og = posts.find(p => p.name === '오크 장군'), V = ORC_VILLAGE, cx = og.x + 1, cy = og.y + 1;
-    Object.assign(VC, { cx, cy, box: [cx - Math.ceil(V.rx), cy - Math.ceil(V.ry - V.oy), Math.ceil(V.rx) * 2 + 1, Math.ceil(V.ry) * 2 + 1] });
+  // 부락 — 마당(흙) · 울타리 · 움막 · 천막 … (VILLAGES). 마당엔 나무가 안 섬
+  const village = new Uint8Array(w * h), blds = [], VC = {};  // village: 1 마당 흙 · 2 막힌 소품 · VC 오크 부락 가운데 · 둘레 네모
+  const noArea = new Uint8Array(w * h), bigAt = {};           // noArea — 어느 구역도 아닌 칸 (트롤 부락 마당 · 골짜기) · bigAt 격마다 정해 둔 큰 상자 자리
+  for (const V of VILLAGES) {
+    const og = posts.find(p => p.name === V.boss), cx = og.x + (og.w >> 1), cy = og.y + (og.h >> 1);
+    if (V.camp) Object.assign(VC, { cx, cy, box: [cx - Math.ceil(V.rx), cy - Math.ceil(V.ry - V.oy), Math.ceil(V.rx) * 2 + 1, Math.ceil(V.ry) * 2 + 1] });
+    // 골짜기 — 바위산을 파서 트롤 킹 폭의 길(양옆 바위 벽)과 끝의 둥근 빈터. 큰 상자는 빈터 가운데
+    if (V.nook) {
+      const N = V.nook, P = N.pocket;
+      for (let y = cy + P.y - 4; y < cy + N.y + N.h; y++) for (let x = cx + N.x - N.wall - 4; x < cx + N.x + N.w + N.wall + 4; x++) {
+        const k = idx(x, y), inPath = x >= cx + N.x && x < cx + N.x + N.w && y >= cy + N.y && y < cy + N.y + N.h;
+        const inPocket = Math.hypot((x + 0.5 - (cx + P.x)) / P.rx, (y + 0.5 - (cy + P.y)) / P.ry) < 1;
+        const nearOpen = [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1], [1, -1], [-1, 1], [2, 0], [-2, 0]].some(([ex, ey]) => {
+          const xx = x + ex, yy = y + ey;
+          return (xx >= cx + N.x && xx < cx + N.x + N.w && yy >= cy + N.y && yy < cy + N.y + N.h) || Math.hypot((xx + 0.5 - (cx + P.x)) / P.rx, (yy + 0.5 - (cy + P.y)) / P.ry) < 1;
+        });
+        if (inPath || inPocket) { tiles[k] = ROAD; keep[k] = 1; noArea[k] = 1; }   // 흙길 — 큰 상자까지 다져진 길
+        else if (nearOpen) { tiles[k] = ROCK; keep[k] = 1; }       // 골짜기 둘레는 바위 벽 — 들머리(트롤 킹) 말고는 못 들어옴
+      }
+      bigAt[2] = { x: cx + P.x, y: cy + P.y };
+    }
     const d = (x, y) => Math.hypot((x + 0.5 - cx) / V.rx, (y + 0.5 - (cy + V.oy)) / V.ry);
     const inGate = (x, y) => { const a = Math.atan2((y + 0.5 - (cy + V.oy)) / V.ry, (x + 0.5 - cx) / V.rx); return V.gates.some(g => Math.abs(Math.atan2(Math.sin(a - g), Math.cos(a - g))) < V.gateW); };
     const put = (x, y, ww, hh, kind, g) => {
       for (let j = 0; j < hh; j++) for (let i = 0; i < ww; i++) {
         const k = idx(x + i, y + j);
-        if (tiles[k] !== FLOOR) throw new Error(`오크 부락 — ${kind} (${x + i}, ${y + j}) 자리가 빈 땅이 아님`);
+        if (tiles[k] !== FLOOR) throw new Error(`${V.boss} 부락 — ${kind} (${x + i}, ${y + j}) 자리가 빈 땅이 아님`);
         tiles[k] = WALL; village[k] = 2;
       }
-      blds.push({ x, y, w: ww, h: hh, kind, g, v: blds.length });
+      blds.push({ x, y, w: ww, h: hh, kind, g, v: blds.length, ...(V.tone ? { tone: V.tone } : {}) });
     };
     for (let y = cy - 12; y <= cy + 13; y++) for (let x = cx - 11; x <= cx + 11; x++) {
-      if (!inside(x, y) || d(x, y) >= 1 || (tiles[idx(x, y)] !== FLOOR && tiles[idx(x, y)] !== ROAD)) continue;
+      if (!inside(x, y) || d(x, y) >= 1 || (tiles[idx(x, y)] !== FLOOR && tiles[idx(x, y)] !== ROAD) || noArea[idx(x, y)]) continue;
+      if (og && x >= og.x && x < og.x + og.w && y >= og.y && y < og.y + og.h) { keep[idx(x, y)] = 1; if (V.noArea) noArea[idx(x, y)] = 1; if (V.nook) tiles[idx(x, y)] = ROAD; continue; }   // 보스가 선 칸 — 소품 · 울타리는 안 둠 (골짜기 들머리는 흙길로 이어짐)
       village[idx(x, y)] = 1; keep[idx(x, y)] = 1;
+      if (V.noArea) noArea[idx(x, y)] = 1;
     }
     for (let y = cy - 12; y <= cy + 13; y++) for (let x = cx - 11; x <= cx + 11; x++) {   // 울타리 — 마당 가장자리 칸 (네 방향 이웃 가운데 마당 밖이 있는 칸)
       if (!inside(x, y) || village[idx(x, y)] !== 1 || tiles[idx(x, y)] !== FLOOR || inGate(x, y)) continue;
       if ([[1, 0], [-1, 0], [0, 1], [0, -1]].some(([ex, ey]) => d(x + ex, y + ey) >= 1)) put(x, y, 1, 1, 'stake', 'grass');
     }
     for (const q of V.pieces) put(cx + q.x, cy + q.y, q.w, q.h, q.kind, 'dirt');
-    // 마당은 흙길 칸으로 — 그림이 흙길처럼 가장자리를 둥글게 이음 (칸 모양 계단이 아니게, 사용자 지적 2026-11-20)
-    for (let k = 0; k < w * h; k++) if (village[k] === 1 && tiles[k] === FLOOR) tiles[k] = ROAD;
+    // 둘레 V.areaGap 칸도 구역 밖 — 그 격 몬스터가 부락에 바짝 붙어 서지 않게 (바실리스크가 트롤 킹에 너무 붙어 있었음, 사용자 지적 2026-11-20)
+    if (V.areaGap) for (let y = cy - 16; y <= cy + 16; y++) for (let x = cx - 16; x <= cx + 16; x++) {
+      if (!inside(x, y) || noArea[idx(x, y)]) continue;
+      let near = false;
+      for (let j = -V.areaGap; j <= V.areaGap && !near; j++) for (let i = -V.areaGap; i <= V.areaGap; i++) if (inside(x + i, y + j) && village[idx(x + i, y + j)] && Math.hypot(i, j) <= V.areaGap) { near = true; break; }
+      if (near) noArea[idx(x, y)] = 2;
+    }
   }
+  // 마당은 흙길 칸으로 — 그림이 흙길처럼 가장자리를 둥글게 이음 (칸 모양 계단이 아니게, 사용자 지적 2026-11-20)
+  for (let k = 0; k < w * h; k++) if (village[k] === 1 && tiles[k] === FLOOR) tiles[k] = ROAD;
   // 숨은 굴로 가는 구멍 — 그 보스 바로 뒤 (보스 몸 위로 한 칸 띄워, 보스 폭만큼)
   for (const s of SECRET_ROOMS) {
     if (s.from && s.from !== 'overworld') continue;            // 건물 안 보스 — 그 안 지도에 (buildingInterior)
@@ -852,7 +894,7 @@ function overworld(data) {
   for (let rank = 2; rank <= 6; rank++) {
     const zi = data.ZONES.findIndex(z => z.rank === rank), zone = data.ZONES[zi];
     const normals = data.ENEMIES.filter(e => e.zoneIndex === zi && e.kind === 'normal');
-    const land = k => seen[k] && open(k) && L.zoneAt(k % w, (k / w) | 0) === rank && L.bio[k] !== 8;
+    const land = k => seen[k] && open(k) && L.zoneAt(k % w, (k / w) | 0) === rank && L.bio[k] !== 8 && !noArea[k];
     const walkLand = from => {                                // 땅을 따라 잰 거리 — 대각선은 1.41 (두 옆 칸이 다 땅일 때만), 못 가면 -1
       const d = new Float64Array(w * h).fill(-1), heap = [[0, from]];
       const push = it => { heap.push(it); for (let i = heap.length - 1; i > 0;) { const p = (i - 1) >> 1; if (heap[p][0] <= heap[i][0]) break; [heap[p], heap[i]] = [heap[i], heap[p]]; i = p; } };
@@ -1053,7 +1095,7 @@ function overworld(data) {
       cand.push({ x, y, d: fromEntry[k] + toBoss[k] - D });
     }
     cand.sort((p, q) => q.d - p.d || p.y - q.y || p.x - q.x);
-    const want = bigElsewhere.has(rank) ? 2 : 3, picked = [];
+    const fixed = bigAt[rank], want = bigElsewhere.has(rank) || fixed ? 2 : 3, picked = [];   // fixed — 정해 둔 큰 상자 자리 (트롤 킹 뒤 골짜기)
     for (const c of cand) {
       if (picked.length >= want) break;
       if (picked.some(q => Math.hypot(q.x - c.x, q.y - c.y) < 40)) continue;
@@ -1061,10 +1103,14 @@ function overworld(data) {
     }
     if (picked.length < want) throw new Error(`${rank}격 보물상자 — 둘 자리가 ${picked.length}곳뿐`);
     const item = (data.ITEMS.find(i => i.chest && i.rank.n === rank) || {}).id;
+    if (fixed) {
+      if (!item) throw new Error(`${rank}격 큰 상자 — 상자 전용 장비(CHEST_ITEMS)가 없음`);
+      chests.push({ name: '보물상자', x: fixed.x, y: fixed.y, chest: `r${rank}-big`, rank, big: true, item });
+    }
     picked.forEach((c, i) => {
-      const big = !bigElsewhere.has(rank) && i === 0;
+      const big = !bigElsewhere.has(rank) && !fixed && i === 0;
       if (big && !item) throw new Error(`${rank}격 큰 상자 — 상자 전용 장비(CHEST_ITEMS)가 없음`);
-      chests.push({ name: '보물상자', x: c.x, y: c.y, chest: big ? `r${rank}-big` : `r${rank}-${bigElsewhere.has(rank) ? i + 1 : i}`, rank, big: big || undefined, item: big ? item : undefined });
+      chests.push({ name: '보물상자', x: c.x, y: c.y, chest: big ? `r${rank}-big` : `r${rank}-${bigElsewhere.has(rank) || fixed ? i + 1 : i}`, rank, big: big || undefined, item: big ? item : undefined });
     });
   }
 

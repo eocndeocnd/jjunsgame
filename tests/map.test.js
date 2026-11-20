@@ -460,7 +460,7 @@ test('overworld — 2~6격 몬스터가 모두 한 번씩, 구역 39개 · 숲 �
   assert.ok(Math.abs(m.start.x - (hole.x + 1)) <= 1 && m.start.y === hole.y - 1, '지도의 시작점은 구멍 바로 위');
   // 길을 막는 것은 다음 격으로 가는 틈의 보스 둘과 세계수를 먹는 벌레뿐 (숲과 왕국은 한 땅이라 트롤 킹은 막지 않음) — 크기는 data.js 그대로
   const blockers = m.posts.filter(p => p.blocks);
-  assert.deepEqual(blockers.map(p => p.enemy).sort(), ['giantking', 'lichking', 'worldworm']);
+  assert.deepEqual(blockers.map(p => p.enemy).sort(), ['giantking', 'lichking', 'trollking', 'worldworm']);
   const sizeOf = id => data.ENEMIES.find(e => e.id === id).size;
   assert.ok(blockers.every(p => p.w === sizeOf(p.enemy) && p.h === sizeOf(p.enemy)));
   assert.ok(blockers.some(p => p.w > 3), '큰 보스가 막는 틈은 그만큼 넓음');
@@ -1985,4 +1985,19 @@ test('트렌트는 뿌리 내린 나무 — 어슬렁거리는 걸음이 다른 
   const perT = t.n / t.mine.length, perG = g.n / g.mine.length;
   assert.ok(t.mine.length && g.mine.length);
   assert.ok(perT * 5 < perG, `60초 동안 한 마리당 트렌트 ${perT.toFixed(1)}걸음 · 가고일 ${perG.toFixed(1)}걸음`);
+});
+
+test('트롤 부락 — 트롤 킹이 바위산 골짜기 들머리를 막고, 골짜기 끝에 2격 큰 상자. 트롤 킹을 꺾어야만 닿음 · 바실리스크는 부락에서 떨어져 오른쪽', () => {
+  const over = loadMap('overworld');
+  const tk = over.posts.find(p => p.enemy === 'trollking'), big = over.chests.find(c => c.chest === 'r2-big');
+  assert.ok(tk.blocks, '트롤 킹은 길을 막음');
+  assert.ok(big.y < tk.y && Math.abs(big.x - (tk.x + tk.w / 2)) <= 3, '큰 상자는 트롤 킹 바로 뒤 골짜기');
+  const k0 = over.start.y * over.w + over.start.x, chestK = big.y * over.w + big.x;
+  const near = d => [1, -1, over.w, -over.w].some(s => d[chestK + s] >= 0);
+  const blockedKing = new Set(cellsOf(over, tk));
+  assert.ok(!near(walk(over, [k0], blockedKing)), '트롤 킹이 서 있으면 큰 상자 곁에 못 감');
+  assert.ok(near(walk(over, [k0])), '트롤 킹을 꺾으면 감');
+  const bas = over.areas.find(a => a.monster === 'basilisk');
+  assert.ok(bas.mid.x - (tk.x + tk.w) >= 8, `바실리스크 들머리가 트롤 킹 오른쪽으로 떨어짐 (${bas.mid.x})`);
+  for (let y = tk.y - 2; y < tk.y + tk.h + 2; y++) for (let x = tk.x - 6; x < tk.x + tk.w + 3; x++) assert.notEqual(over.areaAt[y * over.w + x], bas.index, `(${x}, ${y}) 부락은 바실리스크 구역이 아님`);
 });

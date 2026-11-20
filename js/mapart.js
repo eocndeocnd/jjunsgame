@@ -509,8 +509,10 @@
     hide: ['#3a2a20', '#4c3727', '#5e4530', '#71553a', '#846646'], seam: '#22170f', stitch: '#a08a62',
     bone: ['#6e6452', '#a39780', '#d4c8ac'], paint: '#8a2a22', rope: ['#5e5038', '#8a7a5a'], line: '#1a120e'
   };
+  // 트롤 부락 (blds 의 tone troll) — 이끼 낀 잿빛 가죽 · 검붉은 칠
+  const TROLL_C = { ...ORC_C, hide: ['#2c3128', '#3a4234', '#4a5341', '#5b654f', '#6e785f'], seam: '#181b14', stitch: '#8a8a68', paint: '#6a2a3a' };
   function orcPix(B, px, py, X, Y) {
-    const K = ORC_C, L = HUT_C.log, line = c3(K.line), W = B.w * P, H = B.h * P, v = B.v | 0;
+    const K = B.tone === 'troll' ? TROLL_C : ORC_C, L = HUT_C.log, line = c3(K.line), W = B.w * P, H = B.h * P, v = B.v | 0;
     const ground = () => (B.kind === 'stake' ? texture(GRASS, 2, X, Y) : texture(DIRT, 2, X, Y));
     const shadow = (c, k = 0.66) => mul(c, k);
     if (B.kind === 'stake') {
