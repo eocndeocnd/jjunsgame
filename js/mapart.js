@@ -517,14 +517,38 @@
     const ground = () => (B.kind === 'stake' ? texture(GRASS, 2, X, Y) : texture(DIRT, 2, X, Y));
     const shadow = (c, k = 0.66) => mul(c, k);
     if (B.kind === 'stake') {
-      // 통나무 둘~셋 — 자리마다 폭 4~7 · 꼭대기 높이가 다름. 밑동에 그림자, 허리에 밧줄
+      // 울타리 한 칸 — 이웃 울타리(link: n · s · e · w)에 따라 가로 줄 · 세로 줄 · ㄱ · ㄴ 꺾임이 이어지게 (사용자 결정 2026-11-20)
+      const ln = B.link || '', lN = ln.includes('n'), lS = ln.includes('s'), lE = ln.includes('e'), lW = ln.includes('w');
+      const horiz = lE || lW || !(lN || lS), xa = lW ? 0 : 5, xb = lE ? W : 11;
+      // 세로 줄 — 가운데 폭 6점(x 5~10)으로 위아래 이웃 쪽까지. 위에서 내려다본 통나무 끝이 줄지어 (길이 3~5점, 위 끝은 밝은 단면, 아래는 겹친 그늘),
+      // 왼쪽 빛 · 오른쪽 그늘, 오른쪽 땅에 그림자. 가로 줄과 만나는 곳은 가로 통나무가 앞
+      const vert = (lN || lS) && px >= 5 && px <= 10 && py >= (lN ? 0 : 6) && py <= (lS ? 15 : 13);
+      const vertShadow = (lN || lS) && (px === 11 || px === 12) && py >= (lN ? 0 : 7) && py <= (lS ? 15 : 14);
+      const hLog = horiz && px >= xa && px < xb ? hStake() : null;
+      if (hLog) return hLog;
+      if (vert) {
+        let y0 = (lN ? -2 : 6) - Math.floor(hash(B.x0, B.y0, 706) * 3), j = 0;
+        while (y0 <= py) { const hh = 3 + Math.floor(hash(B.x0, B.y0 * 7 + j, 707) * 3); if (py < y0 + hh) break; y0 += hh; j++; }
+        const ly = py - y0, lx = px - 5;
+        if (lx === 0 || lx === 5) return line;
+        if (ly === 0) return c3(lx < 3 ? '#9a7a54' : '#7a5d3e');                                // 잘린 끝 — 밝은 속살
+        if (ly === 1 && hash(B.x0 + j, B.y0, 708) < 0.5) return c3(HUT_C.end[1]);
+        let k = lx === 1 ? 4 : lx === 4 ? 1 : 2;
+        if (k === 2 && vnoise(px * 0.5, py * 0.4, 709 + j) > 0.64) k = 3;
+        if (lN && lS && (py === 7 || py === 8) && hash(B.x0, B.y0, 703) < 0.6) return c3(K.rope[py === 7 ? 1 : 0]);   // 묶은 밧줄 (군데군데)
+        return c3(L[k]);
+      }
+      if (vertShadow) return shadow(ground(), px === 11 ? 0.62 : 0.78);
+      return ground();
+      // 가로 줄의 서 있는 통나무 — 자리마다 폭 4~7 · 꼭대기 높이가 다름. 밑동에 그림자, 허리에 밧줄 (xa ~ xb 안에서만)
+      function hStake() {
       let x0 = -Math.floor(hash(B.x0, B.y0, 700) * 3), i = 0;
       while (x0 < W) {
         const w = 4 + Math.floor(hash(B.x0 * 5 + i, B.y0, 701) * 4), top = 1 + Math.floor(hash(B.x0 + i, B.y0 * 3, 702) * 5);
         if (px >= x0 && px < x0 + w) {
           const lx = px - x0, mid = (w - 1) / 2, tip = top + Math.ceil(mid);
-          if (py < top) return ground();
-          if (py < tip && Math.abs(lx - mid) > (py - top) + 0.5) return py > top + 1 && lx > mid ? shadow(ground(), 0.8) : ground();   // 뾰족한 끝
+          if (py < top) return null;
+          if (py < tip && Math.abs(lx - mid) > (py - top) + 0.5) return null;                       // 뾰족한 끝 둘레 — 뒤(세로 줄 · 땅)가 보임
           if (py >= 14) return py === 15 ? shadow(ground(), 0.6) : c3(L[0]);                          // 밑동 · 땅 그늘
           if (lx === 0 || lx === w - 1) return line;
           const rope = 8 + (hash(B.x0, B.y0, 703) < 0.5 ? 0 : 1);
@@ -536,7 +560,8 @@
         }
         x0 += w; i++;
       }
-      return ground();
+      return null;
+      }
     }
     if (B.kind === 'tent') {
       // 가죽 천막 — 앞에서 본 세모, 꼭대기에 엇갈린 장대, 가운데 아래 벌어진 입구
@@ -1509,7 +1534,7 @@
   // 바위 칸 덩어리 = 한 층 높은 땅. 큰 덩어리 안쪽(둘레 두 칸이 다 바위)은 잡음으로 한 층 더 (층 2). 층마다 윗면은 풀(숲 · 왕국) 또는 그 땅(고원 바위 · 눈),
   // 남쪽 가장자리는 높이 CLIFF_H 점의 절벽 면 — 폭이 저마다 다른 세로 바위 결(왼쪽 빛 · 오른쪽 그늘 · 갈라진 틈), 위에 풀 처마와 그 밑 그늘, 늘어진 덩굴,
   // 아래로 갈수록 어둑 · 밑동은 가장 어둡게. 옆 · 뒤 가장자리는 풀 처마 테두리만. 막히는 것은 그대로 바위 칸 (그림만 층)
-  const CLIFF_H = 28, CLIFF_SIDE = 10;
+  const CLIFF_H = 28;
   const CLIFF_C = { face: ['#2a221b', '#3a2f25', '#4b3d30', '#5d4c3b', '#6f5c48'], crack: '#1a1410', line: '#1e1813',
                     vine: ['#2f4a26', '#3e5e2e', '#4f7236'] };
   const levels = new WeakMap();                                          // 지도마다 칸의 층 (0 땅 · 1 바위 · 2 큰 바위 안쪽)
@@ -1573,27 +1598,11 @@
         if (vine < 0.22 && s < 2 + vlen && hash(X, Y >> 1, 189) < 0.8) c = c3(K.vine[s < 4 ? 2 : vine < 0.1 ? 0 : 1]);   // 늘어진 덩굴
         return c;
       }
-      // 옆 가장자리 — 동 · 서쪽으로 SIDE 점 안에 이 층 밖이 있으면 그쪽으로 내려가는 바위 옆면 (위 땅 끝 줄까지 바위가 보여 아래 풀과 갈림, 사용자 지적 2026-11-20)
-      let side = 0, sd = 0;
-      for (let d = 1; d <= CLIFF_SIDE && !side; d++) { if (levelField(m, L, k, X - d, Y) < 0) { side = -1; sd = d; } else if (levelField(m, L, k, X + d, Y) < 0) { side = 1; sd = d; } }
-      if (side) {
-        if (sd <= 1) return c3(K.line);
-        if (sd === CLIFF_SIDE) return c3(K.line);                          // 옆면 위 끝 — 풀 처마와 가르는 검은 테
-        let t = side < 0 ? 3 : 1;                                          // 서쪽 옆면은 빛 · 동쪽은 그늘
-        if (hash(X, Y >> 2, 194) < 0.18) t -= 1;
-        if ((Y + Math.floor(hash(X >> 2, k, 195) * 6)) % 9 === 0) t -= 1;  // 가로 틈 (드문드문)
-        const vine = hash(Math.floor(Y / 3), X >> 3, 196) < 0.12;
-        return vine ? c3(K.vine[1]) : c3(K.face[Math.max(0, Math.min(4, t))]);
-      }
-      // 윗면 — 가장자리는 검은 테 두 줄, 그 안쪽은 빛 받는 풀 처마
-      if (f < 0.05) return c3(K.line);
+      // 윗면 — 가장자리는 한 점 검은 테, 그 안쪽 풀은 가장자리로 갈수록 그늘져 진해짐 (바위 테 · 옆면 바위 대신, 사용자 결정 2026-11-20)
+      if (f < 0.03) return c3(K.line);
       let c = ground(k);
       if (k === 1) for (let d = 1; d <= 5; d++) if (levelField(m, L, 2, X, Y - d) >= 0) { c = mul(c, 0.6 + d * 0.06); break; }   // 위층 절벽 밑 그림자
-      if (f < 0.13) {                                                      // 윗면 둘레 — 살짝 튀어나온 바위 테 (빛 받는 위 · 왼쪽은 밝게, 오른쪽은 어둑), 군데군데 풀이 덮음
-        const gx = levelField(m, L, k, X + 2, Y) - levelField(m, L, k, X - 2, Y), gy = levelField(m, L, k, X, Y + 2) - levelField(m, L, k, X, Y - 2);
-        if (fbm(X * 0.15, Y * 0.15, 198) > 0.62) return mul(c, 0.86);
-        return c3(K.face[(gx > 0 || gy > 0) ? (f < 0.09 ? 4 : 3) : (f < 0.09 ? 2 : 1)]);
-      }
+      if (f < 0.26) { const t = (f - 0.03) / 0.23; c = mul(c, 0.58 + 0.42 * t * t * (3 - 2 * t)); }
       return c;
     }
     // 바위 칸이지만 가장자리 밖 — 그 칸의 땅. 절벽 바로 아래는 그림자
@@ -1908,7 +1917,7 @@
       const my = !!door && (door.name === 'myguild' || door.name === 'myguild2');
       const kind = b.kind === 'mineCity' ? 'mineNew' : b.kind === 'aptCity' ? 'apt' : my ? (GLV <= 1 ? 'shabby' : 'mine') : b.kind;
       buildings.push({ x0: b.x, y0: b.y, w: b.w, h: b.h, door, kind, roof: b.roof, tone: b.tone, v: b.v, roofOnly: !!b.roofOnly, f: b.f, G: null, my, glv: b.kind === 'mineCity' ? GLV : Math.min(3, GLV), over: b.overLot ? (b.kind === 'aptCity' ? 'home' : 'guild') : false, hang: b.over | 0,
-                       bmo: !!door && door.name === 'blackmarket' && BMO });
+                       bmo: !!door && door.name === 'blackmarket' && BMO, link: b.link });
     }
     for (let k = 0; k < m.w * m.h; k++) {
       if ((m.look[k] & 15) !== BUILD || bAt[k] >= 0) continue;

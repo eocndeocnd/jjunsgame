@@ -754,7 +754,11 @@ function overworld(data) {
         if (canStake(fx, fy)) ring.add(idx(fx, fy));
       }
     }
-    for (const k of ring) put(k % w, (k / w) | 0, 1, 1, 'stake', 'grass');
+    for (const k of ring) {                                     // 이웃 울타리 쪽 (n · s · e · w) — 그림이 가로 · 세로 · 꺾임으로 이어 그림
+      const x = k % w, y = (k / w) | 0;
+      put(x, y, 1, 1, 'stake', 'grass');
+      blds[blds.length - 1].link = [[0, -1, 'n'], [0, 1, 's'], [1, 0, 'e'], [-1, 0, 'w']].filter(([ex, ey]) => ring.has(idx(x + ex, y + ey))).map(q => q[2]).join('');
+    }
     // 둘레 V.areaGap 칸도 구역 밖 — 그 격 몬스터가 부락에 바짝 붙어 서지 않게 (바실리스크가 트롤 킹에 너무 붙어 있었음, 사용자 지적 2026-11-20)
     if (V.areaGap) for (let y = cy - 16; y <= cy + 16; y++) for (let x = cx - 16; x <= cx + 16; x++) {
       if (!inside(x, y) || noArea[idx(x, y)]) continue;
