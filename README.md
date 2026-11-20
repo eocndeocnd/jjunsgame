@@ -636,7 +636,7 @@ Resolute Hero RPG 와 Inflation RPG 를 모티브로 한 로그라이트 오토�
 - Node 가 있으면 한 줄씩: `node tools/cli.js images` (그림 목록 다시 뽑기) · `node tools/cli.js check-ids` (번호 검사) · `node tools/cli.js snapshot` (의도한 변경을 확인한 뒤 번호표 갱신).
 - 번호 검사에서 걸렸을 때: 옛 전리품을 뺀 것이면 `data.js` 의 `RETIRED_ITEMS` 로 정리해 가진 사람이 강화석으로 돌려받게 하고, 순서를 바꾼 것이면 옛 번호의 자리를 `'retired'` 로 비워 두세요 (자세한 건 아래 「6격」 설명과 `id-check.js` 의 주석).
 - 그 밖: `tools/sim.html` (밸런스 시뮬레이터) · `tools/map-draft.html` (맵 초안 — 색칸 지도 `maps/overworld.tmj` 위를 걸어 봄, 주소 뒤에 `?map=sewer` 면 지하수로).
-- 월드맵 규칙(`js/map.js`) 시험: `node --test tests/map.test.js`. 임시 지도 다시 뽑기: `node tools/cli.js maps` (이미 있는 지도는 `--force` 일 때만 덮어씀 — 지도는 Tiled 로 열어 고칠 수 있습니다). 처음 + 1격 지도(`sewer`)는 `tools/map-gen.js` 의 `SEWER`(방 배치 그림), 2~6격 지도(`overworld`)의 땅 모양은 `tools/overworld-layout.js` 가 정하고(건물은 바깥 지도엔 문 하나 난 닫힌 건물, 문으로 들어가면 따로 뽑은 안 지도 — `tools/map-gen.js` 의 `BUILDINGS`, 3격 몰락한 왕의 성 = `castle`), 맵 시안 그림(`design/map-concept/render.js`)도 같은 파일을 씁니다 (게임 지도는 시안의 2.5배 — `tools/map-gen.js` 의 `OVERWORLD_SCALE`).
+- 월드맵 규칙(`js/map.js`) 시험: `node --test tests/map.test.js`. 임시 지도 다시 뽑기: `node tools/cli.js maps` (이미 있는 지도는 `--force` 일 때만 덮어씀 — 지도는 Tiled 로 열어 고칠 수 있습니다). 처음 + 1격 지도(`sewer`)는 `tools/map-gen.js` 의 `SEWER`(방 배치 그림), 2~6격 지도(`overworld`)의 땅 모양은 `tools/overworld-layout.js` 가 정하고(건물은 바깥 지도엔 문 하나 난 닫힌 건물, 문으로 들어가면 따로 뽑은 안 지도 — `tools/map-gen.js` 의 `BUILDINGS`, 3격 몰락한 왕의 성 = `castle` · 2격 숲의 마녀의 오두막 = `witchhut`, 작은 방은 가게 안과 같은 틀 `storeInterior`), 맵 시안 그림(`design/map-concept/render.js`)도 같은 파일을 씁니다 (게임 지도는 시안의 2.5배 — `tools/map-gen.js` 의 `OVERWORLD_SCALE`).
 
 ## 그림 목록 (AI 이미지 생성용)
 

@@ -1724,10 +1724,10 @@ function currentMapId() {
   return run.mapId;
 }
 function onMapZone() { return !!currentMapId(); }
-// 도시에 서 있나 — 옛 동네 · 헌터들의 도시(props.city) · 가게 안(props.store). 도시에서는 머리 위에 가진 돈이 보입니다
+// 도시에 서 있나 — 옛 동네 · 헌터들의 도시(props.city) · 가게 안(props.store, 바깥 세계의 건물 wild 는 빼고). 도시에서는 머리 위에 가진 돈이 보입니다
 function inTown() {
   const id = currentMapId(), p = id && maps[id] && maps[id].props;
-  return !!p && !!(p.city || p.store);
+  return !!p && !!(p.city || (p.store && !p.wild));   // wild — 마녀의 오두막처럼 바깥 세계의 건물 안
 }
 
 // 지역 머리의 이름 — 지역이 없는 지도(문의 광장)에서는 그 지도의 이름

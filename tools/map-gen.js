@@ -530,7 +530,7 @@ const OVERWORLD_AREAS = {
 //   [이름, 'gate'] 길을 막는 자리 — overworld-layout.js 의 GATES (그 크기만큼 넓힌 틈을 꼭 맞게 막도록)
 const OVERWORLD_POSTS = [
   ['트롤 킹', 12, 38],                                               // 숲 북서쪽 시내 상류의 굴 앞 (길은 막지 않음)
-  ['오크 장군', 13, 46], ['숲의 마녀', 54, 41],                         // 야영지 · 오두막
+  ['오크 장군', 13, 46],                                              // 야영지 (숲의 마녀는 오두막 안 — BUILDINGS)
   ['그리핀 로드', 56, 15], ['히드라', 28, 25],                         // 탑 자리 · 물에 잠긴 안뜰 (카벙클은 몰락한 왕 곁의 숨은 굴 — SECRET_ROOMS)
   ['돌 거인', 98, 39], ['서리 거인', 101, 41], ['불의 거인', 98, 43], ['구름 거인', 95, 41],   // 돌 고리
   ['거인왕', 'gate'],                                                   // 쐐기돌 아치
@@ -554,7 +554,9 @@ const SECRET_ROOMS = [
 // bossY 위 벽에서 보스까지 · pillarX 옆 벽에서 기둥까지 · pillarRows 위 벽에서 기둥 줄마다 · pillar 기둥 한 변
 const BUILDINGS = [
   { id: 'castle', title: '몰락한 왕의 성', layout: 'CASTLE', boss: '몰락한 왕', door: 4,   // 3격 — 남쪽 정면 가운데 성문 (사용자 결정)
-    hall: { w: 27, h: 38, aisle: 3, bossY: 4, pillarX: 5, pillarRows: [9, 16, 23, 30], pillar: 2 } }   // 깔개 끝에 보스 · 기둥은 깔개 양옆으로 넷씩 (사용자 결정)
+    hall: { w: 27, h: 38, aisle: 3, bossY: 4, pillarX: 5, pillarRows: [9, 16, 23, 30], pillar: 2 } },   // 깔개 끝에 보스 · 기둥은 깔개 양옆으로 넷씩 (사용자 결정)
+  // 2격 — 숲의 마녀의 오두막 (사용자 결정 2026-11-20). 안은 큰 방 대신 작은 방(room — storeInterior 틀, 아래 WITCH_ROOM)
+  { id: 'witchhut', title: '마녀의 오두막', layout: 'HUT', boss: '숲의 마녀', door: 1, room: 'WITCH_ROOM' }
 ];
 const OVERWORLD_MERCHANTS = { forest: [34, 58], ruins: [40, 26], giantpass: [70, 46], necropolis: [120, 50], abyss: [128, 37] };
 
@@ -656,6 +658,7 @@ function overworld(data) {
   for (const [name, x, y] of OVERWORLD_POSTS) {
     const e = foes.find(f => f.name === name);
     if (!e) throw new Error(`정해진 자리 — ${name} 이(가) 2~6격에 없음`);
+    if (BUILDINGS.some(b => b.boss === name)) throw new Error(`정해진 자리 — ${name} 은(는) 건물 안에 섬 (BUILDINGS)`);
     const blocks = x === 'gate', n = e.size;
     if (blocks && !L.GATES[e.id]) throw new Error(`길막 자리 — ${name}(${e.id}) 이(가) GATES 에 없음`);
     const [px, py] = blocks ? L.GATES[e.id] : L.spotN(x, y, n);
@@ -1407,7 +1410,7 @@ const DEPT2 = {
   signs: []
 };
 const dept2Interior = () => storeInterior(DEPT2);
-function storeInterior(D) {
+function storeInterior(D, data) {
   const TOP = 3, SIDE = 2, BOTTOM = 2, AISLE = 3;
   const W = D.w + SIDE * 2, H = TOP + D.h + BOTTOM, cx = W >> 1;
   if (D.w % 2 === 0) throw new Error(`${D.title} — 바닥 폭은 홀수여야 통로가 가운데에 맞음`);
@@ -1440,6 +1443,13 @@ function storeInterior(D) {
   }
   const start = { name: 'start', x: out.x + (out.w >> 1), y: out.y - 1 };
   const npcs = [start];
+  // 안에 서 있는 적 (마녀의 오두막) — 빈 바닥 위, 닿으면 싸움. 칸은 걸을 수 있는 그대로 (성 안 보스처럼)
+  const posts = (D.foes || []).map(f => {
+    const e = data.ENEMIES.find(q => q.name === f.name);
+    if (!e) throw new Error(`${D.title} — ${f.name} 이(가) 없음`);
+    for (let j = 0; j < e.size; j++) for (let i = 0; i < e.size; i++) if (!inFloor(f.x + i, f.y + j) || tiles[at(f.x + i, f.y + j)] !== FLOOR) throw new Error(`${D.title} — ${f.name} 자리가 빈 바닥이 아님`);
+    return { name: e.name, x: f.x + SIDE, y: f.y + TOP, w: e.size, h: e.size, enemy: e.id, blocks: false };
+  });
   (D.seats || []).forEach((s, i) => {                                               // 사무 자리 — 막지 않는 빈 바닥 (지도엔 앉은 동료만 그림)
     if (!inFloor(s.x, s.y) || tiles[at(s.x, s.y)] !== FLOOR) throw new Error(`${D.title} — 자리 (${s.x}, ${s.y}) 가 빈 바닥이 아님`);
     npcs.push({ name: 'seat', x: s.x + SIDE, y: s.y + TOP, seat: i });
@@ -1458,8 +1468,8 @@ function storeInterior(D) {
   }
   for (let y = 0; y < D.h; y++) for (let x = 0; x < D.w; x++) if (tiles[at(x, y)] === FLOOR && !blocked.has(at(x, y)) && !seen[at(x, y)]) throw new Error(`${D.title} — (${x}, ${y}) 에 걸어서 못 감`);
   for (const c of D.clerks) if (![1, -1, W, -W].some(d => seen[at(c.x, c.y) + d])) throw new Error(`${D.title} — 점원 (${c.x}, ${c.y}) 곁에 설 자리가 없음`);
-  return buildTmj({ w: W, h: H, tiles, look: lk, ports, npcs,
-    props: { title: D.title, interior: true, store: true, ...(D.theme ? { theme: D.theme } : {}), blds: JSON.stringify(blds), wall: JSON.stringify(D.wall.map(s => ({ x: s.x + SIDE, w: s.w, kind: s.kind }))) } });
+  return buildTmj({ w: W, h: H, tiles, look: lk, ports, npcs, posts,
+    props: { title: D.title, interior: true, store: true, ...(D.wild ? { wild: true } : {}), ...(D.theme ? { theme: D.theme } : {}), blds: JSON.stringify(blds), wall: JSON.stringify(D.wall.map(s => ({ x: s.x + SIDE, w: s.w, kind: s.kind }))) } });
 }
 
 const deptInterior = () => storeInterior(DEPT);
@@ -1644,12 +1654,28 @@ const GUILD2 = {
   signs: []
 };
 const guild2Interior = () => storeInterior(GUILD2);
+// ---------- 마녀의 오두막 안 (2격, 사용자 결정 2026-11-20) — 어둑한 통나무 방 ----------
+// 위 벽: 약병 선반 · 말린 약초 · 약병 선반. 안쪽에 숲의 마녀(닿으면 싸움), 왼쪽에 끓는 가마솥, 오른쪽 구석에 낡은 침대, 구석에 책 더미 · 버섯.
+// wild — 도시가 아님 (머리 위에 돈이 안 보임)
+const WITCH_ROOM = {
+  title: '마녀의 오두막', w: 9, h: 7, to: 'overworld.witchhut', theme: 'witch', wild: true, outLabel: '숲으로',
+  wall: [{ x: 0, w: 3, kind: 'potions' }, { x: 3, w: 3, kind: 'herbs' }, { x: 6, w: 3, kind: 'potions' }],
+  props: [
+    { kind: 'cauldron', x: 1, y: 1, w: 2, h: 2 },
+    { kind: 'bed', x: 7, y: 0, w: 2, h: 3 },
+    { kind: 'books', x: 0, y: 6 }, { kind: 'shroom', x: 8, y: 6 }, { kind: 'shroom', x: 0, y: 4 }
+  ],
+  foes: [{ name: '숲의 마녀', x: 4, y: 0 }],
+  clerks: [],
+  signs: []
+};
+const ROOMS = { WITCH_ROOM };
 
 // 뽑을 지도 전부 — { 파일 이름: 만드는 함수 }
 function allMaps(data) {
   const out = { sewer: sewer(data), overworld: overworld(data), hub: hub(data), oldtown: oldtown(), city: city(), dept: deptInterior(), dept2: dept2Interior(), assoc: assocInterior(), guild: guildInterior(), guild2: guild2Interior(), home: homeInterior(), arena: arenaInterior(), bm: bmInterior(), home2: home2Interior(), gatein: gateinInterior(), chief: chiefInterior(), raid: raidInterior(), w1: storeInterior(W1), w2: storeInterior(W2), w3: storeInterior(W3), sky: storeInterior(SKY) };
   for (const s of SECRET_ROOMS) out[s.id] = secretRoom(data, s);
-  for (const b of BUILDINGS) out[b.id] = buildingInterior(data, b);
+  for (const b of BUILDINGS) out[b.id] = b.room ? storeInterior(ROOMS[b.room], data) : buildingInterior(data, b);
   REALMS.forEach((r, i) => { out[r.name] = realm(data, r, i); });
   return out;
 }

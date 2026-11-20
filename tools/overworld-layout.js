@@ -48,6 +48,9 @@ const CASTLE = {
   box: [10, 4, 22, 20], hall: [11, 5, 21, 19], gate: 16,
   columns: [15, 17, 19, 21].flatMap(x => [[x, 10], [x, 17]])
 };
+// ---- 숲의 마녀의 오두막 — 2격 숲, 좁은 길 끝 (사용자 결정 2026-11-20: 마녀는 바깥에 서 있지 않고 오두막 안에) ----
+// 게임에서 7 × 5 칸 닫힌 건물, 남쪽 정면 가운데(gate)에 문 하나. box 의 53.1 은 칸으로 바꿨을 때 문(54)이 꼭 가운데에 오게
+const HUT = { box: [53.1, 40, 55, 41], gate: 54 };
 
 function build(S = 1, sizes = {}) {
   const G = { dungeonguardian: 3, giantking: 3, lichking: 3, worldworm: 3, ...sizes };   // 틈을 막는 것의 크기 (n × n)
@@ -289,7 +292,7 @@ function build(S = 1, sizes = {}) {
   };
 
   return {
-    S, W, H, T, ter, bio, hgt, idx, inMap, T_, toC, fc, span, spot1, spotN, ROADS, pathMask, wallMask, zoneAt, GATES, BRIDGES, CASTLE, RUINS,
+    S, W, H, T, ter, bio, hgt, idx, inMap, T_, toC, fc, span, spot1, spotN, ROADS, pathMask, wallMask, zoneAt, GATES, BRIDGES, CASTLE, HUT, RUINS,
     VOID, WATER, CANAL, LAVA, ROCKY, OBSID, hash, fbm
   };
 }
@@ -297,5 +300,5 @@ function build(S = 1, sizes = {}) {
 module.exports = {
   CW, CH, T, hash, sm, vnoise, fbm,
   VOID, GRASS, DIRT, COBBLE, TILES, WATER, LAVA, OBSID, SNOW, ROCKY, PAVE, CANAL,
-  BRIDGES, CASTLE, RUINS, build
+  BRIDGES, CASTLE, HUT, RUINS, build
 };

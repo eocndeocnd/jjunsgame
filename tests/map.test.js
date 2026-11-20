@@ -454,7 +454,7 @@ test('overworld — 2~6격 몬스터가 모두 한 번씩, 구역 39개 · 숲 �
   assert.deepEqual(m.posts.map(p => p.enemy).sort(), foes.filter(e => e.kind !== 'normal' && !elsewhere.includes(e.id)).map(e => e.id).sort());
   assert.equal(areaMonsters.length, 39);
   assert.deepEqual(m.ports.map(p => [p.to, p.opensAfter, !!p.hole]),
-    [['sewer.out', undefined, true], ['castle.out', undefined, false], ['hub.overworld', 'demonking', false]]);
+    [['sewer.out', undefined, true], ['castle.out', undefined, false], ['witchhut.out', undefined, false], ['hub.overworld', 'demonking', false]]);
   const hole = m.ports.find(p => p.name === 'sewer');
   assert.ok(!m.solid[(hole.y - 1) * m.w + hole.x + 1] && m.solid[(hole.y + 1) * m.w + hole.x + 1], '구멍 위는 걸을 수 있는 숲, 아래는 어둠');
   assert.ok(Math.abs(m.start.x - (hole.x + 1)) <= 1 && m.start.y === hole.y - 1, '지도의 시작점은 구멍 바로 위');
@@ -695,13 +695,54 @@ test('열리기 전엔 없는 문(appears) — 보이지도 막히지도 않는 
   assert.ok(ev2.some(e => e.type === 'port' && e.port.name === 'secret'), '들어섬');
 });
 
+// 문 칸에서 겉모습이 건물인 칸을 따라 이어지는 한 덩어리
+function buildingBlob(m, door) {
+  const seen = new Set(), st = [door.y * m.w + door.x];
+  while (st.length) {
+    const k = st.pop();
+    if (seen.has(k) || (m.look[k] & 15) !== gen.BUILD) continue;
+    seen.add(k);
+    const x = k % m.w;
+    if (x > 0) st.push(k - 1);
+    if (x < m.w - 1) st.push(k + 1);
+    if (k >= m.w) st.push(k - m.w);
+    if (k < m.w * (m.h - 1)) st.push(k + m.w);
+  }
+  return [...seen];
+}
+
+test('건물 — 2격 숲의 마녀는 바깥에 서 있지 않고 오두막 안에: 문 하나 난 닫힌 오두막, 안은 통나무 방 안쪽에 마녀 · 나가면 숲의 그 문 앞', () => {
+  const over = loadMap('overworld'), h = loadMap('witchhut'), data = loadData();
+  const witch = data.ENEMIES.find(e => e.name === '숲의 마녀');
+  assert.ok(!over.posts.some(p => p.enemy === witch.id), '바깥 지도엔 마녀가 없음');
+  const door = over.ports.find(p => p.name === 'witchhut');
+  assert.ok(door.door && door.to === 'witchhut.out' && door.w === 1 && door.h === 1);
+  const cells = buildingBlob(over, door);
+  const xs = cells.map(k => k % over.w), ys = cells.map(k => (k / over.w) | 0);
+  const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+  assert.equal(cells.length, (x1 - x0 + 1) * (y1 - y0 + 1), '오두막 자리는 네모 한 덩어리');
+  assert.deepEqual([x1 - x0 + 1, y1 - y0 + 1], [7, 5]);
+  assert.ok(cells.every(k => k === door.y * over.w + door.x ? !over.solid[k] : over.solid[k]), '문 칸만 걸을 수 있음');
+  assert.ok(door.y === y1 && door.x === (x0 + x1) / 2, '문은 정면 한가운데');
+  const d = walk(over, [over.start.y * over.w + over.start.x]);
+  const dk = door.y * over.w + door.x;
+  assert.ok(d[dk] >= 0 && d[dk + over.w] >= 0, '문과 그 앞까지 걸어서 닿음');
+  // 안 — 마녀 하나(정예 크기 그대로) · 나가는 문은 바깥 그 문으로 · 도시가 아님(wild) · 마녀까지 걸어서 닿음
+  assert.deepEqual(h.posts.map(p => [p.enemy, p.w]), [[witch.id, witch.size]]);
+  assert.equal(h.props.title, '마녀의 오두막');
+  assert.ok(h.props.interior && h.props.wild && h.props.theme === 'witch');
+  const out = h.ports.find(p => p.name === 'out');
+  assert.ok(out.door && out.to === 'overworld.witchhut');
+  const dh = walk(h, [h.start.y * h.w + h.start.x]);
+  assert.ok(cellsOf(h, h.posts[0]).some(i => dh[i] >= 0), '마녀에게 걸어서 닿음');
+});
+
 test('건물 — 3격 몰락한 왕의 성은 바깥 지도에선 남쪽 정면 가운데에 문 하나 난 닫힌 건물, 들어가면 깔개 끝에 보스 · 양옆에 기둥인 성 안', () => {
   const over = loadMap('overworld'), c = loadMap('castle');
   const door = over.ports.find(p => p.name === 'castle');
   assert.ok(door.door && door.to === 'castle.out' && door.w === 4 && door.h === 1);
-  // 건물 자리 — 겉모습이 건물인 칸 덩어리. 문 칸만 걸을 수 있고 나머지는 모두 막힘, 문은 그 아래 가장자리 한가운데
-  const cells = [];
-  for (let k = 0; k < over.w * over.h; k++) if ((over.look[k] & 15) === gen.BUILD) cells.push(k);
+  // 건물 자리 — 겉모습이 건물인 칸 덩어리(문이 든 덩어리). 문 칸만 걸을 수 있고 나머지는 모두 막힘, 문은 그 아래 가장자리 한가운데
+  const cells = buildingBlob(over, door);
   const xs = cells.map(k => k % over.w), ys = cells.map(k => (k / over.w) | 0);
   const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
   assert.equal(cells.length, (x1 - x0 + 1) * (y1 - y0 + 1), '건물 자리는 네모 한 덩어리');
