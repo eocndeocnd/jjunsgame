@@ -1951,3 +1951,20 @@ test('오크 부락 — 오크 장군은 부락 한가운데, 오크 전사 구�
     assert.ok(n >= 1 && n <= 2, `씨앗 ${seed} — 부락 안 오크 전사 ${n}마리`);
   }
 });
+
+test('2격 서쪽 통나무 다리 — 건너면 바로 트렌트 구역(듬성듬성한 나무 사이), 가고일은 그 뒤(남쪽)', () => {
+  const over = loadMap('overworld');
+  const treant = over.areas.find(a => a.monster === 'treant'), garg = over.areas.find(a => a.monster === 'gargoyle');
+  // 다리 서쪽 끝 — 시냇물을 건너는 흙길 칸 중 가장 서쪽 (2격 숲 서쪽)
+  let bx = Infinity, by = 0;
+  for (let y = 100; y < 130; y++) for (let x = 40; x < 70; x++) {
+    const k = y * over.w + x;
+    if (over.tile[k] === 5 && (over.tile[k - over.w] === 2 || over.tile[k + over.w] === 2) && x < bx) { bx = x; by = y; }   // 위나 아래가 물인 흙길 = 다리
+  }
+  assert.ok(bx < Infinity, '다리를 찾음');
+  const dist = a => Math.hypot(a.mid.x - bx, a.mid.y - by);
+  assert.ok(dist(treant) < dist(garg) && garg.mid.y > treant.mid.y, '트렌트가 다리 쪽, 가고일이 그 뒤');
+  let trees = 0;
+  for (let k = 0; k < over.w * over.h; k++) if (over.areaAt[k] === treant.index && over.tile[k] === 3) trees++;
+  assert.ok(trees >= 8, `트렌트 구역 안의 나무 ${trees}그루`);
+});

@@ -558,6 +558,13 @@ const BUILDINGS = [
   // 2격 — 숲의 마녀의 오두막 (사용자 결정 2026-11-20). 안은 큰 방 대신 작은 방(room — storeInterior 틀, 아래 WITCH_ROOM)
   { id: 'witchhut', title: '마녀의 오두막', layout: 'HUT', boss: '숲의 마녀', door: 1, room: 'WITCH_ROOM' }
 ];
+// 정해 둔 구역 — { 격: { 몬스터 id: 그 구역 자리(OVERWORLD_AREAS 의 네모) } }. 약한 차례로 정해지는 것보다 앞섬
+// 2격: 서쪽 통나무 다리를 건너면 바로 트렌트(나무 사이), 그 뒤(남쪽) 가고일 (사용자 결정 2026-11-20)
+const AREA_FIX = { 2: { treant: [6, 42, 25, 51], gargoyle: [6, 52, 25, 61] } };
+// 듬성듬성한 나무를 심는 구역 — { 몬스터 id: 나무 간격(칸) }. 트렌트는 나무 사이에서 생겨남 (사용자 결정 2026-11-20)
+const SPARSE_TREES = { treant: 6 };
+// 숲 솎기 — 시안 칸 네모 [x0, y0, x1, y1] 안의 빽빽한 숲을 gap 칸마다 한 그루로. 2격 서쪽 통나무 다리 앞 숲 — 트렌트가 그 나무 사이에 섬 (사용자 결정 2026-11-20)
+const THIN_FOREST = [{ rect: [11, 46.2, 23.6, 52], gap: 4 }];
 // 오크 부락 (2격, 사용자 결정 2026-11-20) — 오크 장군 자리를 가운데로 둥근 다진 흙 마당, 둘레에 뾰족한 통나무 울타리(서 · 동 · 남은 트인 입구),
 // 안에 족장 움막 · 가죽 천막 넷 · 모닥불 · 토템 둘 · 무기 걸이 · 가죽 말림대. 모두 막힌 칸(그림은 js/mapart.js 의 orcPix — 지도 속성 blds),
 // 들어갈 수 없는 소품 (건물로 들어가는 문은 없음). 자리는 장군 2 × 2 의 오른쪽 아래 칸(cx, cy)에서 잰 칸
@@ -703,6 +710,8 @@ function overworld(data) {
       if ([[1, 0], [-1, 0], [0, 1], [0, -1]].some(([ex, ey]) => d(x + ex, y + ey) >= 1)) put(x, y, 1, 1, 'stake', 'grass');
     }
     for (const q of V.pieces) put(cx + q.x, cy + q.y, q.w, q.h, q.kind, 'dirt');
+    // 마당은 흙길 칸으로 — 그림이 흙길처럼 가장자리를 둥글게 이음 (칸 모양 계단이 아니게, 사용자 지적 2026-11-20)
+    for (let k = 0; k < w * h; k++) if (village[k] === 1 && tiles[k] === FLOOR) tiles[k] = ROAD;
   }
   // 숨은 굴로 가는 구멍 — 그 보스 바로 뒤 (보스 몸 위로 한 칸 띄워, 보스 폭만큼)
   for (const s of SECRET_ROOMS) {
@@ -772,6 +781,18 @@ function overworld(data) {
   function nearHall(x, y) {                                   // 6격 돌바닥(칠죄종 홀 · 왕좌의 방)에서 6칸 안
     for (let j = y - 6; j <= y + 6; j++) for (let i = x - 6; i <= x + 6; i++) if (inside(i, j) && L.ter[idx(i, j)] === OL.TILES && L.bio[idx(i, j)] === 6) return true;
     return false;
+  }
+
+  // 3-2) 숲 솎기 — THIN_FOREST 네모 안의 빽빽한 숲은 흔든 격자(gap)마다 한 그루만 남기고 베어 듬성듬성하게
+  for (const f of THIN_FOREST) {
+    const r = rectOf(...f.rect);
+    for (let y = r.y; y < r.y + r.h; y++) for (let x = r.x; x < r.x + r.w; x++) {
+      const k = idx(x, y);
+      if (tiles[k] !== TREE) continue;
+      const gx = Math.floor(x / f.gap), gy = Math.floor(y / f.gap);
+      const tx = gx * f.gap + Math.floor(L.hash(gx, gy, 143) * (f.gap - 1)), ty = gy * f.gap + Math.floor(L.hash(gx, gy, 144) * (f.gap - 1));
+      if (!(x === tx && y === ty && L.hash(gx, gy, 145) < 0.85)) tiles[k] = FLOOR;
+    }
   }
 
   // 4) 시작점에서 닿는 칸 — 나무 · 바위 무더기에 갇힌 정해진 자리 · 들머리 · 상인은 가까운 길까지 나무를 베어 이음
@@ -938,7 +959,7 @@ function overworld(data) {
       let sum = 0, n = 0, near = Infinity;
       for (const k of mine) if (fromEntry[k] >= 0 && toBoss[k] >= 0) { sum += fromEntry[k] - toBoss[k]; n++; near = Math.min(near, fromEntry[k]); }
       if (!n) throw new Error(`${rank}격 구역 자리 [${seeds[rank][i].rect}] — 들어오는 곳이나 보스에서 걸어서 닿지 않음`);
-      return { mine, box, score: sum / n, near };
+      return { mine, box, score: sum / n, near, seed: i };
     });
     const regionsBySeed = regions.slice();                       // 자리 차례 그대로 (오크 부락 검사)
     regions.sort((p, q) => p.score - q.score);
@@ -947,14 +968,38 @@ function overworld(data) {
     regions.splice(regions.indexOf(first), 1);
     regions.unshift(first);
     if (rank === 2 && regions[0] !== regionsBySeed[VC.weak]) throw new Error('오크 부락 — 걸친 구역이 가장 약한 구역(오크 전사)이 아님');
+    // 정해 둔 자리 — 그 몬스터는 그 구역 자리에 (AREA_FIX). 차례로 정해진 자리와 맞바꿈
+    for (const [id, rect] of Object.entries(AREA_FIX[rank] || {})) {
+      const k = normals.findIndex(e => e.id === id), si = OVERWORLD_AREAS[rank].findIndex(q => q.join() === rect.join());
+      if (k < 1 || si < 0) throw new Error(`${rank}격 정해 둔 구역 — ${id} [${rect}]`);
+      const j = regions.findIndex(r => r.seed === si);
+      [regions[k], regions[j]] = [regions[j], regions[k]];
+    }
     regions.forEach((r, k) => {
       const mid = clearMid(r);
+      if (SPARSE_TREES[normals[k].id]) sparseTrees(r, mid, normals[k].id);
       mids.push([mid % w, (mid / w) | 0]);
       const { x, y, polygon } = outline(r.mine, r.box);
       // 오크 부락에 걸친 구역 — camp(부락 네모): 이 구역의 몬스터 한두 마리는 부락 안에서 생겨남 (js/map.js 의 spawn)
       const camp = rank === 2 && k === 0 ? { camp: VC.box.join(',') } : {};
       areas.push({ name: normals[k].name, x, y, polygon, rank, monster: normals[k].id, zone: zone.id, ...camp });
     });
+  }
+
+  // 듬성듬성한 나무 — 그 구역 안 트인 땅에 흔든 격자(간격 SPARSE_TREES)로 한 그루씩. 둘레 여덟 칸이 다 트인 곳에만 · 들머리 둘레 · 길가 · 막으면 안 되는 칸은 비움,
+  // 나무끼리는 세 칸 넘게 떨어져 길을 막지 않고 그 사이에 큰 몬스터(3 × 3)가 설 자리가 남음
+  function sparseTrees(r, mid, id) {
+    const gap = SPARSE_TREES[id], mx = mid % w, my = (mid / w) | 0, put = [];
+    for (let gy = r.box.y; gy < r.box.y + r.box.h; gy += gap) for (let gx = r.box.x; gx < r.box.x + r.box.w; gx += gap) {
+      if (L.hash(gx, gy, 140) > 0.8) continue;
+      const x = gx + Math.floor(L.hash(gx, gy, 141) * (gap - 2)), y = gy + Math.floor(L.hash(gx, gy, 142) * (gap - 2)), k = idx(x, y);
+      if (!r.mine.has(k) || tiles[k] !== FLOOR || keep[k] || Math.max(Math.abs(x - mx), Math.abs(y - my)) <= 2) continue;
+      let ok = true;
+      for (let j = -1; j <= 1 && ok; j++) for (let i = -1; i <= 1; i++) if (tiles[idx(x + i, y + j)] !== FLOOR) { ok = false; break; }
+      if (!ok || put.some(([px, py]) => Math.max(Math.abs(px - x), Math.abs(py - y)) <= 3)) continue;
+      put.push([x, y]);
+      tiles[k] = TREE;
+    }
   }
 
   // 구역 들머리(js/map.js 의 areaMid 와 같은 셈 — 구역 칸들의 무게중심에 가장 가까운 걸을 수 있는 칸, 같으면 위 · 왼쪽) 둘레 나무를 베어 비워 둠.
@@ -1029,7 +1074,7 @@ function overworld(data) {
   const lookLayer = new Uint8Array(w * h);
   for (let i = 0; i < w * h; i++) {
     const wet = L.ter[i] === OL.WATER || L.ter[i] === OL.CANAL;
-    lookLayer[i] = buildingCells[i] ? look(BUILD, 8) : village[i] === 2 ? look(BUILD, L.bio[i]) : village[i] === 1 && tiles[i] !== WALL ? look(OL.DIRT, L.bio[i]) : ruin(i) ? look(RUIN, L.bio[i]) : look(tiles[i] === ROAD && !wet ? OL.DIRT : L.ter[i], L.bio[i]);
+    lookLayer[i] = buildingCells[i] ? look(BUILD, 8) : village[i] === 2 ? look(BUILD, L.bio[i]) : ruin(i) ? look(RUIN, L.bio[i]) : look(tiles[i] === ROAD && !wet ? OL.DIRT : L.ter[i], L.bio[i]);
   }
   // 옛 성문 — 두 탑을 감싸는 네모 (그림 js/mapart.js 의 drawOver 가 그 위에 아치를 덮어 그림)
   const gx0 = L.span(L.RUINS.towers[0], L.RUINS.towers[0])[0], gx1 = L.span(L.RUINS.towers[1], L.RUINS.towers[1])[1];

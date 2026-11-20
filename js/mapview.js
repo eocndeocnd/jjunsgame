@@ -47,7 +47,7 @@ const MapView = (function () {
       rows.forEach((r, y) => { for (let x = 0; x < n; x++) if (r[x] !== '.') { g.fillStyle = s.pal[r[x]]; g.fillRect(x, y, 1, 1); } });
       return c;
     };
-    return (mobArt[id] = { a: frame(s.a), b: frame(s.b), n: s.a.length, pace: s.pace || 1 });
+    return (mobArt[id] = { a: frame(s.a), b: frame(s.b), n: s.a.length, pace: s.pace || 1, sway: !!s.sway });
   }
 
   const rankColors = {};
@@ -425,7 +425,7 @@ const MapView = (function () {
         ctx.globalAlpha = mob.frozen > 0 ? 0.45 : 1;
         if (mob.aura) auraFx(mob.aura, g.x, g.y, n, mob.id, true);
         let top = oy + gy * T + 1;
-        if (art) top = Math.min(top, sprite(art, g.x, g.y, n, g.face, Math.floor(g.walked * 2 * art.pace) % 2) + 1);   // 반 칸 걸을 때마다 A · B (걸음 박자 pace — 둔한 것은 천천히)
+        if (art) top = Math.min(top, sprite(art, g.x, g.y, n, g.face, Math.floor((g.walked * 2 + (art.sway ? clock * 1.6 : 0)) * art.pace) % 2) + 1);   // 반 칸 걸을 때마다 A · B (걸음 박자 pace — 둔한 것은 천천히) · sway 는 서 있어도 흔들림
         else glyph(g.x + n / 2, gy + n / 2, getEnemy(mob.monster).icon, 0.72 * n);
         if (mob.aura) auraFx(mob.aura, g.x, g.y, n, mob.id, false);
         ctx.globalAlpha = 1;

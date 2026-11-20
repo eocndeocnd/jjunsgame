@@ -1,6 +1,6 @@
 // ============================================================
 //  지도 몬스터 도트 — design/mobs/make.js 가 만듦 (손으로 고치지 않음)
-//  몬스터 id → 걸음 박자(pace — 클수록 프레임이 빨리 바뀜) + 팔레트(글자 → 색, '.' 은 투명) + 프레임 A · B (글자 격자, 한 칸 = 16픽셀). 오른쪽을 봄
+//  몬스터 id → 걸음 박자(pace — 클수록 프레임이 빨리 바뀜) · sway(서 있을 때도 흔들림) + 팔레트(글자 → 색, '.' 은 투명) + 프레임 A · B (글자 격자, 한 칸 = 16픽셀). 오른쪽을 봄
 // ============================================================
 const MOB_SPRITES = {
   slime: {
@@ -1172,7 +1172,7 @@ const MOB_SPRITES = {
     ]
   },
   treant: {
-    pace: 0.4,
+    pace: 0.5, sway: 1,
     pal: {"K":"#35263f","A":"#506544","B":"#34482f","C":"#70825a","D":"#162317","E":"#080d09","F":"#1e1512","G":"#0d0707","H":"#44372a","I":"#62563f","J":"#1e1418","L":"#e0a040","M":"#807954","N":"#24361c","O":"#6d7c47"},
     a: [
       '................................................',
@@ -1226,28 +1226,28 @@ const MOB_SPRITES = {
     ],
     b: [
       '................................................',
-      '................................................',
-      '............................K.KKKK..............',
-      '............KKKK..KK..KKK..KAKAAABK.............',
-      '...........KCCABKKAAKKAABKKABAAABAK.............',
-      '..........KAAABDEAAABBABBBAABDBAAAKK............',
-      '.........KABBBBDEDBBDDBBBBBBDDBAAABBK...........',
-      '..........KBDDDDEEBBDDDBBDBBBBBBBDBBK..K........',
-      '......KKKKKKKKKKEDDBDDDBDEEEDDDDDDDBAKKDK.......',
-      '.....KAAAACKKKDEEEEDDDDDDDDEDDDDDDEDBAADK.......',
-      '....KAAAAAAAEBBBEEDDDBBBBDBEEEEEEEDDBAABBK......',
-      '....KABBBAABDDDDEEEEDBBDDBDDDDDEDDDDAABBK.......',
-      '....KBBBBBBBDDBBBBBBDDDBBDDBBDDDDDEDDDBK........',
-      '.....KDBBBBBEDBBBABDEDDBBDBBBBBDEDDDDDDK........',
-      '......KKKKDEEEDDDDBBDBBDDBBBDEDDDEEDEEEK........',
-      '........KABEEEEEEDDDDEDEEDDDEEDBDEEDDDDEK.......',
-      '........KBDEEEEEEDDDBBEFEDDDEEEDDDEDDEEK...K....',
-      '........KBBDEEEEEDBBBDDBDDEDEEEEEEDDDDK..KKFK...',
-      '.........KDDEEEEKDBDDBBDDADBDEEEEDDDDDK.KGGK....',
-      '..........KKKKKKFGBDBBGGDEDDEEEEKKKKKKKKGGK.....',
-      '..............KFFFGFFFFFGGGDDGGGGGGKFFFFGGK.....',
-      '....KK.......KFFFHGGGGFFFFFGGGGGGGGGGGGGKK......',
-      '...KIFK.....KIHHHGFFJJJHHFJJJGGGGGGGGGGGK.......',
+      '..............................KKKKKK............',
+      '..............KKKK..KK..KKK..KAAAAABK...........',
+      '.............KCCCAKKBAKKAADKKAAAAABBBK..........',
+      '............KACCBBDKAAKKABBBAABBBBBAADK.........',
+      '...........KABBBBDEDBBDDBBBBBBDDBAAABK.K........',
+      '............KDDDDEEEBBDDBBBDBBDDBAABBBKAK.......',
+      '.......KKKKK.KKDDDEDDBDDDBDDEDDDDDDDBBKKK.......',
+      '......KABBACK..KKEEEEEEEDDEEEEDDDDDDDBKKDK......',
+      '.....KAAAAAAKKKBBBEEDDDDDDDEDEEEEEEEDBBADDK.....',
+      '.....KBBBBBABDBDDDEEEEBBDDDBDDDDEDDDDBABBK......',
+      '.....KABDDBBBDDBBBBDDBBBBBBDDBBDDDDEEBBBBK......',
+      '......KDBBBBBEDBBBAADEDDBBDDBBBBDEDDDDDKK.......',
+      '.......KKKKDDEEDDDBBBDBBBBBBBBDDDDEEDEEEK.......',
+      '.........KAAEEEDDDDBBEGDDDDDDEEDDDEEDDDDEK......',
+      '.........KBDEEEEEEDDEDEGEEDDDEEEDDDDDDEEEK......',
+      '.........KBBDEEEEDDDBDEBDDEEEEEDEEEDDDDKK..K....',
+      '..........KDEEEEEDBDDDBBDDEDDEEEEEDDDDK..KKFK...',
+      '...........KKKKKKGBBBBGGDADBDEEEKKKKKK..KGGK....',
+      '...............KFFGFFGFFGGGDDGGKKKK.KKKKGGK.....',
+      '..............KFFFFFHHFFFFGGGGGFFFGKFFFFGGK.....',
+      '....KK.......KHHHHGGGGFHHFFGGGGGGFFFFFFGKK......',
+      '...KIFK.....KIHHHGFHJJJHHHJJJGGGGGGGGGGGK.......',
       '....KFFKKKKKKIHHGIHHJLJHHHJLJGGKKKKKKKKGGK......',
       '.....KFIIIIIIHHHKFHHHHHHHHHFFFGK.......KGGK.....',
       '......KHHHFFFHHKKFHIHHHHHHHFFGFK.......KGGGK....',
