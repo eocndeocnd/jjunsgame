@@ -505,6 +505,7 @@
   // orchut 족장 움막(둥근 가죽 지붕 · 붉은 전쟁 칠 · 엄니 둘 · 짐승 해골) · totem 토템 · fire 모닥불 · rack 무기 걸이 · hide 가죽 말림대.
   // 빛은 왼쪽 위 — 오른쪽 면은 그늘, 그림자는 오른쪽 아래 땅에
   const ORC_KINDS = { stake: 1, tent: 1, orchut: 1, totem: 1, fire: 1, rack: 1, hide: 1 };
+  const ORC_SMALL = { totem: 1, fire: 1, rack: 1, hide: 1 };
   const ORC_C = {
     hide: ['#3a2a20', '#4c3727', '#5e4530', '#71553a', '#846646'], seam: '#22170f', stitch: '#a08a62',
     bone: ['#6e6452', '#a39780', '#d4c8ac'], paint: '#8a2a22', rope: ['#5e5038', '#8a7a5a'], line: '#1a120e'
@@ -605,7 +606,9 @@
         if (py === 9 || py === 13) return c3(L[0]);                                                 // 입 · 마디
         return c3(L[dx < 0 ? 4 : dx < 1 ? 2 : 1]);
       }
-      if (py >= 13 && dx > 1 && dx < 6) return shadow(ground());
+      // 그림자 — 기둥 밑동(오른쪽 아래 끝)에서 오른쪽으로 비스듬히 뻗음 (꼭대기 해골 그림자는 끝에 둥글게)
+      const sx = dx - 2, sy = py - 12;
+      if (sy >= 0 && sx >= -1 && sx <= 6 - sy * 0.5 && sy <= 3 && sx >= sy * 0.4 - 1.2) return shadow(ground(), 0.62);
       return ground();
     }
     if (B.kind === 'fire') {
@@ -615,7 +618,9 @@
       const fl = 9 - Math.abs(dx) * 1.6 + (hash(px, 0, 712) - 0.5) * 3;
       if (Math.abs(dx) < 4 && py >= 10.5 - fl && py < 11) return c3(py > 9 - Math.abs(dx) * 0.3 ? '#e0702a' : Math.abs(dx) < 1.5 && py > 4 ? '#ffd070' : '#ffb040');
       if (rr <= 0.68) return c3(Math.abs(dx - dy) < 1 || Math.abs(dx + dy) < 1 ? L[1] : '#2a1a12');   // 장작 · 재
-      const g = ground(), gl = Math.hypot(dx, dy * 1.3);
+      let g = ground();
+      if (dy > 2.5 && dy < 5 && dx > -4 && dx < 7.5 - (dy - 2.5)) g = shadow(g, 0.7);   // 돌 둘레 밑 그림자 — 오른쪽 아래로 붙어서
+      const gl = Math.hypot(dx, dy * 1.3);
       return gl < 9 ? mix(g, c3('#ff9a40'), 0.25 * (1 - gl / 9)) : g;
     }
     if (B.kind === 'rack' || B.kind === 'hide') {
@@ -1504,7 +1509,7 @@
   // 바위 칸 덩어리 = 한 층 높은 땅. 큰 덩어리 안쪽(둘레 두 칸이 다 바위)은 잡음으로 한 층 더 (층 2). 층마다 윗면은 풀(숲 · 왕국) 또는 그 땅(고원 바위 · 눈),
   // 남쪽 가장자리는 높이 CLIFF_H 점의 절벽 면 — 폭이 저마다 다른 세로 바위 결(왼쪽 빛 · 오른쪽 그늘 · 갈라진 틈), 위에 풀 처마와 그 밑 그늘, 늘어진 덩굴,
   // 아래로 갈수록 어둑 · 밑동은 가장 어둡게. 옆 · 뒤 가장자리는 풀 처마 테두리만. 막히는 것은 그대로 바위 칸 (그림만 층)
-  const CLIFF_H = 28;
+  const CLIFF_H = 28, CLIFF_SIDE = 6;
   const CLIFF_C = { face: ['#2a221b', '#3a2f25', '#4b3d30', '#5d4c3b', '#6f5c48'], crack: '#1a1410', line: '#1e1813',
                     vine: ['#2f4a26', '#3e5e2e', '#4f7236'] };
   const levels = new WeakMap();                                          // 지도마다 칸의 층 (0 땅 · 1 바위 · 2 큰 바위 안쪽)
@@ -1568,8 +1573,20 @@
         if (vine < 0.22 && s < 2 + vlen && hash(X, Y >> 1, 189) < 0.8) c = c3(K.vine[s < 4 ? 2 : vine < 0.1 ? 0 : 1]);   // 늘어진 덩굴
         return c;
       }
-      // 윗면 — 가장자리는 검은 테, 그 안쪽은 빛 받는 풀 처마
-      if (f < 0.03) return c3(K.line);
+      // 옆 가장자리 — 동 · 서쪽으로 SIDE 점 안에 이 층 밖이 있으면 그쪽으로 내려가는 바위 옆면 (위 땅 끝 줄까지 바위가 보여 아래 풀과 갈림, 사용자 지적 2026-11-20)
+      let side = 0, sd = 0;
+      for (let d = 1; d <= CLIFF_SIDE && !side; d++) { if (levelField(m, L, k, X - d, Y) < 0) { side = -1; sd = d; } else if (levelField(m, L, k, X + d, Y) < 0) { side = 1; sd = d; } }
+      if (side) {
+        if (sd <= 1) return c3(K.line);
+        if (sd === CLIFF_SIDE) return c3(K.line);                          // 옆면 위 끝 — 풀 처마와 가르는 검은 테
+        let t = side < 0 ? 3 : 1;                                          // 서쪽 옆면은 빛 · 동쪽은 그늘
+        if (hash(X, Y >> 2, 194) < 0.18) t -= 1;
+        if ((Y + Math.floor(hash(X >> 2, k, 195) * 6)) % 9 === 0) t -= 1;  // 가로 틈 (드문드문)
+        const vine = hash(Math.floor(Y / 3), X >> 3, 196) < 0.12;
+        return vine ? c3(K.vine[1]) : c3(K.face[Math.max(0, Math.min(4, t))]);
+      }
+      // 윗면 — 가장자리는 검은 테 두 줄, 그 안쪽은 빛 받는 풀 처마
+      if (f < 0.05) return c3(K.line);
       let c = ground(k);
       if (k === 1) for (let d = 1; d <= 5; d++) if (levelField(m, L, 2, X, Y - d) >= 0) { c = mul(c, 0.6 + d * 0.06); break; }   // 위층 절벽 밑 그림자
       if (f < 0.09) {
@@ -1988,7 +2005,8 @@
       return e;
     }
     // 건물 · 기둥 바로 아래 칸은 위쪽이 그늘
-    if (t !== WALL && t !== POOL && ((lookAt(tx, ty - 1) & 15) === BUILD || pillar(tx, ty - 1))) e.shadeTop = (lookAt(tx, ty - 1) & 15) === BUILD ? 9 : 6;
+    const bUp = ty > 0 ? A.bAt[(ty - 1) * m.w + tx] : -1, smallUp = bUp >= 0 && A.buildings[bUp] && ORC_SMALL[A.buildings[bUp].kind];   // 토템 · 모닥불 … 은 제 그림자를 붙여 그림 (떨어진 네모 그늘 띠가 어색했음, 사용자 지적)
+    if (t !== WALL && t !== POOL && !smallUp && ((lookAt(tx, ty - 1) & 15) === BUILD || pillar(tx, ty - 1))) e.shadeTop = (lookAt(tx, ty - 1) & 15) === BUILD ? 9 : 6;
     if (t === WALL || t < 0) {
       // 바로 위 두 칸 안에 땅이 있으면 그 땅의 옆면, 아니면 어둠
       e.face = null;
@@ -3249,6 +3267,16 @@
       ctx.drawImage(clutterSprite(it), Math.round(ox + it.x * T), Math.round(oy + it.y * T), it.w * T, it.h * T);
     }
   }
+  // 언덕 위 나무 (사용자 요청 2026-11-20 — 사례 그림처럼 높은 땅에도 나무). 단차를 그리는 바위 칸 가운데 둘레가 다 같은 층이고
+  // 아래 두 칸도 같은 층(절벽 면 위가 아님)인 칸에 드문드문 — 서로 붙지 않게 왼쪽 · 위 칸에 나무가 없을 때만
+  function hillTree(m, x, y) {
+    const b = m.look[y * m.w + x] >> 4;
+    if (b === 6 || b === 7 || b === 8 || b === CITY || (m.look[y * m.w + x] & 15) === OBSID) return false;
+    const L = levelOf(m), lv = L[y * m.w + x], at = (i, j) => (i < 0 || j < 0 || i >= m.w || j >= m.h ? -1 : L[j * m.w + i]);
+    if (!lv || hash(x, y, 197) > 0.14) return false;
+    for (const [i, j] of [[-1, 0], [1, 0], [0, -1], [0, 1], [0, 2], [-1, 1], [1, 1]]) if (at(x + i, y + j) !== lv) return false;
+    return !(hash(x - 1, y, 197) <= 0.14 || hash(x, y - 1, 197) <= 0.14 || hash(x - 1, y - 1, 197) <= 0.14);
+  }
   function drawTrees(ctx, m, ox, oy, T, x0, y0, x1, y1) {
     ctx.imageSmoothingEnabled = false;
     if (m.props && m.props.clutter) drawClutter(ctx, m, prep(m), ox, oy, T, x0, y0, x1, y1);   // 옛 동네의 자잘한 것 — 불법주차 차 · 라바콘 …
@@ -3274,7 +3302,7 @@
         ctx.drawImage(spr, Math.round(ox + x * T), Math.round(oy + (y + 1) * T - h), bw * T, h);
         continue;
       }
-      if (m.tile[k] !== TREE) continue;
+      if (m.tile[k] !== TREE && !(m.tile[k] === ROCK && hillTree(m, x, y))) continue;
       const [style, pal] = treeOf(m, k, x, y), v = (hash(x, y, 63) * VARIANTS) | 0;
       const j = (hash(x, y, 61) - 0.5) * 0.3 * T;                       // 줄 맞춰 선 것처럼 안 보이게 살짝 비킴
       const cx = ox + (x + 0.5) * T + j, by = oy + (y + 1) * T;

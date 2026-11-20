@@ -35,7 +35,7 @@ const MapView = (function () {
   const SPARK_LIFE = [0, 1, 2, 3, 2, 1, 0];
   const auraHash = i => { const x = Math.sin(i * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
   // 몬스터 도트 (js/mobsprites.js — design/mobs/make.js 가 만듦). 한 칸 16픽셀, 프레임 A · B, 오른쪽을 봄. 없는 몬스터는 이모지
-  const mobArt = {};
+  const mobArt = {}, shadowCache = {};   // shadowCache — 도트 크기마다 발밑 그림자 (shadowDots)
   function mobSprite(id) {
     if (id in mobArt) return mobArt[id];
     const s = typeof MOB_SPRITES !== 'undefined' && MOB_SPRITES[id];
@@ -246,12 +246,25 @@ const MapView = (function () {
       // 돌려주는 값은 그림 꼭대기 y (머리 위 레벨을 그 위에)
       const kpx = Math.max(1, Math.round(T * dpr / 16)) / dpr;   // 도트 1개의 화면 크기 (기기 픽셀의 정수 배)
       const footX = (x, n) => Math.round((ox + (x + n / 2) * T) * dpr) / dpr, footY = (y, n) => Math.round((oy + (y + n) * T) * dpr) / dpr;
+      const shadowDots = N => {                                   // 도트 크기 N 짜리 몬스터의 발밑 그림자 — 안은 옅게, 테두리 한 점은 짙게
+        if (shadowCache[N]) return shadowCache[N];
+        const rx = N * 0.36, ry = Math.max(1.7, N * 0.1), W = Math.ceil(rx) * 2 + 1, H = Math.ceil(ry) * 2 + 1;
+        const c = document.createElement('canvas'); c.width = W; c.height = H;
+        const g = c.getContext('2d'), inE = (x, y) => ((x + 0.5 - W / 2) / rx) ** 2 + ((y + 0.5 - H / 2) / ry) ** 2 <= 1;
+        for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+          if (!inE(x, y)) continue;
+          const rim = !inE(x - 1, y) || !inE(x + 1, y) || !inE(x, y - 1) || !inE(x, y + 1);
+          g.fillStyle = rim ? 'rgba(28,16,7,0.36)' : 'rgba(28,16,7,0.24)';
+          g.fillRect(x, y, 1, 1);
+        }
+        return (shadowCache[N] = c);
+      };
       const sprite = (art, x, y, n, face, frame) => {
         const k = kpx, size = art.n * k;
         const fx = footX(x, n), fy = footY(y, n);
-        ctx.fillStyle = 'rgba(28,16,7,0.28)';
-        ctx.beginPath(); ctx.ellipse(fx, fy - k, size * 0.36, Math.max(2, size * 0.09), 0, 0, Math.PI * 2); ctx.fill();
+        const sh = shadowDots(art.n);                                // 그림자 — 도트 단위 타원 (둥근 매끈한 테 대신 도트 줄, 사용자 결정 2026-11-20)
         ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(sh, Math.round((fx - sh.width * k / 2) * dpr) / dpr, Math.round((fy - (sh.height - 1) * k) * dpr) / dpr, sh.width * k, sh.height * k);
         const img = frame ? art.b : art.a;
         if (face < 0) { ctx.save(); ctx.translate(fx, 0); ctx.scale(-1, 1); ctx.drawImage(img, -size / 2, fy - size, size, size); ctx.restore(); }
         else ctx.drawImage(img, fx - size / 2, fy - size, size, size);
