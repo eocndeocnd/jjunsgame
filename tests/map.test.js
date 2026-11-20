@@ -1968,3 +1968,21 @@ test('2격 서쪽 통나무 다리 — 건너면 바로 트렌트 구역(듬성�
   for (let k = 0; k < over.w * over.h; k++) if (over.areaAt[k] === treant.index && over.tile[k] === 3) trees++;
   assert.ok(trees >= 8, `트렌트 구역 안의 나무 ${trees}그루`);
 });
+
+test('트렌트는 뿌리 내린 나무 — 어슬렁거리는 걸음이 다른 몬스터보다 훨씬 드묾 (GAIT)', () => {
+  const over = loadMap('overworld');
+  const w = M.createWorld(over, {}, 5);
+  const moves = id => {
+    const mine = w.mobs.filter(m => m.monster === id);
+    return { mine, last: mine.map(m => [m.x, m.y]), n: 0 };
+  };
+  const t = moves('treant'), g = moves('gargoyle');
+  w.player.x = 300; w.player.y = 60;                         // 멀리 — 쫓거나 달아나지 않게
+  for (let i = 0; i < 600; i++) {
+    M.tick(w, 0.1);
+    for (const s of [t, g]) s.mine.forEach((m, k) => { if (m.x !== s.last[k][0] || m.y !== s.last[k][1]) { s.n++; s.last[k] = [m.x, m.y]; } });
+  }
+  const perT = t.n / t.mine.length, perG = g.n / g.mine.length;
+  assert.ok(t.mine.length && g.mine.length);
+  assert.ok(perT * 5 < perG, `60초 동안 한 마리당 트렌트 ${perT.toFixed(1)}걸음 · 가고일 ${perG.toFixed(1)}걸음`);
+});

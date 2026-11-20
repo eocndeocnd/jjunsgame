@@ -41,6 +41,10 @@
     ENRAGE_SECS: 10,     // 후공 앞에서 물러서면 이만큼 화가 나서 쫓아옵니다
     FREEZE_SECS: 2       // 물러서거나 진 뒤 그 몬스터가 멈춰 있는 시간 — 곧바로 다시 닿지 않게
   };
+  // 몬스터마다 다른 걸음 — wander 어슬렁 사이 시간 × · move 어슬렁 때 실제로 한 칸 옮기는 몫(기본 0.75) · chase 쫓기 · 돌아가기 한 걸음 시간 ×.
+  // 트렌트는 뿌리 내린 나무 — 거의 제자리, 가끔 한 칸 (사용자 결정 2026-11-20: 너무 빠르고 많이 움직였음)
+  const GAIT = { treant: { wander: 4, move: 0.3, chase: 3 } };
+  const gaitOf = m => GAIT[m.monster] || {};
 
   // 성격(ARCHETYPES)으로 정하는 기본값 — 선공(aggro) · 후공(passive) · 중립(shy). 어울리지 않는 것은 나중에 하나씩 고칩니다.
   const TEMPER_BY_ARCH = {
@@ -471,7 +475,7 @@
       const s = toward(w, m, (x, y) => gap(body(x, y, n), p.x, p.y), true);
       if (s && (inRect(body(s.x, s.y, n), p.x, p.y) || touchesPlayer(w, body(s.x, s.y, n)))) return meet(w, ev, { mob: m, first: 'foe' });
       if (s) { m.x = s.x; m.y = s.y; }
-      m.wait = 1 / RULES.CHASE_SPEED;
+      m.wait = (gaitOf(m).chase || 1) / RULES.CHASE_SPEED;
     } else if (m.mode === 'flee') {
       const s = w.rng() < RULES.FLEE_STUMBLE ? null : away(w, m);   // 가끔 멈칫
       if (s) { m.x = s.x; m.y = s.y; }
@@ -479,12 +483,13 @@
     } else if (m.mode === 'return') {
       const s = homeward(w, m, a, f);
       if (s) { m.x = s.x; m.y = s.y; }
-      m.wait = 1 / RULES.CHASE_SPEED;
+      m.wait = (gaitOf(m).chase || 1) / RULES.CHASE_SPEED;
     } else {
       const opts = STEPS.map(([dx, dy]) => ({ x: m.x + dx, y: m.y + dy }))
         .filter(c => homeDist(f, c.x, c.y) === 0 && freeForMob(w, c.x, c.y, n, m));
-      if (opts.length && w.rng() < 0.75) { const c = opts[Math.floor(w.rng() * opts.length)]; m.x = c.x; m.y = c.y; }
-      m.wait = RULES.WANDER_EVERY * (0.6 + w.rng() * 0.8);
+      const g = gaitOf(m);
+      if (opts.length && w.rng() < (g.move !== undefined ? g.move : 0.75)) { const c = opts[Math.floor(w.rng() * opts.length)]; m.x = c.x; m.y = c.y; }
+      m.wait = RULES.WANDER_EVERY * (g.wander || 1) * (0.6 + w.rng() * 0.8);
     }
   }
 
@@ -568,7 +573,7 @@
     p.ox = 0; p.oy = 0;                                    // 밀려난 칸 한가운데에
   }
 
-  const api = { RULES, TEMPER_BY_ARCH, DIRS, temperOf, mulberry, parseTiled, createWorld, setInput, tick, resolve, areaAt, mobAt, postAt, portAt, chestAt, merchantAt, shopAt };
+  const api = { RULES, GAIT, TEMPER_BY_ARCH, DIRS, temperOf, mulberry, parseTiled, createWorld, setInput, tick, resolve, areaAt, mobAt, postAt, portAt, chestAt, merchantAt, shopAt };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.MapRules = api;
 })(typeof window !== 'undefined' ? window : globalThis);
