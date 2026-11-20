@@ -325,6 +325,13 @@
       if (freeForMob(w, x, y, s) && apart(body(x, y, s), me) > RULES.SPAWN_CLEAR) free.push(body(x, y, s));
     });
     for (let i = free.length - 1; i > 0; i--) { const j = Math.floor(w.rng() * (i + 1)); [free[i], free[j]] = [free[j], free[i]]; }
+    // 부락에 걸친 구역(지도 속성 camp — 2격 오크 부락) — 한두 마리는 부락 안 자리부터
+    if (a.camp) {
+      const [cx, cy, cw, ch] = String(a.camp).split(',').map(Number), want = 1 + (w.rng() < 0.5 ? 1 : 0);
+      const inCamp = c => c.x >= cx && c.y >= cy && c.x < cx + cw && c.y < cy + ch;
+      const first = free.filter(inCamp).slice(0, want);
+      free.splice(0, free.length, ...first, ...free.filter(c => !first.includes(c)));
+    }
     const placed = [];
     for (const c of free) {
       if (placed.length >= n) break;

@@ -1932,3 +1932,22 @@ test('지도 몬스터 도트 — 있는 몬스터 · 크기(칸 × 16) · 1 · 
   for (const e of ENEMIES.filter(x => x.rank.n <= 2)) assert.ok(MOB_SPRITES[e.id], `${e.rank.n}격 ${e.id} — 도트 없음`);
   for (const s of Object.values(MOB_SPRITES)) assert.ok(s.pace > 0 && s.pace <= 2);
 });
+
+test('오크 부락 — 오크 장군은 부락 한가운데, 오크 전사 구역이 부락 서쪽 반에 걸쳐 한두 마리는 부락 안에서 생겨남', () => {
+  const data = loadData(), over = loadMap('overworld');
+  const og = over.posts.find(p => p.enemy === data.ENEMIES.find(e => e.name === '오크 장군').id);
+  const orc = over.areas.find(a => a.monster === 'orc');
+  assert.ok(orc.camp, '오크 전사 구역에 부락 네모(camp)');
+  const [cx, cy, cw, ch] = orc.camp.split(',').map(Number);
+  assert.ok(og.x > cx && og.y > cy && og.x + og.w < cx + cw && og.y + og.h < cy + ch, '장군은 부락 안');
+  assert.ok(cw <= 13 && ch <= 15, '부락은 작게 (13 × 15 칸 안)');
+  const inCamp = (x, y) => x >= cx && y >= cy && x < cx + cw && y < cy + ch;
+  let campCells = 0;
+  for (let y = cy; y < cy + ch; y++) for (let x = cx; x < cx + cw; x++) if (over.areaAt[y * over.w + x] === orc.index && !over.solid[y * over.w + x]) campCells++;
+  assert.ok(campCells >= 15, `부락 안의 오크 전사 구역 칸 ${campCells}`);
+  for (let seed = 1; seed <= 8; seed++) {
+    const w = M.createWorld(over, {}, seed);
+    const n = w.mobs.filter(m => m.area === orc.index && inCamp(m.x, m.y)).length;
+    assert.ok(n >= 1 && n <= 2, `씨앗 ${seed} — 부락 안 오크 전사 ${n}마리`);
+  }
+});

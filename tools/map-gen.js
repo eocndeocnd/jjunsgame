@@ -530,7 +530,7 @@ const OVERWORLD_AREAS = {
 //   [이름, 'gate'] 길을 막는 자리 — overworld-layout.js 의 GATES (그 크기만큼 넓힌 틈을 꼭 맞게 막도록)
 const OVERWORLD_POSTS = [
   ['트롤 킹', 12, 38],                                               // 숲 북서쪽 시내 상류의 굴 앞 (길은 막지 않음)
-  ['오크 장군', 44.1, 55.7],                                          // 오크 부락 한가운데 — 오크 전사 · 홉고블린 구역 사이 (ORC_VILLAGE, 사용자 결정 2026-11-20) · 숲의 마녀는 오두막 안 (BUILDINGS)
+  ['오크 장군', 43.3, 56.1],                                          // 오크 부락 한가운데 — 오크 전사 · 홉고블린 구역 사이 (ORC_VILLAGE, 사용자 결정 2026-11-20) · 숲의 마녀는 오두막 안 (BUILDINGS)
   ['그리핀 로드', 56, 15], ['히드라', 28, 25],                         // 탑 자리 · 물에 잠긴 안뜰 (카벙클은 몰락한 왕 곁의 숨은 굴 — SECRET_ROOMS)
   ['돌 거인', 98, 39], ['서리 거인', 101, 41], ['불의 거인', 98, 43], ['구름 거인', 95, 41],   // 돌 고리
   ['거인왕', 'gate'],                                                   // 쐐기돌 아치
@@ -562,15 +562,14 @@ const BUILDINGS = [
 // 안에 족장 움막 · 가죽 천막 넷 · 모닥불 · 토템 둘 · 무기 걸이 · 가죽 말림대. 모두 막힌 칸(그림은 js/mapart.js 의 orcPix — 지도 속성 blds),
 // 들어갈 수 없는 소품 (건물로 들어가는 문은 없음). 자리는 장군 2 × 2 의 오른쪽 아래 칸(cx, cy)에서 잰 칸
 const ORC_VILLAGE = {
-  rx: 8.6, ry: 10.1, oy: 0.5,                                   // 울타리 타원 (칸) · 가운데를 장군보다 반 칸 아래로
-  gates: [Math.PI, 0, Math.PI / 2], gateW: 0.2,                 // 트인 입구 — 서(길 쪽) · 동(홉고블린 쪽) · 남(지하수로 구멍 쪽)
+  // 2026-11-20 줄임 (사용자 결정 — 오크 전사 구역에 비해 너무 컸음: 17 × 20 → 11 × 13, 천막 넷 → 둘)
+  rx: 5.6, ry: 6.4, oy: 0.5,                                    // 울타리 타원 (칸) · 가운데를 장군보다 반 칸 아래로
+  gates: [Math.PI, 0, Math.PI / 2], gateW: 0.3,                 // 트인 입구 — 서(오크 전사 구역 · 길 쪽) · 동(홉고블린 쪽) · 남(지하수로 구멍 쪽)
   pieces: [
-    { kind: 'orchut', x: -2, y: -6, w: 4, h: 3 },
-    { kind: 'tent', x: -6, y: -4, w: 3, h: 2 }, { kind: 'tent', x: 4, y: -3, w: 3, h: 2 },
-    { kind: 'tent', x: -6, y: 4, w: 3, h: 2 }, { kind: 'tent', x: 4, y: 3, w: 3, h: 2 },
-    { kind: 'fire', x: 0, y: 2, w: 1, h: 1 },
-    { kind: 'totem', x: -3, y: -5, w: 1, h: 1 }, { kind: 'totem', x: 2, y: -5, w: 1, h: 1 },
-    { kind: 'rack', x: -4, y: 7, w: 2, h: 1 }, { kind: 'hide', x: 3, y: 7, w: 2, h: 1 }
+    { kind: 'orchut', x: -2, y: -5, w: 4, h: 3 }, { kind: 'totem', x: -3, y: -4, w: 1, h: 1 },
+    { kind: 'fire', x: -1, y: 2, w: 1, h: 1 },
+    { kind: 'tent', x: 1, y: 2, w: 3, h: 2 }, { kind: 'tent', x: -3, y: 3, w: 3, h: 2 },
+    { kind: 'rack', x: 1, y: 4, w: 2, h: 1 }
   ]
 };
 const OVERWORLD_MERCHANTS = { forest: [34, 58], ruins: [40, 26], giantpass: [70, 46], necropolis: [120, 50], abyss: [128, 37] };
@@ -681,9 +680,10 @@ function overworld(data) {
     guard(px, py, n, n, 2);
   }
   // 오크 부락 — 마당(흙) · 울타리 · 움막 · 천막 … (ORC_VILLAGE). 마당엔 나무가 안 섬
-  const village = new Uint8Array(w * h), blds = [];          // village: 1 마당 흙 · 2 막힌 소품
+  const village = new Uint8Array(w * h), blds = [], VC = {};  // village: 1 마당 흙 · 2 막힌 소품 · VC 부락 가운데 · 둘레 네모
   {
     const og = posts.find(p => p.name === '오크 장군'), V = ORC_VILLAGE, cx = og.x + 1, cy = og.y + 1;
+    Object.assign(VC, { cx, cy, box: [cx - Math.ceil(V.rx), cy - Math.ceil(V.ry - V.oy), Math.ceil(V.rx) * 2 + 1, Math.ceil(V.ry) * 2 + 1] });
     const d = (x, y) => Math.hypot((x + 0.5 - cx) / V.rx, (y + 0.5 - (cy + V.oy)) / V.ry);
     const inGate = (x, y) => { const a = Math.atan2((y + 0.5 - (cy + V.oy)) / V.ry, (x + 0.5 - cx) / V.rx); return V.gates.some(g => Math.abs(Math.atan2(Math.sin(a - g), Math.cos(a - g))) < V.gateW); };
     const put = (x, y, ww, hh, kind, g) => {
@@ -883,6 +883,18 @@ function overworld(data) {
       const e = d1 + (L.fbm((k % w) * 0.12, ((k / w) | 0) * 0.12, 90 + rank) - 0.5) * 2 * AREA_WOBBLE;
       if (e <= AREA_REACH && (d2 === Infinity || e <= AREA_SHARE * (d1 + d2))) near[k] = a;
     }
+    // 2격 — 가장 약한 구역(들어오는 곳에서 가장 가까운 자리 = 오크 전사)이 오크 부락의 서쪽 반에 걸침 (사용자 결정 2026-11-20):
+    // 부락 마당의 서쪽 반 · 부락 서쪽 입구까지 비어 있는 땅을 그 구역으로
+    if (rank === 2) {
+      const entry = walkFrom([idx(...L.spot1(...OVERWORLD_ENTRY[rank]))]);
+      const weak = starts.reduce((b, s0, i) => (entry[s0] >= 0 && (b < 0 || entry[s0] < entry[starts[b]]) ? i : b), -1);
+      for (let y = VC.cy - 3; y <= VC.cy + 3; y++) for (let x = VC.cx - 10; x <= VC.cx; x++) {
+        const k = idx(x, y);
+        if (land(k) && (village[k] === 1 || near[k] < 0)) near[k] = weak;
+      }
+      for (let y = VC.box[1]; y < VC.box[1] + VC.box[3]; y++) for (let x = VC.box[0]; x <= VC.cx; x++) if (land(idx(x, y)) && village[idx(x, y)] === 1) near[idx(x, y)] = weak;
+      VC.weak = weak;
+    }
     const owner = new Int16Array(w * h).fill(-1);              // 그 자리에서 걸어서(네 방향) 이어지는 것만 — 늘 한 덩어리
     starts.forEach((s0, i) => {
       if (near[s0] !== i) near[s0] = i;
@@ -927,16 +939,21 @@ function overworld(data) {
       for (const k of mine) if (fromEntry[k] >= 0 && toBoss[k] >= 0) { sum += fromEntry[k] - toBoss[k]; n++; near = Math.min(near, fromEntry[k]); }
       if (!n) throw new Error(`${rank}격 구역 자리 [${seeds[rank][i].rect}] — 들어오는 곳이나 보스에서 걸어서 닿지 않음`);
       return { mine, box, score: sum / n, near };
-    }).sort((p, q) => p.score - q.score);
+    });
+    const regionsBySeed = regions.slice();                       // 자리 차례 그대로 (오크 부락 검사)
+    regions.sort((p, q) => p.score - q.score);
     // 가장 약한 것은 들어오자마자 만나게 — 들어오는 곳에서 걸어서 가장 먼저 닿는 구역 (나머지는 위 순서대로)
     const first = regions.reduce((b, r) => (r.near < b.near ? r : b));
     regions.splice(regions.indexOf(first), 1);
     regions.unshift(first);
+    if (rank === 2 && regions[0] !== regionsBySeed[VC.weak]) throw new Error('오크 부락 — 걸친 구역이 가장 약한 구역(오크 전사)이 아님');
     regions.forEach((r, k) => {
       const mid = clearMid(r);
       mids.push([mid % w, (mid / w) | 0]);
       const { x, y, polygon } = outline(r.mine, r.box);
-      areas.push({ name: normals[k].name, x, y, polygon, rank, monster: normals[k].id, zone: zone.id });
+      // 오크 부락에 걸친 구역 — camp(부락 네모): 이 구역의 몬스터 한두 마리는 부락 안에서 생겨남 (js/map.js 의 spawn)
+      const camp = rank === 2 && k === 0 ? { camp: VC.box.join(',') } : {};
+      areas.push({ name: normals[k].name, x, y, polygon, rank, monster: normals[k].id, zone: zone.id, ...camp });
     });
   }
 
