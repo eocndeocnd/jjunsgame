@@ -500,6 +500,146 @@
     stone: ['#57534c', '#4a4640', '#635f56'], mortar: '#272421', door: ['#2a1e17', '#36271d', '#433024'], iron: ['#232327', '#3e3e45'],
     glow: ['#4f9a3a', '#7ed05a', '#c6f59a'], line: '#1a120e'
   };
+  // ---------- 오크 부락 (2격 — tools/map-gen.js 의 ORC_VILLAGE, 사용자 결정 2026-11-20) ----------
+  // 지도 속성 blds 의 소품 하나하나: stake 울타리 한 칸(굵기 · 키가 저마다 다른 뾰족한 통나무, 묶은 밧줄) · tent 가죽 천막(조각 가죽을 기운 자국 · 엇갈린 장대) ·
+  // orchut 족장 움막(둥근 가죽 지붕 · 붉은 전쟁 칠 · 엄니 둘 · 짐승 해골) · totem 토템 · fire 모닥불 · rack 무기 걸이 · hide 가죽 말림대.
+  // 빛은 왼쪽 위 — 오른쪽 면은 그늘, 그림자는 오른쪽 아래 땅에
+  const ORC_KINDS = { stake: 1, tent: 1, orchut: 1, totem: 1, fire: 1, rack: 1, hide: 1 };
+  const ORC_C = {
+    hide: ['#3a2a20', '#4c3727', '#5e4530', '#71553a', '#846646'], seam: '#22170f', stitch: '#a08a62',
+    bone: ['#6e6452', '#a39780', '#d4c8ac'], paint: '#8a2a22', rope: ['#5e5038', '#8a7a5a'], line: '#1a120e'
+  };
+  function orcPix(B, px, py, X, Y) {
+    const K = ORC_C, L = HUT_C.log, line = c3(K.line), W = B.w * P, H = B.h * P, v = B.v | 0;
+    const ground = () => (B.kind === 'stake' ? texture(GRASS, 2, X, Y) : texture(DIRT, 2, X, Y));
+    const shadow = (c, k = 0.66) => mul(c, k);
+    if (B.kind === 'stake') {
+      // 통나무 둘~셋 — 자리마다 폭 4~7 · 꼭대기 높이가 다름. 밑동에 그림자, 허리에 밧줄
+      let x0 = -Math.floor(hash(B.x0, B.y0, 700) * 3), i = 0;
+      while (x0 < W) {
+        const w = 4 + Math.floor(hash(B.x0 * 5 + i, B.y0, 701) * 4), top = 1 + Math.floor(hash(B.x0 + i, B.y0 * 3, 702) * 5);
+        if (px >= x0 && px < x0 + w) {
+          const lx = px - x0, mid = (w - 1) / 2, tip = top + Math.ceil(mid);
+          if (py < top) return ground();
+          if (py < tip && Math.abs(lx - mid) > (py - top) + 0.5) return py > top + 1 && lx > mid ? shadow(ground(), 0.8) : ground();   // 뾰족한 끝
+          if (py >= 14) return py === 15 ? shadow(ground(), 0.6) : c3(L[0]);                          // 밑동 · 땅 그늘
+          if (lx === 0 || lx === w - 1) return line;
+          const rope = 8 + (hash(B.x0, B.y0, 703) < 0.5 ? 0 : 1);
+          if (py === rope || py === rope + 1) return c3(K.rope[py === rope ? 1 : 0]);
+          let k = lx === 1 ? 4 : lx >= w - 2 ? 1 : 2;
+          if (py < tip) k = Math.min(4, k + 1);                                                       // 깎은 끝 — 밝은 속살
+          if (k === 2 && vnoise(px * 0.5, py * 0.3, 704 + i) > 0.64) k = 3;
+          return mul(c3(L[k]), 0.95 - (py / 16) * 0.12);
+        }
+        x0 += w; i++;
+      }
+      return ground();
+    }
+    if (B.kind === 'tent') {
+      // 가죽 천막 — 앞에서 본 세모, 꼭대기에 엇갈린 장대, 가운데 아래 벌어진 입구
+      const ax = W / 2 - 0.5 + (hash(v, 0, 705) < 0.5 ? -1 : 1), ay = 4, by = H - 3, hw = W / 2 - 2;
+      const half = y => (y - ay) / (by - ay) * hw;
+      for (const s of [-1, 1]) {                                                                       // 장대 — 꼭대기 위로 엇갈려 삐죽
+        const t = py - 0, xx = ax + s * (4 - t * 0.9);
+        if (py < ay + 2 && Math.abs(px - xx) < 0.7) return c3(L[s < 0 ? 3 : 1]);
+      }
+      const dx = px - ax, hh = half(py);
+      if (py >= ay && py <= by && Math.abs(dx) <= hh + 0.5) {
+        if (Math.abs(dx) > hh - 0.5 || py === by) return line;
+        const door = (by - py) < 13 && Math.abs(dx) < (13 - (by - py)) * 0.42;
+        if (door) return Math.abs(dx) > (13 - (by - py)) * 0.42 - 1 ? c3(K.hide[4]) : c3('#120c09');   // 입구 — 젖힌 가죽 끝 · 안의 어둠
+        let c = stones(X, Y, 9, 706 + v, [K.hide[2], K.hide[1], K.hide[3]], K.seam);
+        if (c[0] === c3(K.seam)[0] && hash(X, Y, 707) < 0.35) c = c3(K.stitch);                     // 기운 자국
+        c = mul(c, dx < 0 ? 1.08 - (py - ay) / (by - ay) * 0.1 : 0.78);                            // 왼쪽 빛 · 오른쪽 그늘
+        return c;
+      }
+      if (py > by - 4 && py <= by + 2 && px > ax && px < ax + hw + 4) return shadow(ground());     // 오른쪽 아래 그림자
+      return ground();
+    }
+    if (B.kind === 'orchut') {
+      // 족장 움막 — 둥근 가죽 지붕(조각 가죽 · 붉은 전쟁 칠), 꼭대기 연기 구멍의 장대, 문 양옆 엄니 둘, 문 위 짐승 해골
+      const cx = W / 2 - 0.5, cy = H - 6, rx = W / 2 - 3, ry = H - 9, dx = px - cx, dy = py - cy;
+      const r = Math.hypot(dx / rx, dy / ry);
+      if (py < 7 && py >= 0) for (const s of [-1, 0.4, 1.3]) {                                       // 장대 — 저마다 기울기가 다름
+        const xx = cx + s * 3 + (7 - py) * s * 0.5;
+        if (Math.abs(px - xx) < 0.7) return c3(L[s < 0 ? 3 : 1]);
+      }
+      // 엄니 — 문 양옆에서 위로 휘어 오름
+      for (const s of [-1, 1]) {
+        const t = (H - 2 - py) / 18;
+        if (t >= 0 && t <= 1) { const xx = cx + s * (10 + Math.sin(t * 2.4) * 5); if (Math.abs(px - xx) < 1.6 - t) return c3(K.bone[Math.abs(px - xx) < 0.5 ? 2 : s < 0 ? 1 : 0]); }
+      }
+      if (r < 1 && py <= H - 3) {
+        if (r > 0.96 || py === H - 3) return line;
+        const ddx = Math.abs(dx);
+        if (py >= H - 14 && ddx < 5.5 - Math.max(0, H - 11 - py) * 0.6) return ddx > 4.5 - Math.max(0, H - 11 - py) * 0.6 ? c3(K.hide[4]) : c3('#0e0907');   // 문
+        // 해골 — 문 위
+        const sx = dx, sy = py - (H - 19);
+        if (Math.hypot(sx, sy * 1.15) < 3.6) return (Math.abs(Math.abs(sx) - 1.4) < 0.8 && sy > -1.5 && sy < 0.5) ? c3('#120c09') : sx < 0 ? c3(K.bone[2]) : c3(K.bone[1]);
+        if (sy >= 3 && sy < 5 && Math.abs(sx) < 2.2) return (Math.round(sx) & 1) && sy === 4 ? c3('#120c09') : c3(K.bone[1]);
+        if (sy > -3 && sy < 1 && Math.abs(sx) > 3.4 && Math.abs(sx) < 6 - (sy + 3) * 0.6) return c3(K.bone[0]);   // 뿔
+        let c = stones(X, Y, 11, 708, [K.hide[2], K.hide[1], K.hide[3]], K.seam);
+        if (c[0] === c3(K.seam)[0] && hash(X, Y, 709) < 0.35) c = c3(K.stitch);
+        const lit = (-dx / rx) * 0.5 + (-dy / ry) * 0.5;                                            // 둥근 지붕 — 왼쪽 위가 밝음
+        c = mul(c, 0.82 + lit * 0.3);
+        const band = py - (H - 26) - Math.round(Math.sin(px * 0.35 + 1) * 1.5);                      // 붉은 전쟁 칠 — 물결 띠, 군데군데 벗겨짐
+        if ((band === 0 || band === 1) && fbm(X * 0.2, Y * 0.2, 710) > 0.42) c = mix(c, c3(K.paint), 0.75);
+        return c;
+      }
+      if (py >= H - 4 && px > cx && px < cx + rx + 5) return shadow(ground());
+      return ground();
+    }
+    if (B.kind === 'totem') {
+      // 토템 — 깎은 기둥에 얼굴 둘(붉은 칠 눈), 꼭대기에 뿔 달린 해골, 오른쪽 아래 그림자
+      const dx = px - 7.5;
+      if (py < 5) {
+        if (Math.hypot(dx, py - 2.5) < 2.6) return Math.abs(Math.abs(dx) - 1) < 0.6 && py === 2 ? c3('#120c09') : dx < 0 ? c3(K.bone[2]) : c3(K.bone[1]);
+        if (py < 3 && Math.abs(dx) > 2.4 && Math.abs(dx) < 5 - py) return c3(K.bone[0]);
+        return ground();
+      }
+      if (Math.abs(dx) < 2.5 && py < 15) {
+        if (Math.abs(dx) > 1.8) return line;
+        if ((py === 7 || py === 11) && Math.abs(dx) < 1.2) return c3(K.paint);                      // 눈
+        if (py === 9 || py === 13) return c3(L[0]);                                                 // 입 · 마디
+        return c3(L[dx < 0 ? 4 : dx < 1 ? 2 : 1]);
+      }
+      if (py >= 13 && dx > 1 && dx < 6) return shadow(ground());
+      return ground();
+    }
+    if (B.kind === 'fire') {
+      // 모닥불 — 돌 둘레(돌마다 크기가 다름) · 엇갈린 장작 · 불꽃 (가운데가 밝음)
+      const dx = px - 7.5, dy = py - 10.5, rr = Math.hypot(dx / 6.5, dy / 4);
+      if (rr < 1 && rr > 0.68) return stones(X * 1.4, Y * 1.4, 4, 711, HUT_C.stone, HUT_C.mortar);
+      const fl = 9 - Math.abs(dx) * 1.6 + (hash(px, 0, 712) - 0.5) * 3;
+      if (Math.abs(dx) < 4 && py >= 10.5 - fl && py < 11) return c3(py > 9 - Math.abs(dx) * 0.3 ? '#e0702a' : Math.abs(dx) < 1.5 && py > 4 ? '#ffd070' : '#ffb040');
+      if (rr <= 0.68) return c3(Math.abs(dx - dy) < 1 || Math.abs(dx + dy) < 1 ? L[1] : '#2a1a12');   // 장작 · 재
+      const g = ground(), gl = Math.hypot(dx, dy * 1.3);
+      return gl < 9 ? mix(g, c3('#ff9a40'), 0.25 * (1 - gl / 9)) : g;
+    }
+    if (B.kind === 'rack' || B.kind === 'hide') {
+      // 걸이 — 기둥 둘 · 가로대. rack 엔 거친 도끼 · 창이 기대 있고, hide 엔 펼친 가죽이 묶여 있음
+      const posts = [3, W - 4];
+      for (const q of posts) if (Math.abs(px - q) < 1.5 && py >= 2 && py < 15) return Math.abs(px - q) > 0.6 ? line : c3(L[px < q ? 3 : 1]);
+      if (py >= 3 && py <= 4 && px > 2 && px < W - 3) return c3(L[py === 3 ? 3 : 1]);
+      if (B.kind === 'hide') {
+        if (px > 5 && px < W - 6 && py > 5 && py < 14 - Math.abs(Math.sin(px * 0.6)) * 2) {
+          if ((px === 6 || px === W - 7) && (py & 1)) return c3(K.rope[1]);
+          return mul(c3(K.hide[(hash(px >> 2, py >> 2, 713) * 3 + 1) | 0]), px < W / 2 ? 1.05 : 0.85);
+        }
+      } else {
+        const items = [[7, 0.25, 'axe'], [13, -0.2, 'spear'], [20, 0.15, 'axe'], [25, -0.1, 'spear']];
+        for (const [x0, lean, kind] of items) {
+          const xx = x0 + (py - 14) * lean;
+          if (py >= 2 && py < 15 && Math.abs(px - xx) < 0.6) return c3(L[3]);
+          if (kind === 'axe' && py >= 3 && py <= 7 && px > xx && px < xx + 4 - Math.abs(py - 5) * 0.6) return c3(px > xx + 2 ? '#8a8a90' : '#5a5a60');
+          if (kind === 'spear' && py >= 0 && py < 3 && Math.abs(px - xx) < (py + 0.5) * 0.5) return c3('#9a9aa0');
+        }
+      }
+      if (py >= 14 && px > 3) return shadow(ground(), 0.75);
+      return ground();
+    }
+    return ground();
+  }
   function hutGeom(B) {
     const pw = B.w * P, ph = B.h * P, d0 = (B.door.x - B.x0) * P, d1 = d0 + B.door.w * P;
     const G = { pw, ph, d0, d1, WL: 10, WR: pw - 10, wTop: ph - 34, fTop: ph - 7, cx: pw / 2, logs: [] };
@@ -657,6 +797,7 @@
   function buildingPixel(A, e, X, Y) {
     const B = A.buildings[e.b];
     if (STORE_KINDS[B.kind]) return storeProp(B, X - B.x0 * P, Y - B.y0 * P, X, Y);   // 가게 안의 가구
+    if (ORC_KINDS[B.kind]) return orcPix(B, X - B.x0 * P, Y - B.y0 * P, X, Y);   // 오크 부락
     if (B.kind) return cityBuilding(B, X - B.x0 * P, Y - B.y0 * P, X, Y);   // 도시의 건물
     if (B.door && B.door.name === 'witchhut') { if (!B.G) B.G = hutGeom(B); return hutPix(B.G, X - B.x0 * P, Y - B.y0 * P, X, Y); }   // 숲의 마녀의 오두막
     if (!B.G) B.G = castleGeom(B);

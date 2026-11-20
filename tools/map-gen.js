@@ -530,7 +530,7 @@ const OVERWORLD_AREAS = {
 //   [이름, 'gate'] 길을 막는 자리 — overworld-layout.js 의 GATES (그 크기만큼 넓힌 틈을 꼭 맞게 막도록)
 const OVERWORLD_POSTS = [
   ['트롤 킹', 12, 38],                                               // 숲 북서쪽 시내 상류의 굴 앞 (길은 막지 않음)
-  ['오크 장군', 13, 46],                                              // 야영지 (숲의 마녀는 오두막 안 — BUILDINGS)
+  ['오크 장군', 44.1, 55.7],                                          // 오크 부락 한가운데 — 오크 전사 · 홉고블린 구역 사이 (ORC_VILLAGE, 사용자 결정 2026-11-20) · 숲의 마녀는 오두막 안 (BUILDINGS)
   ['그리핀 로드', 56, 15], ['히드라', 28, 25],                         // 탑 자리 · 물에 잠긴 안뜰 (카벙클은 몰락한 왕 곁의 숨은 굴 — SECRET_ROOMS)
   ['돌 거인', 98, 39], ['서리 거인', 101, 41], ['불의 거인', 98, 43], ['구름 거인', 95, 41],   // 돌 고리
   ['거인왕', 'gate'],                                                   // 쐐기돌 아치
@@ -558,6 +558,21 @@ const BUILDINGS = [
   // 2격 — 숲의 마녀의 오두막 (사용자 결정 2026-11-20). 안은 큰 방 대신 작은 방(room — storeInterior 틀, 아래 WITCH_ROOM)
   { id: 'witchhut', title: '마녀의 오두막', layout: 'HUT', boss: '숲의 마녀', door: 1, room: 'WITCH_ROOM' }
 ];
+// 오크 부락 (2격, 사용자 결정 2026-11-20) — 오크 장군 자리를 가운데로 둥근 다진 흙 마당, 둘레에 뾰족한 통나무 울타리(서 · 동 · 남은 트인 입구),
+// 안에 족장 움막 · 가죽 천막 넷 · 모닥불 · 토템 둘 · 무기 걸이 · 가죽 말림대. 모두 막힌 칸(그림은 js/mapart.js 의 orcPix — 지도 속성 blds),
+// 들어갈 수 없는 소품 (건물로 들어가는 문은 없음). 자리는 장군 2 × 2 의 오른쪽 아래 칸(cx, cy)에서 잰 칸
+const ORC_VILLAGE = {
+  rx: 8.6, ry: 10.1, oy: 0.5,                                   // 울타리 타원 (칸) · 가운데를 장군보다 반 칸 아래로
+  gates: [Math.PI, 0, Math.PI / 2], gateW: 0.2,                 // 트인 입구 — 서(길 쪽) · 동(홉고블린 쪽) · 남(지하수로 구멍 쪽)
+  pieces: [
+    { kind: 'orchut', x: -2, y: -6, w: 4, h: 3 },
+    { kind: 'tent', x: -6, y: -4, w: 3, h: 2 }, { kind: 'tent', x: 4, y: -3, w: 3, h: 2 },
+    { kind: 'tent', x: -6, y: 4, w: 3, h: 2 }, { kind: 'tent', x: 4, y: 3, w: 3, h: 2 },
+    { kind: 'fire', x: 0, y: 2, w: 1, h: 1 },
+    { kind: 'totem', x: -3, y: -5, w: 1, h: 1 }, { kind: 'totem', x: 2, y: -5, w: 1, h: 1 },
+    { kind: 'rack', x: -4, y: 7, w: 2, h: 1 }, { kind: 'hide', x: 3, y: 7, w: 2, h: 1 }
+  ]
+};
 const OVERWORLD_MERCHANTS = { forest: [34, 58], ruins: [40, 26], giantpass: [70, 46], necropolis: [120, 50], abyss: [128, 37] };
 
 // 칸 모음(구멍 없는 한 덩어리) → 둘레를 시계 방향으로 도는 다각형. 꼭짓점은 칸 모서리 (칸 단위, x · y 에서 잰 값).
@@ -665,6 +680,30 @@ function overworld(data) {
     posts.push(n > 1 ? { name, x: px, y: py, w: n, h: n, enemy: e.id, blocks } : { name, x: px, y: py, enemy: e.id, blocks });
     guard(px, py, n, n, 2);
   }
+  // 오크 부락 — 마당(흙) · 울타리 · 움막 · 천막 … (ORC_VILLAGE). 마당엔 나무가 안 섬
+  const village = new Uint8Array(w * h), blds = [];          // village: 1 마당 흙 · 2 막힌 소품
+  {
+    const og = posts.find(p => p.name === '오크 장군'), V = ORC_VILLAGE, cx = og.x + 1, cy = og.y + 1;
+    const d = (x, y) => Math.hypot((x + 0.5 - cx) / V.rx, (y + 0.5 - (cy + V.oy)) / V.ry);
+    const inGate = (x, y) => { const a = Math.atan2((y + 0.5 - (cy + V.oy)) / V.ry, (x + 0.5 - cx) / V.rx); return V.gates.some(g => Math.abs(Math.atan2(Math.sin(a - g), Math.cos(a - g))) < V.gateW); };
+    const put = (x, y, ww, hh, kind, g) => {
+      for (let j = 0; j < hh; j++) for (let i = 0; i < ww; i++) {
+        const k = idx(x + i, y + j);
+        if (tiles[k] !== FLOOR) throw new Error(`오크 부락 — ${kind} (${x + i}, ${y + j}) 자리가 빈 땅이 아님`);
+        tiles[k] = WALL; village[k] = 2;
+      }
+      blds.push({ x, y, w: ww, h: hh, kind, g, v: blds.length });
+    };
+    for (let y = cy - 12; y <= cy + 13; y++) for (let x = cx - 11; x <= cx + 11; x++) {
+      if (!inside(x, y) || d(x, y) >= 1 || (tiles[idx(x, y)] !== FLOOR && tiles[idx(x, y)] !== ROAD)) continue;
+      village[idx(x, y)] = 1; keep[idx(x, y)] = 1;
+    }
+    for (let y = cy - 12; y <= cy + 13; y++) for (let x = cx - 11; x <= cx + 11; x++) {   // 울타리 — 마당 가장자리 칸 (네 방향 이웃 가운데 마당 밖이 있는 칸)
+      if (!inside(x, y) || village[idx(x, y)] !== 1 || tiles[idx(x, y)] !== FLOOR || inGate(x, y)) continue;
+      if ([[1, 0], [-1, 0], [0, 1], [0, -1]].some(([ex, ey]) => d(x + ex, y + ey) >= 1)) put(x, y, 1, 1, 'stake', 'grass');
+    }
+    for (const q of V.pieces) put(cx + q.x, cy + q.y, q.w, q.h, q.kind, 'dirt');
+  }
   // 숨은 굴로 가는 구멍 — 그 보스 바로 뒤 (보스 몸 위로 한 칸 띄워, 보스 폭만큼)
   for (const s of SECRET_ROOMS) {
     if (s.from && s.from !== 'overworld') continue;            // 건물 안 보스 — 그 안 지도에 (buildingInterior)
@@ -764,7 +803,8 @@ function overworld(data) {
     }
   };
   const cellsOf = p => { const out = []; for (let j = 0; j < (p.h || 1); j++) for (let i = 0; i < (p.w || 1); i++) out.push([p.name, p.x + i, p.y + j]); return out; };
-  const stand = [...posts.flatMap(cellsOf), ...ports.filter(p => p.appears || p.door).flatMap(cellsOf), ...npcs.map(n => [n.name, n.x, n.y])];
+  const stand = [...posts.flatMap(cellsOf), ...ports.filter(p => p.appears || p.door).flatMap(cellsOf), ...npcs.map(n => [n.name, n.x, n.y]),
+    ...Object.values(seeds).flat().filter(c => open(idx(c.x, c.y))).map(c => [`구역 [${c.rect}]`, c.x, c.y])];   // 구역 자리 한가운데도 — 옛 오크 장군 자리로 판 길에 기대던 숲 서남쪽 구역이 갇히지 않게 (2026-11-20)
   for (const [, x, y] of stand) {
     const k = idx(x, y);
     if (seen[k] || !open(k)) continue;
@@ -972,11 +1012,11 @@ function overworld(data) {
   const lookLayer = new Uint8Array(w * h);
   for (let i = 0; i < w * h; i++) {
     const wet = L.ter[i] === OL.WATER || L.ter[i] === OL.CANAL;
-    lookLayer[i] = buildingCells[i] ? look(BUILD, 8) : ruin(i) ? look(RUIN, L.bio[i]) : look(tiles[i] === ROAD && !wet ? OL.DIRT : L.ter[i], L.bio[i]);
+    lookLayer[i] = buildingCells[i] ? look(BUILD, 8) : village[i] === 2 ? look(BUILD, L.bio[i]) : village[i] === 1 && tiles[i] !== WALL ? look(OL.DIRT, L.bio[i]) : ruin(i) ? look(RUIN, L.bio[i]) : look(tiles[i] === ROAD && !wet ? OL.DIRT : L.ter[i], L.bio[i]);
   }
   // 옛 성문 — 두 탑을 감싸는 네모 (그림 js/mapart.js 의 drawOver 가 그 위에 아치를 덮어 그림)
   const gx0 = L.span(L.RUINS.towers[0], L.RUINS.towers[0])[0], gx1 = L.span(L.RUINS.towers[1], L.RUINS.towers[1])[1];
-  return buildTmj({ w, h, tiles, areas, posts, ports, npcs, chests, look: lookLayer, props: { gate: `${gx0},${ry0},${gx1 - gx0 + 1},${ry1 - ry0 + 1}` } });
+  return buildTmj({ w, h, tiles, areas, posts, ports, npcs, chests, look: lookLayer, props: { gate: `${gx0},${ry0},${gx1 - gx0 + 1},${ry1 - ry0 + 1}`, blds: JSON.stringify(blds) } });
 }
 
 // ---------- 숨은 굴 (SECRET_ROOMS) — 히든 하나만 있는 작은 굴 ----------
