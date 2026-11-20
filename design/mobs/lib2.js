@@ -55,6 +55,24 @@ function mPoly(m, pts) {
     for (let i = 0; i + 1 < xs.length; i += 2) for (let x = Math.ceil(xs[i] - 0.5); x <= Math.floor(xs[i + 1] - 0.5); x++) if (inside(m, x, y)) m[y][x] = true;
   }
 }
+// 굵기가 변하는 관 — 점들을 따라 r0 에서 r1 로 (뿌리 · 가지처럼 끝이 가늘어짐)
+function mTube(m, pts, r0, r1) {
+  const n = pts.length;
+  for (let i = 1; i < n; i++) {
+    const [ax, ay] = pts[i - 1], [bx, by] = pts[i], steps = Math.max(4, Math.ceil(Math.hypot(bx - ax, by - ay) * 2));
+    for (let k = 0; k <= steps; k++) { const t = k / steps, r = r0 + (r1 - r0) * ((i - 1 + t) / (n - 1)); mEll(m, ax + (bx - ax) * t, ay + (by - ay) * t, Math.max(0.55, r), Math.max(0.55, r)); }
+  }
+}
+// 값 잡음 — 격자 간격 cell 마다 정해 둔 값을 부드럽게 이음 (0~1). 일정한 무늬가 아니라 덩어리진 얼룩을 만들 때
+function noise(seed, cell = 3) {
+  const h = (x, y) => { const v = Math.sin(x * 127.1 + y * 311.7 + seed * 74.7) * 43758.5453; return v - Math.floor(v); };
+  return (x, y) => {
+    const gx = x / cell, gy = y / cell, x0 = Math.floor(gx), y0 = Math.floor(gy), fx = gx - x0, fy = gy - y0;
+    const sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy);
+    const a = h(x0, y0) + (h(x0 + 1, y0) - h(x0, y0)) * sx, c = h(x0, y0 + 1) + (h(x0 + 1, y0 + 1) - h(x0, y0 + 1)) * sx;
+    return a + (c - a) * sy;
+  };
+}
 // 줄 문자열로 모양 — '#' 이 칠함
 function mRows(m, x0, y0, rows) { rows.forEach((r, j) => [...r].forEach((c, i) => { if (c !== '.' && c !== ' ' && inside(m, x0 + i, y0 + j)) m[y0 + j][x0 + i] = true; })); }
 
@@ -102,6 +120,22 @@ class Sprite {
   part(matId, shape, opt = {}) {
     const m = mask(this.n); shape(m);
     const t = toneMap(m, opt), g = this.g, n = this.n;
+    // 드리운 그림자 — 새 부위(앞)가 이미 그린 부위(뒤)에 빛 반대쪽(오른쪽 아래)으로 그림자를 떨어뜨림. 가까울수록 진하게
+    // (잎 아래 줄기 · 머리 밑 목 · 팔 밑 옆구리 · 몸 밑 다리 사이 — 사용자 지적 2026-11-20: 가려진 곳이 밝으면 틀림)
+    if (opt.cast !== false) {
+      const len = opt.cast || Math.max(2, Math.round(n / 16)), dark = new Map();
+      for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+        if (!m[y][x]) continue;
+        for (let d = 1; d <= len; d++) {
+          const tx = x + Math.floor(d / 2), ty = y + d;
+          if (!inside(g, tx, ty) || m[ty][tx]) continue;
+          const c = g[ty][tx]; if (!c || !/\d$/.test(c)) continue;
+          const amt = d === 1 ? 2 : 1, k = ty * n + tx;
+          if ((dark.get(k) || 0) < amt) dark.set(k, amt);
+        }
+      }
+      for (const [k, amt] of dark) { const x = k % n, y = (k - x) / n, c = g[y][x]; g[y][x] = c.slice(0, -1) + Math.max(0, +c.slice(-1) - amt); }
+    }
     for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
       if (!m[y][x]) continue;
       const touch = opt.line !== false && [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => inside(m, x + dx, y + dy) && !m[y + dy][x + dx] && g[y + dy][x + dx] && g[y + dy][x + dx] !== 'K');
@@ -114,6 +148,16 @@ class Sprite {
   // 이미 칠한 칸의 단계만 바꿈 (재질은 그대로) — 근육 주름 · 반짝임
   tone(list, t) { for (const [x, y] of list) { const c = inside(this.g, x, y) && this.g[y][x]; if (c && /\d$/.test(c)) this.g[y][x] = c.slice(0, -1) + t; } return this; }
   shift(list, dt) { for (const [x, y] of list) { const c = inside(this.g, x, y) && this.g[y][x]; if (c && /\d$/.test(c)) this.g[y][x] = c.slice(0, -1) + Math.max(0, Math.min(4, +c.slice(-1) + dt)); } return this; }
+  // 한 재질의 칸마다 fn(x, y, 단계) → 새 단계 (null 이면 지움)
+  each(matId, fn) {
+    const g = this.g;
+    for (let y = 0; y < this.n; y++) for (let x = 0; x < this.n; x++) {
+      const c = g[y][x]; if (!c || c.slice(0, -1) !== matId || !/\d$/.test(c)) continue;
+      const t = fn(x, y, +c.slice(-1));
+      g[y][x] = t == null ? null : matId + Math.max(0, Math.min(4, t));
+    }
+    return this;
+  }
   clear(list) { for (const [x, y] of list) if (inside(this.g, x, y)) this.g[y][x] = null; return this; }
   outline() {
     const g = this.g, src = g.map(r => r.slice());
@@ -157,4 +201,4 @@ function pair(A, B, K, extra = {}) {
   }).join(''));
   return { ...extra, pal, a: enc(A), b: enc(B) };
 }
-module.exports = { pair, Sprite, ramp, mRect, mEll, mLine, mPoly, mRows, toneMap };
+module.exports = { mTube, noise, pair, Sprite, ramp, mRect, mEll, mLine, mPoly, mRows, toneMap };

@@ -3,11 +3,11 @@ const fs = require('fs'), path = require('path'), zlib = require('zlib');
 const S = require(path.resolve(process.argv[2])), out = process.argv[3];
 const ids = process.argv[4] ? process.argv[4].split(',') : Object.keys(S);
 for (const id of ids) for (const f of ['a', 'b']) {
-  const g = S[id][f]; if (![16, 32, 48].includes(g.length)) throw new Error(`${id}.${f} 줄 ${g.length}`);
+  const g = S[id][f]; if (![16, 32, 48, 64].includes(g.length)) throw new Error(`${id}.${f} 줄 ${g.length}`);
   g.forEach((r, y) => { if (r.length !== g.length) throw new Error(`${id}.${f} ${y}줄 길이 ${r.length} «${r}»`); for (const ch of r) if (ch !== '.' && !S[id].pal[ch]) throw new Error(`${id}.${f} ${y}줄 모르는 색 ${ch}`); });
 }
 const hex = h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
-const BIG = 192, PAD = 12, SM = 2 * 96 + 24;
+const BIG = 192, PAD = 12, MAXN = Math.max(...ids.map(id => S[id].a.length)), SM = Math.max(2 * 96, 4 * MAXN) + 24;
 const W = PAD + ids.length * (2 * (BIG + PAD) + SM + PAD), H = PAD * 2 + BIG;
 const px = Buffer.alloc(W * H * 4);
 const rect = (x, y, w, h, c) => { for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) { const X = x + i, Y = y + j; if (X < 0 || Y < 0 || X >= W || Y >= H) continue; const k = (Y * W + X) * 4; px[k] = c[0]; px[k + 1] = c[1]; px[k + 2] = c[2]; px[k + 3] = 255; } };

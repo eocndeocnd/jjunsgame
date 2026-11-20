@@ -15,7 +15,13 @@ const path = require('path');
 const { execFileSync } = require('child_process');
 
 const ROOT = path.join(__dirname, '..', '..');
-const RANKS = { 1: ['./rank01-small.js', './rank01-big.js'] };
+const RANKS = { 1: ['./rank01-small.js', './rank01-big.js'], 2: ['./rank02-small.js', './rank02-big.js'] };
+// 걸음 박자 — 둔한 몬스터일수록 프레임이 천천히 바뀜 (1 = 반 칸마다 A · B, 0.5 = 한 칸마다). 서 있는 정예 · 보스의 숨도 같은 박자
+// (사용자 결정 2026-11-20). 없으면 1
+const PACE = {
+  slime: 0.7, giantrat: 1.3, goblin: 1, kobold: 1.1, goblinchief: 0.8, skeleton: 0.9, zombie: 0.6, cavespider: 1.2, mimic: 0.7, imp: 1.2, darkwolf: 1.4, dungeonguardian: 0.5,
+  orc: 0.9, hobgoblin: 1, lizardman: 1, harpy: 1.3, orcgeneral: 0.8, ogre: 0.5, darkelf: 1.3, treant: 0.4, forestwitch: 0.7, gargoyle: 0.7, basilisk: 0.8, trollking: 0.5
+};
 
 const all = {}, byRank = {};
 for (const [rank, files] of Object.entries(RANKS)) {
@@ -27,17 +33,17 @@ for (const [rank, files] of Object.entries(RANKS)) {
       if (s[fr].length !== n || s[fr].some(r => r.length !== n)) throw new Error(`${id}.${fr} — ${n}×${n} 이 아님`);
       for (const r of s[fr]) for (const c of r) if (c !== '.' && !s.pal[c]) throw new Error(`${id}.${fr} — 모르는 색 ${c}`);
     }
-    all[id] = { pal: s.pal, a: s.a, b: s.b };
+    all[id] = { pal: s.pal, a: s.a, b: s.b, pace: PACE[id] || 1 };
     byRank[rank].push(id);
   }
 }
 
 const body = Object.entries(all).map(([id, s]) =>
-  `  ${id}: {\n    pal: ${JSON.stringify(s.pal)},\n    a: [\n${s.a.map(r => `      '${r}'`).join(',\n')}\n    ],\n    b: [\n${s.b.map(r => `      '${r}'`).join(',\n')}\n    ]\n  }`).join(',\n');
+  `  ${id}: {\n    pace: ${s.pace},\n    pal: ${JSON.stringify(s.pal)},\n    a: [\n${s.a.map(r => `      '${r}'`).join(',\n')}\n    ],\n    b: [\n${s.b.map(r => `      '${r}'`).join(',\n')}\n    ]\n  }`).join(',\n');
 fs.writeFileSync(path.join(ROOT, 'js', 'mobsprites.js'),
 `// ============================================================
 //  지도 몬스터 도트 — design/mobs/make.js 가 만듦 (손으로 고치지 않음)
-//  몬스터 id → 팔레트(글자 → 색, '.' 은 투명) + 프레임 A · B (글자 격자, 한 칸 = 16픽셀). 오른쪽을 봄
+//  몬스터 id → 걸음 박자(pace — 클수록 프레임이 빨리 바뀜) + 팔레트(글자 → 색, '.' 은 투명) + 프레임 A · B (글자 격자, 한 칸 = 16픽셀). 오른쪽을 봄
 // ============================================================
 const MOB_SPRITES = {
 ${body}

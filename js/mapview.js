@@ -47,7 +47,7 @@ const MapView = (function () {
       rows.forEach((r, y) => { for (let x = 0; x < n; x++) if (r[x] !== '.') { g.fillStyle = s.pal[r[x]]; g.fillRect(x, y, 1, 1); } });
       return c;
     };
-    return (mobArt[id] = { a: frame(s.a), b: frame(s.b), n: s.a.length });
+    return (mobArt[id] = { a: frame(s.a), b: frame(s.b), n: s.a.length, pace: s.pace || 1 });
   }
 
   const rankColors = {};
@@ -406,7 +406,7 @@ const MapView = (function () {
         let top = oy + post.y * T - 1;
         const pn = Math.min(post.w, post.h), pAura = w.hooks.postAura(post.enemy), pSeed = post.x * 31 + post.y;
         if (pAura) auraFx(pAura, post.x, post.y, pn, pSeed, true);
-        if (art) top = Math.min(top, sprite(art, post.x, post.y, Math.min(post.w, post.h), 1, Math.floor(clock * 1.6) % 2) - 1);   // 서 있는 자리 — 숨 쉬듯 A · B
+        if (art) top = Math.min(top, sprite(art, post.x, post.y, Math.min(post.w, post.h), 1, Math.floor(clock * 1.6 * art.pace) % 2) - 1);   // 서 있는 자리 — 숨 쉬듯 A · B (둔한 것은 천천히)
         else glyph(post.x + post.w / 2, post.y + post.h / 2, f.icon, 0.72 * Math.min(post.w, post.h));
         if (pAura) auraFx(pAura, post.x, post.y, pn, pSeed, false);
         label(post.enemy, ox + (post.x + post.w / 2) * T, top);
@@ -424,7 +424,7 @@ const MapView = (function () {
         ctx.globalAlpha = mob.frozen > 0 ? 0.45 : 1;
         if (mob.aura) auraFx(mob.aura, g.x, g.y, n, mob.id, true);
         let top = oy + gy * T + 1;
-        if (art) top = Math.min(top, sprite(art, g.x, g.y, n, g.face, Math.floor(g.walked * 2) % 2) + 1);   // 반 칸 걸을 때마다 A · B
+        if (art) top = Math.min(top, sprite(art, g.x, g.y, n, g.face, Math.floor(g.walked * 2 * art.pace) % 2) + 1);   // 반 칸 걸을 때마다 A · B (걸음 박자 pace — 둔한 것은 천천히)
         else glyph(g.x + n / 2, gy + n / 2, getEnemy(mob.monster).icon, 0.72 * n);
         if (mob.aura) auraFx(mob.aura, g.x, g.y, n, mob.id, false);
         ctx.globalAlpha = 1;
