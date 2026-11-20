@@ -1571,7 +1571,7 @@
     const fx = X / P - 0.5, fy = Y / P - 0.5, x0 = Math.floor(fx), y0 = Math.floor(fy), ax = sm(fx - x0), ay = sm(fy - y0);
     const v = (x, y) => (x < 0 || y < 0 || x >= m.w || y >= m.h ? 1 : F[y * m.w + x]);
     return (v(x0, y0) * (1 - ax) + v(x0 + 1, y0) * ax) * (1 - ay) + (v(x0, y0 + 1) * (1 - ax) + v(x0 + 1, y0 + 1) * ax) * ay
-      - 0.47 - (vnoise(X * 0.1, Y * 0.1, 170 + k) - 0.5) * 0.12;
+      - 0.47 - (vnoise(X * 0.1, Y * 0.1, 170 + k) - 0.5) * 0.2 - (vnoise(X * 0.31, Y * 0.31, 175 + k) - 0.5) * 0.08;   // 가장자리가 곧은 줄이 되지 않게 — 큰 · 작은 물결 두 겹
   }
   function cliffPix(m, e, X, Y) {
     const L = levelOf(m), K = CLIFF_C;
@@ -2068,6 +2068,14 @@
         if (u === FLOOR || u === TREE || u === ROCK) { const lk = m.look[(ty + dy) * m.w + tx + dx]; e.gTer = terOf(lk & 15); e.gBio = lk >> 4; break; }
       }
     } else if (t === ROCK) { e.belowRock = at(tx, ty + 1) === ROCK; e.lone = loneRock(m, tx, ty); }
+    if (t === FLOOR || t === TREE || t === ROAD) {                       // 곁에 단차(언덕) 바위 칸이 있으면 — 언덕 가장자리가 이 칸으로 둥글게 번져 들어옴
+      for (let dy = -1; dy <= 1 && !e.nearCliff; dy++) for (let dx = -1; dx <= 1; dx++) {
+        const i = tx + dx, j = ty + dy;
+        if (at(i, j) !== ROCK) continue;
+        const lk = m.look[j * m.w + i], b = lk >> 4;
+        if (b !== 6 && b !== 7 && b !== 8 && b !== CITY && (lk & 15) !== OBSID && !loneRock(m, i, j)) { e.nearCliff = true; break; }
+      }
+    }
     if (t === FLOOR || t === TREE) {                                     // 곁에 길이 있으면 길이 이 칸으로 둥글게 번져 들어옴
       e.nearRoad = false;
       for (let dy = -1; dy <= 1 && !e.nearRoad; dy++) for (let dx = -1; dx <= 1; dx++) if (at(tx + dx, ty + dy) === ROAD) { e.nearRoad = true; break; }
@@ -2105,8 +2113,10 @@
       const t = m.tile[y * m.w + x];
       return t === ROAD ? 1 : t === WALL || t === POOL || t === ROCK || t < 0 ? self : 0;   // 바위(언덕) 쪽은 이 칸과 같은 값 — 흙길이 절벽 밑까지 닿게
     };
-    return (v(x0, y0) * (1 - ax) + v(x0 + 1, y0) * ax) * (1 - ay) + (v(x0, y0 + 1) * (1 - ax) + v(x0 + 1, y0 + 1) * ax) * ay
-      - 0.5 - (vnoise(X * 0.08, Y * 0.08, 81) - 0.5) * 0.3;           // 0 이상이면 길 (가장자리에서 얼마나 안쪽인지)
+    // 둘레 칸과 1-2-8-2-1 로 섞은 값 — 길 모퉁이 · 긴 가장자리가 칸 모양대로 곧지 않게 (사용자 규칙 2026-11-20: 땅 · 풀 · 돌과 길 사이는 절대 직선이 아님)
+    const vb = (x, y) => (v(x - 1, y - 1) + v(x + 1, y - 1) + v(x - 1, y + 1) + v(x + 1, y + 1) + (v(x, y - 1) + v(x - 1, y) + v(x + 1, y) + v(x, y + 1)) * 2 + v(x, y) * 8) / 20;
+    return (vb(x0, y0) * (1 - ax) + vb(x0 + 1, y0) * ax) * (1 - ay) + (vb(x0, y0 + 1) * (1 - ax) + vb(x0 + 1, y0 + 1) * ax) * ay
+      - 0.5 - (vnoise(X * 0.08, Y * 0.08, 81) - 0.5) * 0.45 - (vnoise(X * 0.27, Y * 0.27, 82) - 0.5) * 0.18;   // 0 이상이면 길 (가장자리에서 얼마나 안쪽인지) — 큰 · 작은 물결 두 겹
   }
   // 흙길 한 점 — 바닥과 확실히 다르게 (사용자 요청 — 길이 잘 안 보였음): 가장자리 한두 점은 짙게, 군데군데 패인 자리
   function roadPixel(bio, X, Y, g) {
@@ -2954,13 +2964,14 @@
       if (e.face) return faceColor(e.face.bio, e.face.ter, X, Y, Y - e.face.top);
       return vnoise(X * 0.03, Y * 0.03, 50) > 0.72 ? c3('#16121f') : C.void;
     }
+    if (e.nearCliff && levelField(m, levelOf(m), 1, X, Y) >= 0) return cliffPix(m, e, X, Y);   // 언덕 가장자리 안쪽 — 언덕 (사용자 지적 2026-11-20: 흙길이 언덕 위로 올라와 보였음)
+    if (t === ROCK) return rockPix(m, e, X, Y);                          // 바위 칸이 먼저 — 언덕 안쪽 점에 흙길이 번지지 않게
     if (t === ROAD) {
       if (e.bridge) return bridge(e, X, Y, lx, ly);
       const g = roadField(m, X, Y, 1);
       return g >= 0 ? roadPixel(e.bio, X, Y, g) : texture(e.gTer, e.gBio, X, Y);
     }
     if (e.nearRoad) { const g = roadField(m, X, Y, 0); if (g >= 0) return roadPixel(e.bio, X, Y, g); }
-    if (t === ROCK) return rockPix(m, e, X, Y);
     return texture(e.ter, e.bio, X, Y);                                   // 바닥 · 나무 밑
   }
 
