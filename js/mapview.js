@@ -349,8 +349,11 @@ const MapView = (function () {
           ctx.fillStyle = open ? '#3fae4a' : '#5c3a1a';
           ctx.fillRect(ox + port.x * T + 2, oy + port.y * T + 2, port.w * T - 4, port.h * T - 4);
         }
-        // 통로(갈 곳 to 가 있는 문 · 구멍 · 가장자리)는 이름을 안 씀 — 잠긴 것만 🔒 (사용자 결정 2026-11-20). 이름표만 있는 것(4대 길드 건물)은 이름 그대로
-        const plabel = port.to ? (open ? '' : '🔒') : port.label;
+        // 통로(구멍 · 가장자리 · 건물 안의 문)는 이름을 안 씀 — 잠긴 것만 🔒. 바깥 지도의 건물 문은 건물 이름을 씀 (사용자 결정 2026-11-20).
+        // 이름표만 있는 것(4대 길드 건물)은 이름 그대로
+        const building = port.door && port.to && !(m.props && m.props.interior);
+        const name = building ? (w.hooks.portLabel && w.hooks.portLabel(port)) || port.label : '';
+        const plabel = !port.to ? port.label : building ? (name ? name + (open ? '' : ' 🔒') : '') : open ? '' : '🔒';
         if (plabel) {
           // 글은 문 바깥쪽(벽 쪽)에 — 문 앞에 선 나와 겹치지 않게
           const below = m.solid[Math.min(m.h - 1, port.y + port.h) * m.w + port.x];
@@ -565,6 +568,13 @@ const MapView = (function () {
         && (p.unlock !== 'home2' || !!State.meta.home2) && (p.unlock !== 'home1' || !State.meta.home2)          // 새 집을 사면 열리고 옛 원룸은 잠김
         && (p.unlock !== 'gatein' || !!gateInNow()) && (p.unlock !== 'chief' || chiefCalls()) && (p.unlock !== 'crisis' || (!!raidNow() && raidNow().tier === 0))
         && (p.unlock !== 'portal' || !!State.meta.portalMoved) && (p.unlock !== 'portalOld' || !State.meta.portalMoved),   // 이상한 게이트 — 옮긴 뒤엔 새 집 안
+      // 내 길드 — 지은 이름으로 (1~3단계는 옛 동네, 4단계부터는 미래 도시 가운데 빈터 · 옛 동네 건물은 「옛 사무실」)
+      portLabel: p => {
+        const g = State.meta && State.meta.guild, name = g && (g.name || '내 길드');
+        if (p.name === 'myguild' && g) return g.level >= 4 ? '옛 사무실' : name;
+        if (p.name === 'myguild2') return g && g.level >= 4 ? name : null;
+        return null;
+      },
       size: id => (getEnemy(id) || {}).size || 1,  // 지도에서 차지하는 n × n 칸 (data.js ENEMY_SIZE)
       chestOpen: id => !!State.meta && State.meta.chestsOpened.includes(id),  // 연 보물상자 (game.js 의 openChest)
       merchantHere: n => { const m = State.run && State.run.merchant; return !!m && !State.run.over && !!ZONES[m.zone] && ZONES[m.zone].id === n.zone; }

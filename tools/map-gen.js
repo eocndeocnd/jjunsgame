@@ -750,8 +750,10 @@ function overworld(data) {
       const x = k % w, y = (k / w) | 0;
       for (const [ex, ey] of [[1, 1], [-1, 1], [1, -1], [-1, -1]]) {
         if (!ring.has(idx(x + ex, y + ey)) || ring.has(idx(x + ex, y)) || ring.has(idx(x, y + ey))) continue;
-        const a = [x + ex, y], b = [x, y + ey], [fx, fy] = d(...a) < d(...b) ? a : b;   // 더 안쪽 칸
-        if (canStake(fx, fy)) ring.add(idx(fx, fy));
+        const a = [x + ex, y], b = [x, y + ey], [ix, iy] = d(...a) < d(...b) ? a : b, [ox, oy] = d(...a) < d(...b) ? b : a;   // 안쪽 · 바깥쪽 칸
+        const outside = (xx, yy) => inside(xx, yy) && tiles[idx(xx, yy)] === FLOOR && !village[idx(xx, yy)] && !inGate(xx, yy) && !noArea[idx(xx, yy)];
+        if (canStake(ix, iy)) ring.add(idx(ix, iy));
+        else if (outside(ox, oy)) { ring.add(idx(ox, oy)); village[idx(ox, oy)] = 1; keep[idx(ox, oy)] = 1; }   // 안쪽이 소품이면 바깥쪽 칸으로 이음
       }
     }
     for (const k of ring) {                                     // 이웃 울타리 쪽 (n · s · e · w) — 그림이 가로 · 세로 · 꺾임으로 이어 그림

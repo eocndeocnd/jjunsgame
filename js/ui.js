@@ -29,6 +29,8 @@ function render() {
     enhMode = false;      // 슬롯 강화 중이었다면 칸이 도로 장비 칸으로
     if (document.body.dataset.tab !== 'journey') showTab('journey');   // 메뉴 서랍은 닫고 지도 위의 창만
   }
+  const gu = $('giveUpBtn');
+  if (gu) gu.hidden = !canGiveUp();   // 회차 포기하기 — 첫 회차 · 싸우는 중엔 없음
   withHeldSpoils(renderRecords);
   withHeldSpoils(renderHero);      // 레벨 · 경험치 · 스탯도 전투가 끝난 뒤에
   withHeldSpoils(renderJourney);
@@ -1557,6 +1559,20 @@ function isLeaveOpen() {
 function confirmLeave() {
   $('leaveModal').classList.add('hidden');
   fadeThrough(() => { leaveSpace(); });     // 화면이 까매졌다가 끝 화면 (다음 회차는 도시에서)
+}
+
+// ---------- 회차 포기하기 — 메뉴 · 기능 칸 아래 단추 (game.js 의 giveUpRun) ----------
+function askGiveUp() {
+  if (!canGiveUp()) return;
+  const g = Math.floor(num(State.meta.gold)), gg = $('giveUpGold');
+  if (gg) gg.innerHTML = g > 0 ? `가진 <b>골드 ${fmt(g)}</b>은(는) 사라진다 — 패시브를 사고 포기하자 (스탯 창)` : '';
+  $('giveUpModal').classList.remove('hidden');
+}
+function closeGiveUp() { $('giveUpModal').classList.add('hidden'); render(); }
+function confirmGiveUp() {
+  $('giveUpModal').classList.add('hidden');
+  showTab('journey');
+  fadeThrough(() => { giveUpRun(); render(); });
 }
 
 // 결과 창에서는 달라지는 능력치를 앞의 둘까지만 — 나머지는 「…」 (다 보려면 부위 창). 「낀다」가 스크롤 없이 보이게
@@ -3829,9 +3845,9 @@ function renderOverlay() {
   // 마왕 너머를 본 뒤로는, 격이 무너지는 화면 구석에 눈 하나가 아주 옅게 스칩니다 (말은 없습니다)
   card.classList.toggle('watched', wallSeen() && !run.victory);
   if (wallSeen()) { guideEye(); card.style.setProperty('--eye', `url("${guideEyeSrc}")`); }
-  $('overTitle').textContent = run.victory ? '모든 격을 넘어섰다' : run.walkedOut ? '도시로 나왔다' : '격이 무너졌다';
+  $('overTitle').textContent = run.victory ? '모든 격을 넘어섰다' : run.walkedOut ? '도시로 나왔다' : run.gaveUp ? '회차를 포기했다' : '격이 무너졌다';
   // 깼을 때는 제목이 곧 사연이라 아래 줄을 비웁니다 (비면 CSS 가 숨깁니다)
-  $('overReason').textContent = run.victory ? '' : run.walkedOut ? '격은 그 공간에 두고 나왔다.' : run.reason;
+  $('overReason').textContent = run.victory ? '' : run.walkedOut ? '격은 그 공간에 두고 나왔다.' : run.gaveUp ? '격은 사라졌지만 빼앗은 것은 남는다.' : run.reason;
   // 다음 회차는 도시에서 — 쓰러졌으면 눈을 뜨고, 걸어 나왔으면 그대로 도시로 (도시가 열리기 전의 저장본만 「다시 오른다」)
   $('newRunBtn').firstChild.textContent = !State.meta.cityOpen ? '다시 오른다' : run.walkedOut ? '도시로 간다' : '도시에서 눈을 뜬다';
 
@@ -4539,6 +4555,9 @@ function init() {
   $('newRunBtn').addEventListener('click', () => { startRun(); showTab('journey'); render(); });
   $('logToggle').addEventListener('click', () => { logOpen = !logOpen; renderLog(); });
   $('toTitleBtn').addEventListener('click', () => { currentSlot = 0; showTitle(); });
+  $('giveUpBtn').addEventListener('click', askGiveUp);
+  for (const b of document.querySelectorAll('[data-closegiveup]')) b.addEventListener('click', closeGiveUp);
+  $('giveUpOkBtn').addEventListener('click', confirmGiveUp);
   for (const b of document.querySelectorAll('[data-closesave]')) b.addEventListener('click', closeSaveModal);
   for (const b of document.querySelectorAll('[data-closeswap]')) b.addEventListener('click', closeSwapModal);
   for (const b of document.querySelectorAll('[data-closeavatar]')) b.addEventListener('click', closeAvatarModal);

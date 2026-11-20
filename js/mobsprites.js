@@ -638,9 +638,9 @@ const MOB_SPRITES = {
       '...........KFFFFDDDEEEQRRRQDFDDDEDDHK...........',
       '...........KDFFFEEEEEHQRRRQDFEEEDDDHK...........',
       '...........KDHHHHHHHHHQRRRQHHHHHHHHHK...........',
-      '...........KHHHHHHHHHHQRRQQHHHHHHHHHK...........',
-      '............KKKKKKKKKKKQQQKKKKKKKKKK............',
-      '.......................KKK......................'
+      '...........KHHHHHHHHHHQRRRQHHHHHHHHHK...........',
+      '............KKKKKKKKKKRRRQQKKKKKKKKK............',
+      '......................KQQQK.....................'
     ]
   },
   orc: {

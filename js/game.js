@@ -1103,6 +1103,7 @@ function freshRun() {
     over: false,
     victory: false,
     walkedOut: false,    // 스스로 걸어 나와 끝난 회차인가 (leaveSpace) — 끝 화면의 글이 다름
+    gaveUp: false,       // 메뉴의 「회차 포기하기」로 끝낸 회차인가 (giveUpRun)
     reason: ''
   };
 }
@@ -1140,6 +1141,9 @@ function endRun(reason) {
 
   if (run.victory) {
     pushLog('rank', `━━ 여정의 끝 — ${State.meta.runCount}회차에 모든 격을 넘어섰다 ━━`);
+  } else if (run.gaveUp) {
+    const r = rankOf(run.level);
+    pushLog('info', `회차를 포기했다  (${knownRank(r.n) ? `제${r.n}격 ${r.name}` : '???'} · Lv.${fmtLevel(run.level)} · ${run.kills}명을 꺾음)`);
   } else if (run.walkedOut) {
     const r = rankOf(run.level);
     pushLog('info', `도시로 나왔다 — 격은 그 공간에 두고 나왔다  (${knownRank(r.n) ? `제${r.n}격 ${r.name}` : '???'} · Lv.${fmtLevel(run.level)} · ${run.kills}명을 꺾음)`);
@@ -1184,6 +1188,19 @@ function leaveSpace() {
   if (!run || run.over || run.encounter || run.lastResult) return false;
   run.walkedOut = true;
   endRun('스스로 걸어 나왔다');
+  return true;
+}
+
+// 회차 포기하기 — 메뉴의 단추 (사용자 결정 2026-11-20). 첫 회차는 안 됨 (도시가 열리기 전 — 처음 하는 사람이 실수로 끝내지 않게).
+// 싸우는 중 · 결과 창이 떠 있는 동안도 안 됨. 끝은 쓰러진 것과 같음 — 격 · 골드는 사라지고 빼앗은 것은 남음
+function canGiveUp() {
+  const run = State.run;
+  return !!run && !run.over && !run.encounter && !run.lastResult && State.meta.runCount > 1;
+}
+function giveUpRun() {
+  if (!canGiveUp()) return false;
+  State.run.gaveUp = true;
+  endRun('회차를 포기했다');
   return true;
 }
 

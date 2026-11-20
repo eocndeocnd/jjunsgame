@@ -517,50 +517,49 @@
     const ground = () => (B.kind === 'stake' ? texture(GRASS, 2, X, Y) : texture(DIRT, 2, X, Y));
     const shadow = (c, k = 0.66) => mul(c, k);
     if (B.kind === 'stake') {
-      // 울타리 한 칸 — 사용자가 준 사례대로 (2026-11-20): 칸 가운데 뾰족한 기둥 하나, 좌우 이웃(link e · w) 쪽으로 가로대 두 줄,
-      // 위아래 이웃(n · s) 쪽으로는 멀어지는 가로대가 가는 세로 막대로 (이음 자리에 마디). 기둥 · 가로대 모두 검은 테 · 왼쪽 빛 · 오른쪽 그늘 · 나뭇결,
-      // 밑동과 가로대 아래 땅에 그림자. 이웃이 없으면 기둥만
+      // 울타리 한 칸 — 사용자가 준 사례대로 (2026-11-20): 칸 가운데 뾰족한 기둥, 좌우 이웃(link e · w) 쪽으로 가로대 두 줄,
+      // 위아래 이웃(n · s) 쪽으로는 폭 4점의 막대가 이웃 칸까지 끊김 없이 (위아래로만 이어진 칸은 기둥 없이 막대만, 가운데 마디).
+      // 그림자는 울타리 모양을 오른쪽 아래로 한 점 · 두 점 옮긴 자리 — 칸을 넘어 이어짐. 바닥은 마당 흙길과 둥글게 이어지는 흙 · 풀
       const ln = B.link || '', lN = ln.includes('n'), lS = ln.includes('s'), lE = ln.includes('e'), lW = ln.includes('w');
-      const PX0 = 5, PX1 = 10, TIP = 1, BASE = 14;                               // 기둥 x 5~10 (폭 6) · 꼭대기 · 밑동
-      const grain = (x, y, s) => (hash(x, y >> 1, s) < 0.12 ? -1 : hash(x, y, s + 1) < 0.08 ? 1 : 0);
-      const wood = (lx, w, x, y, s) => c3(L[Math.max(0, Math.min(4, (lx === 1 ? 4 : lx >= w - 2 ? 1 : 2) + grain(x + B.x0 * 16, y + B.y0 * 16, s)))]);
-      // 위아래로만 이어진 칸 — 큰 기둥 없이 가는 세로 막대만 (사례의 세로 줄), 위 · 가운데 이음 자리에 마디
-      if ((lN || lS) && !(lE || lW)) {
-        const y0 = lN ? 0 : TIP + 3, y1 = lS ? 15 : BASE;
-        if (py >= y0 && py <= y1 && px >= 6 && px <= 10) {
-          const knot = (lN && py <= 1) || (py >= 7 && py <= 8);
-          if (px === 6 || px === 10) return knot ? line : (py === y0 && !lN) || (py === y1 && !lS) ? ground() : ground();
-          if (px === 7 || px === 9) return knot ? c3(L[px === 7 ? 4 : 1]) : line;
-          if ((!lN && py === y0) || (!lS && py === y1)) return line;
-          return c3(L[knot ? 3 : grain(px, py + B.y0 * 16, 714) < 0 ? 1 : 2]);
+      const onlyV = (lN || lS) && !(lE || lW);
+      const PX0 = 5, PX1 = 10, TIP = 0, BASE = 14, mid = (PX0 + PX1) / 2;
+      const grain = (x, y, s) => (hash(x + B.x0 * 16, (y + B.y0 * 16) >> 1, s) < 0.12 ? -1 : hash(x + B.x0 * 16, y + B.y0 * 16, s + 1) < 0.08 ? 1 : 0);
+      const tone = (k, x, y, s) => c3(L[Math.max(0, Math.min(4, k + grain(x, y, s)))]);
+      const fence = (x, y) => {
+        // 기둥 — 뾰족한 끝
+        if (!onlyV && x >= PX0 && x <= PX1) {
+          const tipH = Math.abs(x - mid) * 1.7;
+          if (y >= TIP + tipH - 0.5 && y <= BASE) {
+            if (x === PX0 || x === PX1 || y === BASE || y < TIP + tipH + 0.6) return line;
+            if (y < TIP + 4) return c3(L[x < mid ? 4 : 2]);
+            return tone(x === PX0 + 1 ? 4 : x >= PX1 - 1 ? 1 : 2, x, y, 710);
+          }
         }
-        if (px === 11 && py >= y0 && py <= y1) return shadow(ground(), 0.72);
-        return ground();
+        // 가로대 두 줄 — 좌우 이웃 쪽
+        if ((lW && x < PX0) || (lE && x > PX1)) for (const r0 of [5, 9]) if (y >= r0 && y <= r0 + 2) return y === r0 + 1 ? tone(y === 6 ? 3 : 2, x, y, 712) : line;
+        // 세로 막대 — 위 · 아래 이웃 쪽 (x 6~9 — 테 6 · 9, 속 7 · 8), 위아래로만 이어진 칸은 칸 끝까지 · 가운데 마디
+        const vTop = lN ? -2 : onlyV ? 3 : 99, vBot = lS ? 17 : onlyV ? BASE : -99;
+        const inV = (lN && y < 8) || (lS && y > 7) || onlyV;
+        if (inV && y >= vTop && y <= vBot) {
+          const knot = onlyV && (y === 7 || y === 8);
+          if (knot && x >= 5 && x <= 10) return x === 5 || x === 10 ? line : c3(L[x < 8 ? 3 : 1]);
+          if (x === 6 || x === 9) return line;
+          if (x === 7 || x === 8) return (onlyV && (y === vTop || y === vBot)) ? line : tone(x === 7 ? 3 : 2, x, y, 714);
+        }
+        return null;
+      };
+      const f = fence(px, py);
+      if (f) return f;
+      const g = stakeGround();
+      if (fence(px - 1, py - 1)) return shadow(g, 0.62);                       // 그림자 — 울타리 모양 그대로 오른쪽 아래로
+      if (fence(px - 2, py - 1) || fence(px - 1, py - 2)) return shadow(g, 0.8);
+      return g;
+      // 울타리 칸의 바닥 — 이웃 흙길(마당)과 둥글게 이어지게 (칸 경계에서 곧게 끊기지 않게)
+      function stakeGround() {
+        if (!curMap) return ground();
+        const r = roadField(curMap, X, Y, 0);
+        return r >= 0 ? roadPixel(2, X, Y, r) : ground();
       }
-      // 기둥 — 뾰족한 끝 (가운데가 가장 높음)
-      const mid = (PX0 + PX1) / 2, tipH = Math.abs(px - mid) * 1.7;
-      if (px >= PX0 && px <= PX1 && py >= TIP + tipH - 0.5 && py <= BASE) {
-        if (px === PX0 || px === PX1 || py === BASE || py < TIP + tipH + 0.6) return line;
-        if (py < TIP + 4) return c3(L[px < mid ? 4 : 2]);                       // 깎은 끝 — 밝은 속살
-        return wood(px - PX0, PX1 - PX0 + 1, px, py, 710);
-      }
-      // 가로대 — 좌우 이웃 쪽으로 두 줄 (위 y 5~7 · 아래 y 9~11, 테 포함)
-      const railX = (lW && px < PX0) || (lE && px > PX1);
-      for (const r0 of [5, 9]) if (railX && py >= r0 && py <= r0 + 2) return py === r0 || py === r0 + 2 ? line : wood(1 + ((py - r0) === 1 ? 1 : 0), 4, px, py, 712);
-      if (railX && (py === 8 || py === 12)) return shadow(ground(), 0.7);       // 가로대 아래 그림자
-      // 세로 막대 — 위 · 아래 이웃 쪽 (멀어지는 가로대). 폭 3점(x 7~9), 이음 자리 마디는 한 점 넓게
-      const vx0 = 7, vx1 = 9;
-      const vUp = lN && py < TIP + 2, vDown = lS && py > BASE;
-      if ((vUp || vDown) && px >= vx0 - 1 && px <= vx1 + 1) {
-        const knot = (vUp && (py === 0 || py === 1)) || (vDown && py === 15);
-        if (px === vx0 - 1 || px === vx1 + 1) return knot ? line : ground();
-        if (px === vx0 || px === vx1) return knot ? c3(L[px === vx0 ? 3 : 1]) : line;
-        return c3(L[3]);
-      }
-      // 땅 — 기둥 밑동 오른쪽 아래 그림자
-      if (py === BASE + 1 && px > PX0 && px <= PX1 + 2) return shadow(ground(), 0.62);
-      if (px === PX1 + 1 && py > 6 && py <= BASE) return shadow(ground(), 0.75);
-      return ground();
     }
     if (B.kind === 'tent') {
       // 가죽 천막 — 앞에서 본 세모, 꼭대기에 엇갈린 장대, 가운데 아래 벌어진 입구
@@ -1533,7 +1532,7 @@
   // 바위 칸 덩어리 = 한 층 높은 땅. 큰 덩어리 안쪽(둘레 두 칸이 다 바위)은 잡음으로 한 층 더 (층 2). 층마다 윗면은 풀(숲 · 왕국) 또는 그 땅(고원 바위 · 눈),
   // 남쪽 가장자리는 높이 CLIFF_H 점의 절벽 면 — 폭이 저마다 다른 세로 바위 결(왼쪽 빛 · 오른쪽 그늘 · 갈라진 틈), 위에 풀 처마와 그 밑 그늘, 늘어진 덩굴,
   // 아래로 갈수록 어둑 · 밑동은 가장 어둡게. 옆 · 뒤 가장자리는 풀 처마 테두리만. 막히는 것은 그대로 바위 칸 (그림만 층)
-  const CLIFF_H = 28;
+  const CLIFF_H = 28, EDGE_SHADE = 10;
   const CLIFF_C = { face: ['#2a221b', '#3a2f25', '#4b3d30', '#5d4c3b', '#6f5c48'], crack: '#1a1410', line: '#1e1813',
                     vine: ['#2f4a26', '#3e5e2e', '#4f7236'] };
   const levels = new WeakMap();                                          // 지도마다 칸의 층 (0 땅 · 1 바위 · 2 큰 바위 안쪽)
@@ -1552,11 +1551,27 @@
     levels.set(m, L);
     return L;
   }
+  // 층 k 의 칸 값(1 · 0)을 둘레 칸과 1-2-1 로 고루 섞어 둔 것 — 가장자리 모퉁이가 칸 모양 계단이 아니라 둥글게 (사용자 지적 2026-11-20)
+  const blurs = new WeakMap();
+  function levelBlur(m, L, k) {
+    let B = blurs.get(m);
+    if (!B) blurs.set(m, (B = {}));
+    if (B[k]) return B[k];
+    const raw = (x, y) => (x < 0 || y < 0 || x >= m.w || y >= m.h ? 1 : L[y * m.w + x] >= k ? 1 : k === 1 && m.tile[y * m.w + x] === WALL && (m.look[y * m.w + x] & 15) !== BUILD ? 0.6 : 0);   // 울타리 · 소품(건물 칸) 앞은 땅 — 그 뒤 언덕에도 절벽 면
+    const F = new Float32Array(m.w * m.h);
+    for (let y = 0; y < m.h; y++) for (let x = 0; x < m.w; x++) {
+      let a = 0;
+      for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) a += raw(x + i, y + j) * (i ? 1 : 2) * (j ? 1 : 2);
+      F[y * m.w + x] = raw(x, y) >= 1 ? Math.max(0.5, a / 16) : Math.min(0.44, a / 16);   // 섞어도 제 칸 한가운데의 안 · 밖은 그대로 (모퉁이만 둥글게 깎임)
+    }
+    return (B[k] = F);
+  }
   function levelField(m, L, k, X, Y) {
+    const F = levelBlur(m, L, k);
     const fx = X / P - 0.5, fy = Y / P - 0.5, x0 = Math.floor(fx), y0 = Math.floor(fy), ax = sm(fx - x0), ay = sm(fy - y0);
-    const v = (x, y) => (x < 0 || y < 0 || x >= m.w || y >= m.h ? 1 : L[y * m.w + x] >= k ? 1 : k === 1 && m.tile[y * m.w + x] === WALL && (m.look[y * m.w + x] & 15) !== BUILD ? 0.6 : 0);   // 울타리 · 소품(건물 칸) 앞은 땅 — 그 뒤 언덕에도 절벽 면
+    const v = (x, y) => (x < 0 || y < 0 || x >= m.w || y >= m.h ? 1 : F[y * m.w + x]);
     return (v(x0, y0) * (1 - ax) + v(x0 + 1, y0) * ax) * (1 - ay) + (v(x0, y0 + 1) * (1 - ax) + v(x0 + 1, y0 + 1) * ax) * ay
-      - 0.47 - (vnoise(X * 0.1, Y * 0.1, 170 + k) - 0.5) * 0.22;
+      - 0.47 - (vnoise(X * 0.1, Y * 0.1, 170 + k) - 0.5) * 0.12;
   }
   function cliffPix(m, e, X, Y) {
     const L = levelOf(m), K = CLIFF_C;
@@ -1601,11 +1616,19 @@
       if (f < 0.03) return c3(K.line);
       let c = ground(k);
       if (k === 1) for (let d = 1; d <= 5; d++) if (levelField(m, L, 2, X, Y - d) >= 0) { c = mul(c, 0.6 + d * 0.06); break; }   // 위층 절벽 밑 그림자
-      if (f < 0.26) { const t = (f - 0.03) / 0.23; c = mul(c, 0.58 + 0.42 * t * t * (3 - 2 * t)); }
+      // 가장자리 그늘 — 가장자리에서 EDGE_SHADE 점 안쪽까지, 가장자리로 갈수록 진하게 (사용자 지적: 얇아서 티가 안 났음). 둘레 여덟 칸이 다 같은 층이면 멀어서 건너뜀
+      let near = false;
+      for (let j = -1; j <= 1 && !near; j++) for (let i = -1; i <= 1; i++) { const xx = tx + i, yy = ty + j; if (xx >= 0 && yy >= 0 && xx < m.w && yy < m.h && L[yy * m.w + xx] < k) { near = true; break; } }
+      if (near) {
+        let dm = EDGE_SHADE + 1;
+        for (let d = 1; d <= EDGE_SHADE && dm > EDGE_SHADE; d++) for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) if (levelField(m, L, k, X + dx * d, Y + dy * d) < 0) { dm = d; break; }
+        if (dm <= EDGE_SHADE) { const t = (dm - 1) / (EDGE_SHADE - 1); c = mul(c, 0.34 + 0.66 * t * t * (3 - 2 * t)); }
+      }
       return c;
     }
-    // 바위 칸이지만 가장자리 밖 — 그 칸의 땅. 절벽 바로 아래는 그림자
-    const g = ground(0);
+    // 바위 칸이지만 가장자리 밖 — 그 칸의 땅(둘레에 흙길이 있으면 흙 — 골짜기 가장자리가 절벽 선을 따라 둥글게, 사용자 지적 2026-11-20). 절벽 바로 아래는 그림자
+    const r = roadField(m, X, Y, 1);
+    const g = r >= 0 && [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, 1], [1, -1], [-1, -1]].some(([dx, dy]) => m.tile[(ty + dy) * m.w + tx + dx] === ROAD) ? roadPixel(e.bio, X, Y, 1) : ground(0);
     for (let d = 1; d <= 6; d++) if (levelField(m, L, 1, X, Y - d) >= 0) return mul(g, 0.6 + d * 0.05);
     return g;
   }
@@ -2073,7 +2096,7 @@
     const v = (x, y) => {
       if (x < 0 || y < 0 || x >= m.w || y >= m.h) return self;
       const t = m.tile[y * m.w + x];
-      return t === ROAD ? 1 : t === WALL || t === POOL || t < 0 ? self : 0;
+      return t === ROAD ? 1 : t === WALL || t === POOL || t === ROCK || t < 0 ? self : 0;   // 바위(언덕) 쪽은 이 칸과 같은 값 — 흙길이 절벽 밑까지 닿게
     };
     return (v(x0, y0) * (1 - ax) + v(x0 + 1, y0) * ax) * (1 - ay) + (v(x0, y0 + 1) * (1 - ax) + v(x0 + 1, y0 + 1) * ax) * ay
       - 0.5 - (vnoise(X * 0.08, Y * 0.08, 81) - 0.5) * 0.3;           // 0 이상이면 길 (가장자리에서 얼마나 안쪽인지)
@@ -2892,7 +2915,9 @@
   }
 
   // 점 하나의 색 — 칸 e 안의 (lx, ly) 번째 점, 지도 전체로는 (X, Y)
+  let curMap = null;                                                     // 지금 칠하는 지도 — 건물 칸 그림이 둘레 땅(흙길)을 볼 때 (울타리 바닥)
   function paint(m, A, e, X, Y, lx, ly) {
+    curMap = m;
     if (e.b !== undefined) return buildingPixel(A, e, X, Y);
     if (e.ruin) return ruinPix(e, X, Y);
     if (e.raw === DOORWAY) return m.props && m.props.store ? storeDoorway(e, X, Y, lx, ly) : doorwayPix(e, X, Y, lx, ly);

@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/galmuri@2.40.3/dist/galmuri.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/neodgm/neodgm-webfont@1.601/neodgm/style.css">
-<link rel="stylesheet" href="css/style.css?v=20261120195414">
+<link rel="stylesheet" href="css/style.css?v=20261120200952">
 </head>
 <body data-tab="journey">
 
@@ -135,6 +135,7 @@
     </div>
     <footer class="footer">
       <button id="toTitleBtn" class="btn small">초기 화면으로</button>
+      <button id="giveUpBtn" class="btn small" hidden>회차 포기하기</button>
       <span class="footer-note">© jjunsgame</span>
     </footer>
   </section>
@@ -220,6 +221,26 @@
       <div class="chest-actions">
         <button class="btn" data-closeleave>그만둔다</button>
         <button class="btn primary" id="leaveOkBtn">나간다</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 회차 포기하기 — 메뉴 · 기능 칸 아래 단추 (첫 회차엔 없음, 사용자 결정 2026-11-20). ui.js 의 askGiveUp -->
+<div id="giveUpModal" class="modal enh-modal leave-modal hidden">
+  <div class="modal-back" data-closegiveup></div>
+  <div class="modal-card">
+    <div class="modal-head">
+      <h3>회차를 포기한다</h3>
+      <button class="btn tiny" data-closegiveup>닫기</button>
+    </div>
+    <div class="leave-body">
+      <p>이번 회차는 여기서 끝난다. 격은 사라진다.</p>
+      <p class="leave-keep">전리품 · 강화석 · 핵 · 재료 · 패시브는 그대로 남는다.</p>
+      <p class="leave-gold" id="giveUpGold"></p>
+      <div class="chest-actions">
+        <button class="btn" data-closegiveup>그만둔다</button>
+        <button class="btn primary" id="giveUpOkBtn">포기한다</button>
       </div>
     </div>
   </div>
@@ -330,22 +351,22 @@
 </div>
 
 <!-- 맨 뒤의 헤진 지도. 게임과 상관없이 먼저 그려둡니다. -->
-<script src="js/backdrop.js?v=20261120195414"></script>
+<script src="js/backdrop.js?v=20261120200952"></script>
 <!-- 효과음과 배경음. 소리 파일 없이 그 자리에서 만듭니다. -->
-<script src="js/sound.js?v=20261120195414"></script>
+<script src="js/sound.js?v=20261120200952"></script>
 <!-- 전투 이펙트 — assets/fx 의 그림 두 장에서 프레임을 잘라 씁니다 -->
-<script src="js/fx.js?v=20261120195414"></script>
-<script src="js/data.js?v=20261120195414"></script>
-<script src="js/game.js?v=20261120195414"></script>
+<script src="js/fx.js?v=20261120200952"></script>
+<script src="js/data.js?v=20261120200952"></script>
+<script src="js/game.js?v=20261120200952"></script>
 <!-- 월드맵 — 지도(maps/*.tmj 를 build.py 가 감싼 것) · 걷기 규칙 · 그리기 -->
-<script src="js/maps.js?v=20261120195414"></script>
-<script src="js/map.js?v=20261120195414"></script>
-<script src="js/mapart.js?v=20261120195414"></script>
+<script src="js/maps.js?v=20261120200952"></script>
+<script src="js/map.js?v=20261120200952"></script>
+<script src="js/mapart.js?v=20261120200952"></script>
 <!-- 지도 몬스터 도트 (design/mobs/make.js 가 만듦) — 없는 몬스터는 이모지 -->
-<script src="js/mobsprites.js?v=20261120195414"></script>
-<script src="js/mapview.js?v=20261120195414"></script>
+<script src="js/mobsprites.js?v=20261120200952"></script>
+<script src="js/mapview.js?v=20261120200952"></script>
 <!-- 장비 그림 목록 (tools/cut-sheets.js 가 만듦) — 없는 장비는 이모티콘 -->
-<script src="js/itemart.js?v=20261120195414"></script>
-<script src="js/ui.js?v=20261120195414"></script>
+<script src="js/itemart.js?v=20261120200952"></script>
+<script src="js/ui.js?v=20261120200952"></script>
 </body>
 </html>

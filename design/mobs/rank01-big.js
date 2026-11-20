@@ -117,7 +117,7 @@ function guardian(f) {
     .color('glow', f ? '#a8f0ff' : '#48c8e0');
   S.part('i', m => { mRect(m, 14, 35, 7, 8); mRect(m, 12, 42, 10, 4); });
   S.part('i', m => { mRect(m, 27, 35, 7, 8); mRect(m, 26, 42, 10, 4); });
-  S.part('s', m => { mRect(m, 22, 31 + b, 5, 15 - b); mRect(m, 23, 46, 3, 1); }, { round: 2 });
+  S.part('s', m => { mRect(m, 22, 31 + b, 5, 15); mRect(m, 23, 46 + b, 3, 1); }, { round: 2 });   // 칼도 상체와 함께 한 점씩 오르내림 (사용자 결정 2026-11-20)
   S.part('i', m => mPoly(m, [[13, 15 + b], [35, 15 + b], [33, 29 + b], [15, 29 + b]]));
   S.part('i', m => mPoly(m, [[14, 28 + b], [34, 28 + b], [36, 36], [12, 36]]), { round: 3 });
   S.part('i', m => { mLine(m, 10, 20 + b, 13, 30 + b, 5); mLine(m, 13, 30 + b, 20, 27 + b, 4); });
