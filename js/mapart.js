@@ -517,51 +517,50 @@
     const ground = () => (B.kind === 'stake' ? texture(GRASS, 2, X, Y) : texture(DIRT, 2, X, Y));
     const shadow = (c, k = 0.66) => mul(c, k);
     if (B.kind === 'stake') {
-      // 울타리 한 칸 — 이웃 울타리(link: n · s · e · w)에 따라 가로 줄 · 세로 줄 · ㄱ · ㄴ 꺾임이 이어지게 (사용자 결정 2026-11-20)
+      // 울타리 한 칸 — 사용자가 준 사례대로 (2026-11-20): 칸 가운데 뾰족한 기둥 하나, 좌우 이웃(link e · w) 쪽으로 가로대 두 줄,
+      // 위아래 이웃(n · s) 쪽으로는 멀어지는 가로대가 가는 세로 막대로 (이음 자리에 마디). 기둥 · 가로대 모두 검은 테 · 왼쪽 빛 · 오른쪽 그늘 · 나뭇결,
+      // 밑동과 가로대 아래 땅에 그림자. 이웃이 없으면 기둥만
       const ln = B.link || '', lN = ln.includes('n'), lS = ln.includes('s'), lE = ln.includes('e'), lW = ln.includes('w');
-      const horiz = lE || lW || !(lN || lS), xa = lW ? 0 : 5, xb = lE ? W : 11;
-      // 세로 줄 — 가운데 폭 6점(x 5~10)으로 위아래 이웃 쪽까지. 위에서 내려다본 통나무 끝이 줄지어 (길이 3~5점, 위 끝은 밝은 단면, 아래는 겹친 그늘),
-      // 왼쪽 빛 · 오른쪽 그늘, 오른쪽 땅에 그림자. 가로 줄과 만나는 곳은 가로 통나무가 앞
-      const vert = (lN || lS) && px >= 5 && px <= 10 && py >= (lN ? 0 : 6) && py <= (lS ? 15 : 13);
-      const vertShadow = (lN || lS) && (px === 11 || px === 12) && py >= (lN ? 0 : 7) && py <= (lS ? 15 : 14);
-      const hLog = horiz && px >= xa && px < xb ? hStake() : null;
-      if (hLog) return hLog;
-      if (vert) {
-        let y0 = (lN ? -2 : 6) - Math.floor(hash(B.x0, B.y0, 706) * 3), j = 0;
-        while (y0 <= py) { const hh = 3 + Math.floor(hash(B.x0, B.y0 * 7 + j, 707) * 3); if (py < y0 + hh) break; y0 += hh; j++; }
-        const ly = py - y0, lx = px - 5;
-        if (lx === 0 || lx === 5) return line;
-        if (ly === 0) return c3(lx < 3 ? '#9a7a54' : '#7a5d3e');                                // 잘린 끝 — 밝은 속살
-        if (ly === 1 && hash(B.x0 + j, B.y0, 708) < 0.5) return c3(HUT_C.end[1]);
-        let k = lx === 1 ? 4 : lx === 4 ? 1 : 2;
-        if (k === 2 && vnoise(px * 0.5, py * 0.4, 709 + j) > 0.64) k = 3;
-        if (lN && lS && (py === 7 || py === 8) && hash(B.x0, B.y0, 703) < 0.6) return c3(K.rope[py === 7 ? 1 : 0]);   // 묶은 밧줄 (군데군데)
-        return c3(L[k]);
-      }
-      if (vertShadow) return shadow(ground(), px === 11 ? 0.62 : 0.78);
-      return ground();
-      // 가로 줄의 서 있는 통나무 — 자리마다 폭 4~7 · 꼭대기 높이가 다름. 밑동에 그림자, 허리에 밧줄 (xa ~ xb 안에서만)
-      function hStake() {
-      let x0 = -Math.floor(hash(B.x0, B.y0, 700) * 3), i = 0;
-      while (x0 < W) {
-        const w = 4 + Math.floor(hash(B.x0 * 5 + i, B.y0, 701) * 4), top = 1 + Math.floor(hash(B.x0 + i, B.y0 * 3, 702) * 5);
-        if (px >= x0 && px < x0 + w) {
-          const lx = px - x0, mid = (w - 1) / 2, tip = top + Math.ceil(mid);
-          if (py < top) return null;
-          if (py < tip && Math.abs(lx - mid) > (py - top) + 0.5) return null;                       // 뾰족한 끝 둘레 — 뒤(세로 줄 · 땅)가 보임
-          if (py >= 14) return py === 15 ? shadow(ground(), 0.6) : c3(L[0]);                          // 밑동 · 땅 그늘
-          if (lx === 0 || lx === w - 1) return line;
-          const rope = 8 + (hash(B.x0, B.y0, 703) < 0.5 ? 0 : 1);
-          if (py === rope || py === rope + 1) return c3(K.rope[py === rope ? 1 : 0]);
-          let k = lx === 1 ? 4 : lx >= w - 2 ? 1 : 2;
-          if (py < tip) k = Math.min(4, k + 1);                                                       // 깎은 끝 — 밝은 속살
-          if (k === 2 && vnoise(px * 0.5, py * 0.3, 704 + i) > 0.64) k = 3;
-          return mul(c3(L[k]), 0.95 - (py / 16) * 0.12);
+      const PX0 = 5, PX1 = 10, TIP = 1, BASE = 14;                               // 기둥 x 5~10 (폭 6) · 꼭대기 · 밑동
+      const grain = (x, y, s) => (hash(x, y >> 1, s) < 0.12 ? -1 : hash(x, y, s + 1) < 0.08 ? 1 : 0);
+      const wood = (lx, w, x, y, s) => c3(L[Math.max(0, Math.min(4, (lx === 1 ? 4 : lx >= w - 2 ? 1 : 2) + grain(x + B.x0 * 16, y + B.y0 * 16, s)))]);
+      // 위아래로만 이어진 칸 — 큰 기둥 없이 가는 세로 막대만 (사례의 세로 줄), 위 · 가운데 이음 자리에 마디
+      if ((lN || lS) && !(lE || lW)) {
+        const y0 = lN ? 0 : TIP + 3, y1 = lS ? 15 : BASE;
+        if (py >= y0 && py <= y1 && px >= 6 && px <= 10) {
+          const knot = (lN && py <= 1) || (py >= 7 && py <= 8);
+          if (px === 6 || px === 10) return knot ? line : (py === y0 && !lN) || (py === y1 && !lS) ? ground() : ground();
+          if (px === 7 || px === 9) return knot ? c3(L[px === 7 ? 4 : 1]) : line;
+          if ((!lN && py === y0) || (!lS && py === y1)) return line;
+          return c3(L[knot ? 3 : grain(px, py + B.y0 * 16, 714) < 0 ? 1 : 2]);
         }
-        x0 += w; i++;
+        if (px === 11 && py >= y0 && py <= y1) return shadow(ground(), 0.72);
+        return ground();
       }
-      return null;
+      // 기둥 — 뾰족한 끝 (가운데가 가장 높음)
+      const mid = (PX0 + PX1) / 2, tipH = Math.abs(px - mid) * 1.7;
+      if (px >= PX0 && px <= PX1 && py >= TIP + tipH - 0.5 && py <= BASE) {
+        if (px === PX0 || px === PX1 || py === BASE || py < TIP + tipH + 0.6) return line;
+        if (py < TIP + 4) return c3(L[px < mid ? 4 : 2]);                       // 깎은 끝 — 밝은 속살
+        return wood(px - PX0, PX1 - PX0 + 1, px, py, 710);
       }
+      // 가로대 — 좌우 이웃 쪽으로 두 줄 (위 y 5~7 · 아래 y 9~11, 테 포함)
+      const railX = (lW && px < PX0) || (lE && px > PX1);
+      for (const r0 of [5, 9]) if (railX && py >= r0 && py <= r0 + 2) return py === r0 || py === r0 + 2 ? line : wood(1 + ((py - r0) === 1 ? 1 : 0), 4, px, py, 712);
+      if (railX && (py === 8 || py === 12)) return shadow(ground(), 0.7);       // 가로대 아래 그림자
+      // 세로 막대 — 위 · 아래 이웃 쪽 (멀어지는 가로대). 폭 3점(x 7~9), 이음 자리 마디는 한 점 넓게
+      const vx0 = 7, vx1 = 9;
+      const vUp = lN && py < TIP + 2, vDown = lS && py > BASE;
+      if ((vUp || vDown) && px >= vx0 - 1 && px <= vx1 + 1) {
+        const knot = (vUp && (py === 0 || py === 1)) || (vDown && py === 15);
+        if (px === vx0 - 1 || px === vx1 + 1) return knot ? line : ground();
+        if (px === vx0 || px === vx1) return knot ? c3(L[px === vx0 ? 3 : 1]) : line;
+        return c3(L[3]);
+      }
+      // 땅 — 기둥 밑동 오른쪽 아래 그림자
+      if (py === BASE + 1 && px > PX0 && px <= PX1 + 2) return shadow(ground(), 0.62);
+      if (px === PX1 + 1 && py > 6 && py <= BASE) return shadow(ground(), 0.75);
+      return ground();
     }
     if (B.kind === 'tent') {
       // 가죽 천막 — 앞에서 본 세모, 꼭대기에 엇갈린 장대, 가운데 아래 벌어진 입구
