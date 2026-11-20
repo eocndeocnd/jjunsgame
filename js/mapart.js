@@ -1509,7 +1509,7 @@
   // 바위 칸 덩어리 = 한 층 높은 땅. 큰 덩어리 안쪽(둘레 두 칸이 다 바위)은 잡음으로 한 층 더 (층 2). 층마다 윗면은 풀(숲 · 왕국) 또는 그 땅(고원 바위 · 눈),
   // 남쪽 가장자리는 높이 CLIFF_H 점의 절벽 면 — 폭이 저마다 다른 세로 바위 결(왼쪽 빛 · 오른쪽 그늘 · 갈라진 틈), 위에 풀 처마와 그 밑 그늘, 늘어진 덩굴,
   // 아래로 갈수록 어둑 · 밑동은 가장 어둡게. 옆 · 뒤 가장자리는 풀 처마 테두리만. 막히는 것은 그대로 바위 칸 (그림만 층)
-  const CLIFF_H = 28, CLIFF_SIDE = 6;
+  const CLIFF_H = 28, CLIFF_SIDE = 10;
   const CLIFF_C = { face: ['#2a221b', '#3a2f25', '#4b3d30', '#5d4c3b', '#6f5c48'], crack: '#1a1410', line: '#1e1813',
                     vine: ['#2f4a26', '#3e5e2e', '#4f7236'] };
   const levels = new WeakMap();                                          // 지도마다 칸의 층 (0 땅 · 1 바위 · 2 큰 바위 안쪽)
@@ -1530,7 +1530,7 @@
   }
   function levelField(m, L, k, X, Y) {
     const fx = X / P - 0.5, fy = Y / P - 0.5, x0 = Math.floor(fx), y0 = Math.floor(fy), ax = sm(fx - x0), ay = sm(fy - y0);
-    const v = (x, y) => (x < 0 || y < 0 || x >= m.w || y >= m.h ? 1 : L[y * m.w + x] >= k ? 1 : k === 1 && m.tile[y * m.w + x] === WALL ? 0.6 : 0);
+    const v = (x, y) => (x < 0 || y < 0 || x >= m.w || y >= m.h ? 1 : L[y * m.w + x] >= k ? 1 : k === 1 && m.tile[y * m.w + x] === WALL && (m.look[y * m.w + x] & 15) !== BUILD ? 0.6 : 0);   // 울타리 · 소품(건물 칸) 앞은 땅 — 그 뒤 언덕에도 절벽 면
     return (v(x0, y0) * (1 - ax) + v(x0 + 1, y0) * ax) * (1 - ay) + (v(x0, y0 + 1) * (1 - ax) + v(x0 + 1, y0 + 1) * ax) * ay
       - 0.47 - (vnoise(X * 0.1, Y * 0.1, 170 + k) - 0.5) * 0.22;
   }
@@ -1589,9 +1589,10 @@
       if (f < 0.05) return c3(K.line);
       let c = ground(k);
       if (k === 1) for (let d = 1; d <= 5; d++) if (levelField(m, L, 2, X, Y - d) >= 0) { c = mul(c, 0.6 + d * 0.06); break; }   // 위층 절벽 밑 그림자
-      if (f < 0.09) {
+      if (f < 0.13) {                                                      // 윗면 둘레 — 살짝 튀어나온 바위 테 (빛 받는 위 · 왼쪽은 밝게, 오른쪽은 어둑), 군데군데 풀이 덮음
         const gx = levelField(m, L, k, X + 2, Y) - levelField(m, L, k, X - 2, Y), gy = levelField(m, L, k, X, Y + 2) - levelField(m, L, k, X, Y - 2);
-        c = (gx > 0 || gy > 0) ? mix(c, WHITE, 0.12) : mul(c, 0.82);        // 왼쪽 · 위 가장자리는 빛, 오른쪽은 그늘
+        if (fbm(X * 0.15, Y * 0.15, 198) > 0.62) return mul(c, 0.86);
+        return c3(K.face[(gx > 0 || gy > 0) ? (f < 0.09 ? 4 : 3) : (f < 0.09 ? 2 : 1)]);
       }
       return c;
     }
@@ -3277,6 +3278,20 @@
     for (const [i, j] of [[-1, 0], [1, 0], [0, -1], [0, 1], [0, 2], [-1, 1], [1, 1]]) if (at(x + i, y + j) !== lv) return false;
     return !(hash(x - 1, y, 197) <= 0.14 || hash(x, y - 1, 197) <= 0.14 || hash(x - 1, y - 1, 197) <= 0.14);
   }
+  // 나무 발밑 그림자 — 그림 점 단위 타원 (안은 옅게 · 테두리 한 점은 짙게)
+  let treeShadowCv = null;
+  function treeShadow() {
+    if (treeShadowCv) return treeShadowCv;
+    const rx = P * 0.62, ry = P * 0.2, W = Math.ceil(rx) * 2 + 1, H = Math.ceil(ry) * 2 + 1;
+    const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+    const g = cv.getContext('2d'), inE = (x, y) => ((x + 0.5 - W / 2) / rx) ** 2 + ((y + 0.5 - H / 2) / ry) ** 2 <= 1;
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      if (!inE(x, y)) continue;
+      g.fillStyle = !inE(x - 1, y) || !inE(x + 1, y) || !inE(x, y - 1) || !inE(x, y + 1) ? 'rgba(16,10,6,0.38)' : 'rgba(16,10,6,0.26)';
+      g.fillRect(x, y, 1, 1);
+    }
+    return (treeShadowCv = cv);
+  }
   function drawTrees(ctx, m, ox, oy, T, x0, y0, x1, y1) {
     ctx.imageSmoothingEnabled = false;
     if (m.props && m.props.clutter) drawClutter(ctx, m, prep(m), ox, oy, T, x0, y0, x1, y1);   // 옛 동네의 자잘한 것 — 불법주차 차 · 라바콘 …
@@ -3307,7 +3322,8 @@
       const j = (hash(x, y, 61) - 0.5) * 0.3 * T;                       // 줄 맞춰 선 것처럼 안 보이게 살짝 비킴
       const cx = ox + (x + 0.5) * T + j, by = oy + (y + 1) * T;
       ctx.fillStyle = 'rgba(16, 10, 6, 0.28)';
-      ctx.beginPath(); ctx.ellipse(cx, by - T * 0.08, T * 0.62, T * 0.2, 0, 0, Math.PI * 2); ctx.fill();
+      const ts = treeShadow(), tk = T / P;                                // 그림자 — 도트 단위 타원 (사용자 결정 2026-11-20)
+      ctx.drawImage(ts, Math.round(cx - ts.width * tk / 2), Math.round(by - T * 0.08 - ts.height * tk / 2), ts.width * tk, ts.height * tk);
       ctx.drawImage(treeSprite(style, pal, v), Math.round(cx - sw / 2), Math.round(by - sh), sw, sh);
     }
   }

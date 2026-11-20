@@ -736,15 +736,25 @@ function overworld(data) {
     };
     for (let y = cy - 12; y <= cy + 13; y++) for (let x = cx - 11; x <= cx + 11; x++) {
       if (!inside(x, y) || d(x, y) >= 1 || (tiles[idx(x, y)] !== FLOOR && tiles[idx(x, y)] !== ROAD) || noArea[idx(x, y)]) continue;
-      if (og && x >= og.x && x < og.x + og.w && y >= og.y && y < og.y + og.h) { keep[idx(x, y)] = 1; if (V.noArea) noArea[idx(x, y)] = 1; if (V.nook) tiles[idx(x, y)] = ROAD; continue; }   // 보스가 선 칸 — 소품 · 울타리는 안 둠 (골짜기 들머리는 흙길로 이어짐)
+      if (og && x >= og.x && x < og.x + og.w && y >= og.y && y < og.y + og.h) { keep[idx(x, y)] = 1; if (V.noArea) noArea[idx(x, y)] = 1; tiles[idx(x, y)] = ROAD; continue; }   // 보스가 선 칸 — 소품 · 울타리는 안 두고 바닥은 마당과 같은 흙
       village[idx(x, y)] = 1; keep[idx(x, y)] = 1;
       if (V.noArea) noArea[idx(x, y)] = 1;
     }
-    for (let y = cy - 12; y <= cy + 13; y++) for (let x = cx - 11; x <= cx + 11; x++) {   // 울타리 — 마당 가장자리 칸 (네 방향 이웃 가운데 마당 밖이 있는 칸)
-      if (!inside(x, y) || village[idx(x, y)] !== 1 || tiles[idx(x, y)] !== FLOOR || inGate(x, y)) continue;
-      if ([[1, 0], [-1, 0], [0, 1], [0, -1]].some(([ex, ey]) => d(x + ex, y + ey) >= 1)) put(x, y, 1, 1, 'stake', 'grass');
+    for (const q of V.pieces) put(cx + q.x, cy + q.y, q.w, q.h, q.kind, 'dirt');   // 소품 먼저 — 울타리를 메울 때 그 자리를 비켜 가게
+    // 울타리 — 마당 가장자리 칸 (네 방향 이웃 가운데 마당 밖이 있는 칸). 대각선으로만 닿는 두 칸 사이는 안쪽 칸을 하나 더 메워
+    // 울타리가 끊기지 않고 이어지게 (사용자 지적 2026-11-20)
+    const ring = new Set(), canStake = (x, y) => inside(x, y) && village[idx(x, y)] === 1 && tiles[idx(x, y)] === FLOOR && !inGate(x, y);
+    for (let y = cy - 12; y <= cy + 13; y++) for (let x = cx - 11; x <= cx + 11; x++)
+      if (canStake(x, y) && [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([ex, ey]) => d(x + ex, y + ey) >= 1)) ring.add(idx(x, y));
+    for (const k of [...ring]) {
+      const x = k % w, y = (k / w) | 0;
+      for (const [ex, ey] of [[1, 1], [-1, 1], [1, -1], [-1, -1]]) {
+        if (!ring.has(idx(x + ex, y + ey)) || ring.has(idx(x + ex, y)) || ring.has(idx(x, y + ey))) continue;
+        const a = [x + ex, y], b = [x, y + ey], [fx, fy] = d(...a) < d(...b) ? a : b;   // 더 안쪽 칸
+        if (canStake(fx, fy)) ring.add(idx(fx, fy));
+      }
     }
-    for (const q of V.pieces) put(cx + q.x, cy + q.y, q.w, q.h, q.kind, 'dirt');
+    for (const k of ring) put(k % w, (k / w) | 0, 1, 1, 'stake', 'grass');
     // 둘레 V.areaGap 칸도 구역 밖 — 그 격 몬스터가 부락에 바짝 붙어 서지 않게 (바실리스크가 트롤 킹에 너무 붙어 있었음, 사용자 지적 2026-11-20)
     if (V.areaGap) for (let y = cy - 16; y <= cy + 16; y++) for (let x = cx - 16; x <= cx + 16; x++) {
       if (!inside(x, y) || noArea[idx(x, y)]) continue;
