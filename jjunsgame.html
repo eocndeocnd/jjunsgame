@@ -13252,7 +13252,9 @@ const MAP_FILES = {"arena":{"compressionlevel":-1,"type":"map","version":"1.10",
   // 흙길 한 점 — 바닥과 확실히 다르게 (사용자 요청 — 길이 잘 안 보였음): 가장자리 한두 점은 짙게, 군데군데 패인 자리
   function roadPixel(bio, X, Y, g) {
     const c = texture(DIRT, bio, X, Y);
-    return hash(X >> 1, Y >> 1, 77) < 0.025 ? mul(c, 0.86) : c;    // 가장자리의 짙은 띠(잔디 밑 그림자)는 뺌 (사용자 결정 2026-11-20)
+    if (g < 0.1) return mul(c, 0.56);                                     // 가장자리 한두 점은 짙게 — 길 그림자 (사용자 결정 2026-11-20: 이건 둠)
+    if (g < 0.22) return mul(c, 0.76);
+    return hash(X >> 1, Y >> 1, 77) < 0.025 ? mul(c, 0.86) : c;
   }
 
   // 다리 — 물을 건너는 길은 널판: 건너는 쪽과 엇갈린 판자, 판 사이 틈 · 나뭇결 · 못, 길 아닌 쪽엔 난간
