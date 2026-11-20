@@ -505,7 +505,6 @@
   // orchut 족장 움막(둥근 가죽 지붕 · 붉은 전쟁 칠 · 엄니 둘 · 짐승 해골) · totem 토템 · fire 모닥불 · rack 무기 걸이 · hide 가죽 말림대.
   // 빛은 왼쪽 위 — 오른쪽 면은 그늘, 그림자는 오른쪽 아래 땅에
   const ORC_KINDS = { stake: 1, tent: 1, orchut: 1, totem: 1, fire: 1, rack: 1, hide: 1 };
-  const ORC_SMALL = { totem: 1, fire: 1, rack: 1, hide: 1, stake: 1 };   // 아래 칸에 네모 그늘 띠를 안 두는 것 (울타리도 — 그림자를 없앰, 사용자 결정 2026-11-20)
   const ORC_C = {
     hide: ['#3a2a20', '#4c3727', '#5e4530', '#71553a', '#846646'], seam: '#22170f', stitch: '#a08a62',
     bone: ['#6e6452', '#a39780', '#d4c8ac'], paint: '#8a2a22', rope: ['#5e5038', '#8a7a5a'], line: '#1a120e'
@@ -551,6 +550,8 @@
       const f = fence(px, py);
       if (f) return f;
       const g = stakeGround();
+      if (fence(px - 1, py - 1)) return shadow(g, 0.62);                       // 그림자 — 울타리 모양 그대로 오른쪽 아래로 한 점 · 두 점 (도트 그림자, 사용자 결정 2026-11-20)
+      if (fence(px - 2, py - 1) || fence(px - 1, py - 2)) return shadow(g, 0.8);
       return g;
       // 울타리 칸의 바닥 — 이웃 흙길(마당)과 둥글게 이어지게 (칸 경계에서 곧게 끊기지 않게)
       function stakeGround() {
@@ -2042,7 +2043,7 @@
       return e;
     }
     // 건물 · 기둥 바로 아래 칸은 위쪽이 그늘
-    const bUp = ty > 0 ? A.bAt[(ty - 1) * m.w + tx] : -1, smallUp = bUp >= 0 && A.buildings[bUp] && ORC_SMALL[A.buildings[bUp].kind];   // 토템 · 모닥불 … 은 제 그림자를 붙여 그림 (떨어진 네모 그늘 띠가 어색했음, 사용자 지적)
+    const bUp = ty > 0 ? A.bAt[(ty - 1) * m.w + tx] : -1, smallUp = bUp >= 0 && A.buildings[bUp] && ORC_KINDS[A.buildings[bUp].kind];   // 부락 소품 · 울타리 아래 칸엔 그라데이션 그늘 띠 없음 — 도트 그림자만 (사용자 결정 2026-11-20)   // 토템 · 모닥불 … 은 제 그림자를 붙여 그림 (떨어진 네모 그늘 띠가 어색했음, 사용자 지적)
     if (t !== WALL && t !== POOL && !smallUp && ((lookAt(tx, ty - 1) & 15) === BUILD || pillar(tx, ty - 1))) e.shadeTop = (lookAt(tx, ty - 1) & 15) === BUILD ? 9 : 6;
     if (t === WALL || t < 0) {
       // 바로 위 두 칸 안에 땅이 있으면 그 땅의 옆면, 아니면 어둠
