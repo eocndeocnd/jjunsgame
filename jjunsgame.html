@@ -12753,7 +12753,14 @@ const MAP_FILES = {"arena":{"compressionlevel":-1,"type":"map","version":"1.10",
       if (near) {
         let dm = EDGE_SHADE + 1;
         for (let d = 1; d <= EDGE_SHADE && dm > EDGE_SHADE; d++) for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) if (levelField(m, L, k, X + dx * d, Y + dy * d) < 0) { dm = d; break; }
-        if (dm <= EDGE_SHADE) { const t = (dm - 1) / (EDGE_SHADE - 1); c = mul(c, 0.34 + 0.66 * t * t * (3 - 2 * t)); }
+        // 가장자리 — 어둡게 칠하지 않고 잔디의 가장 어두운 색들(풀잎 밑동 빛)을 가장자리로 갈수록 더 많이 섞어 씀 (사용자 결정 2026-11-20).
+        // 풀잎처럼 세로로 두 점씩 이어 찍고, 가장자리 바로 곁은 가장 어두운 색이 거의 다
+        if (dm <= EDGE_SHADE) {
+          const p = 1 - (dm - 1) / (EDGE_SHADE - 1), pal = (C.grass[e.bio] || C.grass[0]).map(h => k ? mix(c3(h), c3('#d8e8a0'), k === 2 ? 0.14 : 0.07) : c3(h));
+          const r = hash(X, Y >> 1, 199) * 0.8 + hash(X, Y, 200) * 0.2;           // 위아래 두 점이 같은 값 — 풀잎 결
+          if (dm <= 2 || r < p * 1.1 - 0.1) c = dm <= 4 && r < 0.75 ? mul(pal[3], 0.78) : pal[3];   // 가장자리 곁은 풀잎 밑동의 가장 어두운 빛
+          else if (r < p * 1.6) c = pal[1];
+        }
       }
       return c;
     }
