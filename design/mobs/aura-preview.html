@@ -1,0 +1,758 @@
+<!doctype html><meta charset="utf-8"><title>기운 이펙트 시안</title>
+<style>
+body{margin:0;background:#1d1a17;color:#eee;font:14px system-ui;padding:12px}
+h3{margin:14px 0 4px;font-size:15px}
+p{margin:0 0 6px;color:#bbb;font-size:13px}
+canvas{image-rendering:pixelated;display:block;max-width:100%}
+</style>
+<div>기운 이펙트 시안 (2026-11-20) — 사용자가 B 를 고름 (게임에 들어감 · js/mapview.js 의 auraFx). C(떠오르는 빛가루)는 나중에 쓸 거리로 남겨 둠. 다섯 기운 색(황금 · 보라 · 불타는 · 전조 · 신화) × 몬스터. 실제 게임 크기의 2배</div>
+<div id="list"></div>
+<script>
+// ============================================================
+//  지도 몬스터 도트 — design/mobs/make.js 가 만듦 (손으로 고치지 않음)
+//  몬스터 id → 팔레트(글자 → 색, '.' 은 투명) + 프레임 A · B (글자 격자, 한 칸 = 16픽셀). 오른쪽을 봄
+// ============================================================
+const MOB_SPRITES = {
+  slime: {
+    pal: {"K":"#35263f","a":"#10241a","b":"#254d2e","c":"#3b753b","d":"#5a944e","e":"#81ac68"},
+    a: [
+      '................',
+      '................',
+      '................',
+      '................',
+      '................',
+      '......KKKK......',
+      '....KKdeedKK....',
+      '...KdeedcccbK...',
+      '..KdedccccccbK..',
+      '..KdccccccccbK..',
+      '.KccKcccccKcbbK.',
+      '.KcccccccccbbbK.',
+      '.KcccccccbbbbaK.',
+      '.KbccccbbbbbaaK.',
+      '..KabbbbbbaaaK..',
+      '...KKKKKKKKKK...'
+    ],
+    b: [
+      '................',
+      '................',
+      '................',
+      '................',
+      '................',
+      '................',
+      '................',
+      '.....KKKKKK.....',
+      '...KKdeeddcKK...',
+      '..KdeedccccccbK.',
+      '.KdedcccccccbbK.',
+      'KccKccccccKccbbK',
+      'KccccccccccbbbbK',
+      'KbcccccccbbbbaaK',
+      '.KabbbbbbbbaaaK.',
+      '..KKKKKKKKKKKK..'
+    ]
+  },
+  giantrat: {
+    pal: {"K":"#35263f","a":"#1b1616","b":"#3d3432","c":"#5e554e","d":"#797165","e":"#928e7f","q":"#a5676f","p":"#844b5f","R":"#c8302a"},
+    a: [
+      '................',
+      '................',
+      '................',
+      '................',
+      '................',
+      '................',
+      '................',
+      '....KKKKK.KqK...',
+      '...KdeeddKKqKK..',
+      '..KdedccccccdcK.',
+      '..KdcccccccccRcK',
+      'qqKcccccccccccbp',
+      'q.KbccccccbbbKK.',
+      '..KabbbbbbbbaK..',
+      '...KqK.KqK.KqK..',
+      '...KK..KK..KK...'
+    ],
+    b: [
+      '................',
+      '................',
+      '................',
+      '................',
+      '................',
+      '................',
+      '................',
+      '....KKKKK.KqK...',
+      '...KdeeddKKqKK..',
+      '..KdedccccccdcK.',
+      '..KdcccccccccRcK',
+      '.qKcccccccccccbp',
+      'qKKbccccccbbbKK.',
+      '..KabbbbbbbbaK..',
+      '..KqK.KqK.KqK...',
+      '..KK..KK..KK....'
+    ]
+  },
+  goblin: {
+    pal: {"K":"#35263f","a":"#091809","b":"#23441a","c":"#4a6e2e","d":"#718f40","e":"#9dae53","p":"#361c19","q":"#5e3e2f","m":"#d5dbde","n":"#969eae","w":"#624834","R":"#c8302a"},
+    a: [
+      '................',
+      '.....KKKKKK.....',
+      'KKK.KeddccbK.KK.',
+      'KdcKedddcccbKcbK',
+      '.KdcccKKccKKcbK.',
+      '..KccKRKcbRKbK..',
+      '..KbcccKKKcbbK..',
+      '...KabcccccbKKmK',
+      '..KKKKaabbaKKwmK',
+      '.KdcKedccccKKwnK',
+      '.KccKcccccbKcwK.',
+      '.KcbKKqqqqKKbwK.',
+      '..KKKbKqpKbKKw..',
+      '...KdcKppKdcK...',
+      '..KdcbK..KdcbK..',
+      '..KKKKK..KKKKK..'
+    ],
+    b: [
+      '................',
+      '................',
+      '.....KKKKKK.....',
+      'KKK.KeddccbK.KK.',
+      'KdcKedddcccbKcbK',
+      '.KdcccKKccKKcbK.',
+      '..KccKRKcbRKbK..',
+      '..KbcccKKKcbbK..',
+      '...KabcccccbKKmK',
+      '..KKKKaabbaKKwmK',
+      '.KdcKedccccKKwnK',
+      '.KccKcccccbKcwK.',
+      '.KcbKKqqqqKKbwK.',
+      '..KKKbKqpKbKKw..',
+      '..KdcbK.KdcbK...',
+      '..KKKKK.KKKKK...'
+    ]
+  },
+  kobold: {
+    pal: {"K":"#35263f","a":"#250c0e","b":"#52241d","c":"#7c4d30","d":"#9e7541","e":"#b79f5b","v":"#ac8e56","w":"#bbb07a","Y":"#d8b838"},
+    a: [
+      '................',
+      '................',
+      '......K.K.......',
+      '.....KbKbKKK....',
+      '....KdeedddcKKKK',
+      '....KdKYdccccccb',
+      '....KccccccccbbK',
+      '.....KcbKKKKKbK.',
+      '....KKKccbbK.K..',
+      '...KdcvvvvbbK...',
+      '.KKdcKwvvvKcbK..',
+      'KbcccKvvvvKbcK..',
+      'bbKKKccKcbbKK...',
+      'KK..KcbKKcbK....',
+      '....KabKKabK....',
+      '.....KK..KK.....'
+    ],
+    b: [
+      '................',
+      '................',
+      '......K.K.......',
+      '.....KbKbKKK....',
+      '....KdeedddcKKKK',
+      '....KdKYdccccccb',
+      '....KccccccccbbK',
+      '.....KcbKKKKKbK.',
+      '....KKKccbbK.K..',
+      '...KdcvvvvbbK...',
+      '.KKdcKwvvvKcbK..',
+      'KbcccKvvvvKbcK..',
+      'bbKKKccKcbbKK...',
+      'KK...KcbcbK.....',
+      '.....KababK.....',
+      '......KKKK......'
+    ]
+  },
+  skeleton: {
+    pal: {"K":"#35263f","a":"#5c4a43","b":"#827161","c":"#a29a84","d":"#b9b7a4","e":"#d1d0c4","R":"#c8302a"},
+    a: [
+      '................',
+      '.....KKKKKK.....',
+      '....KeeddccK....',
+      '...KeddddcccK...',
+      '...KdKKddKKcK...',
+      '...KdKRdcKRbK...',
+      '...KcccKcccbK...',
+      '....KcKcKcKK....',
+      '....KKKbbKKK....',
+      '..KdKdddccbKcK..',
+      '..KbKKKbKKKKbK..',
+      '..KdKcccbbaKcK..',
+      '..KcKKKbKKKKbK..',
+      '...KKKcbbaKKK...',
+      '....KcK..KbK....',
+      '...KdcK..KcbK...'
+    ],
+    b: [
+      '................',
+      '................',
+      '.....KKKKKK.....',
+      '....KeeddccK....',
+      '...KeddddcccK...',
+      '...KdKKddKKcK...',
+      '...KdKRdcKRbK...',
+      '...KcccKcccbK...',
+      '....KcKcKcKK....',
+      '....KKKbbKKK....',
+      '..KdKdddccbKcK..',
+      '..KbKKKbKKKKbK..',
+      '..KdKcccbbaKcK..',
+      '..KcKKKbKKKKbK..',
+      '...KKKcbbaKKK...',
+      '....KdcKKcbK....'
+    ]
+  },
+  zombie: {
+    pal: {"K":"#35263f","a":"#202c1f","b":"#414f39","c":"#657255","d":"#858e6b","e":"#a2a388","v":"#0f0e15","w":"#26283a","x":"#40495f","y":"#55687b","p":"#211918","q":"#433933","R":"#c8302a"},
+    a: [
+      '................',
+      '.....KKKKK......',
+      '....KedddcK.....',
+      '...KeddddcbK....',
+      '...KdKRdKRbK....',
+      '...KdddccbbK....',
+      '....KcKKKbK.....',
+      '...KyyxxwwKKKKK.',
+      '..KyyxxxwwdddcbK',
+      '..KyxxdxxwccbbaK',
+      '..KxxxxxwwKKKKK.',
+      '..KxxwxxxvK.....',
+      '...KqqqppK......',
+      '...KqpKqpK......',
+      '..KdcbKdcbK.....',
+      '...KKK.KKK......'
+    ],
+    b: [
+      '................',
+      '.....KKKKK......',
+      '....KedddcK.....',
+      '...KeddddcbK....',
+      '...KdKRdKRbK....',
+      '...KdddccbbK....',
+      '....KcKKKbK.....',
+      '...KyyxxwwK.....',
+      '..KyyxxxwwKKKKK.',
+      '..KyxxdxxwdddcbK',
+      '..KxxxxxwwccbbaK',
+      '..KxxwxxxvKKKKK.',
+      '...KqqqppK......',
+      '..KqpKKKqpK.....',
+      '.KdcbK.KdcbK....',
+      '..KKK...KKK.....'
+    ]
+  },
+  imp: {
+    pal: {"K":"#35263f","a":"#2e0f1f","b":"#5a2131","c":"#843438","d":"#a55346","e":"#b97f64","v":"#0c070d","w":"#321c30","n":"#c0b090","m":"#a5acb4","M":"#686981","Y":"#d8b030"},
+    a: [
+      '............K.K.',
+      '....K...K..KmKmK',
+      '...KnKKKnK.KmmmK',
+      'KK.KeddddcK.KMK.',
+      'vwKKdKYdKYcKKMK.',
+      'vwwwdddccbbwvMK.',
+      'KvwwwcKKKbwwvMK.',
+      '.KvwKdddcbKvdMdK',
+      '..KKddcccbbdcMK.',
+      '...KdccccbbKKMK.',
+      '...KccccccbKKMK.',
+      '..KbKcbKcbK..K..',
+      '.KbbKcbKcbK.....',
+      'KbbbKabKabK.....',
+      '.KKK.KK.KK......',
+      '................'
+    ],
+    b: [
+      '................',
+      '............K.K.',
+      '....K...K..KmKmK',
+      '...KnKKKnK.KmmmK',
+      '...KeddddcK.KMK.',
+      'KKKKdKYdKYcKKMK.',
+      'vwwwdddccbbKKMK.',
+      'vwwwwcKKKbwwvMK.',
+      'KKvwKdddcbKvdMdK',
+      '..KKddcccbbdcMK.',
+      '...KdccccbbKKMK.',
+      '..KbKccccbbKKMK.',
+      '.KbbKcbKKcbK.K..',
+      'KbbbKabKKabK....',
+      '.KKK.KK..KK.....',
+      '................'
+    ]
+  },
+  darkwolf: {
+    pal: {"K":"#35263f","a":"#09090c","b":"#1d1c25","c":"#383747","d":"#534d63","e":"#70647f","v":"#666478","Y":"#d0a830"},
+    a: [
+      '................',
+      '................',
+      '................',
+      '................',
+      '................',
+      '..........K.K...',
+      'K........KdKdK..',
+      'dK..KKKKKdcdccK.',
+      'ddKKeeddddcccYcK',
+      'KdddcccccccccccK',
+      '.KdcccccccccbbbK',
+      '.KcbcvvvvcbbKKK.',
+      '..KbcbKKKbcbK...',
+      '..KbcK...KbcK...',
+      '..KabK...KabK...',
+      '...KK.....KK....'
+    ],
+    b: [
+      '................',
+      '................',
+      '................',
+      '................',
+      '................',
+      '..........K.K...',
+      '.........KdKdK..',
+      'K...KKKKKdcdccK.',
+      'dKKKeeddddcccYcK',
+      'ddddcccccccccccK',
+      'KKdcccccccccbbbK',
+      '.KcbcvvvvcbbKKK.',
+      '.KbcbKKKKbcbK...',
+      '.KbcK....KKbcK..',
+      '.KabK.....KabK..',
+      '..KK.......KK...'
+    ]
+  },
+  goblinchief: {
+    pal: {"K":"#35263f","A":"#718f40","B":"#9dae53","C":"#4a6e2e","D":"#776246","E":"#0d0708","F":"#94865b","G":"#959aa4","H":"#23441a","I":"#584132","J":"#5c5b6e","L":"#091809","M":"#321e1b","N":"#c8302a","O":"#d8d0b8","P":"#ccc7b4","Q":"#78624a","R":"#b7ac92","S":"#9e8967","T":"#0e0607","U":"#513629","V":"#71573c","W":"#291614"},
+    a: [
+      '................................',
+      'K.............KKK........KKKKK..',
+      'AKK........KKKBACKKK....KDDDDEK.',
+      'AACKKK....KBAABACAACK...KDFFGEK.',
+      'KACAACKK.KBBBBBAAAACHKKKDGIIIJEK',
+      'KACCCCCCKBBBAAAAAAACHLAAKFJIIIEK',
+      'KCCCCCCCLLAAAAAACACHHLCCKIIIIMEK',
+      '.KCCCCCCLBAAAAACCAAAAHLCKIIIIGEK',
+      '.KCCCCCCLAAALLLCCLLLHHLLKIGIIMJK',
+      '..KLLCCLLCCCLNLCCLNLLLLLKIIJEEEK',
+      '...KKLLLLHCCCCCAHHHLLLLKKIMMGEK.',
+      '.....KKKLLHCOHHHHLHHOLK.KEKKEJK.',
+      '...KKPPPQQHHOLHHLLLLOLK..KDMKK..',
+      '..KPPPPPRRQQKKKKKKKKKCKK.KDMK...',
+      '..KRPPRRRRRQLHHHHHHHCLACKKDMK...',
+      '..KRRRKRKQQQAALLLCCCCLCCCKDMK...',
+      '..KQQSSQSQQQBBCCCBCCHLCHCKDK....',
+      '...KAQQSSQAACCCCCCCCHHLCCKMK....',
+      '...KACCLCCCHHCCCCCHHHLLKKCKLK...',
+      '...KAHCLHCCCHHHCHHHLLLLKCCCLK...',
+      '...KAHCLHHHHHHHHHLLLLLLKLLLLK...',
+      '...KACCLTTTTTUTTTTUTTTTKKLKK....',
+      '...KACCLVUUUUUUWWUUUUUTK.K......',
+      '..KACCCCLUUWUUUUWUUUWTTK........',
+      '...KCCLLKUUWUUUUWTTTWTK.........',
+      '....KLLKKTTCTUUUWTACTTK.........',
+      '.....KK.KTACCTUTTKACCTK.........',
+      '.........KACCLTTKKACCLK.........',
+      '........KCCCLLKK.KACCCLK........',
+      '........KLLLLLK..KLLLLLK........',
+      '.........KKKKK....KKKKK.........',
+      '................................'
+    ],
+    b: [
+      '................................',
+      '................................',
+      'K.............KKK........KKKKK..',
+      'AKK........KKKBACKKK....KDDDDEK.',
+      'AACKKK....KBAABACAACK...KDFFGEK.',
+      'KACAACKK.KBBBBBAAAACHKKKDGIIIJEK',
+      'KACCCCCCKBBBAAAAAAACHLAAKFJIIIEK',
+      'KCCCCCCCLLAAAAAACACHHLCCKIIIIMEK',
+      '.KCCCCCCLBAAAAACCAAAAHLCKIIIIGEK',
+      '.KCCCCCCLAAALLLCCLLLHHLLKIGIIMJK',
+      '..KLLCCLLCCCLNLCCLNLLLLLKIIJEEEK',
+      '...KKLLLLHCCCCCAHHHLLLLKKIMMGEK.',
+      '.....KKKLLHCOHHHHLHHOLK.KEKKEJK.',
+      '...KKPPPQQHHOLHHLLLLOLK..KDMKK..',
+      '..KPPPPPRRQQKKKKKKKKKCKK.KDMK...',
+      '..KRPPRRRRRQLHHHHHHHCLACKKDMK...',
+      '..KRRRKRKQQQAALLLCCCCLCCCKDMK...',
+      '..KQQSSQSQQQBBCCCBCCHLCHCKDK....',
+      '...KAQQSSQAACCCCCCCCHHLCCKMK....',
+      '...KACCLCCCHHCCCCCHHHLLKKCKLK...',
+      '...KAHCLHCCCHHHCHHHLLLLKCCCLK...',
+      '...KAHCLHHHHHHHHHLLLLLLKLLLLK...',
+      '...KACCLTTTTTUTTTTUTTTTKKLKK....',
+      '...KACCLVUUUUUUWWUUUUUTK.K......',
+      '..KACCCCLUTWUUUUWTTTWTTK........',
+      '...KCCLLKUTHTUUUWTCCWTK.........',
+      '....KLLKKTKACTUTTACCLTK.........',
+      '.....KK..KCCCLTTKACCLK..........',
+      '.........KLLLLLKKACCCLK.........',
+      '..........KKKKK.KLLLLLK.........',
+      '.................KKKKK..........',
+      '................................'
+    ]
+  },
+  cavespider: {
+    pal: {"K":"#35263f","A":"#765a79","B":"#56445d","C":"#382e40","D":"#17141d","E":"#2c2532","F":"#493b4e","G":"#893e39","H":"#3d1624","I":"#68516a","J":"#0c0a0e","L":"#09080c","M":"#d83a32","N":"#09080c","O":"#cac9b4","P":"#9f886f"},
+    a: [
+      '................................',
+      '................................',
+      '................................',
+      '................................',
+      '........KKKKKKKK................',
+      '......KKABBBBBBCKK..............',
+      '.....KAAAABBBDBCCCK.............',
+      '....KAAADBABBBBDCCDK....KK......',
+      '...KAAAABBBBBBBCCCDDK..KEFK.....',
+      '...KABDBBBGGGHCCCDDDK.KEEIK.....',
+      '..KAABBBBCCGHCCCCDDDDKKEEKJK....',
+      '..KCBBABCCCGHCCCCDDDLKEEEKKFK...',
+      '..KCCCCCCCGHHHCCDDLLLEEEKEEIK...',
+      '..KDDDCCCCCCCCDDDLDLLEEKEEKJJK..',
+      '...KDDCDDDDDDDDLLLLLLEKEEEKKJK..',
+      '...KDDDDDDDDDDLLLLLLBLBLEK.KJJK.',
+      '....KLLLDLLLLLLDLAABBBBCLK.KJK..',
+      '...KJJLLLLLLLLLLAABBBMBMCLK.KJK.',
+      '...KJKKKLLDLLLLLBBBBLCMCMLFKKJK.',
+      '..KJK...KJKKKKLBBCCCCLCLLLLKKJK.',
+      '..KJK...KJK.KJILCCCDDDDLLLJK.KJK',
+      '.KJK...KJK..KNNLDDDDDLLLLLKJKKJK',
+      '..K...KJJK..KNKKDDLLLLLLLKKJK.K.',
+      '......KJK...KNK.KLLLOLLOK.KJK...',
+      '.....KJJK..KNK...KKKPKNPK..KJK..',
+      '.....KJK...KNK......KKNK...KJK..',
+      '....KJK...KNK.........KNK..KJK..',
+      '....KJK...KNK.........KNK...KJK.',
+      '...KJK...KNNK.........KNK...KJK.',
+      '....K....KNK..........KNK....K..',
+      '..........K............K........',
+      '................................'
+    ],
+    b: [
+      '................................',
+      '................................',
+      '................................',
+      '................................',
+      '................................',
+      '........KKKKKKKK................',
+      '......KKABBBBBBCKK......KK......',
+      '.....KAAAABBBDBCCCK....KEFK.....',
+      '....KAAADBABBBBDCCDK..KEEIK.....',
+      '...KAAAABBBBBBBCCCDDK.KEEEJK....',
+      '...KABDBBBGGGHCCCDDDKKEEEKJJK...',
+      '..KAABBBBCCGHCCCCDDDDKEEEKKJK...',
+      '..KCBBABCCCGHCCCCDDDLEEEKKEFJK..',
+      '..KCCCCCCCGHHHCCDDLLLEEEKEEIJK..',
+      '..KDDDCCCCCCCCDDDLDLLEEKEEEJKJK.',
+      '...KDDCDDDDDDDDLLLLLLEKEEEKKJK..',
+      '...KDDDDDDDDDDLLLLLLBLBLEKKKJK..',
+      '....KLLLDLLLLLLDLAABBBBCLEFKJK..',
+      '...KJJLLLLLLLLLLAABBBMBMCLIKKJK.',
+      '...KJKKKLLDLLLLLBBBBLCMCMLJKKJK.',
+      '..KJK..KJKKKKJLBBCCCCLCLLLLJKJK.',
+      '..KJK.KJJK..KJILCCCDDDDLLLKJKKJK',
+      '.KJK..KJK...KNNLDDDDDLLLLLKJKKJK',
+      '..K..KJJK...KNKKDDLLLLLLLK.KJKK.',
+      '.....KJK....KNK.KLLLOLLOK..KJK..',
+      '....KJK....KNK...KKKPKNPK..KJK..',
+      '....KJK....KNK......KKNK....KJK.',
+      '...KJK....KNK.........KNK...KJK.',
+      '....K.....KNK.........KNK....K..',
+      '.........KNNK.........KNK.......',
+      '.........KNK..........KNK.......',
+      '..........K............K........'
+    ]
+  },
+  mimic: {
+    pal: {"K":"#35263f","A":"#7b603d","B":"#5b3d2b","C":"#0e0607","D":"#2e0e1e","E":"#b3a247","F":"#927236","G":"#d2d0bd","H":"#a89076","I":"#bfb79d","J":"#d8b838","L":"#34152b","M":"#863e4f","N":"#684023","O":"#321a16","P":"#5e2941","Q":"#3b1a12"},
+    a: [
+      '................................',
+      '..........KKKKK.................',
+      '.........KAAAABKKKKKKKKK........',
+      '.........KABBBBAAAAAAAABKKKK....',
+      '........KABBBBBBBBBBBBBBAAAAK...',
+      '........KABBBBBBBBBBBBBBBBBCK...',
+      '........KABBBBBBBBBBBBBBBBBCK...',
+      '........KABBBBBBBBBBBBBBBBCCK...',
+      '.......KBBBBBBBBBBBBBBBBBBCK....',
+      '.......KCCCCCCCCCBBBBBBBBCCK....',
+      '........KDEEEEEEFFDDDDDDDDDK....',
+      '.......KDDGHDGHDGHFFFFFFFFFFK...',
+      '.......KDDIDDIDDIDDGHDGHDGHK....',
+      '......KDDDDDJDDDDDDIDJIDDIK.....',
+      '......KDDDDDDDDDDDDDDDDDDDK.K...',
+      '......KIDDIDDIDDIDDIDDIDDKKKBK..',
+      '.....KDGHDGHDGHLLLLGHDGHDKBBCK..',
+      '....KEEEEEEEFFLMMMMLFFFFNBOOCK..',
+      '....KEAAAAAAAALMMMLLAAAANBOOCK..',
+      '....KEBBBBBBBBFLMPLBBBBONBOOCK..',
+      '....KEBBBBBBBKKKMPLBBBBONBOOCK..',
+      '....KEBBBBBBBKKFLPLBBBBONBOOCK..',
+      '....KEOOOOOOOKKQLMLOOOOONBOOCK..',
+      '....KEBBBBBBBKKKLLLBBBBONBOOCK..',
+      '....KEBBBBBBBBFNBBBBBBBONBOOCK..',
+      '....KEBBBBOBBBFNBBBBOBBONBOCCK..',
+      '....KEBBBBBBBBFNBBBBBBBONBOCK...',
+      '....KEBOOOOOOOFNOOOOOOOONBOK....',
+      '....KEQQQQQQQQFNQQQQQQQQNCK.....',
+      '.....KKKKKKKKKKKKKKKKKKKKK......',
+      '................................',
+      '................................'
+    ],
+    b: [
+      '................................',
+      '................................',
+      '..........KKKKK.................',
+      '.........KAAAABKKKKKKKKK........',
+      '.........KABBBBAAAAAAAABKKKK....',
+      '........KABBBBBBBBBBBBBBAAAAK...',
+      '........KABBBBBBBBBBBBBBBBBCK...',
+      '........KABBBBBBBBBBBBBBBBBCK...',
+      '........KABBBBBBBBBBBBBBBBCCK...',
+      '.......KBBBBBBBBBBBBBBBBBBCK....',
+      '.......KCCCCCCCCCBBBBBBBBCCK....',
+      '........KDEEEEEEFFDDDDDDDDDK....',
+      '.......KDDGHDGHDGHFFFFFFFFFFK...',
+      '......KDDDIDDIDDIDDGHDGHDGHKK...',
+      '......KIDDIDJIDDIDDIDJIDDIKKBK..',
+      '.....KDGHDGHDGHLLLLGHDGHDKBBCK..',
+      '....KEEEEEEEFFLMMMMLFFFFNBOOCK..',
+      '....KEAAAAAAAALMMMLLAAAANBOOCK..',
+      '....KEBBBBBBBBFLMPLBBBBONBOOCK..',
+      '....KEBBBBBBBKKKMPLBBBBONBOOCK..',
+      '....KEBBBBBBBKKFLPLBBBBONBOOCK..',
+      '....KEOOOOOOOKKQLMLOOOOONBOOCK..',
+      '....KEBBBBBBBKKKLLLBBBBONBOOCK..',
+      '....KEBBBBBBBBFNBBBBBBBONBOOCK..',
+      '....KEBBBBOBBBFNBBBBOBBONBOCCK..',
+      '....KEBBBBBBBBFNBBBBBBBONBOCK...',
+      '....KEBOOOOOOOFNOOOOOOOONBOK....',
+      '....KEQQQQQQQQFNQQQQQQQQNCK.....',
+      '.....KKKKKKKKKKKKKKKKKKKKK......',
+      '................................',
+      '................................',
+      '................................'
+    ]
+  },
+  dungeonguardian: {
+    pal: {"K":"#35263f","A":"#8a633f","B":"#93a0a6","C":"#140709","D":"#5f6675","E":"#778390","F":"#434454","G":"#3f1b19","H":"#292732","I":"#48c8e0","J":"#693f2d","L":"#371913","M":"#8c6e3a","N":"#0c0808","O":"#332924","P":"#b5bdc2","Q":"#969eaa","R":"#535168"},
+    a: [
+      '.....................KAAAAK.....................',
+      '....................KBCCCCDK....................',
+      '...................KBBBEEEDDK...................',
+      '..................KBBBEEEEDDFK..................',
+      '.................KBBBEEEEDDDFFK.................',
+      '.................KBEEEEEDDDFFFK.................',
+      '................KBBEEGEDDDDFFFFK................',
+      '................KDEEEEDDDDDFFFHK................',
+      '................KDEEDDDDDDFFFHHK................',
+      '................KDDKKKKIKKKKIKK.................',
+      '................KFFDDDDDDFFFHHHK................',
+      '.................KDDDDFFFFFHHHHK................',
+      '.......KKKKKKKK..KDDFFFFHHHGHHHK.KKKKKKKK.......',
+      '......KEEEEEEEDK.KDHHHHHHHHHHHHKKDDDDDDDFK......',
+      '.....KEEEBBEEEDDKKHHHHHHHHHHHHHKDDDEDDDDFFK.....',
+      '....KEEEBEEEDDDDHEEEEHHHHHHEEEEHDDEDDDFFFFHK....',
+      '....KDEEDDDDDDDHHEEEEEEEHEEEEEEHDDFFFFFFFHHK....',
+      '....KDDDDDDDDDHBBEEEEEEEHEEEEEEHBFFFFFFFHHHK....',
+      '....KFFFBFFFFFHHHHEEEEEEHEEEEEFHHHHHHHHHBHHK....',
+      '.....KFFFJHHHHHHDGJEEEELHLEEEFFHHHHHJHHHHHK.....',
+      '......KHHHGHHHHEEDJDDDLMHMLDDFFHHHHHHGHHHK......',
+      '.......KDEDDFHDFDFDFDFDFDFDFDFDFDFKDDFFHHK......',
+      '.......KDDDDFHDEEDDDDDDLHLDDDFFHHHKDDFHHHK......',
+      '.......KDDDDFFHEDDDDDDDNHNDDFFFHHHHDDFHHHK......',
+      '........KDDDDHHDDDHHHHHHOHHHHHGJHHHDFFHHK.......',
+      '........KDDDDFHFDHHDDDDHOHFFFFHJHHHDFFHHK.......',
+      '........KDDDDFDHHEHHDHDHOHHFHFHHHKDDFHHHK.......',
+      '........KDDDDDDEBEHDDDHHOHFFFHHFBDDDFHHHK.......',
+      '.........KDDDDDDDHHHHHHHNHHHHHHFFHDFFHHK........',
+      '.........KDDDDFFLLLLLLLLLLLLLLLLLFFFHHHK........',
+      '.........KDDDFFHLLLLLLLLLLLLLLLLLHFHHHHK........',
+      '..........KDHHHHDDDDDDDDDDDDDDDDHKKHHHK.........',
+      '..........KHHHHJDDDDDDDDDDDDDDDDDKKHHHK.........',
+      '...........KKBDDJDDDDDDDDDDDDDGDDFKBKK..........',
+      '...........KDDHFFFFFFFFFFFFFFFFFFFKFHK..........',
+      '...........KHHHHHHHHHHHHHHHHHHHHHHKHK...........',
+      '............KKDEEEEEHKPQQQRDEEEEEHKK............',
+      '.............KDEEEFFHKPQQQRDEHEFFHK.............',
+      '.............KDEDDFFHKPQQQRDEDDFFHK.............',
+      '.............KDEJDFFHKPQQQRDEDDFFHK.............',
+      '.............KDEDGFFHKPQQQRDEDJFFHK.............',
+      '............KKEEDDDFHKPQQQREEDDDFHKK............',
+      '...........KEEEEDDDFFFRQQQREEDDDFDDHK...........',
+      '...........KDEEEFFFFFHRQQQREEFFFDDDHK...........',
+      '...........KDHHHHHHHHHRQQQRHHHHHHHHHK...........',
+      '...........KHHHHHHHHHHRQQRRHHHHHHHHHK...........',
+      '............KKKKKKKKKKKRRRKKKKKKKKKK............',
+      '.......................KKK......................'
+    ],
+    b: [
+      '......................KKKK......................',
+      '.....................KAAAAK.....................',
+      '....................KBCCCCDK....................',
+      '...................KBBBEEEDDK...................',
+      '..................KBBBEEEEDDFK..................',
+      '.................KBBBEEEEDDDFFK.................',
+      '.................KBEEEEEDDDFFFK.................',
+      '................KBBEEGEDDDDFFFFK................',
+      '................KDEEEEDDDDDFFFHK................',
+      '................KDEEDDDDDDFFFHHK................',
+      '................KDDKKKKIKKKKIKK.................',
+      '................KFFDDDDDDFFFHHHK................',
+      '.................KDDDDFFFFFHHHHK................',
+      '.......KKKKKKKK..KDDFFFFHHHGHHHK.KKKKKKKK.......',
+      '......KEEEEEEEDK.KDHHHHHHHHHHHHKKDDDDDDDFK......',
+      '.....KEEEBBEEEDDKKHHHHHHHHHHHHHKDDDEDDDDFFK.....',
+      '....KEEEBEEEDDDDHEEEEHHHHHHEEEEHDDEDDDFFFFHK....',
+      '....KDEEDDDDDDDHHEEEEEEEHEEEEEEHDDFFFFFFFHHK....',
+      '....KDDDDDDDDDHBBEEEEEEEHEEEEEEHBFFFFFFFHHHK....',
+      '....KFFFBFFFFFHHHHEEEEEEHEEEEEFHHHHHHHHHBHHK....',
+      '.....KFFFJHHHHHHDGJEEEELHLEEEFFHHHHHJHHHHHK.....',
+      '......KHHHGHHHHEEDJDDDLMHMLDDFFHHHHHHGHHHK......',
+      '.......KDEDDFHDFDFDFDFDFDFDFDFDFDFKDDFFHHK......',
+      '.......KDDDDFHDEEDDDDDDLHLDDDFFHHHKDDFHHHK......',
+      '.......KDDDDFFHEDDDDDDDNHNDDFFFHHHHDDFHHHK......',
+      '........KDDDDHHDDDHHHHHHOHHHHHGJHHHDFFHHK.......',
+      '........KDDDDFHFDHHDDDDHOHFFFFHJHHHDFFHHK.......',
+      '........KDDDDFDHHEHHDHDHOHHFHFHHHKDDFHHHK.......',
+      '........KDDDDDDEBEHDDDHHOHFFFHHFBDDDFHHHK.......',
+      '.........KDDDDDDDHHHHHHHNHHHHHHFFHDFFHHK........',
+      '.........KDDDDFFLLLLLLLLLLLLLLLLLFFFHHHK........',
+      '.........KDDDFFHLLLLLLLLLLLLLLLLLHFHHHHK........',
+      '..........KDHHHHDDDDDDDDDDDDDDDDHKKHHHK.........',
+      '..........KHHHHJDDDDDDDDDDDDDDDDDKKHHHK.........',
+      '...........KDBFFJFFFFFFFFFFFFFGFFFKBKK..........',
+      '...........KHHHHHHHHHHHHHHHHHHHHHHKHHK..........',
+      '............KKDEEEEEHKPQQQRDEEEEEHKKK...........',
+      '.............KDEEEFFHKPQQQRDEHEFFHK.............',
+      '.............KDEDDFFHKPQQQRDEDDFFHK.............',
+      '.............KDEJDFFHKPQQQRDEDDFFHK.............',
+      '.............KDEDGFFHKPQQQRDEDJFFHK.............',
+      '............KKEEDDDFHKPQQQREEDDDFHKK............',
+      '...........KEEEEDDDFFFRQQQREEDDDFDDHK...........',
+      '...........KDEEEFFFFFHRQQQREEFFFDDDHK...........',
+      '...........KDHHHHHHHHHRQQQRHHHHHHHHHK...........',
+      '...........KHHHHHHHHHHRQQRRHHHHHHHHHK...........',
+      '............KKKKKKKKKKKRRRKKKKKKKKKK............',
+      '.......................KKK......................'
+    ]
+  }
+};
+if (typeof module !== 'undefined') module.exports = { MOB_SPRITES };
+
+</script>
+<script>
+// ---- 기운 색 (지도용 밝은 빛) ----
+const AURA = [
+  { id: 'gold', name: '황금빛', c: '#ffd84a', w: '#fff6c8' },
+  { id: 'violet', name: '보랏빛', c: '#c27dff', w: '#f0dcff' },
+  { id: 'burn', name: '불타는', c: '#ff7a36', w: '#ffe0b0' },
+  { id: 'omen', name: '전조의', c: '#5ab4ff', w: '#dcf0ff' },
+  { id: 'myth', name: '신화의', c: '#72f070', w: '#e4ffd8' }
+];
+const T = 16, Z = 2;      // 한 칸 16 도트, 화면 2배 (도트 1개 = 2px — 게임과 같은 굵기)
+function art(id) {
+  const s = MOB_SPRITES[id], mk = rows => { const n = rows.length, c = document.createElement('canvas'); c.width = c.height = n; const g = c.getContext('2d'); rows.forEach((r, y) => { for (let x = 0; x < n; x++) if (r[x] !== '.') { g.fillStyle = s.pal[r[x]]; g.fillRect(x, y, 1, 1); } }); return c; };
+  return { a: mk(s.a), b: mk(s.b), n: s.a.length };
+}
+// 도트 반짝이 — 가장자리로 갈수록 가늘어지는 마름모 (✦). 단계 0~3 (0 = 점 하나 … 3 = 7×7)
+const SPARK = [
+  ['#'],
+  ['.#.', '#W#', '.#.'],
+  ['..#..', '..#..', '##W##', '..#..', '..#..'],
+  ['...#...', '...#...', '..#W#..', '##WWW##', '..#W#..', '...#...', '...#...']
+];
+function spark(g, cx, cy, step, col, white) {
+  const m = SPARK[step], h = (m.length - 1) / 2;
+  m.forEach((r, y) => [...r].forEach((ch, x) => { if (ch === '.') return; g.fillStyle = ch === 'W' ? white : col; g.fillRect(cx - h + x, cy - h + y, 1, 1); }));
+}
+// 반짝이 하나의 삶 — 0 → 3 → 0 으로 커졌다 작아짐
+function life(t) { const k = Math.floor(t * 7); return k < 0 || k > 6 ? -1 : [0, 1, 2, 3, 2, 1, 0][k]; }
+function hash(i) { const x = Math.sin(i * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); }
+
+// ---- 시안들 (g 는 도트 단위 좌표, 몬스터 발끝 가운데 (fx, fy), 크기 n 도트) ----
+const STYLES = [
+  { name: 'A · 보석 반짝임', desc: '몸 둘레에 ✦ 가 돌아가며 하나씩 커졌다 작아짐 (사용자 아이디어)', fn(g, t, fx, fy, n, a) {
+      const cnt = 3 + (n >> 4);
+      for (let i = 0; i < cnt; i++) {
+        const per = 1.4, off = i / cnt, cyc = Math.floor(t / per + off), u = (t / per + off) - cyc, s = life(u);
+        if (s < 0) continue;
+        const r1 = hash(cyc * 7 + i), r2 = hash(cyc * 13 + i * 3);
+        spark(g, Math.round(fx - n / 2 + r1 * n), Math.round(fy - n * 0.15 - r2 * n * 0.85), s, a.c, a.w);
+      }
+    } },
+  { name: 'B · 반짝임 + 바닥 빛', desc: 'A 에 발밑의 은은한 빛 웅덩이 (멀리서도 보임)', under: true, fn(g, t, fx, fy, n, a, under) {
+      if (under) {
+        const pulse = 0.55 + 0.25 * Math.sin(t * 3);
+        g.save(); g.globalAlpha = pulse;
+        for (let r = 3; r >= 1; r--) { g.globalAlpha = pulse * (0.18 + (3 - r) * 0.14); g.fillStyle = a.c; g.beginPath(); g.ellipse(fx, fy - 1, n * 0.32 * (1 + r * 0.22), n * 0.09 * (1 + r * 0.3), 0, 0, 7); g.fill(); }
+        g.restore(); return;
+      }
+      STYLES[0].fn(g, t, fx, fy, n, a);
+    } },
+  { name: 'C · 떠오르는 빛가루', desc: '발밑에서 작은 빛 점이 피어올라 사라짐 (불꽃 · 정기)', fn(g, t, fx, fy, n, a) {
+      const cnt = 4 + (n >> 3);
+      for (let i = 0; i < cnt; i++) {
+        const per = 1.6, u = (t / per + i / cnt) % 1, cyc = Math.floor(t / per + i / cnt);
+        const x = Math.round(fx - n * 0.45 + hash(cyc * 5 + i) * n * 0.9 + Math.sin(u * 6 + i) * 1.2), y = Math.round(fy - 1 - u * n * 1.05);
+        g.fillStyle = u < 0.3 ? a.w : a.c; g.globalAlpha = 1 - u * 0.7;
+        g.fillRect(x, y, 1, 1); if (u < 0.5) g.fillRect(x, y + 1, 1, 1);
+        g.globalAlpha = 1;
+      }
+      if (Math.floor(t * 2.2) % 3 === 0) spark(g, Math.round(fx + n * 0.3), Math.round(fy - n * 0.8), 1, a.c, a.w);
+    } },
+  { name: 'D · 빛나는 테두리', desc: '몬스터 테두리 선 자체가 기운 색으로 숨 쉬듯 밝아짐 + 가끔 ✦', rim: true, fn(g, t, fx, fy, n, a) {
+      const s = life((t % 2.2) / 1.2);
+      if (s >= 0) spark(g, Math.round(fx + n * 0.38), Math.round(fy - n * 0.82), s, a.c, a.w);
+    } },
+  { name: 'E · 도는 반짝임', desc: '✦ 두세 개가 몸 둘레를 천천히 돌고, 앞쪽에 올 때 크게', fn(g, t, fx, fy, n, a) {
+      const cnt = n > 16 ? 3 : 2;
+      for (let i = 0; i < cnt; i++) {
+        const ang = t * 1.6 + i * Math.PI * 2 / cnt, x = fx + Math.cos(ang) * n * 0.55, y = fy - n * 0.45 + Math.sin(ang) * n * 0.22;
+        const front = Math.sin(ang) > 0, s = front ? (Math.sin(ang) > 0.6 ? 3 : 2) : 1;
+        spark(g, Math.round(x), Math.round(y), s, a.c, a.w);
+      }
+    } }
+];
+// 테두리 빛 — 도트의 바깥 테두리(K) 칸만 기운 색으로 바꾼 그림
+function rimArt(id, col) {
+  const s = MOB_SPRITES[id], mk = rows => { const n = rows.length, c = document.createElement('canvas'); c.width = c.height = n; const g = c.getContext('2d'); rows.forEach((r, y) => { for (let x = 0; x < n; x++) if (r[x] !== '.') { const edge = r[x] === 'K' && [[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dy]) => { const rr = rows[y+dy]; return !rr || rr[x+dx] === undefined || rr[x+dx] === '.'; }); g.fillStyle = edge ? col : s.pal[r[x]]; g.fillRect(x, y, 1, 1); } }); return c; };
+  return { a: mk(s.a), b: mk(s.b) };
+}
+
+const MONS = ['goblin', 'slime', 'darkwolf', 'goblinchief', 'mimic', 'dungeonguardian'];
+const arts = Object.fromEntries(MONS.map(id => [id, art(id)]));
+const rims = {}; for (const id of MONS) for (const a of AURA) rims[id + a.id] = rimArt(id, a.c);
+const views = [];
+for (const st of STYLES) {
+  const box = document.createElement('div');
+  box.innerHTML = `<h3>${st.name}</h3><p>${st.desc}</p>`;
+  const c = document.createElement('canvas');
+  const W = 6 + MONS.length * 56, H = 60;
+  c.width = W * Z; c.height = H * Z; c.style.width = W * Z + 'px';
+  box.appendChild(c); document.getElementById('list').appendChild(box);
+  views.push({ st, c, g: c.getContext('2d'), W, H });
+}
+function frame(now) {
+  const t = now / 1000;
+  for (const v of views) {
+    const g = v.g; g.setTransform(Z, 0, 0, Z, 0, 0); g.imageSmoothingEnabled = false;
+    for (let y = 0; y < v.H; y += 8) for (let x = 0; x < v.W; x += 8) { g.fillStyle = (x + y) / 8 % 2 ? '#4a4640' : '#504b44'; g.fillRect(x, y, 8, 8); }
+    MONS.forEach((id, k) => {
+      const A = arts[id], a = AURA[k % AURA.length], fx = 34 + k * 56, fy = 54, n = A.n, fr = Math.floor(t * 1.6) % 2;
+      g.fillStyle = 'rgba(20,14,8,.35)'; g.beginPath(); g.ellipse(fx, fy - 1, n * .36, Math.max(2, n * .09), 0, 0, 7); g.fill();
+      if (v.st.under) v.st.fn(g, t + k * 0.37, fx, fy, n, a, true);
+      let img = fr ? A.b : A.a;
+      if (v.st.rim) { const R = rims[id + a.id]; g.drawImage(fr ? A.b : A.a, fx - n / 2, fy - n); g.globalAlpha = 0.45 + 0.55 * (0.5 + 0.5 * Math.sin(t * 4)); g.drawImage(fr ? R.b : R.a, fx - n / 2, fy - n); g.globalAlpha = 1; }
+      else g.drawImage(img, fx - n / 2, fy - n);
+      v.st.fn(g, t + k * 0.37, fx, fy, n, a);
+    });
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>

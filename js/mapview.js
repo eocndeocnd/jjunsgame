@@ -22,6 +22,18 @@ const MapView = (function () {
   const HERO = { w: 32, h: 40, foot: 38, body: 34, row: { down: 0, up: 1, right: 2, left: 3 } };
   const heroImg = new Image();
   heroImg.src = 'assets/hero/walk.png';
+  // 기운 — 발밑에 숨 쉬는 빛 웅덩이 + 몸 둘레에 ✦(가장자리로 갈수록 가늘어지는 마름모)가 하나씩 커졌다 작아짐
+  // (시안 B — 사용자 결정 2026-11-20. 시안 모음은 design/mobs/aura-preview.html, 떠오르는 빛가루(C)는 나중에 쓸 거리)
+  // 지도에서는 AURAS 의 잉크색이 어두운 땅에 묻혀서 밝은 빛으로 — [빛, 가운데 흰 빛]
+  const AURA_GLOW = { gold: ['#ffd84a', '#fff6c8'], violet: ['#c27dff', '#f0dcff'], burn: ['#ff7a36', '#ffe0b0'], omen: ['#5ab4ff', '#dcf0ff'], myth: ['#72f070', '#e4ffd8'] };
+  const SPARK = [   // 반짝이 단계 0~3 — # 기운 빛 · W 흰 빛
+    ['#'],
+    ['.#.', '#W#', '.#.'],
+    ['..#..', '..#..', '##W##', '..#..', '..#..'],
+    ['...#...', '...#...', '..#W#..', '##WWW##', '..#W#..', '...#...', '...#...']
+  ];
+  const SPARK_LIFE = [0, 1, 2, 3, 2, 1, 0];
+  const auraHash = i => { const x = Math.sin(i * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
   // 몬스터 도트 (js/mobsprites.js — design/mobs/make.js 가 만듦). 한 칸 16픽셀, 프레임 A · B, 오른쪽을 봄. 없는 몬스터는 이모지
   const mobArt = {};
   function mobSprite(id) {
@@ -144,16 +156,6 @@ const MapView = (function () {
       c.base = c.height - pad;
       return c;
     });
-    // 기운 — 그 색으로 빛나는 둥근 테 (반지름 r · 굵기 lw · 번짐 blur, 칸 단위가 아닌 화면 픽셀). 한가운데가 조각 한가운데
-    const auraStamp = (color, r, lw, blur) => cached(`a|${dpr}|${color}|${r}|${lw}|${blur}`, () => {
-      const M = r + lw + blur * 1.5, c = sheet(M * 2 * dpr, M * 2 * dpr), g = c.getContext('2d');
-      g.scale(dpr, dpr);
-      g.shadowColor = color; g.shadowBlur = blur;
-      g.strokeStyle = color; g.lineWidth = lw;
-      g.beginPath(); g.arc(M, M, r, 0, Math.PI * 2); g.stroke();
-      c.half = M;
-      return c;
-    });
     function fit() {
       const r = o.canvas.getBoundingClientRect();
       if (r.width === cw && r.height === ch) return;
@@ -242,9 +244,11 @@ const MapView = (function () {
       const line = Math.max(2, Math.round(T / 10));
       // 몬스터 도트 — 차지한 칸(n × n)의 아래 가운데에 발을 두고, 도트 1픽셀을 기기 픽셀의 정수 배로 (흐려지지 않게). 왼쪽을 보면 뒤집음
       // 돌려주는 값은 그림 꼭대기 y (머리 위 레벨을 그 위에)
+      const kpx = Math.max(1, Math.round(T * dpr / 16)) / dpr;   // 도트 1개의 화면 크기 (기기 픽셀의 정수 배)
+      const footX = (x, n) => Math.round((ox + (x + n / 2) * T) * dpr) / dpr, footY = (y, n) => Math.round((oy + (y + n) * T) * dpr) / dpr;
       const sprite = (art, x, y, n, face, frame) => {
-        const k = Math.max(1, Math.round(T * dpr / 16)) / dpr, size = art.n * k;
-        const fx = Math.round((ox + (x + n / 2) * T) * dpr) / dpr, fy = Math.round((oy + (y + n) * T) * dpr) / dpr;
+        const k = kpx, size = art.n * k;
+        const fx = footX(x, n), fy = footY(y, n);
         ctx.fillStyle = 'rgba(28,16,7,0.28)';
         ctx.beginPath(); ctx.ellipse(fx, fy - k, size * 0.36, Math.max(2, size * 0.09), 0, 0, Math.PI * 2); ctx.fill();
         ctx.imageSmoothingEnabled = false;
@@ -252,6 +256,29 @@ const MapView = (function () {
         if (face < 0) { ctx.save(); ctx.translate(fx, 0); ctx.scale(-1, 1); ctx.drawImage(img, -size / 2, fy - size, size, size); ctx.restore(); }
         else ctx.drawImage(img, fx - size / 2, fy - size, size, size);
         return fy - size;
+      };
+      // 기운 — x · y · n 은 차지한 칸, seed 는 몬스터마다 다르게 (반짝이 자리 · 때). under 면 발밑 빛, 아니면 반짝이
+      const auraFx = (aura, x, y, n, seed, under) => {
+        const [col, white] = AURA_GLOW[aura.id] || [aura.color, '#ffffff'], px = n * 16, fx = footX(x, n), fy = footY(y, n), t = clock + seed * 0.37;
+        const a0 = ctx.globalAlpha;
+        if (under) {
+          const pulse = 0.55 + 0.25 * Math.sin(t * 3);
+          ctx.fillStyle = col;
+          for (let r = 3; r >= 1; r--) {
+            ctx.globalAlpha = a0 * pulse * (0.18 + (3 - r) * 0.14);
+            ctx.beginPath(); ctx.ellipse(fx, fy - kpx, px * kpx * 0.32 * (1 + r * 0.22), px * kpx * 0.09 * (1 + r * 0.3), 0, 0, Math.PI * 2); ctx.fill();
+          }
+          ctx.globalAlpha = a0;
+          return;
+        }
+        const cnt = 3 + (px >> 4);
+        for (let i = 0; i < cnt; i++) {
+          const v = t / 1.4 + i / cnt, cyc = Math.floor(v), step = SPARK_LIFE[Math.floor((v - cyc) * 7)];
+          if (step == null) continue;
+          const m = SPARK[step], h = (m.length - 1) / 2;
+          const sx = Math.round(-px / 2 + auraHash(cyc * 7 + i + seed) * px), sy = Math.round(-px * 0.15 - auraHash(cyc * 13 + i * 3 + seed) * px * 0.85);
+          m.forEach((row, yy) => { for (let xx = 0; xx < row.length; xx++) if (row[xx] !== '.') { ctx.fillStyle = row[xx] === 'W' ? white : col; ctx.fillRect(fx + (sx - h + xx) * kpx, fy + (sy - h + yy) * kpx, kpx, kpx); } });
+        }
       };
       // 머리 위 레벨 — 나보다 센 상대는 붉게. cx · topY 는 픽셀
       const label = (id, cx, topY) => {
@@ -369,15 +396,19 @@ const MapView = (function () {
       }
       for (const post of m.posts) {
         if (!seen(post.x, post.y, post.w, post.h) || !w.hooks.postAlive(post.enemy)) continue;
-        const f = getEnemy(post.enemy), pw = post.w * T, ph = post.h * T;
-        if (post.w > 1) { ctx.fillStyle = 'rgba(28,16,7,0.18)'; ctx.fillRect(ox + post.x * T, oy + post.y * T, pw, ph); }   // 큰 자리 — 그림자
-        ctx.strokeStyle = KIND_COLOR[f.kind] || '#000';
-        ctx.lineWidth = line;
-        ctx.strokeRect(ox + post.x * T + line / 2, oy + post.y * T + line / 2, pw - line, ph - line);
-        const art = mobSprite(post.enemy);
+        const f = getEnemy(post.enemy), pw = post.w * T, ph = post.h * T, art = mobSprite(post.enemy);
+        if (!art) {   // 도트가 없는 것(이모지)만 — 자리 그림자 · 정예/보스 색 테두리. 도트는 발밑 그림자만 (테두리 네모는 뺌 — 사용자 결정 2026-11-20)
+          if (post.w > 1) { ctx.fillStyle = 'rgba(28,16,7,0.18)'; ctx.fillRect(ox + post.x * T, oy + post.y * T, pw, ph); }
+          ctx.strokeStyle = KIND_COLOR[f.kind] || '#000';
+          ctx.lineWidth = line;
+          ctx.strokeRect(ox + post.x * T + line / 2, oy + post.y * T + line / 2, pw - line, ph - line);
+        }
         let top = oy + post.y * T - 1;
+        const pn = Math.min(post.w, post.h), pAura = w.hooks.postAura(post.enemy), pSeed = post.x * 31 + post.y;
+        if (pAura) auraFx(pAura, post.x, post.y, pn, pSeed, true);
         if (art) top = Math.min(top, sprite(art, post.x, post.y, Math.min(post.w, post.h), 1, Math.floor(clock * 1.6) % 2) - 1);   // 서 있는 자리 — 숨 쉬듯 A · B
         else glyph(post.x + post.w / 2, post.y + post.h / 2, f.icon, 0.72 * Math.min(post.w, post.h));
+        if (pAura) auraFx(pAura, post.x, post.y, pn, pSeed, false);
         label(post.enemy, ox + (post.x + post.w / 2) * T, top);
       }
       for (const mob of w.mobs) {
@@ -385,19 +416,17 @@ const MapView = (function () {
         if (!seen(Math.floor(g.x), Math.floor(g.y), n + 1, n + 1)) continue;
         const gy = g.y + bob(g) / T;                          // 들썩임까지 얹은 보이는 줄
         const cx = ox + (g.x + n / 2) * T, cy = oy + (gy + n / 2) * T;
-        if (n > 1) {   // 차지한 칸 — 옅은 그림자 (어느 칸에 닿아도 싸움)
+        const art = mobSprite(mob.monster);
+        if (n > 1 && !art) {   // 차지한 칸 — 옅은 그림자 (어느 칸에 닿아도 싸움). 도트는 발밑 그림자만
           ctx.fillStyle = 'rgba(28,16,7,0.16)';
           ctx.fillRect(ox + g.x * T + 1, oy + g.y * T + 1, n * T - 2, n * T - 2);
         }
-        if (mob.aura) {   // 기운 — 그 색으로 빛남
-          const s = auraStamp(mob.aura.color, T * 0.45 * n, line + 1, T * 0.6);
-          ctx.drawImage(s, cx - s.half, cy - s.half, s.half * 2, s.half * 2);
-        }
         ctx.globalAlpha = mob.frozen > 0 ? 0.45 : 1;
-        const art = mobSprite(mob.monster);
+        if (mob.aura) auraFx(mob.aura, g.x, g.y, n, mob.id, true);
         let top = oy + gy * T + 1;
         if (art) top = Math.min(top, sprite(art, g.x, g.y, n, g.face, Math.floor(g.walked * 2) % 2) + 1);   // 반 칸 걸을 때마다 A · B
         else glyph(g.x + n / 2, gy + n / 2, getEnemy(mob.monster).icon, 0.72 * n);
+        if (mob.aura) auraFx(mob.aura, g.x, g.y, n, mob.id, false);
         ctx.globalAlpha = 1;
         if (o.dots) {
           ctx.fillStyle = TEMPER_COLOR[mob.temper];
@@ -505,6 +534,16 @@ const MapView = (function () {
     return {
       temper: id => MapRules.temperOf(getEnemy(id).arch),
       rollAura: () => rollAura(),
+      // 정예 · 히든 · 보스의 기운 — 이 여정에 처음 보일 때 한 번 굴려 run.postAura 에 둠 (닿으면 approachPost 가 그대로 씀).
+      // 예전엔 닿는 순간 굴려서 지도에서 미리 안 보였음 — 이제 일반처럼 빛나 보여 골라 잡을 수 있게 (사용자 결정 2026-11-20, 확률은 일반과 같음)
+      postAura: id => {
+        const run = State.run;
+        if (!run || run.over) return null;
+        if (!run.postAura) run.postAura = {};
+        if (!(id in run.postAura)) { const a = rollAura(); run.postAura[id] = a ? a.id : null; }
+        const k = run.postAura[id];
+        return k ? AURAS.find(a => a.id === k) || null : null;
+      },
       postAlive: id => { const f = getEnemy(id); return !!f && !isDowned(id) && isRevealed(f); },   // 이 여정에 꺾었거나 아직 안 나타난 히든은 없음
       // 꺾어야 열리는 문 · 도시가 열린 뒤에만 있는 문 (지하수로 첫 공간의 도시로 나가는 게이트 — needsCity)
       npcHere: n => deskHere(n.shop),   // 협회 로비의 「???」(제4격 보스 뒤) · 동료 모집 · 게이트 창구(제5격 보스 뒤)

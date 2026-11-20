@@ -168,7 +168,7 @@
     const w = {
       map,
       rng: seed == null ? Math.random : mulberry(seed),
-      hooks: { temper: () => 'passive', rollAura: () => null, postAlive: () => true, portOpen: () => true, size: () => 1, chestOpen: () => false,
+      hooks: { temper: () => 'passive', rollAura: () => null, postAura: () => null, postAlive: () => true, portOpen: () => true, size: () => 1, chestOpen: () => false,
                merchantHere: () => false, ...hooks },
       time: 0,
       // 나 — x · y 는 몸 한가운데가 든 칸 (규칙은 모두 이 칸으로), ox · oy 는 그 칸 가운데에서 비킨 만큼 (-0.5 ~ 0.5, 칸 사이를 미끄러지며 걸음)
