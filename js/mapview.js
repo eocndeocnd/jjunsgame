@@ -22,6 +22,21 @@ const MapView = (function () {
   const HERO = { w: 32, h: 40, foot: 38, body: 34, row: { down: 0, up: 1, right: 2, left: 3 } };
   const heroImg = new Image();
   heroImg.src = 'assets/hero/walk.png';
+  // 몬스터 도트 (js/mobsprites.js — design/mobs/make.js 가 만듦). 한 칸 16픽셀, 프레임 A · B, 오른쪽을 봄. 없는 몬스터는 이모지
+  const mobArt = {};
+  function mobSprite(id) {
+    if (id in mobArt) return mobArt[id];
+    const s = typeof MOB_SPRITES !== 'undefined' && MOB_SPRITES[id];
+    if (!s) return (mobArt[id] = null);
+    const frame = rows => {
+      const n = rows.length, c = document.createElement('canvas');
+      c.width = c.height = n;
+      const g = c.getContext('2d');
+      rows.forEach((r, y) => { for (let x = 0; x < n; x++) if (r[x] !== '.') { g.fillStyle = s.pal[r[x]]; g.fillRect(x, y, 1, 1); } });
+      return c;
+    };
+    return (mobArt[id] = { a: frame(s.a), b: frame(s.b), n: s.a.length });
+  }
 
   const rankColors = {};
   function rankColor(n) {
@@ -62,11 +77,12 @@ const MapView = (function () {
       const exact = e.ox !== undefined, tx = e.x + (e.ox || 0), ty = e.y + (e.oy || 0);
       let g = glide.get(e);
       if (!g || Math.hypot(g.x - tx, g.y - ty) > 2.5) {   // 처음 보거나 멀리 옮겨졌으면(문 · 불러오기) 그 자리에
-        g = { x: tx, y: ty, phase: 0, moving: false, walked: 0, idle: 1 };
+        g = { x: tx, y: ty, phase: 0, moving: false, walked: 0, idle: 1, face: (e.id || 0) % 2 ? -1 : 1 };
         glide.set(e, g);
         return g;
       }
       const ddx = tx - g.x, ddy = ty - g.y, dd = Math.hypot(ddx, ddy), moving = dd > 1e-6;
+      if (Math.abs(ddx) > 1e-3) g.face = ddx > 0 ? 1 : -1;   // 좌우로 움직인 쪽을 봄 (몬스터 도트 — 위아래로만 가면 그대로)
       const go = exact ? dd : Math.min(dd, speed * dt);   // 이번 장면에 옮긴 만큼
       if (exact || dd <= go) { g.x = tx; g.y = ty; } else { g.x += ddx / dd * go; g.y += ddy / dd * go; }
       g.phase = moving ? g.phase + go * Math.PI : 0;     // 한 칸에 한 번 들썩
@@ -224,6 +240,19 @@ const MapView = (function () {
         ctx.drawImage(g, ox + cx * T - g.width / dpr / 2, oy + (cy + 0.06) * T - g.height / dpr / 2, g.width / dpr, g.height / dpr);
       };
       const line = Math.max(2, Math.round(T / 10));
+      // 몬스터 도트 — 차지한 칸(n × n)의 아래 가운데에 발을 두고, 도트 1픽셀을 기기 픽셀의 정수 배로 (흐려지지 않게). 왼쪽을 보면 뒤집음
+      // 돌려주는 값은 그림 꼭대기 y (머리 위 레벨을 그 위에)
+      const sprite = (art, x, y, n, face, frame) => {
+        const k = Math.max(1, Math.round(T * dpr / 16)) / dpr, size = art.n * k;
+        const fx = Math.round((ox + (x + n / 2) * T) * dpr) / dpr, fy = Math.round((oy + (y + n) * T) * dpr) / dpr;
+        ctx.fillStyle = 'rgba(28,16,7,0.28)';
+        ctx.beginPath(); ctx.ellipse(fx, fy - k, size * 0.36, Math.max(2, size * 0.09), 0, 0, Math.PI * 2); ctx.fill();
+        ctx.imageSmoothingEnabled = false;
+        const img = frame ? art.b : art.a;
+        if (face < 0) { ctx.save(); ctx.translate(fx, 0); ctx.scale(-1, 1); ctx.drawImage(img, -size / 2, fy - size, size, size); ctx.restore(); }
+        else ctx.drawImage(img, fx - size / 2, fy - size, size, size);
+        return fy - size;
+      };
       // 머리 위 레벨 — 나보다 센 상대는 붉게. cx · topY 는 픽셀
       const label = (id, cx, topY) => {
         const t = o.tag && o.tag(id);
@@ -345,8 +374,11 @@ const MapView = (function () {
         ctx.strokeStyle = KIND_COLOR[f.kind] || '#000';
         ctx.lineWidth = line;
         ctx.strokeRect(ox + post.x * T + line / 2, oy + post.y * T + line / 2, pw - line, ph - line);
-        glyph(post.x + post.w / 2, post.y + post.h / 2, f.icon, 0.72 * Math.min(post.w, post.h));
-        label(post.enemy, ox + (post.x + post.w / 2) * T, oy + post.y * T - 1);
+        const art = mobSprite(post.enemy);
+        let top = oy + post.y * T - 1;
+        if (art) top = Math.min(top, sprite(art, post.x, post.y, Math.min(post.w, post.h), 1, Math.floor(clock * 1.6) % 2) - 1);   // 서 있는 자리 — 숨 쉬듯 A · B
+        else glyph(post.x + post.w / 2, post.y + post.h / 2, f.icon, 0.72 * Math.min(post.w, post.h));
+        label(post.enemy, ox + (post.x + post.w / 2) * T, top);
       }
       for (const mob of w.mobs) {
         const g = seenAt(mob, R.CHASE_SPEED, dt), n = mob.w || 1;   // 큰 몬스터는 n × n 칸 — 그림 · 기운도 그만큼
@@ -362,7 +394,10 @@ const MapView = (function () {
           ctx.drawImage(s, cx - s.half, cy - s.half, s.half * 2, s.half * 2);
         }
         ctx.globalAlpha = mob.frozen > 0 ? 0.45 : 1;
-        glyph(g.x + n / 2, gy + n / 2, getEnemy(mob.monster).icon, 0.72 * n);
+        const art = mobSprite(mob.monster);
+        let top = oy + gy * T + 1;
+        if (art) top = Math.min(top, sprite(art, g.x, g.y, n, g.face, Math.floor(g.walked * 2) % 2) + 1);   // 반 칸 걸을 때마다 A · B
+        else glyph(g.x + n / 2, gy + n / 2, getEnemy(mob.monster).icon, 0.72 * n);
         ctx.globalAlpha = 1;
         if (o.dots) {
           ctx.fillStyle = TEMPER_COLOR[mob.temper];
@@ -373,7 +408,7 @@ const MapView = (function () {
           ctx.font = `bold ${Math.round(T * 0.55)}px sans-serif`;
           ctx.fillText('!', ox + (g.x + n - 0.15) * T, oy + (gy + 0.2) * T);
         }
-        label(mob.monster, cx, oy + gy * T + 1);
+        label(mob.monster, cx, top);
       }
       // 나 — 누른 쪽을 보고, 걷는 동안 한 칸에 한 장씩 넘김. 그림 1픽셀을 기기 픽셀의 정수 배로 키워 또렷하게
       // (몸 높이가 1.5칸에 가장 가까운 배 — 폰에서는 2배, 약 1.7칸)

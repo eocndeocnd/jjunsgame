@@ -1875,3 +1875,18 @@ test('협회 로비 — 등록 창구 왼쪽 시험장 문(시험 중에만 열�
   assert.equal(out.to, 'assoc.arena');
   assert.deepEqual(arena.npcs.filter(n => n.shop).map(n => n.shop), ['examiner']);
 });
+
+test('지도 몬스터 도트 — 있는 몬스터 · 크기(칸 × 16) · 1격은 모두', () => {
+  const { MOB_SPRITES } = require('../js/mobsprites.js');
+  const { ENEMIES } = loadData();
+  for (const [id, s] of Object.entries(MOB_SPRITES)) {
+    const e = ENEMIES.find(x => x.id === id);
+    assert.ok(e, `${id} — 없는 몬스터`);
+    assert.equal(s.a.length, e.size * 16, `${id} — 크기 ${e.size}칸인데 ${s.a.length}픽셀`);
+    for (const f of ['a', 'b']) {
+      assert.equal(s[f].length, s.a.length);
+      for (const r of s[f]) { assert.equal(r.length, s.a.length); for (const c of r) assert.ok(c === '.' || s.pal[c], `${id} — 모르는 색 ${c}`); }
+    }
+  }
+  for (const e of ENEMIES.filter(x => x.rank.n === 1)) assert.ok(MOB_SPRITES[e.id], `1격 ${e.id} — 도트 없음`);
+});
