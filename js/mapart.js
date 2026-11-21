@@ -2123,6 +2123,14 @@
     // 건물 · 기둥 바로 아래 칸은 위쪽이 그늘
     const bUp = ty > 0 ? A.bAt[(ty - 1) * m.w + tx] : -1, smallUp = bUp >= 0 && A.buildings[bUp] && ORC_KINDS[A.buildings[bUp].kind];   // 부락 소품 · 울타리 아래 칸엔 그라데이션 그늘 띠 없음 — 도트 그림자만 (사용자 결정 2026-11-20)   // 토템 · 모닥불 … 은 제 그림자를 붙여 그림 (떨어진 네모 그늘 띠가 어색했음, 사용자 지적)
     if (t !== WALL && t !== POOL && !smallUp && ((lookAt(tx, ty - 1) & 15) === BUILD || pillar(tx, ty - 1))) e.shadeTop = (lookAt(tx, ty - 1) & 15) === BUILD ? 9 : 6;
+    // 굴 벽(그냥 벽 · 지도 밖)과 바닥이 맞닿은 칸 — 경계를 칸 모양 곧은 줄 대신 구불구불하게 (solidField · wallPixel, 사용자 규칙 2026-11-22)
+    // 사람이 쌓은 벽(벽돌 · 판석 · 묘지돌 — 지하수로 같은)은 곧은 그대로
+    // 자연 땅인지는 바닥 쪽 겉모습으로 (벽 칸의 겉모습은 어둠이라 아무것이나)
+    const natural = (x, y) => { const u = at(x, y); return (u === FLOOR || u === TREE) && ![COBBLE, TILES, PAVE, CANAL].includes(terOf(lookAt(x, y) & 15)); };
+    if (!(m.props && (m.props.interior || m.props.store)) && e.bio !== CITY && (natural(tx, ty) || plainWall(m, tx, ty)))
+      for (let dy = -2; dy <= 2 && !e.wallEdge; dy++) for (let dx = -2; dx <= 2; dx++) {   // 두 칸 — 옆면이 두 칸까지 내려오고 경계가 칸을 넘어 흔들리므로
+        if (plainWall(m, tx, ty) ? natural(tx + dx, ty + dy) : plainWall(m, tx + dx, ty + dy)) { e.wallEdge = true; break; }
+      }
     if (t === WALL || t < 0) {
       // 바로 위 두 칸 안에 땅이 있으면 그 땅의 옆면, 아니면 어둠
       e.face = null;
@@ -3037,12 +3045,59 @@
     if (e.shore) c = shoreRim(m, A, e, X, Y, c);
     return e.shadeTop && ly < e.shadeTop ? mul(c, 0.62 + 0.38 * ly / e.shadeTop) : c;
   }
+  // 그냥 벽(울타리 · 부락 소품 · 건물이 아닌 벽)이거나 지도 밖인 칸
+  function plainWall(m, x, y) {
+    if (x < 0 || y < 0 || x >= m.w || y >= m.h) return true;
+    const t = m.tile[y * m.w + x];
+    return t < 0 || (t === WALL && (m.look[y * m.w + x] & 15) !== BUILD);
+  }
+  // 벽다움 — 칸 가운데 값(벽 1 · 바닥 0)을 둥글게 섞고 잡음으로 흔든 값, 0 이상이면 벽으로 그림 (경계가 구불구불 · 모퉁이는 둥글게)
+  function solidField(m, X, Y) {
+    const fx = X / P - 0.5, fy = Y / P - 0.5, x0 = Math.floor(fx), y0 = Math.floor(fy), ax = fx - x0, ay = fy - y0;   // 곧게 섞음 — 계단 모퉁이가 비스듬히 깎임
+    const v = (x, y) => (plainWall(m, x, y) ? 1 : 0);
+    const b = (v(x0, y0) * (1 - ax) + v(x0 + 1, y0) * ax) * (1 - ay) + (v(x0, y0 + 1) * (1 - ax) + v(x0 + 1, y0 + 1) * ax) * ay;
+    return b - 0.5 + (vnoise(X * 0.06, Y * 0.06, 420) - 0.5) * 0.7 + (vnoise(X * 0.2, Y * 0.2, 421) - 0.5) * 0.26;
+  }
+  // 그 칸(벽이면 곁의 바닥)의 겉모습 — 없으면 null
+  function floorLookNear(m, tx, ty) {
+    for (const [dx, dy] of [[0, 0], [0, 1], [-1, 0], [1, 0], [0, -1], [-1, 1], [1, 1], [-1, -1], [1, -1]]) {
+      const x = tx + dx, y = ty + dy;
+      if (x < 0 || y < 0 || x >= m.w || y >= m.h) continue;
+      const u = m.tile[y * m.w + x];
+      if (u === FLOOR || u === TREE) return m.look[y * m.w + x];
+    }
+    return null;
+  }
+  // 벽으로 그리는 점 — 바로 위 두 칸 안에 바닥(벽다움 < 0)이 있으면 그 땅의 옆면(위 가장자리에서 잰 점 수대로), 아니면 어둠
+  function wallPixel(m, X, Y) {
+    const tx = Math.floor(X / P), FH = Math.round(P * (1.15 + 0.85 * vnoise(X * 0.07, 0.5, 422)));   // 옆면 높이 — 자리마다 달라 밑동 · 양 끝이 곧지 않게
+    const SX = X + Math.round((vnoise(Y * 0.11, X * 0.02, 423) - 0.5) * 12);   // 위를 살피는 줄을 줄마다 옆으로 흔듦 — 옆면 양 끝이 세로로 곧게 끊기지 않게
+    for (let k = 1; k <= FH; k++) {
+      const y = Y - k;
+      if (y < 0) break;
+      const ty = Math.floor(y / P);
+      if (m.tile[ty * m.w + tx] === POOL) break;
+      if (solidField(m, SX, y) >= 0) continue;
+      const lk = floorLookNear(m, tx, ty);
+      if (lk === null) break;
+      return faceColor(lk >> 4, terOf(lk & 15), X, Y, k - 1);
+    }
+    return vnoise(X * 0.03, Y * 0.03, 50) > 0.72 ? c3('#16121f') : C.void;
+  }
   function paintGround(m, A, e, X, Y, lx, ly) {
     const t = e.t;
     if (t === POOL) { const c = e.raw === LAVA ? lava(X, Y) : water(m, A, X, Y); return e.bridgeAbove && ly < 3 ? mul(c, 0.62) : c; }
     if (m.props && m.props.store) return storeGround(m, A, e, X, Y, lx, ly);   // 가게 안 (헌터백화점)
     if (e.bio === CITY) return cityGround(m, A, e, X, Y, lx, ly);
     if ((t === WALL || t < 0) && m.props && m.props.interior) return hallWall(m, e, X, Y, lx, ly);
+    if (e.wallEdge) {                                                    // 굴 벽과 바닥의 경계 — 구불구불하게
+      const sf = solidField(m, X, Y);
+      if (t === WALL || t < 0) {
+        if (sf < 0) { const lk = floorLookNear(m, Math.floor(X / P), Math.floor(Y / P)); if (lk !== null) return texture(terOf(lk & 15), lk >> 4, X, Y); }
+        return wallPixel(m, X, Y);
+      }
+      if (sf >= 0) return wallPixel(m, X, Y);
+    }
     if (t === WALL || t < 0) {
       if (e.face) return faceColor(e.face.bio, e.face.ter, X, Y, Y - e.face.top);
       return vnoise(X * 0.03, Y * 0.03, 50) > 0.72 ? c3('#16121f') : C.void;

@@ -1201,10 +1201,14 @@ function overworld(data) {
     const fromEntry = walkFrom([idx(...L.spot1(...OVERWORLD_ENTRY[rank]))]);
     const toBoss = walkFrom(cellsOfRect(boss).map(([x, y]) => idx(x, y)));
     const D = Math.min(...cellsOfRect(boss).map(([x, y]) => fromEntry[idx(x, y)]).filter(v => v >= 0));
+    // 더 낮은 격 땅에서 걸어서 CHEST_FAR 칸 안쪽엔 두지 않음 — 낮은 격에서 몬스터를 안 지나고 집어 가지 않게 (사용자 결정 2026-11-22, 만티코어 곁의 4격 상자)
+    const lower = [];
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const z = L.zoneAt(x, y); if (z >= 2 && z < rank && (tiles[idx(x, y)] === FLOOR || tiles[idx(x, y)] === ROAD)) lower.push(idx(x, y)); }
+    const fromLower = walkFrom(lower), CHEST_FAR = 40;
     const cand = [];
     for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) {
       const k = idx(x, y);
-      if (tiles[k] !== FLOOR || L.zoneAt(x, y) !== rank || L.bio[k] === 8 || fromEntry[k] < 0 || toBoss[k] < 0) continue;
+      if (tiles[k] !== FLOOR || L.zoneAt(x, y) !== rank || L.bio[k] === 8 || fromEntry[k] < 0 || toBoss[k] < 0 || (fromLower[k] >= 0 && fromLower[k] < CHEST_FAR)) continue;
       let ring = true;
       for (let j = -1; j <= 1 && ring; j++) for (let i = -1; i <= 1; i++) if (!open(idx(x + i, y + j))) { ring = false; break; }
       if (!ring || busy.some(([bx, by]) => Math.max(Math.abs(bx - x), Math.abs(by - y)) <= 4)) continue;
@@ -1309,7 +1313,7 @@ function caveMap(data, c) {
   // 고인 물 — 방 가장자리에 하나씩 (길을 막지 않게 방 한가운데에서 비킨 자리)
   for (const [px, py] of [[rooms[0][0] + 4, rooms[0][1] - 3], [rooms[1][0] - 4, rooms[1][1] + 3]])
     for (let y = py - 1; y <= py + 1; y++) for (let x = px - 1; x <= px + 1; x++)
-      if (tiles[at(x, y)] === FLOOR && Math.hypot(x - px, (y - py) * 1.2) < 1.6) tiles[at(x, y)] = WATER;
+      if (tiles[at(x, y)] === FLOOR && Math.hypot(x - px, (y - py) * 1.2) < 1.6 && [-1, 0, 1].every(j => [-1, 0, 1].every(i => tiles[at(x + i, y + j)] !== WALL))) tiles[at(x, y)] = WATER;   // 벽에 붙지 않게 (물가가 벽과 곧게 맞닿지 않게)
   // 구역 — 방마다 그 몬스터 (방 둘레 네모 — 바닥 칸만 구역으로 셈)
   const areas = c.rooms.map((name, i) => {
     const foe = data.ENEMIES.find(e => e.name === name && e.kind === 'normal');
