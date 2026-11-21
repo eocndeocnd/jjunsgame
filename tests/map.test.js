@@ -2013,3 +2013,20 @@ test('높은 땅 — 그리핀 로드는 걸어 올라가는 둔덕 위, 바위 
   assert.ok(gk.some(k => walk(over, [k0])[k] >= 0), '계단으로 올라가 닿음');
   assert.ok(!gk.some(k => walk(over, [k0], stairs)[k] >= 0), '계단 말고는 못 올라감');
 });
+
+test('4격 정예 거인 넷 — 서리 거인은 눈밭 · 불의 거인은 남쪽 용암 곁 · 구름 거인은 계단으로 오르는 높은 둔덕 · 돌 거인은 언덕 거인 곁 큰 바위 사이', () => {
+  const over = loadMap('overworld');
+  const runs = s => { const a = new Set(); for (const r of String(s || '').split(';')) { if (!r) continue; const [x, y, n] = r.split(',').map(Number); for (let i = 0; i < n; i++) a.add(y * over.w + x + i); } return a; };
+  const at = e => over.posts.find(p => p.enemy === e), near = (g, r, f) => { for (let y = g.y - r; y < g.y + r + 4; y++) for (let x = g.x - r; x < g.x + r + 4; x++) if (f(y * over.w + x)) return true; return false; };
+  const frost = at('frostgiant'), fire = at('firegiant'), cloud = at('cloudgiant'), stone = at('stonegiant'), hill = over.areas.find(a => a.name === '언덕 거인');
+  assert.ok(cellsOf(over, frost).every(k => (over.look[k] & 15) === 8), '서리 거인 발밑은 눈');
+  assert.ok(fire.y > stone.y && fire.y > cloud.y && fire.y > frost.y, '불의 거인은 남쪽');
+  assert.ok(near(fire, 8, k => over.tile[k] === 2 && (over.look[k] & 15) === 6), '불의 거인 곁에 용암');
+  const high = runs(over.props.high), stairs = runs(over.props.stairs), k0 = over.start.y * over.w + over.start.x;
+  assert.ok(cellsOf(over, cloud).every(k => high.has(k)), '구름 거인은 높은 땅 위');
+  assert.ok(!cellsOf(over, cloud).some(k => walk(over, [k0], stairs)[k] >= 0), '구름 거인 둔덕도 계단으로만');
+  assert.ok(stone.x > hill.x - 10 && stone.x < hill.x + hill.w + 10 && stone.y > hill.y - 10 && stone.y < hill.y + hill.h + 10, '돌 거인은 언덕 거인 구역 곁');
+  const big = String(over.props.bigrocks || '').split(';').filter(Boolean).map(r => r.split(',').map(Number));
+  assert.ok(big.filter(([x, y]) => Math.hypot(x - stone.x, y - stone.y) < 10).length >= 3, '돌 거인 둘레에 큰 바위');
+  assert.ok(cellsOf(over, at('frostgiant')).concat(cellsOf(over, fire), cellsOf(over, stone)).every(k => walk(over, [k0])[k] >= 0), '모두 걸어서 닿음');
+});

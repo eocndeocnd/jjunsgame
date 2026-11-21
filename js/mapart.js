@@ -1511,19 +1511,40 @@
     return (v(x0, y0) * (1 - ax) + v(x0 + 1, y0) * ax) * (1 - ay) + (v(x0, y0 + 1) * (1 - ax) + v(x0 + 1, y0 + 1) * ax) * ay;
   }
   // 혼자 선 바위(이웃 네 칸에 바위가 없음) — 칸에는 땅과 발밑 그림자만, 바위는 나무처럼 따로 솟게 그림 (boulderSprite)
-  const loneRock = (m, x, y) => m.tile[y * m.w + x] === ROCK && ![[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => {
+  const loneRock = (m, x, y) => m.tile[y * m.w + x] === ROCK && (bigOf(m).at[y * m.w + x] >= 0 || ![[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => {
     const i = x + dx, j = y + dy; return i >= 0 && j >= 0 && i < m.w && j < m.h && m.tile[j * m.w + i] === ROCK;
-  });
+  }));
+  // 큰 바위 (지도 속성 bigrocks 「x,y,w,h;…」 — tools/map-gen.js 의 GIANT_GROUNDS) — 여러 칸을 막는 돌 하나. 칸에는 땅 + 큰 그림자, 돌은 따로 솟게
+  const bigs = new WeakMap();
+  function bigOf(m) {
+    let B = bigs.get(m);
+    if (B) return B;
+    B = { rects: [], at: new Int16Array(m.w * m.h).fill(-1) };
+    for (const r of String((m.props && m.props.bigrocks) || '').split(';')) {
+      if (!r) continue;
+      const [x, y, w, h] = r.split(',').map(Number);
+      for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) B.at[(y + j) * m.w + x + i] = B.rects.length;
+      B.rects.push({ x, y, w, h });
+    }
+    bigs.set(m, B);
+    return B;
+  }
   const rockKind = (bio, ter) => (bio === 6 || ter === OBSID ? 'obsid' : bio === 7 ? 'cave' : ter === SNOW ? 'snow' : 'rocky');
   const BW = 22, BH = 20;
-  function paintBoulder(put, kind, v) {
-    const [pal, mortar] = ROCK_PAL[kind === 'snow' ? 'rocky' : kind], cx = 11, cy = 11.5, rx = 10 - v * 0.5, ry = 8 + (v % 2) * 0.6;
+  function paintBoulder(put, kind, v, W = BW, H = BH) {
+    const big = W > BW, [pal, mortar] = ROCK_PAL[kind === 'snow' ? 'rocky' : kind], cx = W / 2, cy = H * 0.575, rx = W / 2 - 1 - v * 0.5, ry = H * 0.4 + (v % 2) * 0.6;
     const R = (x, y) => { const dx = (x + 0.5 - cx) / rx, dy = (y + 0.5 - cy) / ry; return Math.hypot(dx, dy) * (1 + (vnoise(Math.atan2(dy, dx) * 1.6 + v * 3, 0.5, 174) - 0.5) * 0.22); };
-    for (let y = 0; y < BH; y++) for (let x = 0; x < BW; x++) {
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
       const r = R(x, y);
       if (r > 1) continue;
       if (R(x - 1, y) > 1 || R(x + 1, y) > 1 || R(x, y - 1) > 1 || R(x, y + 1) > 1) { put(x, y, c3(kind === 'obsid' ? '#0c0810' : '#2a2620')); continue; }
-      const dx = (x + 0.5 - cx) / rx, dy = (y + 0.5 - cy) / ry, lit = -(dx * 0.6 + dy * 0.8) + (hash(x, y, 175 + v) - 0.5) * 0.25;
+      const dx = (x + 0.5 - cx) / rx, dy = (y + 0.5 - cy) / ry;
+      let lit = -(dx * 0.6 + dy * 0.8) + (hash(x, y, 175 + v) - 0.5) * 0.25;
+      if (big) {                                                         // 큰 바위 — 울퉁불퉁한 면(덩이마다 빛 받는 쪽이 다름)과 깊은 틈
+        const fx = x * 0.16 + v * 7, fy = y * 0.16;
+        lit += ((vnoise(fx + 0.6, fy, 182) - vnoise(fx - 0.6, fy, 182)) * -1.4 + (vnoise(fx, fy + 0.6, 182) - vnoise(fx, fy - 0.6, 182)) * -1.8);
+        if (Math.abs(vnoise(x * 0.11 + v * 3, y * 0.11, 183) - 0.5) < 0.03 && r < 0.9) { put(x, y, c3(mortar)); continue; }
+      }
       let c = c3(pal[lit > 0.45 ? 2 : lit > -0.1 ? 0 : lit > -0.5 ? 1 : 3]);
       if (dy > 0.45) c = mul(c, 0.72);                                   // 아래는 그늘진 앞면
       if (Math.abs(vnoise(x * 0.22 + v * 5, y * 0.22, 176) - 0.5) < 0.035 && r < 0.85) c = c3(mortar);   // 금
@@ -1533,7 +1554,17 @@
       put(x, y, c);
     }
   }
-  const boulders = {};
+  const boulders = {}, bigBoulders = {};
+  function bigBoulderSprite(kind, w, h, v) {                            // 칸 w × h 를 덮는 큰 바위 — 둘레로 몇 점 넘침
+    const key = `${kind}|${w}|${h}|${v}`;
+    if (bigBoulders[key]) return bigBoulders[key];
+    const W = w * P + 6, H = h * P + 6, cv = document.createElement('canvas');
+    cv.width = W; cv.height = H;
+    const g = cv.getContext('2d'), img = g.createImageData(W, H), d = img.data;
+    paintBoulder((x, y, c) => { const i = (y * W + x) * 4; d[i] = c[0]; d[i + 1] = c[1]; d[i + 2] = c[2]; d[i + 3] = 255; }, kind, v, W, H);
+    g.putImageData(img, 0, 0);
+    return (bigBoulders[key] = cv);
+  }
   function boulderSprite(kind, v) {
     const key = `${kind}|${v}`;
     if (boulders[key]) return boulders[key];
@@ -1558,7 +1589,7 @@
     L = new Uint8Array(m.w * m.h);
     const rock = (x, y) => x < 0 || y < 0 || x >= m.w || y >= m.h || m.tile[y * m.w + x] === ROCK || m.tile[y * m.w + x] === WALL;
     for (let y = 0; y < m.h; y++) for (let x = 0; x < m.w; x++) {
-      if (m.tile[y * m.w + x] !== ROCK) continue;
+      if (m.tile[y * m.w + x] !== ROCK || bigOf(m).at[y * m.w + x] >= 0) continue;   // 큰 바위는 언덕이 아님
       L[y * m.w + x] = 1;
       let inner = true;
       for (let j = -3; j <= 3 && inner; j++) for (let i = -3; i <= 3; i++) if (!rock(x + i, y + j)) { inner = false; break; }
@@ -1683,9 +1714,12 @@
   }
   function rockPix(m, e, X, Y) {
     if (e.lone) {                                                        // 혼자 선 바위 — 땅 + 발밑 그림자
-      const r = roadField(m, X, Y, 0), lx = X % P, ly = Y % P;
-      const g = r >= 0 ? roadPixel(e.bio, X, Y, r) : texture(e.ter === OBSID || e.bio === 6 ? OBSID : e.ter === ROCKY ? GRASS : e.ter, e.bio, X, Y);   // 곁에 흙길이 있으면 흙이 둥글게 번져 들어옴
-      return ((lx + 0.5 - 8) / 8.5) ** 2 + ((ly + 0.5 - 12.5) / 3.6) ** 2 <= 1 ? mul(g, 0.62) : g;
+      const r = roadField(m, X, Y, 0), bi = bigOf(m).at[Math.floor(Y / P) * m.w + Math.floor(X / P)], br = bi >= 0 && bigOf(m).rects[bi];
+      const lx = br ? X - br.x * P - (br.w - 1) * P / 2 : X % P, ly = br ? Y - br.y * P - (br.h - 1) * P : Y % P, sx = br ? br.w * 0.9 : 1;
+      const tx = Math.floor(X / P), ty = Math.floor(Y / P), nb = [[0, 1], [-1, 0], [1, 0], [0, -1], [0, 2], [-2, 0], [2, 0], [0, -2], [-1, 2], [1, 2]].map(([dx, dy]) => (ty + dy) * m.w + tx + dx).find(k => m.tile[k] === 0);
+      const gt = e.ter === OBSID || e.bio === 6 ? OBSID : nb !== undefined ? (m.look[nb] & 15) : e.ter === ROCKY ? GRASS : e.ter;   // 둘레 땅과 같은 결 (사용자 결정 2026-11-21 — 바위 밑 네모 풀밭 없앰)
+      const g = r >= 0 ? roadPixel(e.bio, X, Y, r) : texture(gt, e.bio, X, Y);   // 곁에 흙길이 있으면 흙이 둥글게 번져 들어옴
+      return ((lx + 0.5 - 8) / (8.5 * sx)) ** 2 + ((ly + 0.5 - 12.5) / (3.6 * (br ? 1.6 : 1))) ** 2 <= 1 ? mul(g, 0.62) : g;
     }
     if (e.bio !== 6 && e.ter !== OBSID && e.bio !== 7) return cliffPix(m, e, X, Y);   // 바위산 — 단차(높은 땅 + 절벽)로 (사용자 결정 2026-11-20)
     const th = 0.47 + (vnoise(X * 0.1, Y * 0.1, 170) - 0.5) * 0.22, f = rockField(m, X, Y) - th;
@@ -3422,6 +3456,14 @@
       if (m.tile[k] === ROCK && (m.look[k] >> 4) === CITY) {                // 도시의 가로등 — 결정을 얹은 기둥
         const pw = PYL_W / P * T, ph = PYL_H / P * T;
         ctx.drawImage(pylonSprite(), Math.round(ox + (x + 0.5) * T - pw / 2), Math.round(oy + (y + 1) * T - ph - T * 0.16), pw, ph);
+        continue;
+      }
+      const bi = bigOf(m).at[k];
+      if (bi >= 0) {                                                      // 큰 바위 — 덩이의 왼쪽 아래 칸에서 한 번, 밑동이 아래 가장자리에 닿게
+        const r = bigOf(m).rects[bi];
+        if (x !== r.x || y !== r.y + r.h - 1) continue;
+        const spr = bigBoulderSprite(rockKind(m.look[k] >> 4, terOf(m.look[k] & 15)), r.w, r.h, (hash(x, y, 181) * 3) | 0), s = T / P;
+        ctx.drawImage(spr, Math.round(ox + (r.x + r.w / 2) * T - spr.width * s / 2), Math.round(oy + (r.y + r.h) * T - spr.height * s + T * 0.12), spr.width * s, spr.height * s);
         continue;
       }
       if (m.tile[k] === ROCK && (m.look[k] >> 4) !== 8 && loneRock(m, x, y)) {   // 혼자 선 바위 — 칸 아래 가장자리에 밑동이 닿게

@@ -532,7 +532,9 @@ const OVERWORLD_POSTS = [
   ['트롤 킹', 12, 38, 'block'],                                      // 숲 북서쪽 바위산 앞 트롤 부락 — 뒤 골짜기의 2격 큰 상자로 가는 길을 막음 (TROLL_VILLAGE, 사용자 결정 2026-11-20)
   ['오크 장군', 43.3, 56.1],                                          // 오크 부락 한가운데 — 오크 전사 · 홉고블린 구역 사이 (ORC_VILLAGE, 사용자 결정 2026-11-20) · 숲의 마녀는 오두막 안 (BUILDINGS)
   ['그리핀 로드', 56, 15], ['히드라', 28, 23],                         // 탑 자리 · 물가의 히드라 둥지 (NESTS — 2026-11-21 두 칸 북쪽으로) (카벙클은 몰락한 왕 곁의 숨은 굴 — SECRET_ROOMS)
-  ['돌 거인', 98, 39], ['서리 거인', 101, 41], ['불의 거인', 98, 43], ['구름 거인', 95, 41],   // 돌 고리
+  // 4격 정예 거인 넷 — 저마다 제 땅에 (사용자 결정 2026-11-21): 돌 거인은 언덕 거인 곁 큰 바위들 사이 · 서리 거인은 북쪽 눈밭 ·
+  // 불의 거인은 남쪽 거친 바위밭의 용암 곁 · 구름 거인은 가운데 길 북쪽의 높은 둔덕 (GIANT_GROUNDS · HIGH_GROUNDS)
+  ['돌 거인', 77.7, 39.3], ['서리 거인', 84.9, 28.9], ['불의 거인', 84.1, 66.1], ['구름 거인', 103.3, 34.5],
   ['거인왕', 'gate'],                                                   // 쐐기돌 아치
   ['흰 말의 기사', 128, 60], ['붉은 말의 기사', 132, 60], ['검은 말의 기사', 128, 63], ['창백한 말의 기사', 132, 63],   // 네 말의 기사 광장
   ['데스 나이트', 122, 77], ['리치', 160, 55], ['까마귀 왕', 158, 81],  // 영묘 둘 · 숨은 묘실
@@ -608,7 +610,16 @@ const NESTS = [
 // 둘레는 못 지나가는 바위 테(남쪽은 두 칸 — 절벽 면이 그려지는 자리), 남쪽 테 가운데에 바위 계단(stairs — 걸을 수 있음).
 // 윗면 · 계단은 어느 구역도 아님. 지도 속성 high · stairs 로 그 칸들을 그림(js/mapart.js 의 cliffPix)에 알려 줌
 const HIGH_GROUNDS = [
-  { boss: '그리핀 로드', rx: 4.6, ry: 3.6, oy: 0, stairs: { x: -1, w: 3 } }    // 탑 자리 — 바위 계단으로 올라가는 높은 둔덕
+  { boss: '그리핀 로드', rx: 4.6, ry: 3.6, oy: 0, stairs: { x: -1, w: 3 } },   // 탑 자리 — 바위 계단으로 올라가는 높은 둔덕
+  { boss: '구름 거인', rx: 5.2, ry: 4.2, oy: 0, stairs: { x: -1, w: 3 } }      // 4격 — 가운데 길 북쪽, 구름 위에 서 있는 듯 높은 둔덕
+];
+// 거인의 땅 (4격, 사용자 결정 2026-11-21) — 그 몬스터 n × n 의 왼쪽 위 칸에서 잰 자리에
+//   rocks: [dx, dy, w, h] 바위 덩이 (붙은 바위 칸 — 그림은 작은 언덕 · 절벽, 1 × 1 은 혼자 선 바위), lava: [dx, dy] 용암 칸 (못 지나감 · 일렁이는 빛)
+const GIANT_GROUNDS = [
+  { boss: '돌 거인', rocks: [[-5, -1, 3, 2], [6, -3, 2, 2], [5, 3, 3, 3], [-4, 5, 2, 2], [1, -4, 2, 2], [-7, 3, 1, 1], [9, 1, 1, 1]] },
+  { boss: '불의 거인', rocks: [[-2, -3, 1, 1], [-6, -1, 1, 1], [-2, 1, 1, 1], [-7, 1, 1, 1], [-4, 3, 1, 1], [-9, 3, 1, 1], [-6, 5, 1, 1],
+                             [5, -2, 1, 1], [6, 1, 1, 1], [4, 5, 1, 1], [1, 6, 1, 1], [-3, 6, 1, 1], [-10, 6, 1, 1]],
+    lava: [[-3, -2], [-3, -1], [-4, -1], [-4, 0], [-5, 0], [-5, 1], [-4, 1], [-5, 2], [-6, 2], [-6, 3], [-7, 3], [-7, 4], [-8, 4], [-8, 5], [-9, 5]] }   // 거인 서쪽으로 흘러내리는 용암 줄기
 ];
 const OVERWORLD_MERCHANTS = { forest: [34, 58], ruins: [40, 26], giantpass: [70, 46], necropolis: [120, 50], abyss: [128, 37] };
 
@@ -803,6 +814,22 @@ function overworld(data) {
       for (let j = y + 1; tiles[idx(x, j)] === ROCK; j++) { const k = idx(x, j); tiles[k] = FLOOR; stairs[k] = 1; keep[k] = 1; noArea[k] = 1; }
     }
     guard(sx, Math.floor(cy + Hg.ry) + 3, Hg.stairs.w, 2, 1);
+  }
+  const lavaCells = new Uint8Array(w * h), bigRocks = [];
+  for (const G of GIANT_GROUNDS) {
+    const og = posts.find(p => p.name === G.boss);
+    for (const [dx, dy, ww, hh] of G.rocks || []) {
+      const x0 = og.x + dx, y0 = og.y + dy, cells = [];
+      for (let j = 0; j < hh; j++) for (let i = 0; i < ww; i++) cells.push([x0 + i, y0 + j]);
+      if (!cells.every(([x, y]) => inside(x, y) && tiles[idx(x, y)] === FLOOR)) continue;   // 자리가 다 빈 땅일 때만
+      for (const [x, y] of cells) { tiles[idx(x, y)] = ROCK; keep[idx(x, y)] = 1; }
+      if (ww * hh > 1) bigRocks.push(`${x0},${y0},${ww},${hh}`);         // 큰 바위 하나 (그림은 언덕이 아니라 땅 위에 솟은 커다란 돌)
+    }
+    for (const [dx, dy] of G.lava || []) {
+      const x = og.x + dx, y = og.y + dy, k = idx(x, y);
+      if (inside(x, y) && tiles[k] === FLOOR) { tiles[k] = WATER; lavaCells[k] = 1; keep[k] = 1; }
+    }
+    guard(og.x - 1, og.y + og.h, og.w + 2, 2, 0);   // 그 거인 발치는 트여 있게
   }
   for (const N of NESTS) {
     const og = posts.find(p => p.name === N.boss), cx = og.x + og.w / 2, cy = og.y + og.h / 2;
@@ -1191,11 +1218,11 @@ function overworld(data) {
   const lookLayer = new Uint8Array(w * h);
   for (let i = 0; i < w * h; i++) {
     const wet = L.ter[i] === OL.WATER || L.ter[i] === OL.CANAL;
-    lookLayer[i] = buildingCells[i] ? look(BUILD, 8) : village[i] === 2 ? look(BUILD, L.bio[i]) : ruin(i) ? look(RUIN, L.bio[i]) : look(tiles[i] === ROAD && !wet ? OL.DIRT : L.ter[i], L.bio[i]);
+    lookLayer[i] = buildingCells[i] ? look(BUILD, 8) : village[i] === 2 ? look(BUILD, L.bio[i]) : lavaCells[i] ? look(OL.LAVA, L.bio[i]) : ruin(i) ? look(RUIN, L.bio[i]) : look(tiles[i] === ROAD && !wet ? OL.DIRT : L.ter[i], L.bio[i]);
   }
   // 옛 성문 — 두 탑을 감싸는 네모 (그림 js/mapart.js 의 drawOver 가 그 위에 아치를 덮어 그림)
   const gx0 = L.span(L.RUINS.towers[0], L.RUINS.towers[0])[0], gx1 = L.span(L.RUINS.towers[1], L.RUINS.towers[1])[1];
-  return buildTmj({ w, h, tiles, areas, posts, ports, npcs, chests, look: lookLayer, props: { gate: `${gx0},${ry0},${gx1 - gx0 + 1},${ry1 - ry0 + 1}`, blds: JSON.stringify(blds), high: cellRuns(high), stairs: cellRuns(stairs) } });
+  return buildTmj({ w, h, tiles, areas, posts, ports, npcs, chests, look: lookLayer, props: { gate: `${gx0},${ry0},${gx1 - gx0 + 1},${ry1 - ry0 + 1}`, blds: JSON.stringify(blds), high: cellRuns(high), stairs: cellRuns(stairs), bigrocks: bigRocks.join(';') } });
 }
 
 // 칸 표시(0 · 1) → 「x,y,길이;…」 가로 줄 묶음 (지도 속성으로 넘길 때 — js/mapart.js 의 runCells 가 풂)
