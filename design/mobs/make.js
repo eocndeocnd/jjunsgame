@@ -15,7 +15,7 @@ const path = require('path');
 const { execFileSync } = require('child_process');
 
 const ROOT = path.join(__dirname, '..', '..');
-const RANKS = { 1: ['./rank01-small.js', './rank01-big.js'], 2: ['./rank02-small.js', './rank02-big.js'], 3: ['./rank03-small.js', './rank03-mid.js', './rank03-big.js'] };
+const RANKS = { 1: ['./rank01-small.js', './rank01-big.js'], 2: ['./rank02-small.js', './rank02-big.js'], 3: ['./rank03-small.js', './rank03-mid.js', './rank03-big.js'], 4: ['./rank04-mid.js', './rank04-big.js'] };
 // 걸음 박자 — 둔한 몬스터일수록 프레임이 천천히 바뀜 (1 = 반 칸마다 A · B, 0.5 = 한 칸마다). 서 있는 정예 · 보스의 숨도 같은 박자
 // (사용자 결정 2026-11-20). 없으면 1
 // 흔들림 — 서 있을 때도 A · B 가 바뀌는 몬스터 (트렌트 잎이 바람에 흔들림, 사용자 요청 2026-11-20). 걸음 박자로 천천히
@@ -24,7 +24,8 @@ const PACE = {
   slime: 0.7, giantrat: 1.3, goblin: 1, kobold: 1.1, goblinchief: 0.8, skeleton: 0.9, zombie: 0.6, cavespider: 1.2, mimic: 0.7, imp: 1.2, darkwolf: 1.4, dungeonguardian: 0.5,
   orc: 0.9, hobgoblin: 1, lizardman: 1, harpy: 1.3, orcgeneral: 0.8, ogre: 0.5, darkelf: 1.3, treant: 0.5, forestwitch: 0.7, gargoyle: 0.7, basilisk: 0.8, trollking: 0.5,
   minotaur: 0.8, wyvern: 1.2, chimera: 1.1, manticore: 1.1, stonegolem: 0.5, irongolem: 0.6, harpyqueen: 1.2, cockatrice: 1.3, darkknight: 0.9, carbuncle: 1.3,
-  griffinlord: 1.1, fallenking: 0.4, hydra: 0.6
+  griffinlord: 1.1, fallenking: 0.4, hydra: 0.6,
+  goliath: 0.8, yeti: 1.1, hillgiant: 0.6, cyclops: 0.6, ettin: 0.6, roc: 1.1, mammoth: 0.5, stonegiant: 0.4, frostgiant: 0.5, firegiant: 0.6, cloudgiant: 0.5, giantking: 0.4
 };
 
 const all = {}, byRank = {};

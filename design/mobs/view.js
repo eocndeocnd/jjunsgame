@@ -3,7 +3,7 @@ const fs = require('fs'), path = require('path'), zlib = require('zlib');
 const S = require(path.resolve(process.argv[2])), out = process.argv[3];
 const ids = process.argv[4] ? process.argv[4].split(',') : Object.keys(S);
 for (const id of ids) for (const f of ['a', 'b']) {
-  const g = S[id][f]; if (![16, 32, 48, 64].includes(g.length)) throw new Error(`${id}.${f} 줄 ${g.length}`);
+  const g = S[id][f]; if (![16, 32, 48, 64, 80].includes(g.length)) throw new Error(`${id}.${f} 줄 ${g.length}`);
   g.forEach((r, y) => { if (r.length !== g.length) throw new Error(`${id}.${f} ${y}줄 길이 ${r.length} «${r}»`); for (const ch of r) if (ch !== '.' && !S[id].pal[ch]) throw new Error(`${id}.${f} ${y}줄 모르는 색 ${ch}`); });
 }
 const hex = h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
@@ -18,7 +18,7 @@ ids.forEach((id, k) => {
   const s = S[id], x0 = PAD + k * (2 * (BIG + PAD) + SM + PAD);
   ['a', 'b'].forEach((f, j) => {
     const x = x0 + j * (BIG + PAD);
-    const n = s[f].length, Z = BIG / n;
+    const n = s[f].length, Z = Math.floor(BIG / n);
     rect(x, PAD, BIG, BIG, BG);
     for (let t = 1; t < n; t++) { const c = t % 16 ? [126, 143, 156] : [100, 112, 124]; rect(x + t * Z, PAD, 1, BIG, c); rect(x, PAD + t * Z, BIG, 1, c); }
     draw(s, s[f], x, PAD, Z);

@@ -63,6 +63,13 @@ function mTube(m, pts, r0, r1) {
     for (let k = 0; k <= steps; k++) { const t = k / steps, r = r0 + (r1 - r0) * ((i - 1 + t) / (n - 1)); mEll(m, ax + (bx - ax) * t, ay + (by - ay) * t, Math.max(0.55, r), Math.max(0.55, r)); }
   }
 }
+// 팔다리 — 점마다 굵기가 다른 관 ([x, y, r] — 어깨 · 이두 · 팔꿈치 · 아래팔 · 손목처럼 굵었다 가늘었다)
+function mLimb(m, pts) {
+  for (let i = 1; i < pts.length; i++) {
+    const [ax, ay, ar] = pts[i - 1], [bx, by, br] = pts[i], steps = Math.max(4, Math.ceil(Math.hypot(bx - ax, by - ay) * 2));
+    for (let k = 0; k <= steps; k++) { const t = k / steps, r = ar + (br - ar) * t; mEll(m, ax + (bx - ax) * t, ay + (by - ay) * t, Math.max(0.55, r), Math.max(0.55, r)); }
+  }
+}
 // 값 잡음 — 격자 간격 cell 마다 정해 둔 값을 부드럽게 이음 (0~1). 일정한 무늬가 아니라 덩어리진 얼룩을 만들 때
 function noise(seed, cell = 3) {
   const h = (x, y) => { const v = Math.sin(x * 127.1 + y * 311.7 + seed * 74.7) * 43758.5453; return v - Math.floor(v); };
@@ -201,4 +208,4 @@ function pair(A, B, K, extra = {}) {
   }).join(''));
   return { ...extra, pal, a: enc(A), b: enc(B) };
 }
-module.exports = { mTube, noise, pair, Sprite, ramp, mRect, mEll, mLine, mPoly, mRows, toneMap };
+module.exports = { mTube, mLimb, noise, pair, Sprite, ramp, mRect, mEll, mLine, mPoly, mRows, toneMap };
