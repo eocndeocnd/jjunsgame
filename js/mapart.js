@@ -504,7 +504,7 @@
   // 지도 속성 blds 의 소품 하나하나: stake 울타리 한 칸(굵기 · 키가 저마다 다른 뾰족한 통나무, 묶은 밧줄) · tent 가죽 천막(조각 가죽을 기운 자국 · 엇갈린 장대) ·
   // orchut 족장 움막(둥근 가죽 지붕 · 붉은 전쟁 칠 · 엄니 둘 · 짐승 해골) · totem 토템 · fire 모닥불 · rack 무기 걸이 · hide 가죽 말림대.
   // 빛은 왼쪽 위 — 오른쪽 면은 그늘, 그림자는 오른쪽 아래 땅에
-  const ORC_KINDS = { stake: 1, tent: 1, orchut: 1, totem: 1, fire: 1, rack: 1, hide: 1, eggs: 1, bones: 1 };   // eggs · bones — 히드라 둥지
+  const ORC_KINDS = { stake: 1, tent: 1, orchut: 1, totem: 1, fire: 1, rack: 1, hide: 1, bones: 1 };   // bones — 히드라 둥지
   const ORC_C = {
     hide: ['#3a2a20', '#4c3727', '#5e4530', '#71553a', '#846646'], seam: '#22170f', stitch: '#a08a62',
     bone: ['#6e6452', '#a39780', '#d4c8ac'], paint: '#8a2a22', rope: ['#5e5038', '#8a7a5a'], line: '#1a120e'
@@ -643,20 +643,6 @@
       if (dy > 2.5 && dy < 5 && dx > -4 && dx < 7.5 - (dy - 2.5)) g = shadow(g, 0.7);   // 돌 둘레 밑 그림자 — 오른쪽 아래로 붙어서
       const gl = Math.hypot(dx, dy * 1.3);
       return gl < 9 ? mix(g, c3('#ff9a40'), 0.25 * (1 - gl / 9)) : g;
-    }
-    if (B.kind === 'eggs') {
-      // 알 무더기 (히드라 둥지) — 엮은 나뭇가지 둥지에 크기가 다른 알 셋, 알마다 짙은 얼룩 (자리마다 다르게)
-      const twig = Math.hypot((px + 0.5 - 8) / 7.2, (py + 0.5 - 10.5) / 4.2);
-      for (const [ex, ey, rx, ry, s] of [[6, 7.5, 2.6, 3.2, 1], [10.5, 8, 2.3, 2.8, 2], [8.2, 10, 2.2, 2.5, 3]]) {
-        const dx = (px + 0.5 - ex) / rx, dy = (py + 0.5 - ey) / ry, r = Math.hypot(dx, dy);
-        if (r < 1) {
-          if (r > 0.82) return line;
-          if (hash(px, py, 720 + s) < 0.12) return c3('#4a5a3a');                    // 얼룩
-          return c3(dx + dy < -0.5 ? '#d8d8b8' : dx + dy < 0.4 ? '#b0b490' : '#7e8466');
-        }
-      }
-      if (twig < 1 && twig > 0.55) return c3(hash(px >> 1, py, 723) < 0.35 ? '#3e2c1e' : hash(px, py >> 1, 724) < 0.5 ? '#6a4e30' : '#8a6a42');   // 나뭇가지
-      return twig <= 0.55 ? c3('#2e2218') : ground();
     }
     if (B.kind === 'bones') {
       // 뼈 (히드라 둥지) — 엇갈린 긴 뼈 둘 · 작은 해골 하나, 그림자는 오른쪽 아래로 한 점
@@ -1578,8 +1564,33 @@
       for (let j = -3; j <= 3 && inner; j++) for (let i = -3; i <= 3; i++) if (!rock(x + i, y + j)) { inner = false; break; }
       if (inner && fbm(x * 0.12, y * 0.12, 181) > 0.48) L[y * m.w + x] = 2;
     }
+    // 걸어 올라가는 높은 땅 · 바위 계단 (지도 속성 high · stairs — tools/map-gen.js 의 HIGH_GROUNDS) — 한 층 높은 땅으로
+    const HS = highOf(m);
+    for (let k = 0; k < m.w * m.h; k++) if (HS.high[k] || HS.stairs[k]) L[k] = 1;
     levels.set(m, L);
     return L;
+  }
+  // 지도 속성 high · stairs (「x,y,길이;…」) → 칸 표시
+  const highs = new WeakMap();
+  function highOf(m) {
+    let H = highs.get(m);
+    if (H) return H;
+    const runs = s => { const a = new Uint8Array(m.w * m.h); for (const r of String(s || '').split(';')) { if (!r) continue; const [x, y, n] = r.split(',').map(Number); for (let i = 0; i < n; i++) a[y * m.w + x + i] = 1; } return a; };
+    H = { high: runs(m.props && m.props.high), stairs: runs(m.props && m.props.stairs) };
+    highs.set(m, H);
+    return H;
+  }
+  // 바위 계단 한 점 — s 는 절벽 면 위에서 잰 점 (0 ~ CLIFF_H-1). 디딤돌마다 윗면은 밝게 · 앞면은 짙게, 돌 사이 틈은 자리마다 다르게
+  function stairPix(X, s) {
+    const st = Math.floor(s / 5), ly = s - st * 5;
+    const cut = (Math.floor(hash(st, 0, 310) * 7) + 4), cut2 = cut + 5 + Math.floor(hash(st, 1, 311) * 5);
+    const lx = ((X % 16) + 16) % 16;
+    if (ly === 4) return c3('#2a241e');                                   // 디딤돌 아래 그늘 줄
+    if (lx === cut || lx === cut2) return c3('#3a342c');                  // 돌 사이 틈
+    const pal = ['#a09a8c', '#8a8478', '#77726a', '#5c5850'];
+    let c = c3(pal[ly === 0 ? 0 : ly === 1 ? 1 : ly === 2 ? 2 : 3]);
+    if (hash(X, st, 312) < 0.1) c = mul(c, 0.88);
+    return c;
   }
   // 층 k 의 칸 값(1 · 0)을 둘레 칸과 1-2-1 로 고루 섞어 둔 것 — 가장자리 모퉁이가 칸 모양 계단이 아니라 둥글게 (사용자 지적 2026-11-20)
   const blurs = new WeakMap();
@@ -1619,6 +1630,7 @@
       let down = 0;
       const deep = ty + 3 < m.h && L[(ty + 1) * m.w + tx] >= k && L[(ty + 2) * m.w + tx] >= k && L[(ty + 3) * m.w + tx] >= k;   // 세 칸 아래까지 같은 층이면 절벽이 닿지 않음
       if (!deep) for (let d = 1; d <= CLIFF_H; d++) if (levelField(m, L, k, X, Y + d) < 0) { down = d; break; }
+      if (down && highOf(m).stairs[ty * m.w + tx]) return stairPix(X, CLIFF_H - down);   // 계단 칸 — 절벽 면 대신 바위 디딤돌
       if (down) {
         const s = CLIFF_H - down;                                          // 0 = 면의 위 끝
         if (s < 2) return s === 0 ? mix(ground(k), WHITE, 0.08) : c3(K.line);   // 풀 처마 끝 · 검은 테
@@ -2983,7 +2995,7 @@
       if (e.t === POOL) return shoreRim(m, A, e, X, Y, texture(e.gTer, e.gBio, X, Y));   // 물 칸 안으로 둥글게 나온 땅
     }
     let c = paintGround(m, A, e, X, Y, lx, ly);
-    if (e.prop && !(e.nearRoad && roadField(m, X, Y, 0) >= -0.08)) c = propPixel(e.prop, lx, ly, c);
+    if (e.prop && !(e.nearRoad && roadField(m, X, Y, 0) >= -0.08) && !highOf(m).stairs[Math.floor(Y / P) * m.w + Math.floor(X / P)]) c = propPixel(e.prop, lx, ly, c);   // 바위 계단 위엔 꽃 · 돌 없음
     if (e.dais) {
       const R = P - 1, d = Math.min(e.dais.l ? lx : 99, e.dais.r ? R - lx : 99, e.dais.u ? ly : 99, e.dais.d ? R - ly : 99);
       if (d === 0) c = c3(CK.line); else if (d <= 2) c = mix(c, c3(CK.gold), d === 1 ? 0.5 : 0.25);
@@ -3001,6 +3013,8 @@
       if (e.face) return faceColor(e.face.bio, e.face.ter, X, Y, Y - e.face.top);
       return vnoise(X * 0.03, Y * 0.03, 50) > 0.72 ? c3('#16121f') : C.void;
     }
+    const HS = highOf(m), tk = Math.floor(Y / P) * m.w + Math.floor(X / P);
+    if (HS.high[tk] || HS.stairs[tk]) return cliffPix(m, e, X, Y);        // 걸어 올라가는 높은 땅 · 바위 계단
     if (e.nearCliff && levelField(m, levelOf(m), 1, X, Y) >= 0) return cliffPix(m, e, X, Y);   // 언덕 가장자리 안쪽 — 언덕 (사용자 지적 2026-11-20: 흙길이 언덕 위로 올라와 보였음)
     if (t === ROCK) return rockPix(m, e, X, Y);                          // 바위 칸이 먼저 — 언덕 안쪽 점에 흙길이 번지지 않게
     if (t === ROAD) {

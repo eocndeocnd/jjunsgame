@@ -602,7 +602,13 @@ const VILLAGES = [ORC_VILLAGE, TROLL_VILLAGE];
 const NESTS = [
   { boss: '히드라', rx: 5.4, ry: 4.4, oy: 0.5,
     rocks: [-0.35, 0.3, 0.75, 2.55, 3.05, 3.6, 4.2, 4.75, 5.35],      // 남쪽(흙길 쪽)은 트임 — 각도 사이가 저마다 다르게
-    pieces: [{ kind: 'eggs', x: -4, y: 1 }, { kind: 'eggs', x: 3, y: 2 }, { kind: 'bones', x: -2, y: 3 }, { kind: 'bones', x: 4, y: -2 }] }
+    pieces: [{ kind: 'bones', x: -2, y: 3 }, { kind: 'bones', x: 4, y: -2 }, { kind: 'bones', x: -4, y: 0 }] }   // 알은 뺌 (사용자 결정 2026-11-21)
+];
+// 높은 땅 (사용자 결정 2026-11-21) — 걸어 올라갈 수 있는 언덕: 그 몬스터 자리를 가운데로 둥근 윗면(걸을 수 있음 · 그림은 한 층 높게),
+// 둘레는 못 지나가는 바위 테(남쪽은 두 칸 — 절벽 면이 그려지는 자리), 남쪽 테 가운데에 바위 계단(stairs — 걸을 수 있음).
+// 윗면 · 계단은 어느 구역도 아님. 지도 속성 high · stairs 로 그 칸들을 그림(js/mapart.js 의 cliffPix)에 알려 줌
+const HIGH_GROUNDS = [
+  { boss: '그리핀 로드', rx: 4.6, ry: 3.6, oy: 0, stairs: { x: -1, w: 3 } }    // 탑 자리 — 바위 계단으로 올라가는 높은 둔덕
 ];
 const OVERWORLD_MERCHANTS = { forest: [34, 58], ruins: [40, 26], giantpass: [70, 46], necropolis: [120, 50], abyss: [128, 37] };
 
@@ -634,7 +640,7 @@ function outline(mine, box) {
   const x0 = Math.min(...corner.map(p => p[0])), y0 = Math.min(...corner.map(p => p[1]));
   return { x: x0, y: y0, polygon: corner.map(([x, y]) => ({ x: x - x0, y: y - y0 })) };
 }
-let OUT_W = 0;   // outline 이 칸 번호를 x · y 로 풀 때 쓰는 지도 너비 (overworld 가 정함)
+let OUT_W = 0, OUT_H = 0;   // outline 이 칸 번호를 x · y 로 풀 때 쓰는 지도 너비 (overworld 가 정함)
 
 function overworld(data) {
   // 길을 막는 것의 크기만큼 틈을 넓혀 땅을 짭니다
@@ -645,7 +651,7 @@ function overworld(data) {
   }));
   const L = require('./overworld-layout.js').build(OVERWORLD_SCALE, gateSize);
   const w = L.W, h = L.H, idx = L.idx;
-  OUT_W = w;
+  OUT_W = w; OUT_H = h;
   const inside = (x, y) => x >= 0 && y >= 0 && x < w && y < h;
   const tiles = new Uint8Array(w * h);
   const keep = new Uint8Array(w * h);                        // 장애물을 두지 않을 칸 — 정해진 자리 곁 · 들머리 · 상인 · 시작점 · 문 · 길가
@@ -778,6 +784,26 @@ function overworld(data) {
     }
   }
   // 마당은 흙길 칸으로 — 그림이 흙길처럼 가장자리를 둥글게 이음 (칸 모양 계단이 아니게, 사용자 지적 2026-11-20)
+  const high = new Uint8Array(w * h), stairs = new Uint8Array(w * h);
+  for (const Hg of HIGH_GROUNDS) {
+    const og = posts.find(p => p.name === Hg.boss), cx = og.x + og.w / 2, cy = og.y + og.h / 2 + Hg.oy;
+    const d = (x, y) => Math.hypot((x + 0.5 - cx) / Hg.rx, (y + 0.5 - cy) / Hg.ry);
+    const box = [Math.floor(cx - Hg.rx - 3), Math.floor(cy - Hg.ry - 3), Math.ceil(cx + Hg.rx + 3), Math.ceil(cy + Hg.ry + 4)];
+    for (let y = box[1]; y <= box[3]; y++) for (let x = box[0]; x <= box[2]; x++) if (inside(x, y) && d(x, y) < 1) { const k = idx(x, y); tiles[k] = FLOOR; high[k] = 1; keep[k] = 1; noArea[k] = 1; }
+    // 바위 테 — 윗면 둘레 한 칸(여덟 방향), 남쪽은 두 칸
+    for (let y = box[1]; y <= box[3]; y++) for (let x = box[0]; x <= box[2]; x++) {
+      if (!inside(x, y) || high[idx(x, y)]) continue;
+      const near = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, 1], [1, -1], [-1, -1], [0, -2], [1, -2], [-1, -2]].some(([ex, ey]) => inside(x + ex, y + ey) && high[idx(x + ex, y + ey)]);   // (0, -2) 줄 — 남쪽은 두 칸
+      if (near) { const k = idx(x, y); tiles[k] = ROCK; keep[k] = 1; noArea[k] = 1; }
+    }
+    // 바위 계단 — 남쪽 테를 위에서 아래로 뚫음 (테 두 칸 + 그 아래 한 칸은 트인 땅)
+    const sx = Math.floor(cx) + Hg.stairs.x;
+    for (let x = sx; x < sx + Hg.stairs.w; x++) {
+      let y = Math.floor(cy); while (high[idx(x, y + 1)]) y++;
+      for (let j = y + 1; tiles[idx(x, j)] === ROCK; j++) { const k = idx(x, j); tiles[k] = FLOOR; stairs[k] = 1; keep[k] = 1; noArea[k] = 1; }
+    }
+    guard(sx, Math.floor(cy + Hg.ry) + 3, Hg.stairs.w, 2, 1);
+  }
   for (const N of NESTS) {
     const og = posts.find(p => p.name === N.boss), cx = og.x + og.w / 2, cy = og.y + og.h / 2;
     const d = (x, y) => Math.hypot((x + 0.5 - cx) / N.rx, (y + 0.5 - (cy + N.oy)) / N.ry);
@@ -1169,7 +1195,18 @@ function overworld(data) {
   }
   // 옛 성문 — 두 탑을 감싸는 네모 (그림 js/mapart.js 의 drawOver 가 그 위에 아치를 덮어 그림)
   const gx0 = L.span(L.RUINS.towers[0], L.RUINS.towers[0])[0], gx1 = L.span(L.RUINS.towers[1], L.RUINS.towers[1])[1];
-  return buildTmj({ w, h, tiles, areas, posts, ports, npcs, chests, look: lookLayer, props: { gate: `${gx0},${ry0},${gx1 - gx0 + 1},${ry1 - ry0 + 1}`, blds: JSON.stringify(blds) } });
+  return buildTmj({ w, h, tiles, areas, posts, ports, npcs, chests, look: lookLayer, props: { gate: `${gx0},${ry0},${gx1 - gx0 + 1},${ry1 - ry0 + 1}`, blds: JSON.stringify(blds), high: cellRuns(high), stairs: cellRuns(stairs) } });
+}
+
+// 칸 표시(0 · 1) → 「x,y,길이;…」 가로 줄 묶음 (지도 속성으로 넘길 때 — js/mapart.js 의 runCells 가 풂)
+function cellRuns(mask) {
+  const out = [];
+  for (let y = 0; y < OUT_H; y++) for (let x = 0; x < OUT_W; x++) {
+    if (!mask[y * OUT_W + x] || (x > 0 && mask[y * OUT_W + x - 1])) continue;
+    let n = 1; while (x + n < OUT_W && mask[y * OUT_W + x + n]) n++;
+    out.push(`${x},${y},${n}`);
+  }
+  return out.join(';');
 }
 
 // ---------- 숨은 굴 (SECRET_ROOMS) — 히든 하나만 있는 작은 굴 ----------

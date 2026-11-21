@@ -2001,3 +2001,15 @@ test('트롤 부락 — 트롤 킹이 바위산 골짜기 들머리를 막고, �
   assert.ok(bas.mid.x - (tk.x + tk.w) >= 8, `바실리스크 들머리가 트롤 킹 오른쪽으로 떨어짐 (${bas.mid.x})`);
   for (let y = tk.y - 2; y < tk.y + tk.h + 2; y++) for (let x = tk.x - 6; x < tk.x + tk.w + 3; x++) assert.notEqual(over.areaAt[y * over.w + x], bas.index, `(${x}, ${y}) 부락은 바실리스크 구역이 아님`);
 });
+
+test('높은 땅 — 그리핀 로드는 걸어 올라가는 둔덕 위, 바위 계단으로만 올라감 (지도 속성 high · stairs)', () => {
+  const over = loadMap('overworld');
+  const runs = s => { const a = new Set(); for (const r of String(s || '').split(';')) { if (!r) continue; const [x, y, n] = r.split(',').map(Number); for (let i = 0; i < n; i++) a.add(y * over.w + x + i); } return a; };
+  const high = runs(over.props.high), stairs = runs(over.props.stairs);
+  const g = over.posts.find(p => p.enemy === 'griffinlord');
+  assert.ok(cellsOf(over, g).every(k => high.has(k)), '그리핀 로드는 높은 땅 위');
+  assert.ok(stairs.size >= 3, '바위 계단');
+  const k0 = over.start.y * over.w + over.start.x, gk = cellsOf(over, g);
+  assert.ok(gk.some(k => walk(over, [k0])[k] >= 0), '계단으로 올라가 닿음');
+  assert.ok(!gk.some(k => walk(over, [k0], stairs)[k] >= 0), '계단 말고는 못 올라감');
+});
