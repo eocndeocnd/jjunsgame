@@ -162,7 +162,7 @@ If a name describes a different kind of object than its type, draw the object fr
 | 6 | 유레카의 원 | 반지 | 아르키메데스 | `assets/items/archimedes_1.png` ✅ |
 | 7 | 노장의 깍지 | 반지 | 황충 | `assets/items/huangzhong_0.png` ✅ |
 
-## 시트 7-D — 목걸이 · 팔찌 · 특수장비 (7개)
+## 시트 7-D — 목걸이 · 팔찌 · 특수장비 (7개) ✅ 다 자름
 
 저장할 이름: `design/images/sheets/rank07-D.png`
 
@@ -205,13 +205,13 @@ If a name describes a different kind of object than its type, draw the object fr
 
 | 칸 | 장비 | 부위 | 나온 곳 | 잘라서 둘 곳 |
 |---|---|---|---|---|
-| 1 | 난중일기 | 목걸이 | 이순신 | `assets/items/yisunsin_2.png` |
-| 2 | 두루마리 끈 팔찌 | 팔찌 | 보물상자 | `assets/items/chest_library_cord.png` |
-| 3 | 천문 팔찌 | 팔찌 | 히파티아 | `assets/items/hypatia_2.png` |
-| 4 | 끊어진 족쇄 | 팔찌 | 스파르타쿠스 | `assets/items/spartacus_2.png` |
-| 5 | 칼로 끊은 매듭 | 특수장비 | 알렉산드로스 | `assets/items/alexander_4.png` |
-| 6 | 에메랄드 서판 | 특수장비 | 헤르메스 트리스메기스투스 | `assets/items/trismegistus_0.png` |
-| 7 | 현자의 돌 | 특수장비 | 헤르메스 트리스메기스투스 | `assets/items/trismegistus_1.png` |
+| 1 | 난중일기 | 목걸이 | 이순신 | `assets/items/yisunsin_2.png` ✅ |
+| 2 | 두루마리 끈 팔찌 | 팔찌 | 보물상자 | `assets/items/chest_library_cord.png` ✅ |
+| 3 | 천문 팔찌 | 팔찌 | 히파티아 | `assets/items/hypatia_2.png` ✅ |
+| 4 | 끊어진 족쇄 | 팔찌 | 스파르타쿠스 | `assets/items/spartacus_2.png` ✅ |
+| 5 | 칼로 끊은 매듭 | 특수장비 | 알렉산드로스 | `assets/items/alexander_4.png` ✅ |
+| 6 | 에메랄드 서판 | 특수장비 | 헤르메스 트리스메기스투스 | `assets/items/trismegistus_0.png` ✅ |
+| 7 | 현자의 돌 | 특수장비 | 헤르메스 트리스메기스투스 | `assets/items/trismegistus_1.png` ✅ |
 
 ## 하나씩 뽑기 (시트가 잘 안 될 때)
 

@@ -105,20 +105,7 @@ function simShop() {
   // 암시장 — 후드티가 와 있고 원석이 있으면 가진 돈의 30% 를 맡김 (사람이 할 법한 만큼)
   if (typeof bmDeal === 'function' && bmOpen() && State.meta.bmGems > 0) bmDeal(Math.floor(State.meta.won * 0.3));
   let bought = 0;
-  if (typeof sellAllCores === 'function') sellAllCores();   // 핵은 모두 팝니다 — 그 돈으로 만들고 삽니다
-  if (typeof craftItem === 'function') {
-    const made = ITEMS.filter(i => i.craft);
-    for (const it of made) if (!simOwns(it.id) && craftItem(it.id)) bought++;
-    // 그 재료로 만들 것을 다 가졌으면 남는 재료는 강화석으로 (강화가 낮은 부위의 것부터)
-    for (const matId of Object.keys(MATERIALS)) {
-      const its = made.filter(i => i.craft.mat === matId);
-      if (!its.every(i => simOwns(i.id))) continue;
-      for (let guard = 0; guard < 500; guard++) {
-        const it = its.slice().sort((x, y) => enhanceLevel(x.slot) - enhanceLevel(y.slot))[0];
-        if (!matToStones(it.id)) break;
-      }
-    }
-  }
+  if (typeof sellAllCores === 'function') sellAllCores();   // 핵은 모두 팝니다 — 그 돈으로 삽니다
   for (const section of Object.keys(DEPT_SECTIONS)) {
     for (const it of deptWares(section).sort((a, b) => b.rank.n - a.rank.n)) {
       const worn = getItem(State.meta.equipped[it.slot]);

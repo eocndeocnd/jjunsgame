@@ -58,8 +58,8 @@ const RULES = {
   // 떠돌이 상인의 물건 값 = 그 격 일반 화신 한 번 몫의 이만큼 배.
   // 소지품은 4~6격 기준이라 4격 약 2,000 · 5격 약 3,900 · 6격 약 7,400골드 — 몇 회차를 모아야 하나 살 수 있는 값입니다.
   WARE_SHARE: 0.94,      // 떠돌이 상인의 물건 값 = 그 물건 격의 한 판 벌이 중간값(PASSIVE_BASE) × 이것 — 에너지가 3 남았을 때까지 모이는 몫 (시뮬, 2026-11-18)
-  // 돈 (원) — 도시의 화폐 (docs/CITY-PLAN.md 「돈과 골드」 2번). 그 공간에서 들고 나온 것(핵 · 재료)을 재료 창구에 **팔아서만** 법니다.
-  // 골드와는 서로 바꿀 수 없습니다 — 백화점 물건 · 재료로 만들기는 돈으로, 떠돌이 상인은 골드로.
+  // 돈 (원) — 도시의 화폐 (docs/CITY-PLAN.md 「돈과 골드」 2번). 그 공간에서 들고 나온 핵을 백화점 핵 창구에 **팔아서만** 법니다.
+  // 골드와는 서로 바꿀 수 없습니다 — 백화점 물건은 돈으로, 떠돌이 상인은 골드로.
   // 눈금: 골드 1 몫 = WON_SCALE 원 (「300원짜리 단검」은 어색해서 — 1격 단검 24만 원, 1격의 핵 1개 1만 원). 아래 값들은 골드 몫으로 적고 이 눈금을 곱합니다.
   WON_SCALE: 1000,
   // 핵 1개 판 값 = 그 격 일반 한 마리 골드 몫의 이만큼 배 (× WON_SCALE) — 1격 1만 · 2격 1.9만 · 3격 3.6만 · 4격 6.9만 원 …
@@ -108,16 +108,6 @@ const RULES = {
   TRAIN_CORES: 10,
   FIND_GATES: 3,
   FIND_UP: 0.15,          // 하나 위 등급이 나올 확률       // 이 격의 보스를 꺾으면 협회 로비에 순위판이 걸림 (도시에선 「협회가 새로 걸었다」)
-  // 재료 (도시 1-다) — 장비를 떨어뜨릴 리 없는 짐승은 장비 대신 제 재료를 줍니다 (data.js 의 MATERIALS).
-  // 한 마리에 1개, 전리품 확률만큼 하나 더 (행운 · 기운이 그대로 듦). 재료 MAT_PER_ITEM 개 = 예전에 그 장비를 한 번 주운 셈:
-  //   아직 없는 장비면 돈(그 격 일반 CRAFT_PRICE 마리 몫 × WON_SCALE — 1격 4만 · 2격 8만 원: 그 격의 핵 4개)을 얹어 만들고, 이미 가진 장비면 분해했을 때와 같은 강화석으로 바꿉니다.
-  //   남는 재료는 1개에 그 격 일반 MAT_SELL 마리 몫(× WON_SCALE — 1격 5,000 · 2격 1만 원)으로 팝니다.
-  // 2개인 까닭 — 예전엔 장비 둘을 저마다 전리품 확률(1격 81% · 2격 52%)로 굴려 한 마리에 1.6 · 1.0개가 나왔습니다.
-  //   재료는 한 마리에 1.8 · 1.5개라, 2개에 하나면 한 마리에 0.9 · 0.76개 — 예전의 56% · 73% (3개면 37% · 49% 라 너무 짬).
-  //   만들려면 도시에 다녀와야 하는 몫까지 치면 예전보다 느립니다 (시뮬: 3격에 처음 닿는 회차 평균 6 → 10).
-  MAT_PER_ITEM: 2,
-  CRAFT_PRICE: 8,
-  MAT_SELL: 1,
   // 회차마다 떠돌이 상인이 나타날 확률 (카벙클을 처음 꺾은 그 회차는 반드시 나타납니다)
   MERCHANT_CHANCE: 0.5,
   // 떠돌이 상인의 강화석 값 — 강화석 1개에 몇 골드. 1~6지역 어디에 나타나든 같은 상인이라 값도 같습니다.
@@ -2543,7 +2533,7 @@ const BIG_GUILDS = [
 
 const DEPT_ID = 'dept';
 const DEPT_GRADE = 1.2;
-const DEPT_SECTIONS = { weapon: { name: '무기 매장', icon: '🧑‍💼' }, armor: { name: '방어구 매장', icon: '👩‍💼' }, mats: { name: '재료 창구', icon: '🧑‍🔧' }, stones: { name: '강화석 교환', icon: '👨‍🔬' } };   // stones — 이미 가진 장비의 재료를 강화석으로 (2026-11-19 재료 창구에서 떼어 냄 — 사용자 결정)   // mats — 재료로 만들기 · 바꾸기 · 팔기 (MATERIALS)
+const DEPT_SECTIONS = { weapon: { name: '무기 매장', icon: '🧑‍💼' }, armor: { name: '방어구 매장', icon: '👩‍💼' }, mats: { name: '핵 창구', icon: '🧑‍🔧' } };   // mats — 핵 팔기 (재료 · 만들기 · 강화석 교환은 없앰, 2026-11-21)
 const DEPT_WARES = [
   // 제1격
   ['dept_knife',     '보급형 합금 단검',   'weapon',  '🔪', 1, 'fierce', '협회 인증 입문용. 날보다 손잡이에 공을 들였다.'],
@@ -2629,43 +2619,21 @@ for (const [id, name, slot, icon, r, arch, note] of DEPT_WARES) {
   });
 }
 
-// ---------- 재료 (도시 — docs/CITY-PLAN.md 1-다) ----------
-// 장비를 떨어뜨릴 리 없는 짐승 · 벌레 · 돌덩이는 장비 대신 **제 재료**를 줍니다 (사용자 결정 — 지금은 1~2격의 일곱).
-// 그 몬스터의 장비는 번호 그대로 「재료로 만든 것」이 됩니다 (item.craft) — 이미 가진 사람의 장비는 바뀌지 않습니다.
-// 만들기 · 강화석으로 바꾸기 · 팔기는 헌터백화점 1층의 재료 창구에서 (game.js 의 craftItem · matToStones · sellMats). 재료는 첫 회차부터 쌓입니다.
-//   몬스터 id → [재료 이름, 아이콘]
-const MATERIALS = {};
-for (const [foeId, name, icon] of [
-  ['giantrat',   '쥐 가죽',          '🐀'],
-  ['cavespider', '질긴 거미줄',      '🕸️'],
-  ['darkwolf',   '검은 늑대 가죽',   '🐺'],
-  ['harpy',      '하피 깃털',        '🪶'],
-  ['treant',     '트렌트 나무껍질',  '🪵'],
-  ['gargoyle',   '가고일 돌조각',    '🪨'],
-  ['basilisk',   '바실리스크 비늘',  '🐍']
-]) {
-  const foe = ENEMIES.find(e => e.id === foeId);
-  if (!foe || foe.kind !== 'normal') throw new Error(`재료 — ${foeId} 이(가) 일반 몬스터가 아님`);
-  const worth = goldFor(foe);
-  MATERIALS[foeId] = { id: foeId, name, icon, from: foeId, fromName: foe.name, rank: foe.rank,
-                       sell: Math.max(1, Math.round(worth * RULES.MAT_SELL)) * RULES.WON_SCALE };      // 원
-  foe.mat = foeId;
-  for (const it of ITEMS) if (it.from === foeId) it.craft = { mat: foeId, n: RULES.MAT_PER_ITEM, won: priceFor(foe.rank.n, RULES.CRAFT_PRICE) * RULES.WON_SCALE };
-}
+// 재료 · 만들기는 없앰 (사용자 결정 2026-11-21) — 1~2격 짐승 일곱(자이언트 랫 · 하피 · 트렌트 …)도 다시 제 장비를 떨어뜨립니다.
+// 예전 저장에 남은 그 재료는 불러올 때 판 값만큼 돈으로 (game.js 의 LEGACY_MATS)
 
 // ---------- 핵 (도시 계획 「돈과 골드」 1번) ----------
 // **모든 몬스터가 팔 것을 남깁니다** (사용자 결정) — 격마다 한 가지, 그 격의 핵. 어느 격에서 싸우든 도시에 팔 것이 생깁니다.
 // 꺾을 때마다 종류만큼: 일반 1 · 정예 4 · 히든 5 · 보스 10개 (골드와 같은 배수 — KINDS 의 gold), 기운을 두른 상대는 그 배수만큼 더.
-// 판 값은 1개에 그 격 일반 한 마리 골드 몫의 CORE_SELL 배 × WON_SCALE 원 (1격 1만 · 2격 1.9만 · 3격 3.6만 원 …). 재료와 같은 가방(meta.mats)에 담기고 재료 창구에서 팝니다 — 만드는 데는 쓰지 않습니다.
-// 짐승은 핵에 더해 제 재료(MATERIALS)도 줍니다. 이름은 가칭.
+// 판 값은 1개에 그 격 일반 한 마리 골드 몫의 CORE_SELL 배 × WON_SCALE 원 (1격 1만 · 2격 1.9만 · 3격 3.6만 원 …). 가방(meta.mats)에 담기고 백화점 1층 핵 창구에서 팝니다.
 const CORES = {};
 for (const rank of RANKS) {
   const id = `core${rank.n}`;
   CORES[id] = { id, name: `제${rank.n}격의 핵`, icon: '💠', rank, core: true,
                 sell: Math.max(1, Math.round(RULES.GOLD_BASE * Math.pow(RULES.GOLD_GROWTH, rank.n - 1) * RULES.CORE_SELL)) * RULES.WON_SCALE };
 }
-// 가방에 담기는 것 하나 (재료 · 핵) — id 로
-function matInfo(id) { return MATERIALS[id] || CORES[id] || null; }
+// 가방에 담기는 것 하나 (핵) — id 로
+function matInfo(id) { return CORES[id] || null; }
 
 // ---------- 보물상자 (지도의 chests 층 — 자리는 tools/map-gen.js 가 놓음) ----------
 // 닿으면 열리고 한 번만 열립니다 (State.meta.chestsOpened — 회차가 끝나도 그대로, 사용자 결정). 함정(미믹)은 없음.

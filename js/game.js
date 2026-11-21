@@ -266,8 +266,7 @@ const State = {
     banked: [],                       // 격을 삼켜 에너지를 영구 적립한 적 id
     specialOpened: [],                // 특수장비 칸을 열어준 히든 id — 이 수만큼 칸이 열려 있습니다
     chestsOpened: [],                 // 연 보물상자 id — 한 번만 열립니다 (지도의 chests 층 · data.js 의 chestLoot)
-    mats: {},                         // 재료 · 핵 id → 개수 (data.js 의 MATERIALS · CORES) — 회차가 끝나도 남습니다
-    matSeen: [],                      // 한 번이라도 얻은 재료 id — 얻기 전엔 마주침 카드 · 도감에 ? (matKnown)
+    mats: {},                         // 핵 id → 개수 (data.js 의 CORES) — 회차가 끝나도 남습니다
     runCount: 0,
     bestLevel: 1,
     bestKill: 0,                      // 지금까지 꺾은 가장 높은 레벨
@@ -560,6 +559,8 @@ function setWeights(...vals) {
 let saveBlocked = false;
 function blockSaving() { saveBlocked = true; }
 
+// 재료가 있던 때(2026-11-18 ~ 11-21)의 짐승 재료 id — 예전 저장을 불러올 때 돈으로 바꿈 (load)
+const LEGACY_MATS = ['giantrat', 'cavespider', 'darkwolf', 'harpy', 'treant', 'gargoyle', 'basilisk'];
 function save() {
   try {
     if (!currentSlot || saveBlocked) return;
@@ -648,12 +649,16 @@ function load() {
     State.meta.chestsOpened = Array.isArray(data.chestsOpened) ? data.chestsOpened.filter(id => typeof id === 'string') : [];
     State.meta.gold = Math.max(0, Math.floor(num(data.gold)));
     // 돈(원)이 생기기 전의 저장본 — 그때의 골드는 도시와 그 공간에서 같이 쓰던 것이라, 돈으로 옮기지 않고 없앱니다 (사용자 결정).
-    // 가방의 핵 · 재료는 그대로라, 재료 창구에 팔면 돈이 됩니다
+    // 가방의 핵은 그대로라, 핵 창구에 팔면 돈이 됩니다
     if (data.won === undefined) State.meta.gold = 0;
     State.meta.won = Math.max(0, Math.floor(num(data.won)));
     State.meta.mats = {};
     for (const [id, n] of Object.entries(data.mats || {})) if (matInfo(id) && num(n) > 0) State.meta.mats[id] = Math.floor(num(n));
-    State.meta.matSeen = Array.isArray(data.matSeen) ? data.matSeen.filter(id => MATERIALS[id]) : [];
+    // 재료가 있던 때의 저장 — 남은 짐승 재료는 판 값(그 격 일반 한 마리 골드 몫 × WON_SCALE)만큼 돈으로 (사용자 결정 2026-11-21)
+    for (const id of LEGACY_MATS) {
+      const n = Math.floor(num((data.mats || {})[id])), foe = getEnemy(id);
+      if (n > 0 && foe) State.meta.won += Math.max(1, Math.round(goldFor(foe))) * RULES.WON_SCALE * n;
+    }
     State.meta.avatars = Array.isArray(data.avatars) ? data.avatars.filter(id => canBecomeAvatar(getEnemy(id))) : [];
     State.meta.avatar = State.meta.avatars.includes(data.avatar) ? data.avatar : null;
     State.meta.seen = Array.isArray(data.seen) ? data.seen : [];
@@ -795,7 +800,7 @@ function freshMeta() {
     chestsOpened: [],
     mats: {},
     gold: 0,                          // 골드 — 그 공간의 화폐 (떠돌이 상인). 회차가 끝나도 남습니다
-    won: 0,                           // 돈(원) — 도시의 화폐. 들고 나온 핵 · 재료를 팔아 벌고 백화점에서 씁니다. 골드와는 못 바꿉니다
+    won: 0,                           // 돈(원) — 도시의 화폐. 들고 나온 핵을 팔아 벌고 백화점에서 씁니다. 골드와는 못 바꿉니다
     avatars: [],                      // 얻은 화신 (적 id) — 회차가 끝나도 남습니다
     avatar: null,                     // 지금 삼은 화신 — 한 번에 하나
     runCount: 0,
@@ -1498,7 +1503,7 @@ function bmPool() {
   const out = [];
   for (let r = 1; r <= bestRankNow(); r++) for (const id of RANK_ITEMS[r] || []) {
     const it = getItem(id);
-    if (it && !owns(id) && !it.store && !it.craft && !it.ware) out.push(id);
+    if (it && !owns(id) && !it.store && !it.ware) out.push(id);
   }
   return out;
 }
@@ -2328,8 +2333,7 @@ function rollDrops(enemyId, auraMult = 1) {
   const result = [];
 
   // 특수장비는 3지역의 숨은 것(카벙클)을 처음 꺾기 전엔 떨어지지 않습니다
-  // 재료로 만드는 장비(item.craft)는 떨어지지 않습니다 — 그 몬스터는 재료를 줍니다 (rollMats)
-  const hits = dropTable(enemyId).filter(it => !it.craft && !(it.slot === 'special' && !merchantUnlocked()) && Math.random() < chance);
+  const hits = dropTable(enemyId).filter(it => !(it.slot === 'special' && !merchantUnlocked()) && Math.random() < chance);
   const keep = hits.map(it => ({ it, k: (owns(it.id) ? 1 : 0) + Math.random() * 0.5 })).sort((p, q) => p.k - q.k)
     .slice(0, DROP_MAX).map(h => h.it);
   for (const it of hits) {
@@ -2353,64 +2357,30 @@ function rollDrops(enemyId, auraMult = 1) {
   return result;
 }
 
-// ---------- 재료 ----------
-// 재료를 주는 몬스터(foe.mat)를 꺾으면 1개, 전리품 확률만큼 하나 더 — 행운 · 전리품 장비 · 기운이 여기에도 듭니다.
-// 몬스터는 그 격의 핵(CORES)도 남깁니다 — 일반 1 · 정예 2 · 히든 5 · 보스 5 (정예 · 보스는 골드 배수의 CORE_BIG 반), 기운을 두른 상대는 그 배수만큼 더. 일반은 CORE_NORMAL(30%) 의 확률로만 (2026-11-20)
-// → [{ mat, n }, …] — 핵이 먼저, 짐승이면 그 뒤에 제 재료
+// ---------- 핵 ----------
+// 몬스터는 그 격의 핵(CORES)을 남깁니다 — 일반 1 · 정예 2 · 히든 5 · 보스 5 (정예 · 보스는 골드 배수의 CORE_BIG 반), 기운을 두른 상대는 그 배수만큼 더. 일반은 CORE_NORMAL(30%) 의 확률로만 (2026-11-20)
+// → [{ mat, n }, …]. 짐승 재료 · 만들기는 없앰 (사용자 결정 2026-11-21)
 function matsOf(id) { return Math.max(0, Math.floor(num(State.meta.mats && State.meta.mats[id]))); }
-// 이 재료를 한 번이라도 얻었나 — 얻기 전엔 이름 · 그림을 ? 로 (사용자 결정 2026-11-21). 예전 저장은 가진 것 · 그 재료로 만든 장비로 짐작
-function matKnown(id) {
-  return (State.meta.matSeen || []).includes(id) || matsOf(id) > 0 || ITEMS.some(i => i.craft && i.craft.mat === id && owns(i.id));
-}
 function rollMats(enemyId, auraMult = 1) {
   const foe = getEnemy(enemyId), out = [];
   if (!foe) return out;
-  const give = (mat, n) => {
-    State.meta.mats[mat.id] = matsOf(mat.id) + n; out.push({ mat, n });
-    if (MATERIALS[mat.id] && !(State.meta.matSeen = State.meta.matSeen || []).includes(mat.id)) State.meta.matSeen.push(mat.id);
-  };
   const core = foe.rank && CORES[`core${foe.rank.n}`];
   const big = foe.kind === 'elite' || foe.kind === 'boss' ? RULES.CORE_BIG : 1;   // 정예 · 보스는 반 (2026-11-20)
-  if (core && (foe.kind !== 'normal' || Math.random() < RULES.CORE_NORMAL)) give(core, Math.max(1, Math.round(KINDS[foe.kind].gold * big * auraMult * passiveMult('miner'))));
-  const mat = MATERIALS[foe.mat];
-  if (mat) give(mat, 1 + (Math.random() < dropChanceFor(foe, auraMult) ? 1 : 0));
+  if (core && (foe.kind !== 'normal' || Math.random() < RULES.CORE_NORMAL)) {
+    const n = Math.max(1, Math.round(KINDS[foe.kind].gold * big * auraMult * passiveMult('miner')));
+    State.meta.mats[core.id] = matsOf(core.id) + n;
+    out.push({ mat: core, n });
+  }
   return out;
 }
-// 재료 창구(헌터백화점) — 도시가 열린 뒤에. 셋 다 성공하면 참(만들기는 만든 장비, 바꾸기는 강화석 수, 팔기는 받은 돈).
-// 값을 치르고 받는 것은 모두 돈(원) — 도시의 화폐 (골드는 그 공간에서만).
-// 만든다: 아직 없는 장비 — 재료 n개 + 돈
-function craftItem(id) {
-  const it = getItem(id), c = it && it.craft;
-  if (!State.meta.cityOpen || !hunterGrade() || !c || owns(id) || matsOf(c.mat) < c.n || num(State.meta.won) < c.won) return null;   // 만들려면 헌터 등록부터
-  State.meta.mats[c.mat] = matsOf(c.mat) - c.n;
-  State.meta.won -= c.won;
-  State.meta.owned[id] = 1;
-  markFresh(it);
-  autoEquipIfBetter(it);
-  pushLog('drop', `재료 창구에서 『${it.name}』${josa(it.name, '을', '를')} 만들었다 — ${MATERIALS[c.mat].name} ${c.n}개 · ${fmtWon(c.won)}`);
-  save();
-  return it;
-}
-// 강화석으로 바꾼다: 이미 가진 장비 — 재료 n개를, 그 장비를 또 주워 분해했을 때와 같은 강화석으로 (세공 유물도 그대로 듦)
-function matStoneYield(it) { return Math.round(stoneYield(it) * (1 + num(heroStats().stoneRate))); }
-function matToStones(id) {
-  const it = getItem(id), c = it && it.craft;
-  if (!State.meta.cityOpen || !c || !owns(id) || matsOf(c.mat) < c.n) return 0;
-  const stones = matStoneYield(it);
-  State.meta.mats[c.mat] = matsOf(c.mat) - c.n;
-  State.meta.stones[it.slot] = stonesOf(it.slot) + stones;
-  pushLog('drop', `재료 창구에서 ${MATERIALS[c.mat].name} ${c.n}개를 ${SLOT_NAMES[it.slot]} 강화석 ${fmt(stones)}개로 바꿨다`);
-  save();
-  return stones;
-}
-// 판다: 재료 · 핵 n개 → 돈 (1개에 그것의 sell 원)
+// 판다: 핵 n개 → 돈 (1개에 그것의 sell 원) — 도시가 열린 뒤 백화점 1층 핵 창구에서
 function sellMats(matId, n) {
   const mat = matInfo(matId), k = Math.min(Math.floor(num(n)), matsOf(matId));
   if (!State.meta.cityOpen || !mat || !(k > 0)) return 0;
   const won = mat.sell * k;
   State.meta.mats[matId] = matsOf(matId) - k;
   State.meta.won = num(State.meta.won) + won;
-  pushLog('drop', `재료 창구에 ${mat.name} ${fmt(k)}개를 팔았다 — +${fmtWon(won)}`);
+  pushLog('drop', `핵 창구에 ${mat.name} ${fmt(k)}개를 팔았다 — +${fmtWon(won)}`);
   save();
   return won;
 }
@@ -2427,7 +2397,7 @@ function sellAllCores() {
   }
   if (!count) return 0;
   State.meta.won = num(State.meta.won) + won;
-  pushLog('drop', `재료 창구에 핵 ${fmt(count)}개를 팔았다 — +${fmtWon(won)}`);
+  pushLog('drop', `핵 창구에 핵 ${fmt(count)}개를 팔았다 — +${fmtWon(won)}`);
   save();
   return won;
 }

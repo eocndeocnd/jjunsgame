@@ -2,7 +2,7 @@
 
 > 자동으로 만든 파일입니다 (`node tools/cli.js images`). 손으로 고치지 마세요. 쓰는 법은 같은 폴더의 `README.md`.
 
-## 시트 8-A — 무기 · 보조무기 · 투구 · 갑옷 (8개)
+## 시트 8-A — 무기 · 보조무기 · 투구 · 갑옷 (8개) ✅ 다 자름
 
 저장할 이름: `design/images/sheets/rank08-A.png`
 
@@ -47,16 +47,16 @@ If a name describes a different kind of object than its type, draw the object fr
 
 | 칸 | 장비 | 부위 | 나온 곳 | 잘라서 둘 곳 |
 |---|---|---|---|---|
-| 1 | 엑스칼리버 | 무기 | 아서왕 | `assets/items/arthur_0.png` |
-| 2 | 아론다이트 | 무기 | 랜슬롯 | `assets/items/lancelot_0.png` |
-| 3 | 뒤랑달 | 무기 | 롤랑 | `assets/items/roland_0.png` |
-| 4 | 프리드웬 | 보조무기 | 아서왕 | `assets/items/arthur_2.png` |
-| 5 | 기도문을 새긴 방패 | 보조무기 | 성기사 | `assets/items/paladin_0.png` |
-| 6 | 배신자의 투구 | 투구 | 모드레드 | `assets/items/mordred_0.png` |
-| 7 | 붉은 십자 투구 | 투구 | 템플 기사 | `assets/items/templar_0.png` |
-| 8 | 펜드래건의 갑주 | 갑옷 | 아서왕 | `assets/items/arthur_1.png` |
+| 1 | 엑스칼리버 | 무기 | 아서왕 | `assets/items/arthur_0.png` ✅ |
+| 2 | 아론다이트 | 무기 | 랜슬롯 | `assets/items/lancelot_0.png` ✅ |
+| 3 | 뒤랑달 | 무기 | 롤랑 | `assets/items/roland_0.png` ✅ |
+| 4 | 프리드웬 | 보조무기 | 아서왕 | `assets/items/arthur_2.png` ✅ |
+| 5 | 기도문을 새긴 방패 | 보조무기 | 성기사 | `assets/items/paladin_0.png` ✅ |
+| 6 | 배신자의 투구 | 투구 | 모드레드 | `assets/items/mordred_0.png` ✅ |
+| 7 | 붉은 십자 투구 | 투구 | 템플 기사 | `assets/items/templar_0.png` ✅ |
+| 8 | 펜드래건의 갑주 | 갑옷 | 아서왕 | `assets/items/arthur_1.png` ✅ |
 
-## 시트 8-B — 갑옷 · 어깨 · 장갑 · 허리띠 (7개)
+## 시트 8-B — 갑옷 · 어깨 · 장갑 · 허리띠 (7개) ✅ 다 자름
 
 저장할 이름: `design/images/sheets/rank08-B.png`
 
@@ -100,15 +100,15 @@ If a name describes a different kind of object than its type, draw the object fr
 
 | 칸 | 장비 | 부위 | 나온 곳 | 잘라서 둘 곳 |
 |---|---|---|---|---|
-| 1 | 오러가 밴 흉갑 | 갑옷 | 오러 기사 | `assets/items/auraknight_1.png` |
-| 2 | 곰가죽 어깨덮개 | 어깨 | 광전사 | `assets/items/berserker_0.png` |
-| 3 | 용비늘 견갑 | 어깨 | 용기사 | `assets/items/dragonknight_0.png` |
-| 4 | 오러를 쥔 건틀릿 | 장갑 | 오러 기사 | `assets/items/auraknight_0.png` |
-| 5 | 검을 호수에 던진 손 | 장갑 | 베디비어 | `assets/items/bedivere_0.png` |
-| 6 | 초록 허리띠 | 허리띠 | 녹색 기사 | `assets/items/greenknight_0.png` |
-| 7 | 론세스바예스의 허리띠 | 허리띠 | 롤랑 | `assets/items/roland_1.png` |
+| 1 | 오러가 밴 흉갑 | 갑옷 | 오러 기사 | `assets/items/auraknight_1.png` ✅ |
+| 2 | 곰가죽 어깨덮개 | 어깨 | 광전사 | `assets/items/berserker_0.png` ✅ |
+| 3 | 용비늘 견갑 | 어깨 | 용기사 | `assets/items/dragonknight_0.png` ✅ |
+| 4 | 오러를 쥔 건틀릿 | 장갑 | 오러 기사 | `assets/items/auraknight_0.png` ✅ |
+| 5 | 검을 호수에 던진 손 | 장갑 | 베디비어 | `assets/items/bedivere_0.png` ✅ |
+| 6 | 초록 허리띠 | 허리띠 | 녹색 기사 | `assets/items/greenknight_0.png` ✅ |
+| 7 | 론세스바예스의 허리띠 | 허리띠 | 롤랑 | `assets/items/roland_1.png` ✅ |
 
-## 시트 8-C — 각반 · 신발 · 망토 (7개)
+## 시트 8-C — 각반 · 신발 · 망토 (7개) ✅ 다 자름
 
 저장할 이름: `design/images/sheets/rank08-C.png`
 
@@ -151,15 +151,15 @@ If a name describes a different kind of object than its type, draw the object fr
 
 | 칸 | 장비 | 부위 | 나온 곳 | 잘라서 둘 곳 |
 |---|---|---|---|---|
-| 1 | 원탁 기사의 정강이받이 | 각반 | 보물상자 | `assets/items/chest_camelot_greaves.png` |
-| 2 | 마지막 출정의 각반 | 각반 | 엘 시드 | `assets/items/elcid_1.png` |
-| 3 | 숲에서 온 투박한 각반 | 각반 | 퍼시벌 | `assets/items/percival_0.png` |
-| 4 | 하늘을 딛는 용의 등자 | 신발 | 용기사 | `assets/items/dragonknight_1.png` |
-| 5 | 바비에카를 몬 박차 | 신발 | 엘 시드 | `assets/items/elcid_0.png` |
-| 6 | 링컨 그린 두건 | 망토 | 로빈 후드 | `assets/items/robinhood_0.png` |
-| 7 | 흰 성전 망토 | 망토 | 템플 기사 | `assets/items/templar_1.png` |
+| 1 | 원탁 기사의 정강이받이 | 각반 | 보물상자 | `assets/items/chest_camelot_greaves.png` ✅ |
+| 2 | 마지막 출정의 각반 | 각반 | 엘 시드 | `assets/items/elcid_1.png` ✅ |
+| 3 | 숲에서 온 투박한 각반 | 각반 | 퍼시벌 | `assets/items/percival_0.png` ✅ |
+| 4 | 하늘을 딛는 용의 등자 | 신발 | 용기사 | `assets/items/dragonknight_1.png` ✅ |
+| 5 | 바비에카를 몬 박차 | 신발 | 엘 시드 | `assets/items/elcid_0.png` ✅ |
+| 6 | 링컨 그린 두건 | 망토 | 로빈 후드 | `assets/items/robinhood_0.png` ✅ |
+| 7 | 흰 성전 망토 | 망토 | 템플 기사 | `assets/items/templar_1.png` ✅ |
 
-## 시트 8-D — 반지 · 목걸이 · 팔찌 · 특수장비 (7개)
+## 시트 8-D — 반지 · 목걸이 · 팔찌 · 특수장비 (7개) ✅ 다 자름
 
 저장할 이름: `design/images/sheets/rank08-D.png`
 
@@ -203,13 +203,13 @@ If a name describes a different kind of object than its type, draw the object fr
 
 | 칸 | 장비 | 부위 | 나온 곳 | 잘라서 둘 곳 |
 |---|---|---|---|---|
-| 1 | 정오의 고리 | 반지 | 가웨인 | `assets/items/gawain_0.png` |
-| 2 | 화살을 가른 깍지 | 반지 | 로빈 후드 | `assets/items/robinhood_1.png` |
-| 3 | 성배의 한 줄기 빛 | 목걸이 | 갤러해드 | `assets/items/galahad_0.png` |
-| 4 | 축성된 성표 | 목걸이 | 성기사 | `assets/items/paladin_1.png` |
-| 5 | 곰 발톱 팔찌 | 팔찌 | 광전사 | `assets/items/berserker_1.png` |
-| 6 | 이졸데의 팔찌 | 팔찌 | 트리스탄 | `assets/items/tristan_0.png` |
-| 7 | 아발론의 칼집 | 특수장비 | 호수의 여인 | `assets/items/ladyofthelake_0.png` |
+| 1 | 정오의 고리 | 반지 | 가웨인 | `assets/items/gawain_0.png` ✅ |
+| 2 | 화살을 가른 깍지 | 반지 | 로빈 후드 | `assets/items/robinhood_1.png` ✅ |
+| 3 | 성배의 한 줄기 빛 | 목걸이 | 갤러해드 | `assets/items/galahad_0.png` ✅ |
+| 4 | 축성된 성표 | 목걸이 | 성기사 | `assets/items/paladin_1.png` ✅ |
+| 5 | 곰 발톱 팔찌 | 팔찌 | 광전사 | `assets/items/berserker_1.png` ✅ |
+| 6 | 이졸데의 팔찌 | 팔찌 | 트리스탄 | `assets/items/tristan_0.png` ✅ |
+| 7 | 아발론의 칼집 | 특수장비 | 호수의 여인 | `assets/items/ladyofthelake_0.png` ✅ |
 
 ## 하나씩 뽑기 (시트가 잘 안 될 때)
 

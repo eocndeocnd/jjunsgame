@@ -1630,7 +1630,7 @@ const city = () => townMap(CITY, '도시');
 const ROADISH_LOOK = c => (c & 15) === OL.DIRT || (c & 15) === OL.COBBLE;
 
 // ---------- 헌터백화점 안 — 1층 (docs/CITY-PLAN.md 1-나) ----------
-// 위 벽(세 칸 높이)에 왼쪽부터 무기 진열 벽 · 2층으로 가는 에스컬레이터 · 재료 창구(재료로 만들기 · 바꾸기 · 팔기). 그 바로 앞줄에 계산대(가운데 빈 칸에 점원) · 막아 둔 줄.
+// 위 벽(세 칸 높이)에 왼쪽부터 무기 진열 벽 · 2층으로 가는 에스컬레이터 · 핵 창구(가져온 핵을 돈으로). 그 바로 앞줄에 계산대(가운데 빈 칸에 점원) · 막아 둔 줄.
 // 가운데 통로(어두운 돌 띠) 양옆으로 유리 진열장이 두 줄씩. 아래 벽 가운데가 도시로 나가는 문.
 // 칸은 바닥 기준 (왼쪽 위가 0, 0). 가구는 막힌 칸 — 지도 속성 blds 의 네모(kind)로 넘겨 그림은 mapart 의 storeProp 이, 위 벽 무늬는 속성 wall 로 storeWall 이.
 // 점원은 npc 층의 점 (shop = 매장 이름 — data.js 의 DEPT_SECTIONS). 닿으면 상점 창 (map.js 의 shop 사건)
@@ -1639,14 +1639,13 @@ const DEPT = {
   wall: [{ x: 1, w: 7, kind: 'rack' }, { x: 9, w: 3, kind: 'esc' }, { x: 13, w: 7, kind: 'mats' }],
   props: [
     { kind: 'counter', x: 1, y: 0, w: 3 }, { kind: 'counter', x: 5, y: 0, w: 3 },          // 무기 매장 계산대 — 사이 (4, 0) 에 점원
-    { kind: 'counter', x: 13, y: 0, w: 3 }, { kind: 'counter', x: 17, y: 0, w: 3 },        // 재료 창구 계산대 — 사이 (16, 0) 에 점원
+    { kind: 'counter', x: 13, y: 0, w: 3 }, { kind: 'counter', x: 17, y: 0, w: 3 },        // 핵 창구 계산대 — 사이 (16, 0) 에 점원
     { kind: 'plant', x: 8, y: 0, w: 1 }, { kind: 'plant', x: 12, y: 0, w: 1 }, { kind: 'plant', x: 0, y: 11, w: 1 }, { kind: 'plant', x: 20, y: 11, w: 1 },
     { kind: 'case', x: 1, y: 3, w: 2, tone: 0 }, { kind: 'case', x: 5, y: 3, w: 2, tone: 1 }, { kind: 'case', x: 1, y: 6, w: 2, tone: 2 }, { kind: 'case', x: 5, y: 6, w: 2, tone: 3 },
     { kind: 'case', x: 14, y: 3, w: 2, tone: 4 }, { kind: 'case', x: 18, y: 3, w: 2, tone: 5 }, { kind: 'case', x: 14, y: 6, w: 2, tone: 6 }, { kind: 'case', x: 18, y: 6, w: 2, tone: 7 },
-    { kind: 'bench', x: 3, y: 9, w: 3 }, { kind: 'bench', x: 15, y: 9, w: 3 },
-    { kind: 'counter', x: 16, y: 11, w: 2 }, { kind: 'counter', x: 19, y: 11, w: 1 }      // 강화석 교환 — 사이 (18, 11) 에 직원 (오른쪽 아래)
+    { kind: 'bench', x: 3, y: 9, w: 3 }, { kind: 'bench', x: 15, y: 9, w: 3 }
   ],
-  clerks: [{ x: 4, y: 0, shop: 'weapon', label: '무기 매장' }, { x: 16, y: 0, shop: 'mats', label: '재료 창구' }, { x: 18, y: 11, shop: 'stones', label: '강화석 교환' }],
+  clerks: [{ x: 4, y: 0, shop: 'weapon', label: '무기 매장' }, { x: 16, y: 0, shop: 'mats', label: '핵 창구' }],
   signs: [],
   // 에스컬레이터 앞 — 2층 방어구 매장으로 (제1격 보스를 꺾기 전에는 잠김 · 줄이 쳐짐 — ui 의 portOpen · mapview 가 줄을 그림)
   links: [{ name: 'up', x: 9, y: 0, w: 3, to: 'dept2.out', label: '2층 방어구 매장', unlock: 'armor' }]

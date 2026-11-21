@@ -1868,6 +1868,10 @@ body.test-mode::after {
   box-shadow: inset 4px 0 0 var(--drop);
 }
 .locked-toggle { width: 100%; margin-top: 10px; }
+/* 부위 도감의 두 갈래 — 모험에서 얻은 것 / 도시에서 산 것 */
+.coll-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 4px; }
+.coll-tabs .btn { width: 100%; opacity: 0.7; }
+.coll-tabs .btn.on { opacity: 1; background: var(--paper-hi); border-color: var(--text); }
 .mobile-tabs button.has-new::after {
   content: '';
   position: absolute;
@@ -2864,7 +2868,7 @@ body.meeting .enc-portrait .portrait-ic { font-size: clamp(90px, 34vw, 190px); }
 /* 헌터백화점의 매장 (상점 창을 같이 씀) — 점원의 한마디 */
 .shop-say { margin: 0 0 10px; padding: 8px 10px; background: var(--paper-hi); border: 2px solid var(--line); font-size: 12px; line-height: 1.5; }
 
-/* 재료 창구 (헌터백화점 1층) — 재료마다 한 묶음: 머리(이름 · 가진 수 · 팔기), 아래에 그 재료로 만드는 장비 */
+/* 핵 창구 (헌터백화점 1층) — 묶음: 머리(이름 · 가진 수 · 팔기) */
 .mat-block { margin-top: 12px; }
 .mat-block:first-of-type { margin-top: 0; }
 .mat-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; padding: 6px 8px; margin-bottom: 6px; background: var(--paper-lo); border: 2px solid var(--line); font-size: 12px; }
@@ -2874,9 +2878,7 @@ body.meeting .enc-portrait .portrait-ic { font-size: clamp(90px, 34vw, 190px); }
 .mat-act .btn span { font-size: 10px; font-weight: 400; opacity: 0.85; }
 .mat-have { margin-left: 6px; padding: 0 5px; border: 1px solid var(--line); font-size: 10px; font-weight: 400; }
 .inv-item.ware.made { background: var(--paper-hi); }
-/* 조우 카드 · 도감 줄의 재료 칸 */
-.ed-item.mat .ed-name, .rd.mat .rd-k { font-weight: 700; }
-/* 재료 창구의 핵 묶음 — 격마다 한 줄 (이름 · 가진 수 · 1개 값 · 판다) */
+/* 핵 창구의 핵 묶음 — 격마다 한 줄 (이름 · 가진 수 · 1개 값 · 판다) */
 .core-list { display: flex; flex-direction: column; gap: 4px; }
 .core-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 8px; padding: 4px 8px; background: var(--paper-hi); border: 2px solid var(--line); font-size: 12px; }
 .core-row .core-worth { font-size: 10px; color: var(--text-dim); white-space: nowrap; }

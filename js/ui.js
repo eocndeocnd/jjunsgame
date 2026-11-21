@@ -912,13 +912,9 @@ function rankChests(n) {
 // 이름은 뺐습니다 — 한 줄에 셋씩 들어가야 해서 자리가 없고,
 // **뭘 아직 못 얻었는지**만 보면 되는 자리라 그림과 부위면 충분합니다.
 function rosterDrops(foe) {
-  const table = dropTable(foe.id), mat = MATERIALS[foe.mat];
+  const table = dropTable(foe.id);
   if (!table.length) return '<span class="r-drops"></span>';
-  // 재료를 주는 몬스터 — 재료 칸이 먼저, 그 뒤가 그 재료로 만드는 것
-  const matChip = !mat ? '' : matKnown(mat.id)
-    ? `<span class="rd mat have" title="${mat.name} — 가진 것 ${fmt(matsOf(mat.id))}개"><span class="rd-ic">${mat.icon}</span><span class="rd-k">재료 ${fmt(matsOf(mat.id))}</span></span>`
-    : `<span class="rd mat miss" title="재료 · 아직 못 얻음"><span class="rd-ic">?</span><span class="rd-k">재료</span></span>`;   // 얻기 전엔 ?
-  return `<span class="r-drops">${matChip}${table.map(it => {
+  return `<span class="r-drops">${table.map(it => {
     const have = owns(it.id);
     return `<span class="rd ${have ? 'have' : 'miss'}" title="${SLOT_NAMES[it.slot]} · ${have ? it.name : '아직 못 얻음'}">
               <span class="rd-ic">${have ? itemArt(it) : '?'}</span>
@@ -1421,8 +1417,8 @@ function resultCard(r, run) {
   if (r.win) {
     lines.push(row('경험치', `+${fmt(r.xp)}`, mults.length ? mults.join(' · ') : ''));
     if (r.gold) lines.push(row('골드', `+${fmt(r.gold)}`));
-    // 들고 나갈 것 — 그 격의 핵(모든 몬스터), 짐승이면 제 재료도. 오른쪽에 가진 수
-    if (r.mats && r.mats.length) lines.push(row('재료', r.mats.map(m => `${m.mat.icon} ${m.mat.core ? '핵' : m.mat.name} +${fmt(m.n)}`).join(' · '), `가진 것 ${r.mats.map(m => fmt(matsOf(m.mat.id))).join(' · ')}`));
+    // 들고 나갈 것 — 그 격의 핵. 오른쪽에 가진 수
+    if (r.mats && r.mats.length) lines.push(row('핵', r.mats.map(m => `${m.mat.icon} ${m.mat.name} +${fmt(m.n)}`).join(' · '), `가진 것 ${r.mats.map(m => fmt(matsOf(m.mat.id))).join(' · ')}`));
     const lvFinal = r.levelsGained > 0 ? `Lv.${fmtLevel(r.levelBefore)} → Lv.${fmtLevel(run.level)}` : `Lv.${fmtLevel(run.level)}`;
     lines.push(row('레벨', `<span id="resLv" data-final="${lvFinal}">${lvFinal}</span>`, r.levelsGained > 0 ? `+${fmtLevel(r.levelsGained)}` : ''));
     // 경험치 바 — 위쪽 지역 창이 빠진 대신 여기서 차오릅니다 (paintLevel 이 resXpFill 도 움직입니다)
@@ -1616,23 +1612,10 @@ function row(k, v, note) {
 //
 // "다 모았다" 를 알 수 있어야 **이 녀석을 또 잡을 이유가 있는지** 판단이 섭니다.
 function dropStrip(foe) {
-  const table = dropTable(foe.id), mat = MATERIALS[foe.mat];
+  const table = dropTable(foe.id);
   if (!table.length) return '';
   const left = table.filter(i => !owns(i.id)).length;
   // 글자로 설명하지 않습니다 — ???? 칸이 남아 있는지만 보면 됩니다.
-  // 재료를 주는 몬스터는 장비를 떨어뜨리지 않으니 재료 칸 하나만 (가진 수) — 얻기 전엔 ? (사용자 결정 2026-11-21)
-  if (mat) {
-    const known = matKnown(mat.id);
-    return `
-    <div class="enc-drops">
-      <div class="ed-list" style="grid-template-columns:minmax(0, 1fr)">
-            <div class="ed-item mat ${known ? 'have' : 'miss'}">
-              <span class="ed-ic">${known ? mat.icon : '?'}</span>
-              <span class="ed-name">${known ? `${mat.name} ${fmt(matsOf(mat.id))}` : '????'}</span>
-            </div>
-      </div>
-    </div>`;
-  }
   return `
     <div class="enc-drops ${left === 0 ? 'done' : ''}">
       <div class="ed-list" style="grid-template-columns:repeat(${table.length}, minmax(0, 1fr))">
@@ -2291,6 +2274,10 @@ function wireTabs() {
 // 아직 못 얻은 것은 ???? 로만 보입니다 — 어느 격의 것인지만 알 수 있게.
 let selectedSlot = 'weapon';
 let showLocked = false;      // 못 얻은 ???? 를 펼쳐 볼 것인가
+// 부위 도감의 두 갈래 (사용자 결정 2026-11-21) — 'space' 그 공간에서 얻은 것(몬스터 · 보물상자 · 떠돌이 상인) / 'city' 도시에서 산 것(헌터백화점).
+// 도시가 열린 뒤에만 나뉨
+let collSrc = 'space';
+const fromCity = i => !!i.store;
 
 // ---------- 장비 세트 ----------
 // 세 벌을 각각 입혀두고 갈아입습니다. 저장·덮어쓰기 버튼은 없습니다 —
@@ -2544,7 +2531,16 @@ function renderGear() {
   // 특수장비 칸 넷은 같은 목록(특수장비 전부)을 봅니다.
   const fk = freshKey(selectedSlot);
   // 못 얻은 것 목록도 아는 격까지만 — 마왕 너머의 전리품은 몇 개인지조차 보이지 않습니다
-  const all = itemsInSlot(special ? 'special' : selectedSlot).filter(i => owns(i.id) || (knownRank(i.rank.n) && !(i.ware || i.chest || i.store)));
+  const both = itemsInSlot(special ? 'special' : selectedSlot).filter(i => owns(i.id) || (knownRank(i.rank.n) && !(i.ware || i.chest || i.store)));
+  const split = !!State.meta.cityOpen && !special, src = split ? collSrc : 'space';
+  const all = both.filter(i => fromCity(i) === (src === 'city'));
+  const srcTabs = split ? `
+    <div class="coll-tabs span2">
+      ${[['space', '모험에서 얻은 것'], ['city', '도시에서 산 것']].map(([k, label]) => {
+        const list = both.filter(i => fromCity(i) === (k === 'city'));
+        return `<button class="btn tiny ${src === k ? 'on' : ''}" data-collsrc="${k}">${label} <b>${list.filter(i => owns(i.id)).length}</b></button>`;
+      }).join('')}
+    </div>` : '';
   const have = all.filter(i => owns(i.id));
   const lockedCount = all.length - have.length;
 
@@ -2601,7 +2597,9 @@ function renderGear() {
           ${where}
         </div>
       </div>`;
-  }).join('') : `<p class="hint span2">얻은 것이 없다</p>`) + lockedBlock;
+  }).join('') : `<p class="hint span2">${src === 'city' ? '도시에서 산 것이 없다 — 헌터백화점에서 산 장비가 여기에' : '얻은 것이 없다'}</p>`) + lockedBlock;
+  if (srcTabs) $('inventory').insertAdjacentHTML('afterbegin', srcTabs);
+  for (const b of document.querySelectorAll('#inventory [data-collsrc]')) b.addEventListener('click', () => { collSrc = b.dataset.collsrc; showLocked = false; render(); });
 
   const lt = $('lockedToggle');
   if (lt) lt.addEventListener('click', () => { showLocked = !showLocked; render(); });
@@ -2797,20 +2795,19 @@ const CLERK_TALK = {
   empty: ['「지금 있는 건 다 가져가셨어요. 새 물건이 들어오면… 또 오시겠죠.」']
 };
 const MAT_TALK = {
-  none: ['「오늘은 빈손이시네요. 핵이든 가죽이든 돌조각이든 가져오시면 봐 드려요.」'],
+  none: ['「오늘은 빈손이시네요. 핵을 가져오시면 봐 드려요.」'],
   first: ['「이건… 어디서 구하셨어요? 아뇨, 대답 안 하셔도 돼요. 상태는 좋네요.」', '「등록 헌터 납품만 받는 게 원칙인데… 뭐, 원칙은 원칙이고요.」'],
   again: ['「또 가져오셨네요. 장부엔 \'개인 소장품\'이라고 적어 둘게요.」', '「이 정도 양이면 보통은 길드 단위인데. …혼자세요?」']
 };
 function clerkLine(kind) {
   const pick = list => list[Math.floor(Math.random() * list.length)];
-  if (kind === 'stones') return pick(STONE_TALK);
   if (kind === 'ranking' || kind === 'home2') return '';
   if (kind === 'gatefind') return pick(FIND_TALK);
   if (kind === 'trainer') return pick(TRAIN_TALK);
   if (kind === 'bm') return pick(!num(State.meta.bmGems) ? BM_TALK.noGem : !bmPool().length ? BM_TALK.none : BM_TALK.hi);
   if (kind === 'mats') {
-    const any = Object.keys(State.meta.mats || {}).some(id => matsOf(id) > 0), made = ITEMS.some(i => i.craft && owns(i.id));
-    return pick(!any ? MAT_TALK.none : made ? MAT_TALK.again : MAT_TALK.first);
+    const any = Object.values(CORES).some(c => matsOf(c.id) > 0);
+    return pick(!any ? MAT_TALK.none : State.meta.runCount > 3 ? MAT_TALK.again : MAT_TALK.first);
   }
   if (kind === 'assoc') return pick(!hunterGrade() ? ASSOC_TALK.none : hunterGrade() > HUNTER_GRADES.length ? ASSOC_TALK.top : canTakeTest() ? ASSOC_TALK.again : ASSOC_TALK.done);
   if (kind === 'hire') return pick(HIRE_TALK);
@@ -2846,7 +2843,6 @@ function renderShop() {
   if (shopKind === 'gate') { renderGates(); return; }
   if (shopKind === 'guild') { renderGuild(); return; }
   if (shopKind === 'mats') { renderMatShop(); return; }
-  if (shopKind === 'stones') { renderStoneShop(); return; }
   if (shopKind === 'bm') { renderBlackMarket(); return; }
   if (shopKind === 'ranking') { renderRanking(); return; }
   if (shopKind === 'home2') { renderHome2Sale(); return; }
@@ -2914,10 +2910,7 @@ function renderShop() {
   for (const b of document.querySelectorAll('[data-buy]')) b.addEventListener('click', () => openBuy(b.dataset.buy));
 }
 
-// ---------- 재료 창구 (헌터백화점 1층) — 재료로 만들기 · 강화석으로 바꾸기 · 팔기 ----------
-// 재료마다 한 묶음: 머리에 재료 이름 · 가진 수 · 팔기 단추(1개 · 모두), 아래에 그 재료로 만드는 장비.
-// 아직 없는 장비는 「만든다」(재료 + 돈 — 만들면 「지금 낄까요?」), 이미 가진 장비는 「강화석」(재료 → 그 부위 강화석 — 예전에 겹쳐 주웠을 때와 같은 양).
-// 보이는 재료는 한 번이라도 손에 넣어 본 것 — 가진 것이 있거나, 그 재료로 만든 장비가 있는 것 (아직 못 본 몬스터의 재료는 숨김)
+// ---------- 핵 창구 (헌터백화점 1층) — 가져온 핵을 돈으로 (재료 · 만들기 · 강화석 교환은 없앰, 사용자 결정 2026-11-21) ----------
 // 맨 위는 핵 — 모든 몬스터가 남기는 팔 것 (격마다 한 가지). 가진 격만 한 줄씩, 「모두 판다」 한 번으로 다 팝니다. 만드는 데는 쓰지 않습니다.
 // ---------- 헌터 협회 · 등록 창구 (상점 창을 같이 씀 — shopKind 'assoc') ----------
 // 지금의 나(도시의 Lv.1 그대로)로 F 시험관부터 차례로 싸워, 이긴 데까지가 등급. 회차에 한 번 · 내려가지 않음 (game.js 의 takeHunterTest)
@@ -3437,11 +3430,6 @@ function renderGuild() {
   startShopTicker();
 }
 
-// ---------- 헌터백화점 1층 · 강화석 교환 (재료 창구에서 떼어 냄 — 사용자 결정 2026-11-19) ----------
-// 이미 가진 장비의 재료 n개를, 그 장비를 또 주워 분해했을 때와 같은 강화석으로 (game.js 의 matToStones)
-const STONE_TALK = ['「가지신 장비랑 같은 재료면 녹여서 강화석으로 뽑아 드려요. 손이 좀 가지만요.」', '「이 가죽이면… 신발 쪽 강화석이 나오겠네요. 잠깐만요.」'];
-// 바꿀 수 있는 재료 — 그 재료로 만드는 장비 중 이미 가진 것이 있는 재료
-function stoneMats() { return Object.values(MATERIALS).filter(mat => ITEMS.some(i => i.craft && i.craft.mat === mat.id && owns(i.id))); }
 // ---------- 새 집 — 미래 도시 오른쪽 빈터의 「분양」 (도시 계획 7번 · 11격, 사용자 결정 2026-11-19 · game.js 의 buyHome2 · movePortal) ----------
 // 사면 이사 → 길잡이가 「이제 네가 충분히 강해졌고, 화신도 거들어서」 이상한 게이트를 새 집 안으로 옮김 (사용자 결정 — 옮길 수 있는 까닭). 대사는 제안
 const HOME2_SALE_SAY = '🏢 「분양 사무소예요. 헌터분들 전용 단지라 보안은 확실해요. 게이트 경보도 이 동네가 제일 늦게 울리고요.」';
@@ -3570,38 +3558,8 @@ function renderBlackMarket() {
   });
 }
 
-function renderStoneShop() {
-  $('shopTitle').textContent = `헌터백화점 · ${DEPT_SECTIONS.stones.name}`;
-  $('shopGold').innerHTML = '';
-  const blocks = stoneMats().map(mat => {
-    const have = matsOf(mat.id);
-    const cards = ITEMS.filter(i => i.craft && i.craft.mat === mat.id && owns(i.id)).map(item => {
-      const c = item.craft;
-      return `
-      <div class="inv-item ware">
-        <span class="inv-art">${itemArt(item)}</span>
-        <div class="inv-body">
-          <div class="inv-head">${itemTag(item)}<span class="inv-name">${item.name}</span></div>
-          <div class="inv-stats">${SLOT_NAMES[item.slot]} 강화석 — 지금 ${fmt(stonesOf(item.slot))}개</div>
-        </div>
-        <div class="inv-act mat-act"><button class="btn primary" data-matstone="${item.id}" ${have >= c.n ? '' : 'disabled'}><b>강화석 +${fmt(matStoneYield(item))}</b><span>${mat.name} ${c.n}개</span></button></div>
-      </div>`;
-    }).join('');
-    return `
-    <div class="mat-block">
-      <div class="mat-head"><span class="mat-name">${mat.icon} ${mat.name} <b>${fmt(have)}개</b></span></div>
-      <div class="inventory shop-wares">${cards}</div>
-    </div>`;
-  }).join('');
-  $('shopBody').innerHTML = `<div class="shop-say">${DEPT_SECTIONS.stones.icon} ${shopSay}</div>`
-    + (blocks || '<div class="adm-note">바꿀 것이 없다 — 재료로 장비를 한 번 만들고 나면, 같은 재료를 그 부위의 강화석으로 바꿀 수 있다</div>');
-  for (const b of $('shopBody').querySelectorAll('[data-matstone]')) b.addEventListener('click', () => {
-    if (matToStones(b.dataset.matstone)) { Sound.play('stone'); render(); }
-  });
-}
-
 function renderMatShop() {
-  const won = num(State.meta.won);      // 도시의 돈 — 판 값도 만드는 값도 원
+  const won = num(State.meta.won);      // 도시의 돈 — 판 값은 원
   $('shopTitle').textContent = `헌터백화점 · ${DEPT_SECTIONS.mats.name}`;
   $('shopGold').innerHTML = `${pxIcon('won')}돈 ${fmtWon(won)}`;
   const cores = Object.values(CORES).filter(c => matsOf(c.id) > 0);
@@ -3619,53 +3577,10 @@ function renderMatShop() {
           <button class="btn tiny" data-sellmat="${c.id}" data-n="${matsOf(c.id)}">판다 +${fmtWon(c.sell * matsOf(c.id))}</button>
         </div>`).join('')}</div>
     </div>` : '';
-  const blocks = Object.values(MATERIALS).map(mat => {
-    // 이미 가진 장비는 목록에서 빠짐 (사용자 결정 2026-11-19) — 그 재료를 강화석으로 바꾸는 것은 「강화석 교환」 창구에서 (renderStoneShop)
-    const have = matsOf(mat.id), items = ITEMS.filter(i => i.craft && i.craft.mat === mat.id && !owns(i.id));
-    if (!have) return '';
-    const cards = items.map(item => {
-      const c = item.craft;
-      const worn = getItem(State.meta.equipped[item.slot]);
-      const diff = itemDiffText(item, worn, slotMult(item.slot));
-      const spec = itemSpecialText(item);
-      const act = `<button class="btn primary" data-craft="${item.id}" ${have >= c.n && won >= c.won && hunterGrade() ? '' : 'disabled'}><b>만든다</b><span>재료 ${c.n}개 · ${fmtWon(c.won)}</span></button>`;
-      return `
-      <div class="inv-item ware">
-        <span class="inv-art">${itemArt(item)}</span>
-        <div class="inv-body">
-          <div class="inv-head">${itemTag(item)}<span class="inv-name">${item.name}</span></div>
-          <div class="inv-stats">${SLOT_NAMES[item.slot]} · ${itemStatText(item) || '—'}${spec ? ` <span class="inv-spec">${spec}</span>` : ''}</div>
-          ${diff ? `<div class="inv-diff">${diff}</div>` : ''}
-        </div>
-        <div class="inv-act mat-act">${act}</div>
-      </div>`;
-    }).join('');
-    return `
-    <div class="mat-block">
-      <div class="mat-head">
-        <span class="mat-name">${mat.icon} ${mat.name} <b>${fmt(have)}개</b></span>
-        <span class="mat-sell">
-          <button class="btn tiny" data-sellmat="${mat.id}" data-n="1" ${have ? '' : 'disabled'}>1개 판다 +${fmtWon(mat.sell)}</button>
-          <button class="btn tiny" data-sellmat="${mat.id}" data-n="${have}" ${have > 1 ? '' : 'disabled'}>모두 +${fmtWon(mat.sell * have)}</button>
-        </span>
-      </div>
-      <div class="inventory shop-wares">${cards}</div>
-    </div>`;
-  }).join('');
   $('shopBody').innerHTML = `<div class="shop-say">${DEPT_SECTIONS.mats.icon} ${shopSay}</div>`
-    + (hunterGrade() ? '' : '<div class="license-note">🪪 만들기는 헌터 등록증이 있어야 한다 — 팔기는 그대로</div>')
-    + (stoneMats().length ? `<p class="hint">이미 가진 장비의 재료는 오른쪽 아래 <b>${DEPT_SECTIONS.stones.name}</b>에서 강화석으로 바꿀 수 있다</p>` : '')
-    + coreBlock
-    + (blocks || (coreBlock ? '' : '<div class="adm-note">가져온 것이 없다 — 몬스터를 꺾으면 핵이, 장비를 지니지 않는 짐승을 꺾으면 재료도 나온다</div>'));
+    + (coreBlock || '<div class="adm-note">가져온 것이 없다 — 몬스터를 꺾으면 그 격의 핵이 나온다</div>');
   const all = $('sellCoresBtn');
   if (all) all.addEventListener('click', () => { if (sellAllCores()) { Sound.play('stone'); render(); } });
-  for (const b of $('shopBody').querySelectorAll('[data-craft]')) b.addEventListener('click', () => {
-    const id = b.dataset.craft;
-    if (!craftItem(id)) return;
-    Sound.play('equip');
-    render();
-    askWear(id);
-  });
   for (const b of $('shopBody').querySelectorAll('[data-sellmat]')) b.addEventListener('click', () => {
     if (sellMats(b.dataset.sellmat, Number(b.dataset.n))) { Sound.play('stone'); render(); }
   });
@@ -4236,7 +4151,7 @@ const CITY_WAKE = [
   { who: 'guide', text: '여기가 네가 사는 데구나. 시끄럽고 밝네. …아 참, 너 이름이 뭐였지?' },
   { who: 'guide', ask: 'name', text: '이름 정도는 알아야 부르지.' },
   { who: 'guide', text: () => `<b>${heroName()}</b>. 좋아, 기억해 둘게.` },
-  { who: 'guide', text: '가져온 <b>핵이랑 가죽</b>은 저쪽 큰 도시의 <b>헌터백화점 재료 창구</b>에서 돈으로 바꿔 줄 거야.' },
+  { who: 'guide', text: '가져온 <b>핵</b>은 저쪽 큰 도시의 <b>헌터백화점 핵 창구</b>에서 돈으로 바꿔 줄 거야.' },
   { who: 'guide', text: '장비를 사려면 <b>헌터 등록증</b>이 있어야 한대. 도시 위쪽 큰 건물 — <b>헌터 협회</b>에서 시험을 보면 돼. 지금 그대로 싸워서.' },
   { who: 'guide', text: '그리고 다시 들어가는 길은 — 네 집 바로 옆 틈의 그 이상한 게이트. 너한테만 보일걸.' }
 ];
