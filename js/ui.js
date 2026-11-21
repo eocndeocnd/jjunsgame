@@ -782,6 +782,10 @@ function renderAvatarModal() {
 //   레벨 — 왼쪽 아래, 경험치 — 맨 아래 가장자리의 줄 (싸운 뒤 굴러 올라가는 동안은 paintLevel 이 그림)
 //   지역 이름 — 다른 지역 · 다른 지도에 들어설 때만 가운데 위에 잠깐
 let bannerShown = '', bannerTimer = 0;
+const SPECIAL_TALK = [
+  { who: 'guide', text: '방금 그 녀석 — 이마의 홍옥이 깨지면서 뭔가 풀렸어. 장비에 <b>특수장비 칸</b>이 하나 열렸어.' },
+  { who: 'guide', text: '여기엔 <b>보석이나 유물</b>을 끼워. 이제부터 <b>4격 위</b>의 상대들이 특수장비를 떨어뜨리기 시작할 거야. 칸은 숨은 것들을 꺾을수록 넷까지 늘어.' }
+];
 const ALLOC_TALK = [
   { who: 'guide', text: '레벨이 올랐네. 오를 때마다 <b>포인트</b>가 생겨 — 오른쪽 위 <b>스탯 분배</b>에서 생명 · 공격력 같은 데 찍어.' },
   { who: 'guide', text: '단추를 누르면 <b>얼마 오르는지 먼저</b> 보여 줘. 한 번 더 누르면 그때 찍혀. 찍은 건 못 되돌리니까 보고 골라.' }
@@ -806,8 +810,15 @@ function renderHud(zone) {
       : `<button class="hud-chip hud-glass hud-gold ${PASSIVES.some(p => { const c = passivePrice(p.id); return c !== null && num(State.meta.gold) >= c; }) ? 'ready' : ''}" id="hudGoldBtn" title="가진 골드 — 회차가 끝나면 사라집니다. 누르면 패시브">골드 ${fmt(num(State.meta.gold))}</button>`}
     <button class="hud-chip hud-glass" id="rosterBtn" title="이 지역에 있는 것">도감 ${run.zoneIndex + 1} / ${knownZoneCount()}</button>
     ${run.unspent > 0 ? `<button class="hud-chip hud-alloc" id="jAllocBtn">스탯 분배 <b>+${fmt(run.unspent)}P</b></button>` : ''}`;
-  // 처음으로 포인트가 생기면 길잡이가 한 번 알려 줌 (사용자 결정 2026-11-21 — 분배가 있는 줄 몰랐음). 지도 위에 아무것도 안 떠 있을 때
-  if (run.unspent > 0 && !State.meta.allocTold && !run.lastResult && !run.encounter && !run.over && !fightLocked() && !isTalkOpen()) {
+  const calm = !run.lastResult && !run.encounter && !run.over && !fightLocked() && !isTalkOpen();   // 지도 위에 아무것도 안 떠 있을 때
+  // 카벙클을 처음 꺾어 특수장비 칸이 처음 열리면 길잡이가 알려 주고 그 칸을 엶 (사용자 결정 2026-11-22)
+  if (State.meta.specialTalkPending && calm) {
+    State.meta.specialTalkPending = false;
+    save();
+    setTimeout(() => { if (!isTalkOpen()) playTalk(SPECIAL_TALK, () => spotlightGear(SPECIAL_SLOT_IDS[0]), { end: '칸을 본다' }); }, 400);
+  }
+  // 처음으로 포인트가 생기면 길잡이가 한 번 알려 줌 (사용자 결정 2026-11-21 — 분배가 있는 줄 몰랐음)
+  else if (run.unspent > 0 && !State.meta.allocTold && calm) {
     State.meta.allocTold = true;
     save();
     setTimeout(() => { if (!isTalkOpen()) playTalk(ALLOC_TALK, openAlloc, { end: '찍으러 간다' }); }, 400);

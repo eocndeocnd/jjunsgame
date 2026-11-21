@@ -2239,6 +2239,7 @@ function engage() {
     State.meta.specialOpened.push(enemy.id);
     const n = specialOpenCount();
     run.lastResult.openedSpecial = n;
+    if (n === 1) State.meta.specialTalkPending = true;   // 첫 칸(카벙클) — 지도에 돌아오면 길잡이가 알려 줌 (ui.js 의 SPECIAL_TALK, 사용자 결정 2026-11-22)
     // 3지역의 숨은 것을 처음 꺾으면 떠돌이 상인이 나타나기 시작합니다 — 이번 회차는 지금 이후의 지역 어딘가에
     if (enemy.id === MERCHANT_UNLOCK && !run.merchant) run.merchant = rollMerchant(run.zoneIndex, true);
     pushLog('rank', `━━ 특수장비 칸이 열렸다 (${n}/${SPECIAL_SLOT_MAX}) — 보석이나 유물을 끼울 수 있다 ━━`);
