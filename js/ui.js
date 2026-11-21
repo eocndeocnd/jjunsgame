@@ -528,21 +528,24 @@ function autoPlanBlock(run) {
 // 스탯 분배판 — 한 스탯이 한 줄 (사용자 결정 2026-11-21 — 화면이 길어서): 이름 · 막대(가로를 다 채우지 않음) · 오른 값 · (자동이면 −).
 // 부가설명(민첩 · 행운)은 맨 아래 한 줄로 모음.
 // 직접 — 단위 단추는 하나(누를 때마다 ×1 → ×10 → ×100 → ×1000), 스탯 줄을 누르면 그 단위만큼: 처음 누르면 막대 자리에 얼마 오르는지, 한 번 더 누르면 찍힘
-let allocUnit = 1;                 // allocSteps 의 몇 번째 단위
+let allocUnit = 1;                 // allocSteps 의 몇 번째 단위 — 마지막(ALLOC_MAX)은 MAX: 남은 것 전부 (사용자 결정 2026-11-22)
+const ALLOC_MAX = 4;
+const unitPoints = (run, i) => i >= ALLOC_MAX ? run.unspent : allocSteps(run.unspent)[i];   // 그 단위로 찍는 점 수
+const unitText = (run, i) => i >= ALLOC_MAX ? 'MAX' : `+${unitLabel(allocSteps(run.unspent)[i])}`;
 function renderAlloc(run) {
   renderPassives();
   const auto = State.meta.autoAlloc;
   $('pointCount').textContent = run.unspent > 0 ? `${fmt(run.unspent)}P 남음` : '';
   const alloc = allocatedStats();
   const spentSum = STAT_KEYS.reduce((n, k) => n + run.spent[k], 0);
-  const steps = allocSteps(run.unspent), none = run.unspent <= 0;
+  const none = run.unspent <= 0;
   const top = `
     <div class="alloc-top">
       <div class="alloc-pool ${run.unspent > 0 ? 'ready' : ''}">
         <span class="pool-k">남은 포인트</span>
         <span class="pool-v">${fmt(run.unspent)}</span>
       </div>
-      ${auto ? '' : `<button class="btn tiny alloc-unit" id="allocUnitBtn" title="누를 때마다 단위가 바뀜" ${none ? 'disabled' : ''}>+${unitLabel(steps[allocUnit])}</button>`}
+      ${auto ? '' : `<button class="btn tiny alloc-unit" id="allocUnitBtn" title="누를 때마다 단위가 바뀜 (+1 → +10 → +100 → +1000 → MAX)" ${none ? 'disabled' : ''}>${unitText(run, allocUnit)}</button>`}
       <div class="alloc-mode">
         <button class="btn tiny ${auto ? '' : 'on'}" data-mode="manual">직접</button>
         <button class="btn tiny ${auto ? 'on' : ''}" data-mode="auto">자동</button>
@@ -554,13 +557,13 @@ function renderAlloc(run) {
     $('alloc').innerHTML = top + STAT_INFO.map(s => {
       const held = spentSum > 0 ? run.spent[s.id] / spentSum * 100 : 0;
       const armed = !!allocArm && allocArm.stat === s.id;
-      const mid = armed ? allocPreviewText(s, Math.min(steps[allocUnit], run.unspent))
+      const mid = armed ? allocPreviewText(s, Math.min(unitPoints(run, allocUnit), run.unspent))
         : `<span class="alloc-bar"><span class="alloc-fill" style="width:${held}%"></span></span>`;
       return `
       <button class="alloc-row line manual ${run.spent[s.id] > 0 ? 'has' : ''} ${armed ? 'armed' : ''}" data-stat="${s.id}" title="${s.desc || s.name}" ${none ? 'disabled' : ''}>
         <span class="alloc-name">${s.name}</span>
         ${mid}
-        <span class="alloc-share">${armed ? `찍기 +${unitLabel(steps[allocUnit])}` : `+${fmt(alloc[s.id])}`}</span>
+        <span class="alloc-share">${armed ? `찍기 ${unitText(run, allocUnit)}` : `+${fmt(alloc[s.id])}`}</span>
       </button>`;
     }).join('') + legend + `
       <p class="hint alloc-note">단위를 고르고 스탯을 누르면 얼마 오르는지 보이고, 한 번 더 누르면 찍힌다 (꾹 누르면 계속) · 되돌릴 수 없다</p>`;
@@ -570,7 +573,7 @@ function renderAlloc(run) {
       b.addEventListener('contextmenu', ev => ev.preventDefault());                 // 폰에서 꾹 누를 때 메뉴가 안 뜨게
     }
     const ub = $('allocUnitBtn');
-    if (ub) ub.addEventListener('click', () => { allocUnit = (allocUnit + 1) % steps.length; renderAlloc(run); });
+    if (ub) ub.addEventListener('click', () => { allocUnit = (allocUnit + 1) % (ALLOC_MAX + 1); renderAlloc(run); });
   } else {
     // 자동 — 행을 누를 때마다 그 스탯이 한 칸 차지하고, 비율은 칸 수대로 나뉩니다. 굵은 막대 = 이미 찍힌 것, 빗금 = 비율
     const w = State.meta.weights, sum = STAT_KEYS.reduce((n, k) => n + (w[k] || 0), 0);
@@ -639,7 +642,7 @@ document.addEventListener('click', ev => {                     // 분배판 밖�
 function allocStep(stat, idx) {
   const run = State.run;
   if (!run) return 0;
-  const got = spendPoints(stat, allocSteps(run.unspent)[idx]);
+  const got = spendPoints(stat, unitPoints(run, idx));
   if (got) renderAlloc(run);
   return got;
 }
