@@ -20005,7 +20005,7 @@ function renderPassives() {
         <span class="passive-ic">${p.icon}</span>
         <span class="passive-body">
           <span class="passive-name">${p.name} <small>${lv}/${p.max}</small></span>
-          <span class="passive-eff">${lv ? passiveEffect(p, lv) : `${p.what} 그대로`}${price !== null ? ` → <b>${passiveEffect(p, lv + 1)}</b>` : ''}</span>
+          <span class="passive-eff">${passiveEffect(p, lv)}${price !== null ? ` → <b>${passiveEffect(p, lv + 1)}</b>` : ''}</span>
         </span>
         ${price === null ? '<span class="passive-max">끝까지 올렸다</span>'
           : `<button class="btn tiny ${can ? 'primary' : ''}" data-passive="${p.id}" ${can ? '' : 'disabled'}>${fmt(price)} 골드</button>`}
