@@ -4239,7 +4239,18 @@ function maybeCityWake() {
 }
 
 // 관측자를 그리는 자리 — 길잡이와 같은 눈동자 (사용자 결정: 마왕 뒤의 늦은 힌트). 다른 몬스터는 제 아이콘
-function foeIcon(foe) { return foe && foe.id === 'observer' ? guideEye('foe-eye') : foe.icon; }
+// 지도 도트가 있는 몬스터는 싸움 화면 · 마주침 · 도감에서도 같은 도트로 (사용자 결정 2026-11-21 — 더 그린 그림은 나중에). A · B 를 걸음 박자대로 번갈아
+function foeIcon(foe) {
+  if (foe && foe.id === 'observer') return guideEye('foe-eye');
+  return foe && typeof MOB_SPRITES !== 'undefined' && MOB_SPRITES[foe.id] ? mobIcon(foe.id) : foe.icon;
+}
+const mobIconSrc = {};
+function mobIcon(id) {
+  const s = MOB_SPRITES[id];
+  if (!mobIconSrc[id]) mobIconSrc[id] = [pixelSprite(s.a, s.pal), pixelSprite(s.b, s.pal)];
+  const [a, b] = mobIconSrc[id], dur = (1.25 / (s.pace || 1)).toFixed(2);
+  return `<span class="mob-icon"><i style="background-image:url('${a}')"></i><i class="mob-b" style="background-image:url('${b}');animation-duration:${dur}s"></i></span>`;
+}
 
 // 길잡이의 한마디 — 도시에 섰을 때 새로 열린 것을 한 번씩 (대사는 제안). 본 것은 meta.guideSaw 에 적어 다시 말하지 않습니다
 // 첫 동료와의 만남 (협회 로비 — 제4격 보스 뒤). 대사는 제안 (가칭 하윤 — D급)

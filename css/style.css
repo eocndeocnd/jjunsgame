@@ -2881,3 +2881,10 @@ body.meeting .enc-portrait .portrait-ic { font-size: clamp(90px, 34vw, 190px); }
 .core-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 8px; padding: 4px 8px; background: var(--paper-hi); border: 2px solid var(--line); font-size: 12px; }
 .core-row .core-worth { font-size: 10px; color: var(--text-dim); white-space: nowrap; }
 .core-block .mat-sell .btn { padding: 5px 10px; font-size: 11px; }
+
+/* 지도 도트를 쓰는 몬스터 그림 (ui.js 의 mobIcon) — 글자 크기를 따라가는 네모, A 위에 B 를 걸음 박자대로 켰다 껐다 */
+.mob-icon { position: relative; display: inline-block; width: 1.1em; height: 1.1em; vertical-align: middle; }
+.mob-icon i { position: absolute; inset: 0; background-size: 100% 100%; image-rendering: pixelated; }
+.mob-icon .mob-b { animation: mob-flip 1.25s steps(1, end) infinite; }
+@keyframes mob-flip { 0% { opacity: 0; } 50% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .mob-icon .mob-b { animation: none; opacity: 0; } }
