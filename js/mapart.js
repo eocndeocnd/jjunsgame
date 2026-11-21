@@ -2974,7 +2974,26 @@
       return g >= 0 ? roadPixel(e.bio, X, Y, g) : texture(e.gTer, e.gBio, X, Y);
     }
     if (e.nearRoad) { const g = roadField(m, X, Y, 0); if (g >= 0) return roadPixel(e.bio, X, Y, g); }
-    return texture(e.ter, e.bio, X, Y);                                   // 바닥 · 나무 밑
+    return blendGround(m, e, X, Y);                                       // 바닥 · 나무 밑
+  }
+  // 바닥 무늬 — 이웃 칸과 겉모습(땅 종류 · 격마다 다른 풀빛)이 다르면, 칸 경계에서 곧게 바뀌지 않고 들쭉날쭉 섞이게:
+  // 이 점을 큰 물결 · 작은 떨림만큼 옮긴 자리의 칸 겉모습을 씀 (사용자 규칙 2026-11-21 — 잔디와 돌길 · 2격과 3격 풀빛 사이가 직선이면 안 됨)
+  function blendGround(m, e, X, Y) {
+    const tx = Math.floor(X / P), ty = Math.floor(Y / P), lk0 = m.look[ty * m.w + tx];
+    let diff = false;
+    for (let dy = -2; dy <= 2 && !diff; dy++) for (let dx = -2; dx <= 2; dx++) {   // 두 칸 안에 다른 겉모습이 있으면 (옮기는 폭이 한 칸을 넘으므로)
+      const i = tx + dx, j = ty + dy;
+      if (i < 0 || j < 0 || i >= m.w || j >= m.h) continue;
+      const t = m.tile[j * m.w + i];
+      if ((t === FLOOR || t === TREE) && m.look[j * m.w + i] !== lk0) { diff = true; break; }
+    }
+    if (!diff) return texture(e.ter, e.bio, X, Y);
+    const wx = X + (vnoise(X * 0.035, Y * 0.035, 301) - 0.5) * 40 + (vnoise(X * 0.15, Y * 0.15, 305) - 0.5) * 10 + (hash(X, Y, 302) - 0.5) * 12;
+    const wy = Y + (vnoise(X * 0.035, Y * 0.035, 303) - 0.5) * 40 + (vnoise(X * 0.15, Y * 0.15, 306) - 0.5) * 10 + (hash(X, Y, 304) - 0.5) * 12;
+    const i = Math.max(0, Math.min(m.w - 1, Math.floor(wx / P))), j = Math.max(0, Math.min(m.h - 1, Math.floor(wy / P))), t = m.tile[j * m.w + i];
+    if (t !== FLOOR && t !== TREE) return texture(e.ter, e.bio, X, Y);
+    const lk = m.look[j * m.w + i];
+    return texture(terOf(lk & 15), lk >> 4, X, Y);
   }
 
   // 칸 [x0, x0+w) × [y0, y0+h) 를 점으로 — put(점 x, 점 y, [r, g, b], 용암인가) (덩어리 · 미리보기 도구가 씀)
