@@ -59,6 +59,53 @@ const MapView = (function () {
     return rankColors[n];
   }
 
+  // 구역 색 (그림 지도) — 칸마다 네모로 칠하면 경계가 곧은 줄로 보여서(흰 눈밭에서 특히, 사용자 지적 2026-11-21) 칸 하나를 4 × 4 로 나눠
+  // 잡음으로 흔든 자리의 구역 색을 미리 한 장에 그려 둠 — 경계가 구불구불. 지도마다 한 번
+  const TINT_S = 4, tints = new WeakMap();
+  function areaTint(m) {
+    let c = tints.get(m);
+    if (c) return c;
+    const h2 = (x, y, s) => { let n = (x * 374761393 + y * 668265263 + s * 2147483647) | 0; n = Math.imul(n ^ (n >>> 13), 1274126177); return ((n ^ (n >>> 16)) >>> 0) / 4294967296; };
+    const vn = (x, y, s) => { const xi = Math.floor(x), yi = Math.floor(y), fx = x - xi, fy = y - yi, sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy);
+      const a = h2(xi, yi, s), b = h2(xi + 1, yi, s), c0 = h2(xi, yi + 1, s), d = h2(xi + 1, yi + 1, s); return (a + (b - a) * sx) * (1 - sy) + (c0 + (d - c0) * sx) * sy; };
+    const W = m.w * TINT_S, H = m.h * TINT_S;
+    c = document.createElement('canvas'); c.width = W; c.height = H;
+    const g = c.getContext('2d'), img = g.createImageData(W, H), d = img.data, rgb = {};
+    const colOf = n => rgb[n] || (rgb[n] = (() => { const s = rankColor(n); return /^#[0-9a-f]{6}$/i.test(s) ? [1, 3, 5].map(i => parseInt(s.slice(i, i + 2), 16)) : [128, 128, 128]; })());
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const fx = (x + 0.5) / TINT_S, fy = (y + 0.5) / TINT_S;
+      const tx = Math.floor(fx + (vn(fx * 0.45, fy * 0.45, 7) - 0.5) * 1.6 + (vn(fx * 1.3, fy * 1.3, 8) - 0.5) * 0.5);
+      const ty = Math.floor(fy + (vn(fx * 0.45, fy * 0.45, 9) - 0.5) * 1.6 + (vn(fx * 1.3, fy * 1.3, 10) - 0.5) * 0.5);
+      if (tx < 0 || ty < 0 || tx >= m.w || ty >= m.h) continue;
+      const ai = m.areaAt[ty * m.w + tx], a = ai >= 0 ? m.areas[ai] : null;
+      if (!a || !a.rank) continue;
+      const [r, gg, b] = colOf(a.rank), i = (y * W + x) * 4;
+      d[i] = r; d[i + 1] = gg; d[i + 2] = b; d[i + 3] = 26;               // 0.1 — 그림 위엔 옅게
+    }
+    // 경계에서 두 칸에 걸쳐 서서히 옅어지게 — 가로 · 세로 상자 흐림(색은 진하기만큼 섞음)
+    const R = TINT_S * 2, blur = (len, step, n, at) => {
+      const buf = new Float32Array(len * 4);
+      for (let line = 0; line < n; line++) {
+        for (let q = 0; q < len; q++) { const i = at(line, q) * 4, al = d[i + 3]; buf[q * 4] = d[i] * al; buf[q * 4 + 1] = d[i + 1] * al; buf[q * 4 + 2] = d[i + 2] * al; buf[q * 4 + 3] = al; }
+        let sr = 0, sg = 0, sb = 0, sa = 0;
+        for (let q = -R; q <= R; q++) if (q >= 0 && q < len) { sr += buf[q * 4]; sg += buf[q * 4 + 1]; sb += buf[q * 4 + 2]; sa += buf[q * 4 + 3]; }
+        for (let q = 0; q < len; q++) {
+          const i = at(line, q) * 4;
+          if (sa > 0) { d[i] = sr / sa; d[i + 1] = sg / sa; d[i + 2] = sb / sa; }
+          d[i + 3] = sa / (2 * R + 1);
+          const out = q - R, inn = q + R + 1;
+          if (out >= 0) { sr -= buf[out * 4]; sg -= buf[out * 4 + 1]; sb -= buf[out * 4 + 2]; sa -= buf[out * 4 + 3]; }
+          if (inn < len) { sr += buf[inn * 4]; sg += buf[inn * 4 + 1]; sb += buf[inn * 4 + 2]; sa += buf[inn * 4 + 3]; }
+        }
+      }
+    };
+    blur(W, 1, H, (y, x) => y * W + x);
+    blur(H, 1, W, (x, y) => y * W + x);
+    g.putImageData(img, 0, 0);
+    tints.set(m, c);
+    return c;
+  }
+
   // o: {
   //   canvas, stick(.knob 를 품은 떠 있는 조이스틱 — 지도를 누른 자리에 생김, 없어도 됨), hooks(MapRules 가 게임에게 묻는 것),
   //   paused() → 지금은 세계를 멈출 때인가 (싸움 창 · 다른 창이 떠 있을 때),
@@ -223,10 +270,14 @@ const MapView = (function () {
         for (const [cx, cy] of MapArt.drawGround(ctx, m, ox, oy, T, x0, y0, x1, y1))
           flat(Math.max(x0, cx * CHK), Math.max(y0, cy * CHK), Math.min(x1, (cx + 1) * CHK), Math.min(y1, (cy + 1) * CHK));
       } else flat(x0, y0, x1, y1);
+      if (art && x1 > x0 && y1 > y0) {                                     // 구역 — 그림 위엔 옅게, 경계는 구불구불 (areaTint)
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(areaTint(m), x0 * TINT_S, y0 * TINT_S, (x1 - x0) * TINT_S, (y1 - y0) * TINT_S, ox + x0 * T, oy + y0 * T, (x1 - x0) * T, (y1 - y0) * T);
+      }
       for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
         const k = y * m.w + x, px = ox + x * T, py = oy + y * T;
-        const a = m.areaAt[k] >= 0 ? m.areas[m.areaAt[k]] : null;
-        if (a && a.rank) { ctx.globalAlpha = art ? 0.1 : 0.2; ctx.fillStyle = rankColor(a.rank); ctx.fillRect(px, py, T, T); ctx.globalAlpha = 1; }   // 구역 — 그림 위엔 더 옅게
+        const a = !art && m.areaAt[k] >= 0 ? m.areas[m.areaAt[k]] : null;
+        if (a && a.rank) { ctx.globalAlpha = 0.2; ctx.fillStyle = rankColor(a.rank); ctx.fillRect(px, py, T, T); ctx.globalAlpha = 1; }   // 구역 (그림 없는 지도)
         if (m.secret[k]) { ctx.fillStyle = 'rgba(234,214,166,0.1)'; ctx.fillRect(px, py, T, T); }   // 아주 옅게 — 눈썰미 있는 사람만
       }
       // 움직이는 것 — 물결 반짝임 · 용암 빛 · 횃불은 땅 위(나무 밑), 불씨 · 반딧불은 나무 위 (js/mapart.js)
