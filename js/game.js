@@ -473,25 +473,26 @@ function allocatedStats() {
   return out;
 }
 
-// 안 찍은 포인트를 지금 비율대로 전부 밀어 넣습니다. 돌아올 수 없습니다.
-function commitPoints() {
+// 안 찍은 포인트를 지금 비율대로 나누면 스탯마다 몇 점인지 — 찍지는 않습니다 (미리 보기 · commitPoints 가 같이 씀).
+// → { give: { 스탯: 점 }, frac: 다음번에 넘길 몫, pool } 또는 null (남은 것이 없거나 비율이 비었음)
+function planPoints() {
   const run = State.run;
+  if (!run) return null;
   const w = State.meta.weights;
   const sum = STAT_KEYS.reduce((n, k) => n + (w[k] || 0), 0);
   const pool = run.unspent;
-  if (pool <= 0 || sum <= 0) return 0;
+  if (pool <= 0 || sum <= 0) return null;
 
   // 나눠떨어지지 않은 몫(소수점)은 버리지 않고 run.allocFrac 에 남겨 다음번에 더합니다.
   // 레벨 하나에 2점뿐이라, 예전처럼 나머지를 비중이 큰 쪽에 몰면 1:1:1:1:1 이어도 늘 한 스탯에만 들어갑니다.
-  const frac = run.allocFrac = { ...emptySpent(), ...(run.allocFrac || {}) };
+  const frac = { ...emptySpent(), ...(run.allocFrac || {}) }, give = emptySpent();
   const want = {};
   let used = 0;
   for (const k of STAT_KEYS) {
     want[k] = w[k] > 0 ? pool * w[k] / sum + frac[k] : 0;
-    const give = Math.floor(want[k]);
-    run.spent[k] += give;
-    used += give;
-    frac[k] = want[k] - give;
+    give[k] = Math.floor(want[k]);
+    used += give[k];
+    frac[k] = want[k] - give[k];
   }
   // 아직 남은 점은 몫이 가장 많이 남은 쪽부터 하나씩 (그만큼 몫에서 뺍니다) — 스탯마다 한 번까지만 돕니다.
   // 레벨이 9천조(2^53)를 넘으면 +1 이 숫자를 바꾸지 못해서, 「남은 게 없을 때까지」 세면 끝나지 않습니다 (시뮬에서 Lv.3.8경에 멈췄음).
@@ -500,14 +501,34 @@ function commitPoints() {
   let left = pool - used;
   for (const k of order) {
     if (left < 1) break;
-    run.spent[k] += 1;
+    give[k] += 1;
     frac[k] -= 1;
     left -= 1;
   }
-  if (left > 0) run.spent[order[0]] += left;
+  if (left > 0) give[order[0]] += left;
+  return { give, frac, pool };
+}
+// 안 찍은 포인트를 지금 비율대로 전부 밀어 넣습니다. 돌아올 수 없습니다.
+function commitPoints() {
+  const plan = planPoints();
+  if (!plan) return 0;
+  const run = State.run;
+  for (const k of STAT_KEYS) run.spent[k] += plan.give[k];
+  run.allocFrac = plan.frac;
   run.unspent = 0;
   save();
-  return pool;
+  return plan.pool;
+}
+// 미리 보기 — 스탯마다 add[스탯] 점을 더 찍으면 내 스탯이 어떻게 되는지 (찍지는 않음). → { before, after } (heroStats 둘)
+function previewSpend(add) {
+  const run = State.run;
+  if (!run) return null;
+  const before = heroStats(), keep = run.spent;
+  run.spent = { ...keep };
+  for (const k of STAT_KEYS) run.spent[k] += add[k] || 0;
+  const after = heroStats();
+  run.spent = keep;
+  return { before, after };
 }
 
 // 직접 분배 — 한 스탯에 n 포인트를 찍습니다. 남은 것이 n 보다 적으면 남은 것을 다 찍습니다 (사용자 결정).
@@ -530,9 +551,9 @@ function allocSteps(unspent) {
 
 // 자동 분배를 켜두면 레벨이 오를 때마다 알아서 들어갑니다.
 // 레벨이 한 번에 수천씩 오르는 게임이라 매번 손으로 찍는 건 고역이니까요.
+// 켤 때 남은 포인트는 바로 찍지 않습니다 — 분배판이 먼저 보여 주고 「이대로 찍기」로 (사용자 결정 2026-11-21). 그 뒤 레벨이 오르면 알아서
 function setAutoAlloc(on) {
   State.meta.autoAlloc = !!on;
-  if (on) commitPoints();
   save();
 }
 

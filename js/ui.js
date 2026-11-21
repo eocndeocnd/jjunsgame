@@ -503,6 +503,28 @@ function renderPassives() {
   });
 }
 
+// 미리 보기 한 줄 — 「공격력 1,234 → 1,240 (+6) · 100P」. add = { 스탯: 점 }
+function allocPreviewLine(info, add) {
+  const pv = previewSpend(add);
+  if (!pv) return '';
+  const k = info.id, b = pv.before[k], a = pv.after[k];
+  return `<div class="alloc-preview">${info.name} ${fmt(b)} → <b>${fmt(a)}</b> <span class="up">(+${fmt(a - b)})</span> · ${fmt(add[k])}P</div>`;
+}
+// 자동 — 남은 포인트가 있으면 지금 비율대로 찍었을 때를 먼저 보여 주고 「이대로 찍기」 (사용자 결정 2026-11-21)
+function autoPlanBlock(run) {
+  const plan = run.unspent > 0 && planPoints();
+  if (!plan) return '';
+  const pv = previewSpend(plan.give);
+  const rows = STAT_INFO.filter(i => plan.give[i.id] > 0).map(i =>
+    `<div class="alloc-preview">${i.name} ${fmt(pv.before[i.id])} → <b>${fmt(pv.after[i.id])}</b> <span class="up">(+${fmt(pv.after[i.id] - pv.before[i.id])})</span> · ${fmt(plan.give[i.id])}P</div>`).join('');
+  return `
+      <div class="auto-plan">
+        <div class="auto-plan-head">남은 ${fmt(plan.pool)}P를 이 비율로 찍으면</div>
+        ${rows}
+        <button class="btn primary" id="autoCommitBtn">이대로 찍기</button>
+      </div>`;
+}
+
 function renderAlloc(run) {
   renderPassives();
   const auto = State.meta.autoAlloc;
@@ -522,8 +544,10 @@ function renderAlloc(run) {
     </div>`;
   if (!auto) {
     const steps = allocSteps(run.unspent), none = run.unspent <= 0;
+    if (none) allocArm = null;
     $('alloc').innerHTML = top + STAT_INFO.map(s => {
       const held = spentSum > 0 ? run.spent[s.id] / spentSum * 100 : 0;
+      const arm = allocArm && allocArm.stat === s.id ? allocArm.idx : -1;
       return `
       <div class="alloc-row manual ${run.spent[s.id] > 0 ? 'has' : ''}">
         <div class="alloc-head">
@@ -533,15 +557,16 @@ function renderAlloc(run) {
         </div>
         <div class="alloc-bar"><div class="alloc-fill" style="width:${held}%"></div></div>
         <div class="alloc-steps">
-          ${steps.map((n, i) => `<button class="btn tiny alloc-step" data-stat="${s.id}" data-step="${i}" ${none ? 'disabled' : ''}>+${unitLabel(n)}</button>`).join('')}
+          ${steps.map((n, i) => `<button class="btn tiny alloc-step ${arm === i ? 'armed' : ''}" data-stat="${s.id}" data-step="${i}" ${none ? 'disabled' : ''}>${arm === i ? '찍기 ' : ''}+${unitLabel(n)}</button>`).join('')}
         </div>
+        ${arm >= 0 ? allocPreviewLine(s, { [s.id]: Math.min(steps[arm], run.unspent) }) : ''}
         ${s.desc ? `<div class="alloc-foot"><span class="alloc-desc">${s.desc}</span></div>` : ''}
       </div>`;
     }).join('') + `
-      <p class="hint alloc-note">꾹 누르면 계속 찍힌다 · 단위보다 적게 남으면 남은 것을 다 찍는다<br>찍은 포인트는 되돌릴 수 없다</p>`;
+      <p class="hint alloc-note">누르면 얼마 오르는지 먼저 보이고, 한 번 더 누르면 찍힌다 · 「찍기」 단추는 꾹 누르면 계속 찍힌다<br>단위보다 적게 남으면 남은 것을 다 찍는다 · 찍은 포인트는 되돌릴 수 없다</p>`;
     for (const b of document.querySelectorAll('.alloc-step')) {
-      b.addEventListener('pointerdown', ev => { if (ev.button === 0 || ev.pointerType !== 'mouse') { ev.preventDefault(); allocPress(b.dataset.stat, +b.dataset.step); } });
-      b.addEventListener('click', ev => { if (ev.detail === 0) { allocStep(b.dataset.stat, +b.dataset.step); allocRelease(false); } });   // 키보드로 누른 것
+      b.addEventListener('pointerdown', ev => { if (ev.button === 0 || ev.pointerType !== 'mouse') { ev.preventDefault(); allocTap(b.dataset.stat, +b.dataset.step, true); } });
+      b.addEventListener('click', ev => { if (ev.detail === 0) allocTap(b.dataset.stat, +b.dataset.step, false); });   // 키보드로 누른 것
       b.addEventListener('contextmenu', ev => ev.preventDefault());                 // 폰에서 꾹 누를 때 메뉴가 안 뜨게
     }
   } else {
@@ -567,6 +592,7 @@ function renderAlloc(run) {
         </div>
       </button>`;
     }).join('') + `
+      ${autoPlanBlock(run)}
       ${sum === 0 ? '<p class="hint alloc-empty">눌러서 비율을 정한다 — 레벨이 오를 때마다 이 비율대로 알아서 찍힌다</p>' : '<p class="hint alloc-note">레벨이 오를 때마다 이 비율대로 알아서 찍힌다<br>찍은 포인트는 되돌릴 수 없다</p>'}
       <div class="alloc-presets">
         <button class="btn tiny" data-preset="1,1,1,1,1">균형</button>
@@ -580,13 +606,14 @@ function renderAlloc(run) {
       b.addEventListener('click', ev => {
         const minus = ev.target.closest('[data-sub]');                              // 행 안의 − 를 눌렀으면 빼기
         if (minus) addWeight(minus.dataset.sub, -1); else addWeight(b.dataset.add, 1);
-        commitPoints();                                                            // 비율이 생기면 남은 포인트도 바로
-        render();
+        render();                                                                  // 남은 포인트는 바로 안 찍음 — 아래 미리 보기의 「이대로 찍기」로
       });
     }
     for (const b of document.querySelectorAll('[data-preset]')) {
-      b.addEventListener('click', () => { setWeights(...b.dataset.preset.split(',').map(Number)); commitPoints(); render(); });
+      b.addEventListener('click', () => { setWeights(...b.dataset.preset.split(',').map(Number)); render(); });
     }
+    const go = $('autoCommitBtn');
+    if (go) go.addEventListener('click', () => { if (commitPoints()) Sound.play('tick'); render(); });
   }
   for (const b of document.querySelectorAll('[data-mode]')) {
     b.addEventListener('click', () => { setAutoAlloc(b.dataset.mode === 'auto'); render(); });
@@ -597,6 +624,25 @@ function renderAlloc(run) {
 // 누르는 동안엔 분배 칸만 다시 그립니다 (단위가 남은 포인트에 맞춰 바뀌어도 같은 자리의 단추로 이어서)
 const ALLOC_HOLD_DELAY = 350, ALLOC_HOLD_EVERY = 60;
 let allocHold = null;
+// 두 번 누르기 (사용자 결정 2026-11-21 — 경고 없이 바로 찍혀서): 처음 누른 단추는 「찍기」로 바뀌고 그 줄에 얼마 오르는지가 보임.
+// 「찍기」가 된 단추를 다시 누르면 찍히고(꾹 누르면 계속), 다른 데를 누르면 풀림. 찍은 뒤에도 그 단추는 「찍기」 그대로
+let allocArm = null;               // { stat, idx }
+function allocTap(stat, idx, press) {
+  const run = State.run;
+  if (!run || run.unspent <= 0) return;
+  if (allocArm && allocArm.stat === stat && allocArm.idx === idx) {
+    if (press) allocPress(stat, idx); else { allocStep(stat, idx); allocRelease(false); }
+    return;
+  }
+  allocArm = { stat, idx };
+  renderAlloc(run);
+}
+document.addEventListener('click', ev => {                     // 분배판 밖을 누르면 미리 보기를 거둠
+  // (단추는 누르는 순간 다시 그려져서 click 이 분배판에 떨어짐 — 분배판 안은 그대로 둠)
+  if (!allocArm || (ev.target.closest && ev.target.closest('#alloc'))) return;
+  allocArm = null;
+  if (State.run && $('alloc')) renderAlloc(State.run);
+});
 function allocStep(stat, idx) {
   const run = State.run;
   if (!run) return 0;
@@ -740,6 +786,10 @@ function renderAvatarModal() {
 //   레벨 — 왼쪽 아래, 경험치 — 맨 아래 가장자리의 줄 (싸운 뒤 굴러 올라가는 동안은 paintLevel 이 그림)
 //   지역 이름 — 다른 지역 · 다른 지도에 들어설 때만 가운데 위에 잠깐
 let bannerShown = '', bannerTimer = 0;
+const ALLOC_TALK = [
+  { who: 'guide', text: '레벨이 올랐네. 오를 때마다 <b>포인트</b>가 생겨 — 오른쪽 위 <b>스탯 분배</b>에서 생명 · 공격력 같은 데 찍어.' },
+  { who: 'guide', text: '단추를 누르면 <b>얼마 오르는지 먼저</b> 보여 줘. 한 번 더 누르면 그때 찍혀. 찍은 건 못 되돌리니까 보고 골라.' }
+];
 function renderHud(zone) {
   const run = State.run;
   $('hudEnergy').classList.toggle('low', run.energy <= 5);
@@ -759,7 +809,13 @@ function renderHud(zone) {
     ${inTown() ? `<span class="hud-chip hud-glass hud-won" title="가진 돈 — 도시에서 씁니다">${pxIcon('won')}${fmtWon(num(State.meta.won))}</span>`
       : `<button class="hud-chip hud-glass hud-gold ${PASSIVES.some(p => { const c = passivePrice(p.id); return c !== null && num(State.meta.gold) >= c; }) ? 'ready' : ''}" id="hudGoldBtn" title="가진 골드 — 회차가 끝나면 사라집니다. 누르면 패시브">골드 ${fmt(num(State.meta.gold))}</button>`}
     <button class="hud-chip hud-glass" id="rosterBtn" title="이 지역에 있는 것">도감 ${run.zoneIndex + 1} / ${knownZoneCount()}</button>
-    ${run.unspent > 0 ? '<button class="hud-chip hud-glass ready" id="jAllocBtn">스탯 분배<span class="alloc-pip on"></span></button>' : ''}`;
+    ${run.unspent > 0 ? `<button class="hud-chip hud-alloc" id="jAllocBtn">스탯 분배 <b>+${fmt(run.unspent)}P</b></button>` : ''}`;
+  // 처음으로 포인트가 생기면 길잡이가 한 번 알려 줌 (사용자 결정 2026-11-21 — 분배가 있는 줄 몰랐음). 지도 위에 아무것도 안 떠 있을 때
+  if (run.unspent > 0 && !State.meta.allocTold && !run.lastResult && !run.encounter && !run.over && !fightLocked() && !isTalkOpen()) {
+    State.meta.allocTold = true;
+    save();
+    setTimeout(() => { if (!isTalkOpen()) playTalk(ALLOC_TALK, openAlloc, { end: '찍으러 간다' }); }, 400);
+  }
   // 지역 이름 — 게임에 들어선 뒤 처음 그릴 때와, 다른 지역이나 지역이 없는 지도(문의 광장)에 들어설 때
   const name = placeName(zone), key = `${currentSlot}|${State.meta.runCount}|${name}`;
   if (key !== bannerShown && !fightLocked() && $('title').classList.contains('hidden')) {
@@ -2140,6 +2196,7 @@ function wireJourney() {
 // (예전엔 따로 창을 띄웠는데 서랍 칸 안에 바로 펼쳐 두는 쪽으로 바꿨습니다 — 사용자 결정)
 function openAlloc() {
   if (fightLocked()) return;
+  allocArm = null;
   showTab('stats');
   render();
   const frame = $('allocFrame'), el = $('alloc');

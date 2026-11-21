@@ -2020,3 +2020,18 @@ test('4격 정예 거인 넷 — 서리 거인은 눈밭 · 불의 거인은 남
   assert.ok(big.filter(([x, y]) => Math.hypot(x - stone.x, y - stone.y) < 10).length >= 3, '돌 거인 둘레에 큰 바위');
   assert.ok(cellsOf(over, at('frostgiant')).concat(cellsOf(over, fire), cellsOf(over, stone)).every(k => walk(over, [k0])[k] >= 0), '모두 걸어서 닿음');
 });
+
+test('스탯 분배 미리 보기 — 비율을 바꾸거나 자동을 켜도 바로 안 찍힘 (planPoints · previewSpend 는 찍지 않음), 「이대로 찍기」(commitPoints) 때 그 계획대로', () => {
+  const run = loadGame();
+  const r = run(`
+    currentSlot = 0; blockSaving(); State.meta = freshMeta(); startRun(); State.run.unspent = 50;
+    setWeights(1, 1, 0, 0, 0); setAutoAlloc(true);
+    const plan = planPoints(), before = { ...State.run.spent };
+    const pv = previewSpend(plan.give);
+    const untouched = [State.run.unspent, JSON.stringify(State.run.spent) === JSON.stringify(before)];
+    commitPoints();
+    return { untouched, give: plan.give, spent: State.run.spent, up: pv.after.life > pv.before.life, left: State.run.unspent };`);
+  assert.deepEqual(r.untouched, [50, true], '미리 보기 · 자동 켜기만으로는 그대로');
+  assert.deepEqual(r.spent, r.give, '찍으면 미리 본 그대로');
+  assert.ok(r.up && r.left === 0);
+});
