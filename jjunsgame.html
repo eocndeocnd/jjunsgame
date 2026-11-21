@@ -422,15 +422,7 @@ h3::before { content: '◆ '; color: var(--wax); }
 .alloc-row:active { background: var(--paper-lo); }
 .alloc-row.has { border-color: var(--line); }
 
-.alloc-head {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-  font-size: 12px;
-  margin-bottom: 6px;
-}
 .alloc-name { color: var(--text); font-weight: 700; }
-.alloc-slots { font-size: 10px; color: var(--text-faint); }
 .alloc-share {
   margin-left: auto;
   font-size: 14px;
@@ -484,8 +476,6 @@ h3::before { content: '◆ '; color: var(--wax); }
 .roster-item.unseen .r-name,
 .roster-item.unseen .r-icon { color: var(--text-faint); }
 
-.alloc-foot { display: flex; align-items: center; gap: 8px; }
-.alloc-desc { font-size: 10px; color: var(--text-faint); }
 .alloc-sub {
   display: inline-flex;
   align-items: center;
@@ -499,15 +489,7 @@ h3::before { content: '◆ '; color: var(--wax); }
   line-height: 1;
 }
 .alloc-sub:hover { border-color: var(--danger); color: var(--danger); }
-
-.alloc-empty { text-align: center; margin: 8px 0; }
-/* 직접 분배 — 행은 단추가 아니라 칸, 아래에 단위 넷 · 위의 직접 / 자동 바꾸기 */
-.alloc-row.manual { cursor: default; }
-.alloc-row.manual:hover { border-color: var(--line-soft); background: var(--paper-hi); }
-.alloc-row.manual.has, .alloc-row.manual.has:hover { border-color: var(--line); }
 .alloc-row.manual:active { background: var(--paper-hi); }
-.alloc-steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin: 2px 0 4px; }
-.alloc-step { padding: 7px 2px; white-space: nowrap; touch-action: manipulation; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
 .alloc-mode { display: flex; }
 .alloc-mode .btn { padding: 6px 10px; }
 .alloc-mode .btn + .btn { margin-left: -2px; }
@@ -2738,8 +2720,23 @@ body.facing .map-stage canvas, body.drawer-open .map-stage canvas { filter: brig
 @keyframes allocGlow { 50% { box-shadow: 0 0 0 2px #2a1a08, 0 0 0 3px #ffd98a, 0 0 14px 4px rgba(255, 217, 138, 0.75); } }
 @media (prefers-reduced-motion: reduce) { .hud-chip.hud-alloc { animation: none; } }
 /* 분배 미리 보기 — 처음 누른 단추는 「찍기」, 그 줄에 얼마 오르는지 */
-.alloc-step.armed { background: var(--wax); color: var(--cream); font-weight: 700; }
-.alloc-preview { margin-top: 4px; font-size: 12px; font-variant-numeric: tabular-nums; }
+/* 한 스탯 한 줄 — 이름 · 막대 · 값 · (−). 막대는 가운데 칸만 (사용자 결정 2026-11-21 — 화면이 길어서) */
+.alloc-row.line { display: grid; grid-template-columns: 3.4em minmax(0, 1fr) auto auto; align-items: center; gap: 8px; padding: 7px 10px; margin-bottom: 5px; }
+.alloc-row.line .alloc-bar { display: block; margin: 0; }
+.alloc-row.line .alloc-fill { display: block; }
+.alloc-row.line .alloc-name { font-size: 12px; }
+.alloc-row.line .alloc-share { margin: 0; font-size: 13px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.alloc-row.line .alloc-share small { font-size: 10px; font-weight: 400; color: var(--text-faint); }
+.alloc-row.line .alloc-sub { margin: -3px 0; }
+.alloc-row.line .alloc-sub.off { visibility: hidden; }
+.alloc-row.manual { cursor: pointer; touch-action: manipulation; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.alloc-row.manual:hover { background: #f6e9c6; }
+.alloc-row.manual:disabled { cursor: default; opacity: 0.75; }
+.alloc-row.manual.armed { border-color: var(--wax); background: #f8e4c0; }
+.alloc-row.manual.armed .alloc-share { color: var(--wax); }
+.alloc-unit { padding: 6px 10px; min-width: 4.4em; font-weight: 700; }
+.alloc-legend { margin: 2px 0 0; font-size: 10px; }
+.alloc-preview { font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .alloc-preview .up { color: #4f8a3a; }
 .auto-plan { margin: 8px 0; padding: 8px; border: 2px dashed var(--line); display: flex; flex-direction: column; gap: 2px; }
 .auto-plan-head { font-size: 12px; font-weight: 700; }
@@ -20052,12 +20049,12 @@ function renderPassives() {
   });
 }
 
-// 미리 보기 한 줄 — 「공격력 1,234 → 1,240 (+6) · 100P」. add = { 스탯: 점 }
-function allocPreviewLine(info, add) {
-  const pv = previewSpend(add);
+// 미리 보기 — 막대 자리에 「74 → 106 (+32)」. n 점을 그 스탯에
+function allocPreviewText(info, n) {
+  const pv = previewSpend({ [info.id]: n });
   if (!pv) return '';
-  const k = info.id, b = pv.before[k], a = pv.after[k];
-  return `<div class="alloc-preview">${info.name} ${fmt(b)} → <b>${fmt(a)}</b> <span class="up">(+${fmt(a - b)})</span> · ${fmt(add[k])}P</div>`;
+  const b = pv.before[info.id], a = pv.after[info.id];
+  return `<span class="alloc-preview">${fmt(b)} → <b>${fmt(a)}</b> <span class="up">(+${fmt(a - b)})</span></span>`;
 }
 // 자동 — 남은 포인트가 있으면 지금 비율대로 찍었을 때를 먼저 보여 주고 「이대로 찍기」 (사용자 결정 2026-11-21)
 function autoPlanBlock(run) {
@@ -20074,50 +20071,52 @@ function autoPlanBlock(run) {
       </div>`;
 }
 
+// 스탯 분배판 — 한 스탯이 한 줄 (사용자 결정 2026-11-21 — 화면이 길어서): 이름 · 막대(가로를 다 채우지 않음) · 오른 값 · (자동이면 −).
+// 부가설명(민첩 · 행운)은 맨 아래 한 줄로 모음.
+// 직접 — 단위 단추는 하나(누를 때마다 ×1 → ×10 → ×100 → ×1000), 스탯 줄을 누르면 그 단위만큼: 처음 누르면 막대 자리에 얼마 오르는지, 한 번 더 누르면 찍힘
+let allocUnit = 1;                 // allocSteps 의 몇 번째 단위
 function renderAlloc(run) {
   renderPassives();
   const auto = State.meta.autoAlloc;
   $('pointCount').textContent = run.unspent > 0 ? `${fmt(run.unspent)}P 남음` : '';
   const alloc = allocatedStats();
   const spentSum = STAT_KEYS.reduce((n, k) => n + run.spent[k], 0);
+  const steps = allocSteps(run.unspent), none = run.unspent <= 0;
   const top = `
     <div class="alloc-top">
       <div class="alloc-pool ${run.unspent > 0 ? 'ready' : ''}">
-        <span class="pool-k">안 찍은 포인트</span>
+        <span class="pool-k">남은 포인트</span>
         <span class="pool-v">${fmt(run.unspent)}</span>
       </div>
+      ${auto ? '' : `<button class="btn tiny alloc-unit" id="allocUnitBtn" title="누를 때마다 단위가 바뀜" ${none ? 'disabled' : ''}>+${unitLabel(steps[allocUnit])}</button>`}
       <div class="alloc-mode">
         <button class="btn tiny ${auto ? '' : 'on'}" data-mode="manual">직접</button>
         <button class="btn tiny ${auto ? 'on' : ''}" data-mode="auto">자동</button>
       </div>
     </div>`;
+  const legend = `<p class="hint alloc-legend">${STAT_INFO.filter(i => i.desc).map(i => `${i.name} — ${i.desc}`).join(' · ')}</p>`;
   if (!auto) {
-    const steps = allocSteps(run.unspent), none = run.unspent <= 0;
     if (none) allocArm = null;
     $('alloc').innerHTML = top + STAT_INFO.map(s => {
       const held = spentSum > 0 ? run.spent[s.id] / spentSum * 100 : 0;
-      const arm = allocArm && allocArm.stat === s.id ? allocArm.idx : -1;
+      const armed = !!allocArm && allocArm.stat === s.id;
+      const mid = armed ? allocPreviewText(s, Math.min(steps[allocUnit], run.unspent))
+        : `<span class="alloc-bar"><span class="alloc-fill" style="width:${held}%"></span></span>`;
       return `
-      <div class="alloc-row manual ${run.spent[s.id] > 0 ? 'has' : ''}">
-        <div class="alloc-head">
-          <span class="alloc-name">${s.name}</span>
-          <span class="alloc-slots">${run.spent[s.id] > 0 ? `${fmt(run.spent[s.id])}P` : ''}</span>
-          <span class="alloc-share">+${fmt(alloc[s.id])}</span>
-        </div>
-        <div class="alloc-bar"><div class="alloc-fill" style="width:${held}%"></div></div>
-        <div class="alloc-steps">
-          ${steps.map((n, i) => `<button class="btn tiny alloc-step ${arm === i ? 'armed' : ''}" data-stat="${s.id}" data-step="${i}" ${none ? 'disabled' : ''}>${arm === i ? '찍기 ' : ''}+${unitLabel(n)}</button>`).join('')}
-        </div>
-        ${arm >= 0 ? allocPreviewLine(s, { [s.id]: Math.min(steps[arm], run.unspent) }) : ''}
-        ${s.desc ? `<div class="alloc-foot"><span class="alloc-desc">${s.desc}</span></div>` : ''}
-      </div>`;
-    }).join('') + `
-      <p class="hint alloc-note">누르면 얼마 오르는지 먼저 보이고, 한 번 더 누르면 찍힌다 · 「찍기」 단추는 꾹 누르면 계속 찍힌다<br>단위보다 적게 남으면 남은 것을 다 찍는다 · 찍은 포인트는 되돌릴 수 없다</p>`;
-    for (const b of document.querySelectorAll('.alloc-step')) {
-      b.addEventListener('pointerdown', ev => { if (ev.button === 0 || ev.pointerType !== 'mouse') { ev.preventDefault(); allocTap(b.dataset.stat, +b.dataset.step, true); } });
-      b.addEventListener('click', ev => { if (ev.detail === 0) allocTap(b.dataset.stat, +b.dataset.step, false); });   // 키보드로 누른 것
+      <button class="alloc-row line manual ${run.spent[s.id] > 0 ? 'has' : ''} ${armed ? 'armed' : ''}" data-stat="${s.id}" title="${s.desc || s.name}" ${none ? 'disabled' : ''}>
+        <span class="alloc-name">${s.name}</span>
+        ${mid}
+        <span class="alloc-share">${armed ? `찍기 +${unitLabel(steps[allocUnit])}` : `+${fmt(alloc[s.id])}`}</span>
+      </button>`;
+    }).join('') + legend + `
+      <p class="hint alloc-note">단위를 고르고 스탯을 누르면 얼마 오르는지 보이고, 한 번 더 누르면 찍힌다 (꾹 누르면 계속) · 되돌릴 수 없다</p>`;
+    for (const b of document.querySelectorAll('.alloc-row.manual')) {
+      b.addEventListener('pointerdown', ev => { if (ev.button === 0 || ev.pointerType !== 'mouse') { ev.preventDefault(); allocTap(b.dataset.stat, allocUnit, true); } });
+      b.addEventListener('click', ev => { if (ev.detail === 0) allocTap(b.dataset.stat, allocUnit, false); });   // 키보드로 누른 것
       b.addEventListener('contextmenu', ev => ev.preventDefault());                 // 폰에서 꾹 누를 때 메뉴가 안 뜨게
     }
+    const ub = $('allocUnitBtn');
+    if (ub) ub.addEventListener('click', () => { allocUnit = (allocUnit + 1) % steps.length; renderAlloc(run); });
   } else {
     // 자동 — 행을 누를 때마다 그 스탯이 한 칸 차지하고, 비율은 칸 수대로 나뉩니다. 굵은 막대 = 이미 찍힌 것, 빗금 = 비율
     const w = State.meta.weights, sum = STAT_KEYS.reduce((n, k) => n + (w[k] || 0), 0);
@@ -20125,24 +20124,15 @@ function renderAlloc(run) {
       const n = w[s.id] || 0, share = sum > 0 ? Math.round(n / sum * 100) : 0;
       const held = spentSum > 0 ? run.spent[s.id] / spentSum * 100 : 0;
       return `
-      <button class="alloc-row ${n ? 'has' : ''}" data-add="${s.id}">
-        <div class="alloc-head">
-          <span class="alloc-name">${s.name}</span>
-          <span class="alloc-slots">${n ? `${n}칸 · ${share}%` : ''}</span>
-          <span class="alloc-share">+${fmt(alloc[s.id])}</span>
-        </div>
-        <div class="alloc-bar">
-          <div class="alloc-fill" style="width:${held}%"></div>
-          <div class="alloc-next" style="width:${share}%"></div>
-        </div>
-        <div class="alloc-foot">
-          ${s.desc ? `<span class="alloc-desc">${s.desc}</span>` : ''}
-          ${n ? `<span class="alloc-sub" data-sub="${s.id}">−</span>` : ''}
-        </div>
+      <button class="alloc-row line ${n ? 'has' : ''}" data-add="${s.id}" title="${s.desc || s.name}">
+        <span class="alloc-name">${s.name}</span>
+        <span class="alloc-bar"><span class="alloc-fill" style="width:${held}%"></span><span class="alloc-next" style="width:${share}%"></span></span>
+        <span class="alloc-share">${n ? `<small>${share}%</small> ` : ''}+${fmt(alloc[s.id])}</span>
+        <span class="alloc-sub ${n ? '' : 'off'}" data-sub="${s.id}">−</span>
       </button>`;
-    }).join('') + `
+    }).join('') + legend + `
       ${autoPlanBlock(run)}
-      ${sum === 0 ? '<p class="hint alloc-empty">눌러서 비율을 정한다 — 레벨이 오를 때마다 이 비율대로 알아서 찍힌다</p>' : '<p class="hint alloc-note">레벨이 오를 때마다 이 비율대로 알아서 찍힌다<br>찍은 포인트는 되돌릴 수 없다</p>'}
+      <p class="hint alloc-note">${sum === 0 ? '눌러서 비율을 정한다 — ' : ''}레벨이 오를 때마다 이 비율대로 알아서 찍힌다 · 되돌릴 수 없다</p>
       <div class="alloc-presets">
         <button class="btn tiny" data-preset="1,1,1,1,1">균형</button>
         <button class="btn tiny" data-preset="1,4,1,2,0">공격</button>
@@ -20154,7 +20144,7 @@ function renderAlloc(run) {
     for (const b of document.querySelectorAll('[data-add]')) {
       b.addEventListener('click', ev => {
         const minus = ev.target.closest('[data-sub]');                              // 행 안의 − 를 눌렀으면 빼기
-        if (minus) addWeight(minus.dataset.sub, -1); else addWeight(b.dataset.add, 1);
+        if (minus) { if (!minus.classList.contains('off')) addWeight(minus.dataset.sub, -1); } else addWeight(b.dataset.add, 1);
         render();                                                                  // 남은 포인트는 바로 안 찍음 — 아래 미리 보기의 「이대로 찍기」로
       });
     }
@@ -20173,17 +20163,17 @@ function renderAlloc(run) {
 // 누르는 동안엔 분배 칸만 다시 그립니다 (단위가 남은 포인트에 맞춰 바뀌어도 같은 자리의 단추로 이어서)
 const ALLOC_HOLD_DELAY = 350, ALLOC_HOLD_EVERY = 60;
 let allocHold = null;
-// 두 번 누르기 (사용자 결정 2026-11-21 — 경고 없이 바로 찍혀서): 처음 누른 단추는 「찍기」로 바뀌고 그 줄에 얼마 오르는지가 보임.
-// 「찍기」가 된 단추를 다시 누르면 찍히고(꾹 누르면 계속), 다른 데를 누르면 풀림. 찍은 뒤에도 그 단추는 「찍기」 그대로
-let allocArm = null;               // { stat, idx }
+// 두 번 누르기 (사용자 결정 2026-11-21 — 경고 없이 바로 찍혀서): 처음 누른 스탯 줄은 막대 자리에 얼마 오르는지, 오른쪽이 「찍기 +단위」.
+// 그 줄을 다시 누르면 찍히고(꾹 누르면 계속), 분배판 밖을 누르면 풀림. 찍은 뒤에도 그 줄은 「찍기」 그대로
+let allocArm = null;               // { stat } — 미리 보는 스탯 줄
 function allocTap(stat, idx, press) {
   const run = State.run;
   if (!run || run.unspent <= 0) return;
-  if (allocArm && allocArm.stat === stat && allocArm.idx === idx) {
+  if (allocArm && allocArm.stat === stat) {
     if (press) allocPress(stat, idx); else { allocStep(stat, idx); allocRelease(false); }
     return;
   }
-  allocArm = { stat, idx };
+  allocArm = { stat };
   renderAlloc(run);
 }
 document.addEventListener('click', ev => {                     // 분배판 밖을 누르면 미리 보기를 거둠
