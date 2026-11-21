@@ -531,7 +531,7 @@ const OVERWORLD_AREAS = {
 const OVERWORLD_POSTS = [
   ['트롤 킹', 12, 38, 'block'],                                      // 숲 북서쪽 바위산 앞 트롤 부락 — 뒤 골짜기의 2격 큰 상자로 가는 길을 막음 (TROLL_VILLAGE, 사용자 결정 2026-11-20)
   ['오크 장군', 43.3, 56.1],                                          // 오크 부락 한가운데 — 오크 전사 · 홉고블린 구역 사이 (ORC_VILLAGE, 사용자 결정 2026-11-20) · 숲의 마녀는 오두막 안 (BUILDINGS)
-  ['그리핀 로드', 56, 15], ['히드라', 28, 25],                         // 탑 자리 · 물에 잠긴 안뜰 (카벙클은 몰락한 왕 곁의 숨은 굴 — SECRET_ROOMS)
+  ['그리핀 로드', 56, 15], ['히드라', 28, 23],                         // 탑 자리 · 물가의 히드라 둥지 (NESTS — 2026-11-21 두 칸 북쪽으로) (카벙클은 몰락한 왕 곁의 숨은 굴 — SECRET_ROOMS)
   ['돌 거인', 98, 39], ['서리 거인', 101, 41], ['불의 거인', 98, 43], ['구름 거인', 95, 41],   // 돌 고리
   ['거인왕', 'gate'],                                                   // 쐐기돌 아치
   ['흰 말의 기사', 128, 60], ['붉은 말의 기사', 132, 60], ['검은 말의 기사', 128, 63], ['창백한 말의 기사', 132, 63],   // 네 말의 기사 광장
@@ -596,6 +596,14 @@ const TROLL_VILLAGE = {
   ]
 };
 const VILLAGES = [ORC_VILLAGE, TROLL_VILLAGE];
+// 둥지 (사용자 결정 2026-11-21) — 보스 · 정예 자리 둘레에 다진 흙바닥, 둘레에 혼자 선 바위(서로 붙지 않게 — 붙으면 언덕이 됨) 몇 개,
+// 안에 알 무더기 · 뼈 (막힌 소품 — 그림은 js/mapart.js 의 orcPix). 바닥 · 둘레는 어느 구역도 아님 (몬스터가 둥지 안에 생겨나지 않게).
+// 자리는 그 몬스터 n × n 의 가운데(cx, cy)에서 잰 칸, 바위는 타원 둘레의 각도(라디안, 0 = 동쪽 · π/2 = 남쪽)
+const NESTS = [
+  { boss: '히드라', rx: 5.4, ry: 4.4, oy: 0.5,
+    rocks: [-0.35, 0.3, 0.75, 2.55, 3.05, 3.6, 4.2, 4.75, 5.35],      // 남쪽(흙길 쪽)은 트임 — 각도 사이가 저마다 다르게
+    pieces: [{ kind: 'eggs', x: -4, y: 1 }, { kind: 'eggs', x: 3, y: 2 }, { kind: 'bones', x: -2, y: 3 }, { kind: 'bones', x: 4, y: -2 }] }
+];
 const OVERWORLD_MERCHANTS = { forest: [34, 58], ruins: [40, 26], giantpass: [70, 46], necropolis: [120, 50], abyss: [128, 37] };
 
 // 칸 모음(구멍 없는 한 덩어리) → 둘레를 시계 방향으로 도는 다각형. 꼭짓점은 칸 모서리 (칸 단위, x · y 에서 잰 값).
@@ -770,6 +778,27 @@ function overworld(data) {
     }
   }
   // 마당은 흙길 칸으로 — 그림이 흙길처럼 가장자리를 둥글게 이음 (칸 모양 계단이 아니게, 사용자 지적 2026-11-20)
+  for (const N of NESTS) {
+    const og = posts.find(p => p.name === N.boss), cx = og.x + og.w / 2, cy = og.y + og.h / 2;
+    const d = (x, y) => Math.hypot((x + 0.5 - cx) / N.rx, (y + 0.5 - (cy + N.oy)) / N.ry);
+    for (let y = Math.floor(cy - N.ry - 2); y <= cy + N.ry + 2; y++) for (let x = Math.floor(cx - N.rx - 2); x <= cx + N.rx + 2; x++) {
+      if (!inside(x, y)) continue;
+      const k = idx(x, y);
+      if (d(x, y) < 1.25) noArea[k] = 1;
+      if (d(x, y) < 1 && (tiles[k] === FLOOR || tiles[k] === ROAD)) { village[k] = 1; keep[k] = 1; }
+    }
+    for (const q of N.pieces) {
+      const x = Math.floor(cx) + q.x, y = Math.floor(cy) + q.y, k = idx(x, y);
+      if (tiles[k] !== FLOOR) throw new Error(`${N.boss} 둥지 — ${q.kind} (${x}, ${y}) 자리가 빈 땅이 아님`);
+      tiles[k] = WALL; village[k] = 2;
+      blds.push({ x, y, w: 1, h: 1, kind: q.kind, v: blds.length });
+    }
+    for (const a of N.rocks) {                                   // 둘레 바위 — 혼자 서게 (네 방향 이웃에 바위가 없을 때만)
+      const x = Math.round(cx - 0.5 + Math.cos(a) * (N.rx + 0.4)), y = Math.round(cy + N.oy - 0.5 + Math.sin(a) * (N.ry + 0.4)), k = idx(x, y);
+      if (!inside(x, y) || tiles[k] !== FLOOR || [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([ex, ey]) => tiles[idx(x + ex, y + ey)] === ROCK)) continue;
+      tiles[k] = ROCK; keep[k] = 1; village[k] = 0;
+    }
+  }
   for (let k = 0; k < w * h; k++) if (village[k] === 1 && tiles[k] === FLOOR) tiles[k] = ROAD;
   // 숨은 굴로 가는 구멍 — 그 보스 바로 뒤 (보스 몸 위로 한 칸 띄워, 보스 폭만큼)
   for (const s of SECRET_ROOMS) {

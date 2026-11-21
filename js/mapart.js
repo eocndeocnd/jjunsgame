@@ -504,7 +504,7 @@
   // 지도 속성 blds 의 소품 하나하나: stake 울타리 한 칸(굵기 · 키가 저마다 다른 뾰족한 통나무, 묶은 밧줄) · tent 가죽 천막(조각 가죽을 기운 자국 · 엇갈린 장대) ·
   // orchut 족장 움막(둥근 가죽 지붕 · 붉은 전쟁 칠 · 엄니 둘 · 짐승 해골) · totem 토템 · fire 모닥불 · rack 무기 걸이 · hide 가죽 말림대.
   // 빛은 왼쪽 위 — 오른쪽 면은 그늘, 그림자는 오른쪽 아래 땅에
-  const ORC_KINDS = { stake: 1, tent: 1, orchut: 1, totem: 1, fire: 1, rack: 1, hide: 1 };
+  const ORC_KINDS = { stake: 1, tent: 1, orchut: 1, totem: 1, fire: 1, rack: 1, hide: 1, eggs: 1, bones: 1 };   // eggs · bones — 히드라 둥지
   const ORC_C = {
     hide: ['#3a2a20', '#4c3727', '#5e4530', '#71553a', '#846646'], seam: '#22170f', stitch: '#a08a62',
     bone: ['#6e6452', '#a39780', '#d4c8ac'], paint: '#8a2a22', rope: ['#5e5038', '#8a7a5a'], line: '#1a120e'
@@ -516,8 +516,8 @@
     // 바닥 — 칸을 통째로 흙 · 풀로 칠하지 않고 둘레 흙길(마당)과 같은 모양으로 (움막 · 천막 칸의 흙이 바깥 풀 · 흙길 위에 올라앉아 보이지 않게, 사용자 지적 2026-11-21)
     const ground = () => {
       if (!curMap) return texture(B.kind === 'stake' ? GRASS : DIRT, 2, X, Y);
-      const r = roadField(curMap, X, Y, 0);
-      return r >= 0 ? roadPixel(2, X, Y, r) : texture(GRASS, 2, X, Y);
+      const bio = curMap.look[Math.floor(Y / P) * curMap.w + Math.floor(X / P)] >> 4, r = roadField(curMap, X, Y, 0);   // 그 칸의 격 풀빛
+      return r >= 0 ? roadPixel(bio, X, Y, r) : texture(GRASS, bio, X, Y);
     };
     const shadow = (c, k = 0.66) => mul(c, k);
     if (B.kind === 'stake') {
@@ -643,6 +643,38 @@
       if (dy > 2.5 && dy < 5 && dx > -4 && dx < 7.5 - (dy - 2.5)) g = shadow(g, 0.7);   // 돌 둘레 밑 그림자 — 오른쪽 아래로 붙어서
       const gl = Math.hypot(dx, dy * 1.3);
       return gl < 9 ? mix(g, c3('#ff9a40'), 0.25 * (1 - gl / 9)) : g;
+    }
+    if (B.kind === 'eggs') {
+      // 알 무더기 (히드라 둥지) — 엮은 나뭇가지 둥지에 크기가 다른 알 셋, 알마다 짙은 얼룩 (자리마다 다르게)
+      const twig = Math.hypot((px + 0.5 - 8) / 7.2, (py + 0.5 - 10.5) / 4.2);
+      for (const [ex, ey, rx, ry, s] of [[6, 7.5, 2.6, 3.2, 1], [10.5, 8, 2.3, 2.8, 2], [8.2, 10, 2.2, 2.5, 3]]) {
+        const dx = (px + 0.5 - ex) / rx, dy = (py + 0.5 - ey) / ry, r = Math.hypot(dx, dy);
+        if (r < 1) {
+          if (r > 0.82) return line;
+          if (hash(px, py, 720 + s) < 0.12) return c3('#4a5a3a');                    // 얼룩
+          return c3(dx + dy < -0.5 ? '#d8d8b8' : dx + dy < 0.4 ? '#b0b490' : '#7e8466');
+        }
+      }
+      if (twig < 1 && twig > 0.55) return c3(hash(px >> 1, py, 723) < 0.35 ? '#3e2c1e' : hash(px, py >> 1, 724) < 0.5 ? '#6a4e30' : '#8a6a42');   // 나뭇가지
+      return twig <= 0.55 ? c3('#2e2218') : ground();
+    }
+    if (B.kind === 'bones') {
+      // 뼈 (히드라 둥지) — 엇갈린 긴 뼈 둘 · 작은 해골 하나, 그림자는 오른쪽 아래로 한 점
+      const bone = (x, y) => {
+        const segs = [[[2, 12], [12, 6]], [[4, 5], [13, 11]]];
+        for (const [[ax, ay], [bx, by]] of segs) {
+          const vx = bx - ax, vy = by - ay, t = Math.max(0, Math.min(1, ((x - ax) * vx + (y - ay) * vy) / (vx * vx + vy * vy))), d = Math.hypot(x - ax - vx * t, y - ay - vy * t);
+          if (d < (t < 0.08 || t > 0.92 ? 1.6 : 0.9)) return true;
+        }
+        return Math.hypot(x - 11.5, (y - 12.5) * 1.15) < 2.4;
+      };
+      if (bone(px, py)) {
+        if (!bone(px - 1, py) || !bone(px, py - 1) || !bone(px + 1, py) || !bone(px, py + 1)) return line;
+        if (Math.hypot(px - 11.5, (py - 12.5) * 1.15) < 2.4 && py === 12 && (px === 10 || px === 12)) return c3('#1a120e');   // 해골 눈
+        return c3(px + py < 16 ? '#d8ccb0' : '#a89c80');
+      }
+      if (bone(px - 1, py - 1)) return shadow(ground(), 0.65);
+      return ground();
     }
     if (B.kind === 'rack' || B.kind === 'hide') {
       // 걸이 — 기둥 둘 · 가로대. rack 엔 거친 도끼 · 창이 기대 있고, hide 엔 펼친 가죽이 묶여 있음
@@ -1639,7 +1671,8 @@
   }
   function rockPix(m, e, X, Y) {
     if (e.lone) {                                                        // 혼자 선 바위 — 땅 + 발밑 그림자
-      const g = texture(e.ter === OBSID || e.bio === 6 ? OBSID : e.ter, e.bio, X, Y), lx = X % P, ly = Y % P;
+      const r = roadField(m, X, Y, 0), lx = X % P, ly = Y % P;
+      const g = r >= 0 ? roadPixel(e.bio, X, Y, r) : texture(e.ter === OBSID || e.bio === 6 ? OBSID : e.ter === ROCKY ? GRASS : e.ter, e.bio, X, Y);   // 곁에 흙길이 있으면 흙이 둥글게 번져 들어옴
       return ((lx + 0.5 - 8) / 8.5) ** 2 + ((ly + 0.5 - 12.5) / 3.6) ** 2 <= 1 ? mul(g, 0.62) : g;
     }
     if (e.bio !== 6 && e.ter !== OBSID && e.bio !== 7) return cliffPix(m, e, X, Y);   // 바위산 — 단차(높은 땅 + 절벽)로 (사용자 결정 2026-11-20)
@@ -2113,7 +2146,9 @@
         const open = (i, j) => { if (i < 0 || j < 0 || i >= m.w || j >= m.h) return false; const u = m.tile[j * m.w + i]; return u !== ROAD && u !== WALL; };
         return open(x - 1, y) || open(x + 1, y) || open(x, y - 1) || open(x, y + 1) ? 0.5 : 1;   // 마당 가장자리(곁에 풀)면 반, 마당 안이면 흙
       }
-      return t === ROAD ? 1 : t === WALL || t === POOL || t === ROCK || t < 0 ? self : 0;   // 바위(언덕) 쪽은 이 칸과 같은 값 — 흙길이 절벽 밑까지 닿게
+      if (t === ROCK && loneRock(m, x, y)) return 0.5;                     // 혼자 선 바위(둥지 둘레 등) — 언덕이 아니라 땅 위의 돌
+      if (t === POOL) return 0.5;                                          // 물 — 어느 쪽에서 재도 같은 값 (물가 곁 흙길이 칸 경계에서 곧게 끊기지 않게)
+      return t === ROAD ? 1 : t === WALL || t === ROCK || t < 0 ? self : 0;   // 바위(언덕) 쪽은 이 칸과 같은 값 — 흙길이 절벽 밑까지 닿게
     };
     // 둘레 칸과 1-2-8-2-1 로 섞은 값 — 길 모퉁이 · 긴 가장자리가 칸 모양대로 곧지 않게 (사용자 규칙 2026-11-20: 땅 · 풀 · 돌과 길 사이는 절대 직선이 아님)
     const vb = (x, y) => (v(x - 1, y - 1) + v(x + 1, y - 1) + v(x - 1, y + 1) + v(x + 1, y + 1) + (v(x, y - 1) + v(x - 1, y) + v(x + 1, y) + v(x, y + 1)) * 2 + v(x, y) * 8) / 20;
