@@ -513,7 +513,12 @@
   const TROLL_C = { ...ORC_C, hide: ['#2c3128', '#3a4234', '#4a5341', '#5b654f', '#6e785f'], seam: '#181b14', stitch: '#8a8a68', paint: '#6a2a3a' };
   function orcPix(B, px, py, X, Y) {
     const K = B.tone === 'troll' ? TROLL_C : ORC_C, L = HUT_C.log, line = c3(K.line), W = B.w * P, H = B.h * P, v = B.v | 0;
-    const ground = () => (B.kind === 'stake' ? texture(GRASS, 2, X, Y) : texture(DIRT, 2, X, Y));
+    // 바닥 — 칸을 통째로 흙 · 풀로 칠하지 않고 둘레 흙길(마당)과 같은 모양으로 (움막 · 천막 칸의 흙이 바깥 풀 · 흙길 위에 올라앉아 보이지 않게, 사용자 지적 2026-11-21)
+    const ground = () => {
+      if (!curMap) return texture(B.kind === 'stake' ? GRASS : DIRT, 2, X, Y);
+      const r = roadField(curMap, X, Y, 0);
+      return r >= 0 ? roadPixel(2, X, Y, r) : texture(GRASS, 2, X, Y);
+    };
     const shadow = (c, k = 0.66) => mul(c, k);
     if (B.kind === 'stake') {
       // 울타리 한 칸 — 사용자가 준 사례대로 (2026-11-20): 칸 가운데 뾰족한 기둥, 좌우 이웃(link e · w) 쪽으로 가로대 두 줄,
@@ -549,16 +554,10 @@
       };
       const f = fence(px, py);
       if (f) return f;
-      const g = stakeGround();
+      const g = ground();
       if (fence(px - 1, py - 1)) return shadow(g, 0.62);                       // 그림자 — 울타리 모양 그대로 오른쪽 아래로 한 점 · 두 점 (도트 그림자, 사용자 결정 2026-11-20)
       if (fence(px - 2, py - 1) || fence(px - 1, py - 2)) return shadow(g, 0.8);
       return g;
-      // 울타리 칸의 바닥 — 이웃 흙길(마당)과 둥글게 이어지게 (칸 경계에서 곧게 끊기지 않게)
-      function stakeGround() {
-        if (!curMap) return ground();
-        const r = roadField(curMap, X, Y, 0);
-        return r >= 0 ? roadPixel(2, X, Y, r) : ground();
-      }
     }
     if (B.kind === 'tent') {
       // 가죽 천막 — 앞에서 본 세모, 꼭대기에 엇갈린 장대, 가운데 아래 벌어진 입구
@@ -2110,7 +2109,10 @@
     const v = (x, y) => {
       if (x < 0 || y < 0 || x >= m.w || y >= m.h) return self;
       const t = m.tile[y * m.w + x];
-      if (t === WALL && (m.look[y * m.w + x] & 15) === BUILD) return 0.5;   // 울타리 · 소품 칸 — 어느 쪽에서 재도 같은 값 (칸 경계에서 흙과 풀이 곧게 끊기지 않게)
+      if (t === WALL && (m.look[y * m.w + x] & 15) === BUILD) {          // 울타리 · 소품 칸 — 어느 쪽에서 재도 같은 값 (칸 경계에서 흙과 풀이 곧게 끊기지 않게):
+        const open = (i, j) => { if (i < 0 || j < 0 || i >= m.w || j >= m.h) return false; const u = m.tile[j * m.w + i]; return u !== ROAD && u !== WALL; };
+        return open(x - 1, y) || open(x + 1, y) || open(x, y - 1) || open(x, y + 1) ? 0.5 : 1;   // 마당 가장자리(곁에 풀)면 반, 마당 안이면 흙
+      }
       return t === ROAD ? 1 : t === WALL || t === POOL || t === ROCK || t < 0 ? self : 0;   // 바위(언덕) 쪽은 이 칸과 같은 값 — 흙길이 절벽 밑까지 닿게
     };
     // 둘레 칸과 1-2-8-2-1 로 섞은 값 — 길 모퉁이 · 긴 가장자리가 칸 모양대로 곧지 않게 (사용자 규칙 2026-11-20: 땅 · 풀 · 돌과 길 사이는 절대 직선이 아님)
