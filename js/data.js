@@ -1857,7 +1857,7 @@ const ENEMY_SIZE = {
   cavespider: 2, ogre: 2, treant: 3, basilisk: 2,
   minotaur: 2, wyvern: 2, chimera: 2, manticore: 2, stonegolem: 2, irongolem: 2,
   hillgiant: 3, cyclops: 3, ettin: 3, goliath: 2, yeti: 2, roc: 3, mammoth: 3,
-  bonedragon: 3, demonlord: 2, balrog: 3,
+  bonedragon: 3, demonlord: 2, balrog: 3, succubus: 2,   // 서큐버스 — 1칸 도트로는 잘 안 읽혀서 2칸 (사용자 결정 2026-11-22)
   archdemon: 2, abysstentacle: 3, elderdragon: 3, demongeneral: 2, apocalypsebeast: 3,
   dragonknight: 2,
   yeongsa: 2, sangun: 2, hwarin: 2, yeonggu: 3,
