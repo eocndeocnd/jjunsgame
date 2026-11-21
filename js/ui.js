@@ -915,7 +915,9 @@ function rosterDrops(foe) {
   const table = dropTable(foe.id), mat = MATERIALS[foe.mat];
   if (!table.length) return '<span class="r-drops"></span>';
   // 재료를 주는 몬스터 — 재료 칸이 먼저, 그 뒤가 그 재료로 만드는 것
-  const matChip = mat ? `<span class="rd mat" title="${mat.name} — 가진 것 ${fmt(matsOf(mat.id))}개"><span class="rd-ic">${mat.icon}</span><span class="rd-k">재료 ${fmt(matsOf(mat.id))}</span></span>` : '';
+  const matChip = !mat ? '' : matKnown(mat.id)
+    ? `<span class="rd mat have" title="${mat.name} — 가진 것 ${fmt(matsOf(mat.id))}개"><span class="rd-ic">${mat.icon}</span><span class="rd-k">재료 ${fmt(matsOf(mat.id))}</span></span>`
+    : `<span class="rd mat miss" title="재료 · 아직 못 얻음"><span class="rd-ic">?</span><span class="rd-k">재료</span></span>`;   // 얻기 전엔 ?
   return `<span class="r-drops">${matChip}${table.map(it => {
     const have = owns(it.id);
     return `<span class="rd ${have ? 'have' : 'miss'}" title="${SLOT_NAMES[it.slot]} · ${have ? it.name : '아직 못 얻음'}">
@@ -1618,16 +1620,23 @@ function dropStrip(foe) {
   if (!table.length) return '';
   const left = table.filter(i => !owns(i.id)).length;
   // 글자로 설명하지 않습니다 — ???? 칸이 남아 있는지만 보면 됩니다.
-  // 재료를 주는 몬스터는 맨 앞에 재료 칸(가진 수) — 그 뒤의 칸은 그 재료로 만드는 것입니다
-  const matCell = mat ? `
-            <div class="ed-item mat">
-              <span class="ed-ic">${mat.icon}</span>
-              <span class="ed-name">${mat.name} ${fmt(matsOf(mat.id))}</span>
-            </div>` : '';
+  // 재료를 주는 몬스터는 장비를 떨어뜨리지 않으니 재료 칸 하나만 (가진 수) — 얻기 전엔 ? (사용자 결정 2026-11-21)
+  if (mat) {
+    const known = matKnown(mat.id);
+    return `
+    <div class="enc-drops">
+      <div class="ed-list" style="grid-template-columns:minmax(0, 1fr)">
+            <div class="ed-item mat ${known ? 'have' : 'miss'}">
+              <span class="ed-ic">${known ? mat.icon : '?'}</span>
+              <span class="ed-name">${known ? `${mat.name} ${fmt(matsOf(mat.id))}` : '????'}</span>
+            </div>
+      </div>
+    </div>`;
+  }
   return `
     <div class="enc-drops ${left === 0 ? 'done' : ''}">
-      <div class="ed-list" style="grid-template-columns:repeat(${table.length + (mat ? 1 : 0)}, minmax(0, 1fr))">
-        ${matCell}${table.map(it => {
+      <div class="ed-list" style="grid-template-columns:repeat(${table.length}, minmax(0, 1fr))">
+        ${table.map(it => {
           const have = owns(it.id);
           return `
             <div class="ed-item ${have ? 'have' : 'miss'}">

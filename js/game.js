@@ -267,6 +267,7 @@ const State = {
     specialOpened: [],                // 특수장비 칸을 열어준 히든 id — 이 수만큼 칸이 열려 있습니다
     chestsOpened: [],                 // 연 보물상자 id — 한 번만 열립니다 (지도의 chests 층 · data.js 의 chestLoot)
     mats: {},                         // 재료 · 핵 id → 개수 (data.js 의 MATERIALS · CORES) — 회차가 끝나도 남습니다
+    matSeen: [],                      // 한 번이라도 얻은 재료 id — 얻기 전엔 마주침 카드 · 도감에 ? (matKnown)
     runCount: 0,
     bestLevel: 1,
     bestKill: 0,                      // 지금까지 꺾은 가장 높은 레벨
@@ -652,6 +653,7 @@ function load() {
     State.meta.won = Math.max(0, Math.floor(num(data.won)));
     State.meta.mats = {};
     for (const [id, n] of Object.entries(data.mats || {})) if (matInfo(id) && num(n) > 0) State.meta.mats[id] = Math.floor(num(n));
+    State.meta.matSeen = Array.isArray(data.matSeen) ? data.matSeen.filter(id => MATERIALS[id]) : [];
     State.meta.avatars = Array.isArray(data.avatars) ? data.avatars.filter(id => canBecomeAvatar(getEnemy(id))) : [];
     State.meta.avatar = State.meta.avatars.includes(data.avatar) ? data.avatar : null;
     State.meta.seen = Array.isArray(data.seen) ? data.seen : [];
@@ -2356,10 +2358,17 @@ function rollDrops(enemyId, auraMult = 1) {
 // 몬스터는 그 격의 핵(CORES)도 남깁니다 — 일반 1 · 정예 2 · 히든 5 · 보스 5 (정예 · 보스는 골드 배수의 CORE_BIG 반), 기운을 두른 상대는 그 배수만큼 더. 일반은 CORE_NORMAL(30%) 의 확률로만 (2026-11-20)
 // → [{ mat, n }, …] — 핵이 먼저, 짐승이면 그 뒤에 제 재료
 function matsOf(id) { return Math.max(0, Math.floor(num(State.meta.mats && State.meta.mats[id]))); }
+// 이 재료를 한 번이라도 얻었나 — 얻기 전엔 이름 · 그림을 ? 로 (사용자 결정 2026-11-21). 예전 저장은 가진 것 · 그 재료로 만든 장비로 짐작
+function matKnown(id) {
+  return (State.meta.matSeen || []).includes(id) || matsOf(id) > 0 || ITEMS.some(i => i.craft && i.craft.mat === id && owns(i.id));
+}
 function rollMats(enemyId, auraMult = 1) {
   const foe = getEnemy(enemyId), out = [];
   if (!foe) return out;
-  const give = (mat, n) => { State.meta.mats[mat.id] = matsOf(mat.id) + n; out.push({ mat, n }); };
+  const give = (mat, n) => {
+    State.meta.mats[mat.id] = matsOf(mat.id) + n; out.push({ mat, n });
+    if (MATERIALS[mat.id] && !(State.meta.matSeen = State.meta.matSeen || []).includes(mat.id)) State.meta.matSeen.push(mat.id);
+  };
   const core = foe.rank && CORES[`core${foe.rank.n}`];
   const big = foe.kind === 'elite' || foe.kind === 'boss' ? RULES.CORE_BIG : 1;   // 정예 · 보스는 반 (2026-11-20)
   if (core && (foe.kind !== 'normal' || Math.random() < RULES.CORE_NORMAL)) give(core, Math.max(1, Math.round(KINDS[foe.kind].gold * big * auraMult * passiveMult('miner'))));
