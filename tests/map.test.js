@@ -454,7 +454,7 @@ test('overworld — 2~6격 몬스터가 모두 한 번씩, 구역 39개 · 숲 �
   assert.deepEqual(m.posts.map(p => p.enemy).sort(), foes.filter(e => e.kind !== 'normal' && !elsewhere.includes(e.id)).map(e => e.id).sort());
   assert.equal(areaMonsters.length, 39);
   assert.deepEqual(m.ports.map(p => [p.to, p.opensAfter, !!p.hole]),
-    [['sewer.out', undefined, true], ['castle.out', undefined, false], ['witchhut.out', undefined, false], ['hub.overworld', 'demonking', false]]);
+    [['sewer.out', undefined, true], ['castle.out', undefined, false], ['witchhut.out', undefined, false], ['giantcave.out', undefined, false], ['hub.overworld', 'demonking', false]]);
   const hole = m.ports.find(p => p.name === 'sewer');
   assert.ok(!m.solid[(hole.y - 1) * m.w + hole.x + 1] && m.solid[(hole.y + 1) * m.w + hole.x + 1], '구멍 위는 걸을 수 있는 숲, 아래는 어둠');
   assert.ok(Math.abs(m.start.x - (hole.x + 1)) <= 1 && m.start.y === hole.y - 1, '지도의 시작점은 구멍 바로 위');
@@ -845,8 +845,8 @@ test('지도 전부 — 스무 지역이 저마다 한 장에만, 296마리가 �
   const zoneMaps = {}, normals = [], posts = [];
   for (const name of allMapNames()) {
     const m = loadMap(name);
-    for (const a of m.areas) if (a.zone) (zoneMaps[a.zone] = zoneMaps[a.zone] || new Set()).add(name);
-    normals.push(...m.areas.filter(a => a.monster).map(a => a.monster));
+    for (const a of m.areas) if (a.zone && !a.extra) (zoneMaps[a.zone] = zoneMaps[a.zone] || new Set()).add(name);
+    normals.push(...m.areas.filter(a => a.monster && !a.extra).map(a => a.monster));   // extra — 동굴에 한 번 더 둔 구역
     posts.push(...m.posts.map(p => p.enemy));
   }
   for (const z of data.ZONES) assert.equal(zoneMaps[z.id] && zoneMaps[z.id].size, 1, `${z.rank}격 ${z.name}`);
@@ -2034,4 +2034,25 @@ test('스탯 분배 미리 보기 — 비율을 바꾸거나 자동을 켜도 �
   assert.deepEqual(r.untouched, [50, true], '미리 보기 · 자동 켜기만으로는 그대로');
   assert.deepEqual(r.spent, r.give, '찍으면 미리 본 그대로');
   assert.ok(r.up && r.left === 0);
+});
+
+test('거인의 동굴 — 4격 큰 상자는 4격 동쪽 깊은 곳 바위 턱의 굴 안 맨 안쪽, 설인 · 털매머드 방을 지나야 닿음 (사용자 결정 2026-11-22)', () => {
+  const over = loadMap('overworld'), cave = loadMap('giantcave');
+  assert.ok(!over.chests.some(c => c.chest === 'r4-big'), '바깥 지도엔 4격 큰 상자 없음');
+  const door = over.ports.find(p => p.name === 'giantcave');
+  assert.ok(door && door.cave && door.to === 'giantcave.out' && door.x > 255, '동쪽 깊은 곳의 굴 입구');
+  assert.ok([0, 1, 2].every(i => over.solid[(door.y - 1) * over.w + door.x + i]), '입구 위는 바위 턱(절벽)');
+  const k0 = over.start.y * over.w + over.start.x;
+  assert.ok(walk(over, [k0])[door.y * over.w + door.x + 1] >= 0, '걸어서 닿음');
+  const chest = cave.chests.find(c => c.chest === 'r4-big'), out = cave.ports.find(p => p.name === 'out');
+  assert.ok(chest && chest.big && chest.item, '굴 안의 4격 큰 상자');
+  assert.equal(out.to, 'overworld.giantcave');
+  assert.deepEqual(cave.areas.map(a => a.monster), ['yeti', 'mammoth']);
+  assert.ok(cave.areas.every(a => a.extra && a.zone === 'giantpass' && a.rank === 4));
+  // 구역을 피해서는 상자에 못 닿음 — 구역 칸을 막고 걸으면 상자 곁에 못 감
+  const blocked = new Set(); for (let k = 0; k < cave.w * cave.h; k++) if (cave.areaAt[k] >= 0) blocked.add(k);
+  const s = out.y * cave.w + out.x + 1 - cave.w, d = walk(cave, [s], blocked);
+  assert.ok(![[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => d[(chest.y + dy) * cave.w + chest.x + dx] >= 0), '몬스터 방을 지나야 닿음');
+  const d2 = walk(cave, [s]);
+  assert.ok([[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => d2[(chest.y + dy) * cave.w + chest.x + dx] >= 0), '걸어서 닿음');
 });

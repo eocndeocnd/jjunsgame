@@ -547,6 +547,11 @@ const OVERWORLD_POSTS = [
 const OVERWORLD_ENTRY = { 2: [38, 60], 3: [44, 28], 4: [66, 50], 5: [116, 48], 6: [136, 39] };   // 구멍 앞 · 옛 성문 자리 · 숲 가장자리 · 아치 너머 · 묘실 입구
 // 숨은 굴 — 보스를 꺾으면 그 보스 바로 뒤(위로 한 칸 띄워)에 구멍이 나타나고(appears), 들어가면 히든 하나만 있는 작은 굴 (사용자 결정 — 3격만).
 // 구멍은 열리기 전엔 보이지도 막히지도 않는 그냥 땅. 굴의 구멍으로 나오면 다시 그 구멍 앞
+// 동굴 (사용자 결정 2026-11-22 — 4격 큰 상자가 3격 만티코어 곁에 있어 3격에서 너무 쉽게 얻어서) — 그 격 땅 깊은 곳의 바위 턱 남쪽 절벽에 굴 입구(cave),
+// 안은 따로 뽑은 굴 지도: 구불구불한 길 · 몬스터 방 둘(rooms 의 몬스터 — 그 격의 구역) · 맨 안쪽에 그 격의 큰 상자. mouth — 입구 가운데 칸(시안 좌표)
+const CAVES = [
+  { id: 'giantcave', title: '거인의 동굴', rank: 4, zone: 'giantpass', mouth: [106.5, 58.1], rooms: ['설인', '털매머드'] }   // 털매머드 · 로크 구역 사이, 동쪽 바위 등성이
+];
 const SECRET_ROOMS = [
   { id: 'grotto', title: '숨은 굴', boss: '몰락한 왕', hidden: '카벙클', bigChest: true, from: 'castle' }   // 3격 — 성 안 왕좌 뒤, 바위턱 폭포 밑 물웅덩이의 굴 · 3격의 큰 상자도 여기
 ];
@@ -814,6 +819,19 @@ function overworld(data) {
       for (let j = y + 1; tiles[idx(x, j)] === ROCK; j++) { const k = idx(x, j); tiles[k] = FLOOR; stairs[k] = 1; keep[k] = 1; noArea[k] = 1; }
     }
     guard(sx, Math.floor(cy + Hg.ry) + 3, Hg.stairs.w, 2, 1);
+  }
+  // 동굴 입구 — 입구 위로 바위 턱(높은 땅 · 남쪽 절벽), 그 절벽 밑 가운데 세 칸이 굴로 들어가는 문 (cave — 그림은 절벽에 뚫린 굴 입구)
+  for (const C of CAVES) {
+    const mx = Math.round(L.fc(C.mouth[0])), my = Math.round(L.fc(C.mouth[1]));
+    for (let y = my - 6; y < my; y++) for (let x = mx - 5; x <= mx + 7; x++) {             // 동쪽은 등성이에 붙임
+      const edge = x === mx - 5 && (y === my - 6 || y === my - 1);   // 서쪽 귀퉁이는 깎아 둥글게
+      if (inside(x, y) && !edge) tiles[idx(x, y)] = ROCK;
+    }
+    const port = { name: C.id, label: C.title, x: mx - 1, y: my, w: 3, h: 1, to: `${C.id}.out`, cave: true };
+    ports.push(port);
+    fillRect(port, FLOOR);
+    fillRect({ x: mx - 2, y: my + 1, w: 5, h: 2 }, FLOOR);
+    guard(mx - 2, my, 5, 3, 1);
   }
   const lavaCells = new Uint8Array(w * h), bigRocks = [];
   for (const G of GIANT_GROUNDS) {
@@ -1173,7 +1191,7 @@ function overworld(data) {
   //    들어오는 곳까지 + 보스까지 − 지름길 걸음 수가 큰 칸. 가장 먼 곳이 큰 상자.
   //    둘레 여덟 칸이 다 걸을 수 있는 바닥(길목을 막지 않게) · 정해진 자리 · 문 · 상인 · 들머리에서 4칸 넘게 · 상자끼리 40칸 넘게
   const chests = [];
-  const bigElsewhere = new Set(SECRET_ROOMS.filter(s => s.bigChest).map(s => data.ENEMIES.find(e => e.name === s.hidden).rank.n));
+  const bigElsewhere = new Set([...SECRET_ROOMS.filter(s => s.bigChest).map(s => data.ENEMIES.find(e => e.name === s.hidden).rank.n), ...CAVES.map(c => c.rank)]);
   const cellsOfRect = r => { const out = []; for (let j = 0; j < (r.h || 1); j++) for (let i = 0; i < (r.w || 1); i++) out.push([r.x + i, r.y + j]); return out; };
   const busy = [...posts.flatMap(cellsOfRect), ...ports.flatMap(cellsOfRect), ...npcs.map(n => [n.x, n.y])];
   busy.push(...mids);                                         // 구역 들머리
@@ -1265,6 +1283,49 @@ function secretRoom(data, s) {
   }
   const lookLayer = Uint8Array.from(tiles, t => (t === WATER ? look(OL.WATER, 7) : look(OL.ROCKY, 7)));
   return buildTmj({ w: W, h: H, tiles, posts: [post], ports: [out], npcs: [{ name: 'start', x: cx, y: oy - 1 }], chests, look: lookLayer, props: { title: s.title } });
+}
+
+// ---------- 동굴 안 (CAVES) — 구불구불한 길 · 몬스터 방 둘 · 맨 안쪽 큰 상자 ----------
+// 아래 가운데 입구에서 위로: 길 → 첫 방(rooms[0]) → 길 → 둘째 방(rooms[1]) → 길 → 맨 안쪽 방(상자). 방마다 그 몬스터의 구역, 군데군데 고인 물
+function caveMap(data, c) {
+  const W = 40, H = 54, noise = valueNoise(23), at = (x, y) => y * W + x;
+  const tiles = new Uint8Array(W * H).fill(WALL);
+  // 뼈대 — 지나는 점 [x, y, 넓이(반지름)]: 입구 → 첫 방 → 둘째 방 → 맨 안쪽
+  const path = [[20, 51, 2.2], [15, 45, 2.4], [19, 39, 2.6], [26, 34, 6.2], [20, 26, 2.6], [12, 20, 6.4], [16, 12, 2.6], [23, 7, 4.4]];
+  const rooms = [path[3], path[5]], end = path[7];
+  for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) {
+    let best = 9;
+    for (let i = 0; i + 1 < path.length; i++) {
+      const [ax, ay, ar] = path[i], [bx, by, br] = path[i + 1], dx = bx - ax, dy = by - ay;
+      const t = Math.max(0, Math.min(1, ((x + 0.5 - ax) * dx + (y + 0.5 - ay) * dy) / (dx * dx + dy * dy)));
+      const r = ar + (br - ar) * t, d = Math.hypot(x + 0.5 - (ax + dx * t), y + 0.5 - (ay + dy * t)) / r;
+      best = Math.min(best, d);
+    }
+    if (best < 1 - (noise(x * 0.35, y * 0.35) - 0.5) * 0.5) tiles[at(x, y)] = FLOOR;
+  }
+  // 입구 — 맨 아래 줄까지 뚫고 세 칸
+  let oy = H - 2;
+  for (let y = path[0][1]; y <= oy; y++) for (let x = 19; x <= 21; x++) tiles[at(x, y)] = FLOOR;
+  // 고인 물 — 방 가장자리에 하나씩 (길을 막지 않게 방 한가운데에서 비킨 자리)
+  for (const [px, py] of [[rooms[0][0] + 4, rooms[0][1] - 3], [rooms[1][0] - 4, rooms[1][1] + 3]])
+    for (let y = py - 1; y <= py + 1; y++) for (let x = px - 1; x <= px + 1; x++)
+      if (tiles[at(x, y)] === FLOOR && Math.hypot(x - px, (y - py) * 1.2) < 1.6) tiles[at(x, y)] = WATER;
+  // 구역 — 방마다 그 몬스터 (방 둘레 네모 — 바닥 칸만 구역으로 셈)
+  const areas = c.rooms.map((name, i) => {
+    const foe = data.ENEMIES.find(e => e.name === name && e.kind === 'normal');
+    if (!foe || foe.rank.n !== c.rank) throw new Error(`동굴 ${c.id} — ${name} 이(가) ${c.rank}격 일반 몬스터가 아님`);
+    const [rx, ry, rr] = rooms[i], r = Math.ceil(rr) + 1;
+    return { name, x: Math.max(1, Math.floor(rx - r)), y: Math.max(1, Math.floor(ry - r)), w: r * 2, h: r * 2, rank: c.rank, monster: foe.id, zone: c.zone, extra: true };   // extra — 바깥 지도에도 있는 몬스터를 한 번 더 (지역 · 도감 셈에서 빠짐)
+  });
+  // 맨 안쪽 — 그 격의 큰 상자 (둘레 한 칸이 모두 바닥)
+  const item = (data.ITEMS.find(i => i.chest && i.rank.n === c.rank) || {}).id;
+  if (!item) throw new Error(`동굴 ${c.id} — ${c.rank}격 상자 전용 장비가 없음`);
+  const cx = Math.round(end[0]), cy = Math.round(end[1]) - 1;
+  for (let j = cy - 1; j <= cy + 1; j++) for (let i = cx - 1; i <= cx + 1; i++) tiles[at(i, j)] = FLOOR;
+  const chests = [{ name: '보물상자', x: cx, y: cy, chest: `r${c.rank}-big`, rank: c.rank, big: true, item }];
+  const out = { name: 'out', label: '나가기', x: 19, y: oy, w: 3, h: 1, to: `overworld.${c.id}`, hole: true };
+  const lookLayer = Uint8Array.from(tiles, t => (t === WATER ? look(OL.WATER, 7) : look(OL.ROCKY, 7)));
+  return buildTmj({ w: W, h: H, tiles, areas, ports: [out], npcs: [{ name: 'start', x: 20, y: oy - 1 }], chests, look: lookLayer, props: { title: c.title } });
 }
 
 // ---------- 건물 안 (BUILDINGS) — 왕좌의 큰 방 ----------
@@ -1931,9 +1992,10 @@ const ROOMS = { WITCH_ROOM };
 function allMaps(data) {
   const out = { sewer: sewer(data), overworld: overworld(data), hub: hub(data), oldtown: oldtown(), city: city(), dept: deptInterior(), dept2: dept2Interior(), assoc: assocInterior(), guild: guildInterior(), guild2: guild2Interior(), home: homeInterior(), arena: arenaInterior(), bm: bmInterior(), home2: home2Interior(), gatein: gateinInterior(), chief: chiefInterior(), raid: raidInterior(), w1: storeInterior(W1), w2: storeInterior(W2), w3: storeInterior(W3), sky: storeInterior(SKY) };
   for (const s of SECRET_ROOMS) out[s.id] = secretRoom(data, s);
+  for (const c of CAVES) out[c.id] = caveMap(data, c);
   for (const b of BUILDINGS) out[b.id] = b.room ? storeInterior(ROOMS[b.room], data) : buildingInterior(data, b);
   REALMS.forEach((r, i) => { out[r.name] = realm(data, r, i); });
   return out;
 }
 
-module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, looksPng, encodePng, generate, sewer, overworld, hub, oldtown, city, deptInterior, dept2Interior, assocInterior, guildInterior, guild2Interior, homeInterior, home2Interior, arenaInterior, bmInterior, gateinInterior, chiefInterior, raidInterior, storeInterior, OLDTOWN, CITY, DEPT, DEPT2, ASSOC, GUILD, GUILD2, HOME, HOME2, ARENA, BM, GATEIN, CHIEF, RAID, W1, W2, W3, SKY, CITY_BIO, secretRoom, buildingInterior, allMaps, layoutFromPlan, HUB_DOORS, REALMS, SEWER, SECRET_ROOMS, BUILDINGS, BUILD, DOORWAY, CARPET, RUIN };
+module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, looksPng, encodePng, generate, sewer, overworld, hub, oldtown, city, deptInterior, dept2Interior, assocInterior, guildInterior, guild2Interior, homeInterior, home2Interior, arenaInterior, bmInterior, gateinInterior, chiefInterior, raidInterior, storeInterior, OLDTOWN, CITY, DEPT, DEPT2, ASSOC, GUILD, GUILD2, HOME, HOME2, ARENA, BM, GATEIN, CHIEF, RAID, W1, W2, W3, SKY, CITY_BIO, secretRoom, buildingInterior, allMaps, layoutFromPlan, HUB_DOORS, REALMS, SEWER, SECRET_ROOMS, CAVES, caveMap, BUILDINGS, BUILD, DOORWAY, CARPET, RUIN };

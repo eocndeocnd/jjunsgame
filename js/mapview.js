@@ -376,6 +376,12 @@ const MapView = (function () {
         const open = w.hooks.portOpen(port);
         if (port.appears && !open) continue;              // 열리기 전엔 없는 문 (보스를 꺾으면 나타나는 숨은 굴의 구멍)
         const revealed = port.hole && port.appears;       // 보스를 꺾어 나타난 숨은 굴 구멍 — 눈에 확 띄게 (사용자 요청)
+        if (port.cave && typeof MapArt !== 'undefined') {   // 동굴 입구 — 절벽 밑동에 뚫린 굴 (도트 그림, 아래 가장자리가 문 칸 위 가장자리)
+          const spr = MapArt.caveMouth(), k = T / MapArt.P;
+          ctx.imageSmoothingEnabled = false;
+          ctx.drawImage(spr, Math.round(ox + (port.x + port.w / 2) * T - spr.width * k / 2), Math.round(oy + port.y * T - spr.height * k + T * 0.25), spr.width * k, spr.height * k);
+          continue;
+        }
         if (port.hole) {
           const cx = ox + (port.x + port.w / 2) * T, cy = oy + (port.y + port.h / 2) * T, rx = port.w * T / 2 - 1, ry = port.h * T / 2 + T * 0.1;
           const now = performance.now() / 1000, pulse = 0.5 + 0.5 * Math.sin(now * 3.2);

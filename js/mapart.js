@@ -3705,7 +3705,44 @@
   const setGuild = n => { GLV = n | 0; };
   const setMarket = b => { BMO = !!b; };
   const setHome2 = b => { APT = !!b; };
-  const api = { setGuild, setMarket, setHome2, has: m => !!(m && m.look), drawGround, drawTrees, drawOver, liveGround, liveAir, drawRift, paintTree, texture, bake, propOf, TW, TH, TREE_STYLES, TREE_PAL, cached: m => (prepared.get(m.look) || { chunks: new Map() }).chunks.size, P, CH, VOID, GRASS, DIRT, COBBLE, TILES, WATER, LAVA, OBSID, SNOW, ROCKY, PAVE, CANAL };
+  // ---------- 동굴 입구 (port.cave — tools/map-gen.js 의 CAVES) — 바위 턱 남쪽 절벽에 뚫린 굴 (사용자 결정 2026-11-22) ----------
+  // 너비 MOUTH_W · 높이 MOUTH_H 점. 아래 가장자리가 문 칸 위 가장자리(절벽 밑동)에 닿음. 안은 가운데일수록 깊은 어둠, 둘레는 돌 테(왼쪽 위가 빛),
+  // 위 안쪽에 늘어진 돌 이빨 몇 개, 바닥에 조금 밝은 흙 턱
+  const MOUTH_W = 54, MOUTH_H = 30;
+  let mouthCv = null;
+  function caveMouth() {
+    if (mouthCv) return mouthCv;
+    const cv = document.createElement('canvas');
+    cv.width = MOUTH_W; cv.height = MOUTH_H;
+    const g = cv.getContext('2d'), img = g.createImageData(MOUTH_W, MOUTH_H), d = img.data;
+    const cx = MOUTH_W / 2, rx = 17, ry = 23, RIM = 1.42;
+    const face = ['#2a221b', '#3a2f25', '#4b3d30', '#5d4c3b', '#6f5c48'];
+    const put = (x, y, c) => { const i = (y * MOUTH_W + x) * 4; d[i] = c[0]; d[i + 1] = c[1]; d[i + 2] = c[2]; d[i + 3] = 255; };
+    const D = (x, y) => { const wob = 1 + (hash(Math.round(Math.atan2(y + 0.5 - MOUTH_H, x + 0.5 - cx) * 6), 0, 401) - 0.5) * 0.1; return Math.hypot((x + 0.5 - cx) / rx, (y + 0.5 - MOUTH_H) / ry) * wob; };
+    for (let y = 0; y < MOUTH_H; y++) for (let x = 0; x < MOUTH_W; x++) {
+      const r = D(x, y);
+      if (r < 1) {                                                        // 굴 안 — 가운데 아래일수록 깊게
+        let c = mix(c3('#030202'), c3('#211710'), Math.min(1, r * r * 1.1));
+        if (hash(x, y, 402) < 0.05) c = mul(c, 1.25);
+        const tooth = (hash(x >> 1, 0, 403) * 5) | 0;                     // 위 안쪽의 돌 이빨 — 테 바로 밑에서 몇 점 늘어짐
+        if (r > 0.78 && y < MOUTH_H - ry * 0.55 && tooth >= 3 && D(x, y - tooth) >= 1) c = c3(face[2 + (x & 1)]);
+        if (y >= MOUTH_H - 2) c = c3(y === MOUTH_H - 1 ? '#3b2f24' : '#2c231b');   // 바닥 흙 턱
+        put(x, y, c);
+      } else if (r < RIM) {                                               // 돌 테 — 덩이마다 빛 받는 쪽 · 덩이 사이 틈
+        const bx = Math.floor(Math.atan2(y + 0.5 - MOUTH_H, x + 0.5 - cx) * 4.2), by = Math.floor((r - 1) / (RIM - 1) * 2);
+        const seam = Math.abs(((Math.atan2(y + 0.5 - MOUTH_H, x + 0.5 - cx) * 4.2) % 1 + 1) % 1 - 0.5) > 0.44;
+        const lit = -((x + 0.5 - cx) / rx * 0.6 + (y + 0.5 - MOUTH_H) / ry * 0.8);
+        let k = 1 + (lit > 0.5 ? 2 : lit > 0.1 ? 1 : 0) + (hash(bx, by, 404) < 0.3 ? 1 : 0);
+        let c = c3(face[Math.min(4, k)]);
+        if (seam || (r > 1.2 && r < 1.24)) c = c3('#1a1410');
+        if (r < 1.06) c = c3('#120d09');                                  // 굴 가장자리 바로 안쪽 — 어둔 테
+        put(x, y, c);
+      } else if (r < RIM + 0.07) put(x, y, c3('#1a1410'));               // 바깥 한 점 테
+    }
+    g.putImageData(img, 0, 0);
+    return (mouthCv = cv);
+  }
+  const api = { caveMouth, MOUTH_W, MOUTH_H, setGuild, setMarket, setHome2, has: m => !!(m && m.look), drawGround, drawTrees, drawOver, liveGround, liveAir, drawRift, paintTree, texture, bake, propOf, TW, TH, TREE_STYLES, TREE_PAL, cached: m => (prepared.get(m.look) || { chunks: new Map() }).chunks.size, P, CH, VOID, GRASS, DIRT, COBBLE, TILES, WATER, LAVA, OBSID, SNOW, ROCKY, PAVE, CANAL };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.MapArt = api;
 })(typeof window !== 'undefined' ? window : globalThis);

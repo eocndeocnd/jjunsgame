@@ -1766,7 +1766,7 @@ function initMap() {
   zoneMap = {};
   for (const [id, tmj] of Object.entries(MAP_FILES)) {
     maps[id] = MapRules.parseTiled(tmj, id);
-    for (const a of maps[id].areas) if (a.zone) zoneMap[a.zone] = id;
+    for (const a of maps[id].areas) if (a.zone && !a.extra) zoneMap[a.zone] = id;   // extra — 동굴(CAVES)에 한 번 더 둔 구역은 그 지역의 지도가 아님
   }
   mapView = MapView.create({
     canvas: $('mapCanvas'),
