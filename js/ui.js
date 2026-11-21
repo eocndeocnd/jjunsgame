@@ -4249,7 +4249,7 @@ function mobIcon(id) {
   const s = MOB_SPRITES[id];
   if (!mobIconSrc[id]) mobIconSrc[id] = [pixelSprite(s.a, s.pal), pixelSprite(s.b, s.pal)];
   const [a, b] = mobIconSrc[id], dur = (1.25 / (s.pace || 1)).toFixed(2);
-  return `<span class="mob-icon"><i style="background-image:url('${a}')"></i><i class="mob-b" style="background-image:url('${b}');animation-duration:${dur}s"></i></span>`;
+  return `<span class="mob-icon" style="--n:${s.a.length / 16}"><i style="background-image:url('${a}')"></i><i class="mob-b" style="background-image:url('${b}');animation-duration:${dur}s"></i></span>`;
 }
 
 // 길잡이의 한마디 — 도시에 섰을 때 새로 열린 것을 한 번씩 (대사는 제안). 본 것은 meta.guideSaw 에 적어 다시 말하지 않습니다

@@ -2826,9 +2826,9 @@ body[data-tab="more"] .hero-panel, body[data-tab="more"] .settings-panel { displ
 .map-overlay .stage .bt-line.b-foe { color: #f2b9a0; }
 .map-overlay .stage .res-head { border-bottom-color: var(--line-soft); }
 
-/* 상대의 초상 — 액자 · 종이를 걷고 발밑 그림자만. 기운을 두르면 그림만 그 색으로 빛납니다 */
+/* 상대의 초상 — 액자 · 종이 · 발밑 그림자 없이 그림만 (그림자는 사용자 결정 2026-11-21 로 뺌). 기운을 두르면 그림만 그 색으로 빛납니다 */
 .map-overlay .portrait {
-  background: radial-gradient(ellipse 36% 8% at 50% 86%, rgba(28, 16, 7, 0.5) 0 96%, transparent 100%);
+  background: none;
   box-shadow: none;
 }
 
@@ -2903,6 +2903,8 @@ body.meeting .enc-portrait .portrait-ic { font-size: clamp(90px, 34vw, 190px); }
 .mob-icon i { position: absolute; inset: 0; background-size: 100% 100%; image-rendering: pixelated; }
 .mob-icon .mob-b { animation: mob-flip 1.25s steps(1, end) infinite; }
 @keyframes mob-flip { 0% { opacity: 0; } 50% { opacity: 1; } }
+/* 마주침 · 싸움 화면에서는 몬스터 크기(칸 수 --n)대로 — 1칸이 예전의 절반, 칸이 늘면 그만큼 크게 (사용자 결정 2026-11-21). 밑동을 맞춰 아래에 붙임 */
+.portrait-ic .mob-icon { width: calc(0.55em * var(--n, 2)); height: calc(0.55em * var(--n, 2)); vertical-align: bottom; }
 @media (prefers-reduced-motion: reduce) { .mob-icon .mob-b { animation: none; opacity: 0; } }
 
 </style>
@@ -22308,7 +22310,7 @@ function mobIcon(id) {
   const s = MOB_SPRITES[id];
   if (!mobIconSrc[id]) mobIconSrc[id] = [pixelSprite(s.a, s.pal), pixelSprite(s.b, s.pal)];
   const [a, b] = mobIconSrc[id], dur = (1.25 / (s.pace || 1)).toFixed(2);
-  return `<span class="mob-icon"><i style="background-image:url('${a}')"></i><i class="mob-b" style="background-image:url('${b}');animation-duration:${dur}s"></i></span>`;
+  return `<span class="mob-icon" style="--n:${s.a.length / 16}"><i style="background-image:url('${a}')"></i><i class="mob-b" style="background-image:url('${b}');animation-duration:${dur}s"></i></span>`;
 }
 
 // 길잡이의 한마디 — 도시에 섰을 때 새로 열린 것을 한 번씩 (대사는 제안). 본 것은 meta.guideSaw 에 적어 다시 말하지 않습니다
