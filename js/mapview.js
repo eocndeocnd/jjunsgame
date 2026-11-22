@@ -382,6 +382,17 @@ const MapView = (function () {
           ctx.drawImage(spr, Math.round(ox + (port.x + port.w / 2) * T - spr.width * k / 2), Math.round(oy + port.y * T - spr.height * k + T * 0.25), spr.width * k, spr.height * k);
           continue;
         }
+        if (port.gate && typeof MapArt !== 'undefined') {     // 고딕 묘실 문 — 문 칸을 아래 가운데로 gw × gh 칸 (닫히면 해골 문짝, 열리면 계단)
+          const gw = +port.gw, gh = +port.gh, spr = MapArt.gothicGate(gw, gh, port.w, open ? (m.id === 'overworld' ? 'down' : 'up') : 'closed');
+          if (spr) { ctx.imageSmoothingEnabled = false; ctx.drawImage(spr, Math.round(ox + (port.x + port.w / 2 - gw / 2) * T), Math.round(oy + (port.y + 1 - gh) * T), gw * T, gh * T); }
+          if (open) continue;                             // 닫힌 문 — 아래에서 🔒 를 씀
+        } else if (port.stairs && typeof MapArt !== 'undefined') {   // 계단 (지하로 내려가는 · 지하에서 올라가는) — 문 칸 위가 막혀 있으면 그 칸까지 두 칸 높이의 돌 우물
+          const upWall = port.y > 0 && m.solid[(port.y - 1) * m.w + port.x], rows = upWall ? 2 : 1;
+          const dir = m.id === 'overworld' ? 'down' : upWall ? 'upN' : 'upS';
+          const spr = MapArt.stairs(port.w, rows, dir);
+          if (spr) { ctx.imageSmoothingEnabled = false; ctx.drawImage(spr, Math.round(ox + port.x * T), Math.round(oy + (port.y - rows + 1) * T), port.w * T, rows * T); }
+          if (open) continue;                             // 닫힌 계단 — 아래에서 🔒 를 씀
+        } else
         if (port.hole) {
           const cx = ox + (port.x + port.w / 2) * T, cy = oy + (port.y + port.h / 2) * T, rx = port.w * T / 2 - 1, ry = port.h * T / 2 + T * 0.1;
           const now = performance.now() / 1000, pulse = 0.5 + 0.5 * Math.sin(now * 3.2);

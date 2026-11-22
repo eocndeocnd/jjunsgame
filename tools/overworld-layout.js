@@ -53,7 +53,7 @@ const CASTLE = {
 const HUT = { box: [53.1, 40, 55, 41], gate: 54 };
 
 function build(S = 1, sizes = {}) {
-  const G = { dungeonguardian: 3, giantking: 3, lichking: 3, worldworm: 3, ...sizes };   // 틈을 막는 것의 크기 (n × n)
+  const G = { dungeonguardian: 3, giantking: 3, worldworm: 3, ...sizes };   // 틈을 막는 것의 크기 (n × n)
   const W = Math.round(CW * S), H = Math.round(CH * S);
   const ter = new Uint8Array(W * H), bio = new Uint8Array(W * H), hgt = new Uint8Array(W * H);
   const wallMask = new Uint8Array(W * H);           // 게임에서 못 지나가는 벽 (시안은 이 자리에 성벽 그림 조각을 그림)
@@ -198,9 +198,9 @@ function build(S = 1, sizes = {}) {
     if (R(x) < 104 || R(x) > 122 || ter[idx(fx, fy)] === VOID || Math.abs(x - RIDGE(y)) > 2.5) return;
     paint(fx, fy, ROCKY, 4, inGap(fy, 48, G.giantking) ? 1 : 3);
   });
-  // 5격 | 6격: 흑요석 벼랑 — 대성당 뒤 묘실 통로(불사의 왕이 막음)로만 지나감
+  // 5격 | 6격: 흑요석 벼랑 — 틈 없이 막힘. 6격은 대성당 앞 묘실 계단으로 내려가 지하(tools/map-gen.js 의 UNDERS — 불사의 왕)를 지나야 감 (사용자 결정 2026-11-22)
   each(100, 36, CW - 1, 48, (fx, fy, x, y) => {
-    if (R(x) < 100 || R(y) < 36 || R(y) > 48 || ter[idx(fx, fy)] === VOID || x < RIDGE(y) || Math.abs(y - CLIFF(x)) > 1.6 || inGap(fx, 136, G.lichking)) return;
+    if (R(x) < 100 || R(y) < 36 || R(y) > 48 || ter[idx(fx, fy)] === VOID || x < RIDGE(y) || Math.abs(y - CLIFF(x)) > 1.6) return;
     paint(fx, fy, OBSID, 6, 3);
   });
 
@@ -282,12 +282,10 @@ function build(S = 1, sizes = {}) {
   // ---- 보스가 막고 서는 자리 (n × n 의 왼쪽 위 칸) — 그만큼 넓힌 틈을 이 배율에서 막음 ----
   const rowsOf = r => { const out = []; for (let fy = 0; fy < H; fy++) if (R(toC(fy)) === r) out.push(fy); return out; };
   const rim = rowsOf(62);
-  let cliffEnd = 0; while (toC(cliffEnd) <= CLIFF(136) + 1.6) cliffEnd++;
   let bayStart = 0; while (R(toC(bayStart)) < 147) bayStart++;
   const GATES = {
     dungeonguardian: [gapN(38, G.dungeonguardian), rim[0] + Math.floor((rim.length - G.dungeonguardian) / 2)],   // 지하수로 수문 — 벽 두께를 가운데로
     giantking: [R(fc(RIDGE(48))) - (G.giantking >> 1), gapN(48, G.giantking)],                             // 쐐기돌 아치 — 등성이 한가운데
-    lichking: [gapN(136, G.lichking), cliffEnd],                                                            // 대성당 — 벼랑 바로 아래, 묘실 통로 들머리
     worldworm: [bayStart - 2, gapN(25, G.worldworm)]                                                        // 벌레의 굴 — 어둠으로 내민 곳의 첫 칸까지
   };
 
