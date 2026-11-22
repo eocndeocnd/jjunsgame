@@ -4237,7 +4237,9 @@ function mobIcon(id) {
   const s = MOB_SPRITES[id];
   if (!mobIconSrc[id]) mobIconSrc[id] = [pixelSprite(s.a, s.pal), pixelSprite(s.b, s.pal)];
   const [a, b] = mobIconSrc[id], dur = (1.25 / (s.pace || 1)).toFixed(2);
-  return `<span class="mob-icon" style="--n:${s.a.length / 16}"><i style="background-image:url('${a}')"></i><i class="mob-b" style="background-image:url('${b}');animation-duration:${dur}s"></i></span>`;
+  // 싸움 화면 크기 — 칸 수가 두 배가 될 때마다 1.6배 (사용자 결정 2026-11-22: 칸 수대로 키우니 5칸 보스가 화면을 넘음). 1칸 1 · 2칸 1.6 · 3칸 2.1 · 4칸 2.6 · 5칸 3
+  const n = s.a.length / 16, sc = Math.pow(n, Math.log2(1.6)).toFixed(3);
+  return `<span class="mob-icon" style="--n:${n};--s:${sc}"><i style="background-image:url('${a}')"></i><i class="mob-b" style="background-image:url('${b}');animation-duration:${dur}s"></i></span>`;
 }
 
 // 길잡이의 한마디 — 도시에 섰을 때 새로 열린 것을 한 번씩 (대사는 제안). 본 것은 meta.guideSaw 에 적어 다시 말하지 않습니다
