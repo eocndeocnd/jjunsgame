@@ -12701,6 +12701,9 @@ const MAP_FILES = {"arena":{"compressionlevel":-1,"type":"map","version":"1.10",
   // 남쪽 가장자리는 높이 CLIFF_H 점의 절벽 면 — 폭이 저마다 다른 세로 바위 결(왼쪽 빛 · 오른쪽 그늘 · 갈라진 틈), 위에 풀 처마와 그 밑 그늘, 늘어진 덩굴,
   // 아래로 갈수록 어둑 · 밑동은 가장 어둡게. 옆 · 뒤 가장자리는 풀 처마 테두리만. 막히는 것은 그대로 바위 칸 (그림만 층)
   const CLIFF_H = 28, EDGE_SHADE = 10;
+  // 흑요석 단차 (6격 — 사용자 결정 2026-11-22: 5격 돌길과 같은 돌 무늬라 벽인지 바닥인지 몰랐음) — 검보라 면 · 흘러내린 불줄기 · 덩굴 없음
+  const CLIFF_OBS = { face: ['#140e1a', '#1e1624', '#2a2032', '#3a2c46', '#4a3a58'], crack: '#0a0610', line: '#0c0810', vine: null };
+  const obsOf = e => e.bio === 6 || e.ter === OBSID;
   const CLIFF_C = { face: ['#2a221b', '#3a2f25', '#4b3d30', '#5d4c3b', '#6f5c48'], crack: '#1a1410', line: '#1e1813',
                     vine: ['#2f4a26', '#3e5e2e', '#4f7236'] };
   const levels = new WeakMap();                                          // 지도마다 칸의 층 (0 땅 · 1 바위 · 2 큰 바위 안쪽)
@@ -12714,7 +12717,7 @@ const MAP_FILES = {"arena":{"compressionlevel":-1,"type":"map","version":"1.10",
       L[y * m.w + x] = 1;
       let inner = true;
       for (let j = -3; j <= 3 && inner; j++) for (let i = -3; i <= 3; i++) if (!rock(x + i, y + j)) { inner = false; break; }
-      if (inner && fbm(x * 0.12, y * 0.12, 181) > 0.48) L[y * m.w + x] = 2;
+      if (inner && fbm(x * 0.12, y * 0.12, 181) > 0.48 && (m.look[y * m.w + x] >> 4) !== 6 && (m.look[y * m.w + x] & 15) !== OBSID) L[y * m.w + x] = 2;   // 흑요석은 한 층만 (안쪽 작은 윗층이 구멍처럼 보였음)
     }
     // 걸어 올라가는 높은 땅 · 바위 계단 (지도 속성 high · stairs — tools/map-gen.js 의 HIGH_GROUNDS) — 한 층 높은 땅으로
     const HS = highOf(m);
@@ -12767,9 +12770,16 @@ const MAP_FILES = {"arena":{"compressionlevel":-1,"type":"map","version":"1.10",
       - 0.47 - (vnoise(X * 0.1, Y * 0.1, 170 + k) - 0.5) * 0.2 - (vnoise(X * 0.31, Y * 0.31, 175 + k) - 0.5) * 0.08;   // 가장자리가 곧은 줄이 되지 않게 — 큰 · 작은 물결 두 겹
   }
   function cliffPix(m, e, X, Y) {
-    const L = levelOf(m), K = CLIFF_C;
+    const obs = obsOf(e), L = levelOf(m), K = obs ? CLIFF_OBS : CLIFF_C;
     const tx = Math.floor(X / P), ty = Math.floor(Y / P);
     const ground = k => {                                                // 층 k 의 윗면 (k 0 은 그 칸의 땅)
+      if (obs && k === 0) {                                              // 흑요석 칸 바깥 — 곁의 땅 (5격 돌길 · 땅)
+        for (const [dx, dy] of [[0, 1], [-1, 0], [1, 0], [0, -1], [0, 2], [-1, 1], [1, 1]]) {
+          const x = tx + dx, y = ty + dy, u = x >= 0 && y >= 0 && x < m.w && y < m.h ? m.tile[y * m.w + x] : -1;
+          if (u === FLOOR || u === ROAD || u === TREE) { const lk = m.look[y * m.w + x]; return u === ROAD ? roadPixel(lk >> 4, X, Y, 1) : texture(terOf(lk & 15), lk >> 4, X, Y); }
+        }
+      }
+      if (obs) return texture(OBSID, 6, X, Y);
       const top = e.bio === 2 || e.bio === 3 || e.bio === 9 || k === 0 ? texture(k === 0 ? (e.ter === ROCKY ? GRASS : e.ter) : GRASS, e.bio, X, Y) : texture(e.ter, e.bio, X, Y);
       return k === 0 ? top : mix(top, c3('#d8e8a0'), k === 2 ? 0.14 : 0.07);   // 높은 층일수록 볕을 더 받아 밝게
     };
@@ -12802,6 +12812,11 @@ const MAP_FILES = {"arena":{"compressionlevel":-1,"type":"map","version":"1.10",
         }
         if (s < 5) c = mul(c, 0.55 + (s - 2) * 0.12);                       // 처마 밑 그늘
         if (s > CLIFF_H - 5) c = mul(c, 1 - (s - (CLIFF_H - 5)) * 0.07);    // 밑동 — 어둑
+        if (obs) {                                                         // 흑요석 면 — 드문드문 흘러내린 불줄기 (굵기 · 길이가 다름)
+          const lr = Math.abs(vnoise(X * 0.035, Y * 0.06, 31) - 0.5), on = vnoise(X * 0.02, 0.5, 33) > 0.62;   // 몇 군데에만
+          if (on && lr < 0.006) c = c3('#f07a2a'); else if (on && lr < 0.014) c = c3('#a8361a');
+          return c;
+        }
         const vine = hash(Math.floor(X / 3), k, 187), vlen = 3 + Math.floor(hash(Math.floor(X / 3), k, 188) * 9);
         if (vine < 0.22 && s < 2 + vlen && hash(X, Y >> 1, 189) < 0.8) c = c3(K.vine[s < 4 ? 2 : vine < 0.1 ? 0 : 1]);   // 늘어진 덩굴
         return c;
@@ -12818,7 +12833,8 @@ const MAP_FILES = {"arena":{"compressionlevel":-1,"type":"map","version":"1.10",
         for (let d = 1; d <= EDGE_SHADE && dm > EDGE_SHADE; d++) for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) if (levelField(m, L, k, X + dx * d, Y + dy * d) < 0) { dm = d; break; }
         // 가장자리 — 어둡게 칠하지 않고 잔디의 가장 어두운 색들(풀잎 밑동 빛)을 가장자리로 갈수록 더 많이 섞어 씀 (사용자 결정 2026-11-20).
         // 풀잎처럼 세로로 두 점씩 이어 찍고, 가장자리 바로 곁은 가장 어두운 색이 거의 다
-        if (dm <= EDGE_SHADE) {
+        if (dm <= EDGE_SHADE && obs) c = mul(c, dm <= 2 ? 0.5 : 0.62 + 0.38 * (dm - 2) / (EDGE_SHADE - 2));   // 흑요석 — 가장자리로 갈수록 어둑
+        else if (dm <= EDGE_SHADE) {
           const p = 1 - (dm - 1) / (EDGE_SHADE - 1), pal = (C.grass[e.bio] || C.grass[0]).map(h => k ? mix(c3(h), c3('#d8e8a0'), k === 2 ? 0.14 : 0.07) : c3(h));
           const r = hash(X, Y >> 1, 199) * 0.8 + hash(X, Y, 200) * 0.2;           // 위아래 두 점이 같은 값 — 풀잎 결
           if (dm <= 2 || r < p * 1.1 - 0.1) c = dm <= 4 && r < 0.75 ? mul(pal[3], 0.78) : pal[3];   // 가장자리 곁은 풀잎 밑동의 가장 어두운 빛
@@ -12842,7 +12858,7 @@ const MAP_FILES = {"arena":{"compressionlevel":-1,"type":"map","version":"1.10",
       const g = r >= 0 ? roadPixel(e.bio, X, Y, r) : texture(gt, e.bio, X, Y);   // 곁에 흙길이 있으면 흙이 둥글게 번져 들어옴
       return ((lx + 0.5 - 8) / (8.5 * sx)) ** 2 + ((ly + 0.5 - 12.5) / (3.6 * (br ? 1.6 : 1))) ** 2 <= 1 ? mul(g, 0.62) : g;
     }
-    if (e.bio !== 6 && e.ter !== OBSID && e.bio !== 7) return cliffPix(m, e, X, Y);   // 바위산 — 단차(높은 땅 + 절벽)로 (사용자 결정 2026-11-20)
+    if (e.bio !== 7) return cliffPix(m, e, X, Y);   // 바위산 · 흑요석 — 단차(높은 땅 + 절벽)로 (사용자 결정 2026-11-20 · 흑요석은 2026-11-22)
     const th = 0.47 + (vnoise(X * 0.1, Y * 0.1, 170) - 0.5) * 0.22, f = rockField(m, X, Y) - th;
     if (f < 0) {                                                         // 테두리 밖 — 그 칸의 땅, 바위 바로 아래는 그림자
       const g = texture(e.ter === OBSID || e.bio === 6 ? OBSID : e.ter, e.bio, X, Y);
@@ -13279,7 +13295,7 @@ const MAP_FILES = {"arena":{"compressionlevel":-1,"type":"map","version":"1.10",
         const i = tx + dx, j = ty + dy;
         if (at(i, j) !== ROCK) continue;
         const lk = m.look[j * m.w + i], b = lk >> 4;
-        if (b !== 6 && b !== 7 && b !== 8 && b !== CITY && (lk & 15) !== OBSID && !loneRock(m, i, j)) { e.nearCliff = true; break; }
+        if (b !== 7 && b !== 8 && b !== CITY && !loneRock(m, i, j)) { e.nearCliff = true; break; }   // 흑요석(6격)도 단차 (2026-11-22)
       }
     }
     if (t === FLOOR || t === TREE) {                                     // 곁에 길이 있으면 길이 이 칸으로 둥글게 번져 들어옴
