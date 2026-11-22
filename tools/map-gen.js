@@ -623,7 +623,7 @@ const NESTS = [
 ];
 // 무너진 성당 터 (사용자 결정 2026-11-22) — 지붕 없이 허물어진 작은 성당. 건물(문 · 안 지도)이 아니라 바깥 지도에 그냥 걸어 들어가는 폐허.
 // plan 은 위가 북쪽인 칸 그림: K 그 몬스터가 선 칸 · . 금 간 판석 바닥(걸을 수 있음) · , 그냥 땅 · W 무너진 돌벽 · N 깨진 둥근 창이 난 벽(두 칸) ·
-// A 제단(두 칸) · p 부러진 기둥 밑동 · r 돌무더기. 벽 · 기둥 · 제단 · 돌무더기는 막힌 소품(그림은 js/mapart.js 의 chapelPix — 지도 속성 blds),
+// A 제단(두 칸) · p 부러진 기둥 밑동 · r 돌무더기 · k 작은 해골들이 쌓인 무더기(이어진 k 네모 하나). 벽 · 기둥 · 제단 · 돌무더기는 막힌 소품(그림은 js/mapart.js 의 chapelPix — 지도 속성 blds),
 // 바닥 · 소품 · 둘레 두 칸은 어느 구역도 아님 (몬스터가 성당 안 · 벽에 바짝 붙어 생겨나지 않게)
 const CHAPELS = [
   { boss: '데스 나이트', plan: [                                       // 남쪽 길의 끝 — 길이 서쪽 벽의 무너진 입구로 들어옴 (사용자 결정 2026-11-22)
@@ -637,6 +637,22 @@ const CHAPELS = [
     '.......r...r',     // 동쪽 벽이 무너져 돌무더기로
     'W.p........W',
     'WWWr.WWWrWW,'      // 남쪽 벽 — 작은 틈 하나 · 동쪽 끝은 무너져 없음
+  ] },
+  { boss: '리치', plan: [                                               // 5격 북동쪽 — 데스 나이트의 작은 성당 터와 달리 십자 모양의 큰 성당 터, 제단방엔 작은 해골 무더기만 (사용자 결정 2026-11-22 — 거대한 해골은 너무 컸음)
+    ',,,,WWWNNWWW,,,,',   // 북쪽 끝 좁은 제단방(앱스) — 깨진 둥근 창
+    ',,,,W..kk..W,,,,',   // 작은 해골들이 쌓인 무더기 (k — 2 × 2, 깨진 창 밑)
+    ',,,,W..kk..W,,,,',
+    'rWWWW......WWWWr',   // 좌우로 넓은 날개(트랜셉트)의 북쪽 벽
+    'W..p...KK...p..W',   // 리치 — 십자의 가운데, 해골 앞
+    '.......KK.......',   // 날개 양 끝은 무너져 트임
+    'W..............W',
+    'rWWW.p....p.WWWr',   // 날개 남쪽 벽 · 아래로 긴 회랑(네이브)
+    ',,,W........W,,,',
+    ',,,W.p....p.r,,,',   // 회랑 기둥 밑동 · 동쪽 벽은 무너져 돌무더기
+    ',,,.........W,,,',   // 서쪽 벽이 무너진 틈
+    ',,,W.r....p.W,,,',   // 쓰러진 기둥
+    ',,,W....r...W,,,',
+    ',,,WWr....rWW,,,'    // 남쪽 정면 — 가운데가 트인 입구
   ] }
 ];
 // 높은 땅 (사용자 결정 2026-11-21) — 걸어 올라갈 수 있는 언덕: 그 몬스터 자리를 가운데로 둥근 윗면(걸을 수 있음 · 그림은 한 층 높게),
@@ -938,11 +954,21 @@ function overworld(data) {
     const og = posts.find(p => p.name === C.boss), kr = C.plan.findIndex(r => r.includes('K')), kc = C.plan[kr].indexOf('K');
     const ox = og.x - kc, oy = og.y - kr, H = C.plan.length, W = C.plan[0].length;
     const ch = (c, r) => (r >= 0 && r < H && c >= 0 && c < W ? C.plan[r][c] : ',');
-    const solidAt = (c, r) => 'WNApr'.includes(ch(c, r)), wallAt = (c, r) => 'WN'.includes(ch(c, r));
-    const inner = (c, r) => '.KApr'.includes(ch(c, r)) && c > 0 && r > 0 && c < W - 1 && r < H - 1;   // 성당 안 (바닥 · 안쪽 소품)
+    const solidAt = (c, r) => 'WNAprk'.includes(ch(c, r)), wallAt = (c, r) => 'WN'.includes(ch(c, r));
+    const inner = (c, r) => '.KAprk'.includes(ch(c, r)) && c > 0 && r > 0 && c < W - 1 && r < H - 1;   // 성당 안 (바닥 · 안쪽 소품)
     for (let r = 0; r < H; r++) for (let c = 0; c < W; c++) {
       const t = ch(c, r), x = ox + c, y = oy + r, k = idx(x, y);
-      if (t === ',' || (t === 'A' && ch(c - 1, r) === 'A')) continue;   // 제단 오른쪽 칸 — 왼쪽 칸이 두 칸을 한꺼번에
+      if (t === ',' || (t === 'A' && ch(c - 1, r) === 'A') || (t === 'k' && (ch(c - 1, r) === 'k' || ch(c, r - 1) === 'k'))) continue;   // 제단 · 해골 무더기의 나머지 칸 — 왼쪽 위 칸이 한꺼번에
+      if (t === 'k') {                                                    // 해골 무더기 (k 네모 — 작은 해골들이 쌓임, 그림은 지하 신전의 skpile · 바닥은 이 성당 터의 판석)
+        let sw = 0, sh = 0; while (ch(c + sw, r) === 'k') sw++; while (ch(c, r + sh) === 'k') sh++;
+        for (let j = 0; j < sh; j++) for (let i = 0; i < sw; i++) {
+          const q = idx(x + i, y + j);
+          if (tiles[q] !== FLOOR && tiles[q] !== ROAD) throw new Error(`${C.boss} 성당 터 — 해골 무더기 (${x + i}, ${y + j}) 자리가 빈 땅이 아님`);
+          tiles[q] = WALL; village[q] = 2; noArea[q] = 1; keep[q] = 1;
+        }
+        blds.push({ x, y, w: sw, h: sh, kind: 'skpile', fb: L.bio[k], v: blds.length });
+        continue;
+      }
       if (!inside(x, y) || (tiles[k] !== FLOOR && tiles[k] !== ROAD) || (t === 'A' && tiles[k + 1] !== FLOOR && tiles[k + 1] !== ROAD)) throw new Error(`${C.boss} 성당 터 — (${x}, ${y}) 자리가 빈 땅이 아님`);
       noArea[k] = 1; keep[k] = 1;
       if (t === 'A') { noArea[k + 1] = 1; keep[k + 1] = 1; }

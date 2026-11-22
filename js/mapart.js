@@ -794,7 +794,7 @@
   // 둘레 바닥은 신전 판석. 빛은 왼쪽 위, 그림자는 오른쪽 아래
   const CR_C = { bone: ['#3e3a3c', '#5c5652', '#7a7268', '#9a9080', '#b8ad98'], hole: '#0a080e', glow: '#3a6ad8', iron: ['#1e1c26', '#34323e', '#4c4a58'], stone: ['#26232c', '#36323e', '#46414e'], line: '#100c14' };
   function cryptPix(B, px, py, X, Y) {
-    const K = CR_C, v = B.v | 0, W = B.w * P, H = B.h * P, line = c3(K.line), floor = () => texture(TILES, 6, X, Y);
+    const K = CR_C, v = B.v | 0, W = B.w * P, H = B.h * P, line = c3(K.line), floor = () => texture(TILES, B.fb || 11, X, Y);   // fb — 둘레 판석의 격 번호 (지하 신전 11 · 성당 터 5)
     if (B.kind === 'btorch') {
       // 받침 — 아래가 넓은 돌 기둥, 위에 쇠 그릇(불꽃은 liveAir). 그림자는 오른쪽 아래
       const sx = px - 7.5;
@@ -809,58 +809,72 @@
       return floor();
     }
     if (B.kind === 'skpile') {
-      // 해골 무더기 — 작은 해골(눈구멍 둘) · 뼈 몇 개, 크기 · 자리가 저마다 다름 (뒤 · 위의 것부터, 앞의 것이 덮음)
-      const n = Math.max(3, Math.round(W * H / 60));
-      const parts = [];
-      for (let i = 0; i < n; i++) parts.push({ cx: 2.5 + hash(v, i, 760) * (W - 5), cy: 4 + hash(v, i, 761) * (H - 7), r: 2.2 + hash(v, i, 762) * 1.4, bone: hash(v, i, 763) < 0.3 });
-      parts.sort((a, b) => a.cy - b.cy);
-      for (let i = parts.length - 1; i >= 0; i--) {
-        const q = parts[i], dx = px - q.cx, dy = py - q.cy;
-        if (q.bone) {
-          const a = hash(v, i, 764) * Math.PI, ux = Math.cos(a), uy = Math.sin(a) * 0.5, t = dx * ux + dy * uy, d = Math.abs(-dx * uy + dy * ux);
-          if (Math.abs(t) < 4 && d < (Math.abs(t) > 3 ? 1.2 : 0.7)) return d > 0.5 && Math.abs(t) <= 3 ? line : c3(K.bone[t < 0 ? 4 : 3]);
-          continue;
+      // 해골 무더기 — 작은 해골들이 피라미드처럼 쌓임 (아래 줄이 넓고 위로 갈수록 적게, 위의 해골이 아래 해골 위에 얹혀 앞을 덮음).
+      // 줄마다 자리 · 간격이 조금씩 흔들리고(줄 맞춘 무늬가 아니게) 뒤 · 아래는 어둑, 사이사이 삐져나온 뼈 몇 개
+      if (!B.pile) {
+        const parts = [], r0 = W >= 32 ? 3.8 : 3.1, gap = r0 * 1.85;
+        for (let layer = 0; ; layer++) {
+          const y = H - r0 - 0.5 - layer * r0 * 1.4, n = Math.floor((W - 2) / gap) - layer;
+          if (n <= 0 || y < r0 + 0.5) break;
+          const span = (n - 1) * gap, x0 = (W - span) / 2;
+          for (let i = 0; i < n; i++) parts.push({ cx: x0 + i * gap + (hash(v, layer * 16 + i, 760) - 0.5) * 1.4, cy: y + (hash(v, layer * 16 + i, 761) - 0.5) * 1.0, r: r0 - 0.25 + hash(v, layer * 16 + i, 762) * 0.5, layer });
         }
-        const rr = Math.hypot(dx, dy * 1.15);
-        if (rr < q.r) {
-          if (rr > q.r - 0.8) return line;
-          if (dy > -0.6 && dy < 0.8 && Math.abs(Math.abs(dx) - q.r * 0.4) < 0.7) return c3(K.hole);           // 눈구멍
-          return c3(K.bone[dx + dy < -1 ? 4 : dx + dy < 1 ? 3 : 2]);
-        }
+        const bones = [];
+        for (let i = 0; i < Math.max(1, Math.round(W / 14)); i++) bones.push({ cx: 3 + hash(v, i, 763) * (W - 6), cy: H - 2 - hash(v, i, 764) * 4, a: (hash(v, i, 765) - 0.5) * 0.9 });
+        B.pile = { parts, bones };
       }
-      const sh = parts.some(q => !q.bone && Math.hypot(px - 1 - q.cx, (py - 1 - q.cy) * 1.15) < q.r);
+      const { parts, bones } = B.pile;
+      for (let i = parts.length - 1; i >= 0; i--) {                                 // 위(나중에 얹힌 것)부터 — 위의 해골이 앞을 덮음
+        const q = parts[i], dx = px - q.cx, dy = py - q.cy, rr = Math.hypot(dx, dy * 1.1);
+        if (rr >= q.r) continue;
+        if (rr > q.r - 0.7) return line;
+        if (dy > -1.2 && dy < 0.4 && Math.abs(Math.abs(dx) - q.r * 0.4) < 0.7) return c3(K.hole);          // 눈구멍 (한 점씩)
+        if (dy > 0.9 && dy < 1.7 && Math.abs(dx) < 0.5) return c3(K.hole);                                  // 코
+        if (dy > q.r * 0.62 && Math.abs(dx) < q.r * 0.5 && (Math.round(px) & 1)) return c3(K.bone[1]);       // 이 사이
+        const lit = -(dx + dy) / q.r;                                                                          // 왼쪽 위가 밝음 · 맨 아래 줄은 그늘
+        return c3(K.bone[Math.max(1, Math.min(4, (lit > 0.35 ? 4 : lit > -0.3 ? 3 : 2) - (q.layer === 0 ? 1 : 0)))]);
+      }
+      for (const b of bones) {                                                       // 무더기 아래로 삐져나온 뼈
+        const ux = Math.cos(b.a), uy = Math.sin(b.a), qx = px - b.cx, qy = py - b.cy, t = qx * ux + qy * uy, d = Math.abs(-qx * uy + qy * ux);
+        if (Math.abs(t) < 3.5 && d < (Math.abs(t) > 2.6 ? 1.2 : 0.7)) return d > 0.5 && Math.abs(t) <= 2.6 ? line : c3(K.bone[t < 0 ? 4 : 3]);
+      }
+      const sh = parts.some(q => Math.hypot(px - 1 - q.cx, (py - 1 - q.cy) * 1.1) < q.r);
       return sh ? mul(floor(), 0.6) : floor();
     }
-    // 거대한 해골 — 앞모습, 아래(턱)는 바닥에 묻힘. 둥근 머리뼈 · 깊은 눈구멍(속에 희미한 푸른빛) · 콧구멍 · 들쭉날쭉한 윗니 · 금
-    const fx = B.flip ? W - 1 - px : px, cx = W / 2 - 0.5, dx = fx - cx;
-    const skull = (x, y) => { const ddx = x - cx; return (Math.hypot(ddx / 26, (y - 24) / 22) < 1 && y < 40) || (Math.abs(ddx) < 17 - Math.max(0, y - 36) * 0.6 && y >= 30 && y < 46); };
+    // 거대한 해골 — 앞모습, 아래(턱)는 바닥에 묻힘. 둥근 머리뼈 · 깊은 눈구멍(속에 희미한 푸른빛) · 콧구멍 · 들쭉날쭉한 윗니 · 금.
+    // 크기는 칸 수대로 (4 × 3 칸 — 지하 신전 · 3 × 2 칸 — 리치의 성당 터): 모양은 폭 W · 높이 H 에 맞춰 늘고 줄고, 테두리 · 금은 늘 한 점
+    const fx = B.flip ? W - 1 - px : px, cx = W / 2 - 0.5, dx = fx - cx, kx = W / 64, ky = H / 48;
+    const RX = 26 * kx, RY = 22 * ky, CY = 24 * ky;
+    const skull = (x, y) => { const ddx = x - cx; return (Math.hypot(ddx / RX, (y - CY) / RY) < 1 && y < 40 * ky) || (Math.abs(ddx) < 17 * kx - Math.max(0, y - 36 * ky) * 0.6 && y >= 30 * ky && y < H - 2 * ky); };
     if (!skull(fx, py)) {
       if (skull(fx - 1, py - 1) || skull(fx - 2, py - 2)) return mul(floor(), 0.6);
       return floor();
     }
-    if (!skull(fx - 1, py) || !skull(fx + 1, py) || !skull(fx, py - 1) || (py < 45 && !skull(fx, py + 1))) return line;
+    if (!skull(fx - 1, py) || !skull(fx + 1, py) || !skull(fx, py - 1) || (py < H - 3 && !skull(fx, py + 1))) return line;
     // 눈구멍 — 크고 비스듬한 둥근 구멍, 속은 어둠 · 가운데 희미한 푸른빛
-    for (const s of [-1, 1]) {
-      const ex = cx + s * 10, ey = 25, d = Math.hypot((fx - ex) / 7, (py - ey) / (6 + (s * (fx - ex) > 0 ? 0 : 1)));
-      if (d < 1) return d > 0.86 ? line : d < 0.3 ? mix(c3(K.hole), c3(K.glow), 0.35) : c3(K.hole);
+    for (const sg of [-1, 1]) {
+      const ex = cx + sg * 10 * kx, ey = 25 * ky, d = Math.hypot((fx - ex) / (7 * kx), (py - ey) / ((6 + (sg * (fx - ex) > 0 ? 0 : 1)) * ky));
+      if (d < 1) return d > 1 - 1 / (7 * kx) ? line : d < 0.3 ? mix(c3(K.hole), c3(K.glow), 0.35) : c3(K.hole);
       if (d < 1.25 && py < ey) return c3(K.bone[1]);                                                         // 눈두덩 그늘
     }
     // 콧구멍 — 거꾸로 된 하트
-    if (py >= 31 && py <= 37 && Math.abs(dx) < (py - 30) * 0.6 && !(py <= 33 && Math.abs(dx) < 0.6)) return py === 37 || Math.abs(dx) > (py - 30) * 0.6 - 0.8 ? line : c3(K.hole);
+    const ny = py - 30 * ky;
+    if (ny >= 1 && py <= 37 * ky && Math.abs(dx) < ny * 0.6 * kx / ky && !(ny <= 3 * ky && Math.abs(dx) < 0.6)) return py >= 37 * ky - 1 || Math.abs(dx) > ny * 0.6 * kx / ky - 0.8 ? line : c3(K.hole);
     // 윗니 — 크기 · 빠진 자리가 다름
-    if (py >= 40) {
-      const tw = 3 + ((hash(Math.floor((fx + 30) / 4), v, 765) * 2) | 0), ti = Math.floor((fx - 12) / tw);
-      if (fx >= 12 && fx < W - 12) {
+    const ty0 = Math.round(40 * ky), tx0 = Math.round(12 * kx);
+    if (py >= ty0) {
+      const tw = Math.max(2, Math.round((3 + ((hash(Math.floor((fx + 30) / 4), v, 765) * 2) | 0)) * kx)), ti = Math.floor((fx - tx0) / tw);
+      if (fx >= tx0 && fx < W - tx0) {
         if (hash(ti, v + 1, 766) < 0.15) return c3(K.hole);                                                  // 빠진 이
-        if ((fx - 12) % tw === 0 || py === 40) return line;
-        return c3(K.bone[py > 43 ? 2 : 3]);
+        if ((fx - tx0) % tw === 0 || py === ty0) return line;
+        return c3(K.bone[py > ty0 + 2 ? 2 : 3]);
       }
     }
     // 머리뼈 — 둥근 입체 (왼쪽 위가 밝음) · 큰 금 하나 · 얼룩
-    const lit = -(dx / 26) * 0.6 - ((py - 24) / 22) * 0.8;
+    const lit = -(dx / RX) * 0.6 - ((py - CY) / RY) * 0.8;
     let k = lit > 0.55 ? 4 : lit > 0.15 ? 3 : lit > -0.3 ? 2 : 1;
     if (hash(X >> 1, Y >> 1, 767) < 0.06) k = Math.max(0, k - 1);
-    if (Math.abs(fx - (cx - 6 + (py - 6) * 0.35 + Math.sin(py * 0.5) * 1.5)) < 0.6 && py > 4 && py < 18) return line;   // 금
+    if (Math.abs(fx - (cx - 6 * kx + (py - 6 * ky) * 0.35 + Math.sin(py * 0.5 / ky) * 1.5 * kx)) < 0.6 && py > 4 * ky && py < 18 * ky) return line;   // 금
     if (fbm(X * 0.08, Y * 0.08, 768) > 0.66) k = Math.max(1, k - 1);
     return c3(K.bone[k]);
   }
@@ -2261,7 +2275,7 @@
       const my = !!door && (door.name === 'myguild' || door.name === 'myguild2');
       const kind = b.kind === 'mineCity' ? 'mineNew' : b.kind === 'aptCity' ? 'apt' : my ? (GLV <= 1 ? 'shabby' : 'mine') : b.kind;
       buildings.push({ x0: b.x, y0: b.y, w: b.w, h: b.h, door, kind, roof: b.roof, tone: b.tone, v: b.v, roofOnly: !!b.roofOnly, f: b.f, G: null, my, glv: b.kind === 'mineCity' ? GLV : Math.min(3, GLV), over: b.overLot ? (b.kind === 'aptCity' ? 'home' : 'guild') : false, hang: b.over | 0,
-                       bmo: !!door && door.name === 'blackmarket' && BMO, link: b.link, hgt: b.hgt, ins: b.ins, fl: b.fl, win: b.win });   // hgt · ins · fl · win — 무너진 성당 터 (chapelPix)
+                       bmo: !!door && door.name === 'blackmarket' && BMO, link: b.link, hgt: b.hgt, ins: b.ins, fl: b.fl, win: b.win, fb: b.fb });   // hgt · ins · fl · win — 무너진 성당 터 (chapelPix) · fb — 거대한 해골 둘레 바닥 (cryptPix)
     }
     for (let k = 0; k < m.w * m.h; k++) {
       if ((m.look[k] & 15) !== BUILD || bAt[k] >= 0) continue;
