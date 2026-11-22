@@ -513,7 +513,7 @@
   // 지도 속성 blds 의 소품 하나하나: stake 울타리 한 칸(굵기 · 키가 저마다 다른 뾰족한 통나무, 묶은 밧줄) · tent 가죽 천막(조각 가죽을 기운 자국 · 엇갈린 장대) ·
   // orchut 족장 움막(둥근 가죽 지붕 · 붉은 전쟁 칠 · 엄니 둘 · 짐승 해골) · totem 토템 · fire 모닥불 · rack 무기 걸이 · hide 가죽 말림대.
   // 빛은 왼쪽 위 — 오른쪽 면은 그늘, 그림자는 오른쪽 아래 땅에
-  const ORC_KINDS = { stake: 1, tent: 1, orchut: 1, totem: 1, fire: 1, rack: 1, hide: 1, bones: 1, chw: 1, chp: 1, cha: 1, chr: 1, gskull: 1, btorch: 1, skpile: 1, gfoot: 1 };   // bones — 히드라 둥지 · ch* — 무너진 성당 터 (chapelPix) · gskull · btorch · skpile — 지하 신전 (cryptPix)
+  const ORC_KINDS = { stake: 1, tent: 1, orchut: 1, totem: 1, fire: 1, rack: 1, hide: 1, bones: 1, chw: 1, chp: 1, cha: 1, chr: 1, gskull: 1, btorch: 1, skpile: 1 };   // bones — 히드라 둥지 · ch* — 무너진 성당 터 (chapelPix) · gskull · btorch · skpile — 지하 신전 (cryptPix)
   const ORC_C = {
     hide: ['#3a2a20', '#4c3727', '#5e4530', '#71553a', '#846646'], seam: '#22170f', stitch: '#a08a62',
     bone: ['#6e6452', '#a39780', '#d4c8ac'], paint: '#8a2a22', rope: ['#5e5038', '#8a7a5a'], line: '#1a120e'
@@ -531,7 +531,6 @@
     const shadow = (c, k = 0.66) => mul(c, k);
     if (B.kind[0] === 'c' && B.kind[1] === 'h') return chapelPix(B, px, py, X, Y, ground);
     if (B.kind === 'gskull' || B.kind === 'btorch' || B.kind === 'skpile') return cryptPix(B, px, py, X, Y);
-    if (B.kind === 'gfoot') return texture(B.under & 15, B.under >> 4, X, Y);   // 고딕 묘실 문이 선 막힌 칸 — 바닥은 둘레 땅 그대로 (문 그림은 mapview 가 위에 덮음)
     if (B.kind === 'stake') {
       // 울타리 한 칸 — 사용자가 준 사례대로 (2026-11-20): 칸 가운데 뾰족한 기둥, 좌우 이웃(link e · w) 쪽으로 가로대 두 줄,
       // 위아래 이웃(n · s) 쪽으로는 폭 4점의 막대가 이웃 칸까지 끊김 없이 (위아래로만 이어진 칸은 기둥 없이 막대만, 가운데 마디).
@@ -2262,7 +2261,7 @@
       const my = !!door && (door.name === 'myguild' || door.name === 'myguild2');
       const kind = b.kind === 'mineCity' ? 'mineNew' : b.kind === 'aptCity' ? 'apt' : my ? (GLV <= 1 ? 'shabby' : 'mine') : b.kind;
       buildings.push({ x0: b.x, y0: b.y, w: b.w, h: b.h, door, kind, roof: b.roof, tone: b.tone, v: b.v, roofOnly: !!b.roofOnly, f: b.f, G: null, my, glv: b.kind === 'mineCity' ? GLV : Math.min(3, GLV), over: b.overLot ? (b.kind === 'aptCity' ? 'home' : 'guild') : false, hang: b.over | 0,
-                       bmo: !!door && door.name === 'blackmarket' && BMO, link: b.link, hgt: b.hgt, ins: b.ins, fl: b.fl, win: b.win, under: b.under });   // hgt · ins · fl · win — 무너진 성당 터 (chapelPix)
+                       bmo: !!door && door.name === 'blackmarket' && BMO, link: b.link, hgt: b.hgt, ins: b.ins, fl: b.fl, win: b.win });   // hgt · ins · fl · win — 무너진 성당 터 (chapelPix)
     }
     for (let k = 0; k < m.w * m.h; k++) {
       if ((m.look[k] & 15) !== BUILD || bAt[k] >= 0) continue;
@@ -4163,6 +4162,51 @@
     gateCv.set(key, cv);
     return cv;
   }
+  // ---------- 바위턱 면 (port.wall — 고딕 묘실 문 뒤, tools/map-gen.js 의 UNDERS) — 벼랑에서 앞으로 내민 흑요석 바위턱의 남쪽 면 ----------
+  // wc × hc 칸, 문보다 높게. 윗선 · 양옆은 들쭉날쭉(허물어진 바위), 맨 위는 처마 빛 · 검은 테(위는 지도의 높은 땅 윗면으로 이어짐),
+  // 폭이 저마다 다른 세로 결(왼쪽 빛 · 오른쪽 그늘 · 갈라진 틈) · 드문드문 흘러내린 불줄기 · 아래로 갈수록 어둑 (지도 절벽 면 cliffPix 와 같은 빛깔)
+  const wallCv = new Map();
+  function rockWall(wc, hc) {
+    const key = `${wc},${hc}`;
+    if (wallCv.has(key)) return wallCv.get(key);
+    if (typeof document === 'undefined') return null;
+    const W = wc * P, H = hc * P, K = CLIFF_OBS, cv = document.createElement('canvas');
+    cv.width = W; cv.height = H;
+    const g = cv.getContext('2d'), img = g.createImageData(W, H);
+    const top = x => Math.round(1 + vnoise(x * 0.09, 3.1, 795) * 4);              // 윗선 — 들쭉날쭉
+    const side = (y, r) => Math.round(vnoise(y * 0.12, r ? 5.3 : 1.7, 796) * 4);    // 양옆 — 아래로 갈수록 살짝 넓게
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const l = side(y, 0), r = W - 1 - side(y, 1), t = top(x);
+      if (x < l || x > r || y < t) continue;
+      let c;
+      const s = y - t;
+      if (s === 0) c = mix(texture(OBSID, 6, x, y), WHITE, 0.08);               // 처마 끝
+      else if (s === 1 || x === l || x === r) c = c3(K.line);
+      else {
+        const u = x + vnoise(x * 0.03, y * 0.02, 182) * 10 + vnoise(x * 0.2, y * 0.12, 190) * 2;
+        let b0 = Math.floor(u / 48) * 48, band = Math.floor(u / 48) * 16, bw = 0;
+        for (;;) { bw = 3 + Math.floor(hash(band, 9, 191) * 8); if (b0 + bw > u) break; b0 += bw; band++; }
+        const lx = u - b0;
+        if (lx < 0.9) c = c3(K.crack);
+        else {
+          let k = 2 + (hash(band, 9, 183) < 0.3 ? 1 : hash(band, 9, 184) < 0.25 ? -1 : 0);
+          if (lx < 1.8) k += 1; else if (lx > bw - 1.6) k -= 1;
+          if (vnoise(x * 0.15, y * 0.18, 197) > 0.7) k -= 1; else if (vnoise(x * 0.21, y * 0.13, 193) > 0.74) k += 1;
+          if ((s + Math.floor(hash(band, 0, 185) * 5)) % 9 === 0 && hash(band, s >> 2, 186) < 0.3) k = 0;   // 가로로 갈라진 틈 (드문드문)
+          c = c3(K.face[Math.max(0, Math.min(4, k))]);
+        }
+        if (s < 5) c = mul(c, 0.55 + (s - 2) * 0.12);                            // 처마 밑 그늘
+        if (y > H - 7) c = mul(c, 1 - (y - (H - 7)) * 0.06);                      // 밑동 — 어둑
+        const lr = Math.abs(vnoise(x * 0.035, y * 0.06, 31) - 0.5), on = vnoise(x * 0.04, 0.5, 798) > 0.6;   // 흘러내린 불줄기 (한두 군데)
+        if (on && lr < 0.006) c = c3('#f07a2a'); else if (on && lr < 0.014) c = c3('#a8361a');
+      }
+      const i = (y * W + x) * 4;
+      img.data[i] = Math.round(c[0]); img.data[i + 1] = Math.round(c[1]); img.data[i + 2] = Math.round(c[2]); img.data[i + 3] = 255;
+    }
+    g.putImageData(img, 0, 0);
+    wallCv.set(key, cv);
+    return cv;
+  }
   let mouthCv = null;
   function caveMouth() {
     if (mouthCv) return mouthCv;
@@ -4196,7 +4240,7 @@
     g.putImageData(img, 0, 0);
     return (mouthCv = cv);
   }
-  const api = { caveMouth, stairs, gothicGate, MOUTH_W, MOUTH_H, setGuild, setMarket, setHome2, has: m => !!(m && m.look), drawGround, drawTrees, drawOver, liveGround, liveAir, drawRift, paintTree, texture, bake, propOf, TW, TH, TREE_STYLES, TREE_PAL, cached: m => (prepared.get(m.look) || { chunks: new Map() }).chunks.size, P, CH, VOID, GRASS, DIRT, COBBLE, TILES, WATER, LAVA, OBSID, SNOW, ROCKY, PAVE, CANAL };
+  const api = { caveMouth, stairs, gothicGate, rockWall, MOUTH_W, MOUTH_H, setGuild, setMarket, setHome2, has: m => !!(m && m.look), drawGround, drawTrees, drawOver, liveGround, liveAir, drawRift, paintTree, texture, bake, propOf, TW, TH, TREE_STYLES, TREE_PAL, cached: m => (prepared.get(m.look) || { chunks: new Map() }).chunks.size, P, CH, VOID, GRASS, DIRT, COBBLE, TILES, WATER, LAVA, OBSID, SNOW, ROCKY, PAVE, CANAL };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.MapArt = api;
 })(typeof window !== 'undefined' ? window : globalThis);

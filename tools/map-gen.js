@@ -556,7 +556,7 @@ const CAVES = [
 // 첫 방 · 둘째 방(rooms — 그 격의 일반 몬스터, 바깥 지도엔 없음) · 용암 웅덩이 → 신전(거대한 해골 · 파란 불꽃 횃불 · 기둥)의 보스 →
 // 보스를 꺾어야 열리는 위로 가는 계단 → 바깥 지도 up(시안 칸 — 다음 격의 들머리)의 계단으로 올라옴
 const UNDERS = [
-  { id: 'crypt', title: '대성당 아래 묘실', rank: 5, zone: 'necropolis', boss: '불사의 왕', rooms: ['데몬 로드', '발록'], mouth: [136, 46.2], up: [136, 38.6] }
+  { id: 'crypt', title: '대성당 아래 묘실', rank: 5, zone: 'necropolis', boss: '불사의 왕', rooms: ['데몬 로드', '발록'], mouth: [136, 45.6], up: [136, 38.6] }
 ];
 const CRYPT_BIO = 11;                                        // 지하 신전 바닥 — 그림(js/mapart.js)이 이 격 번호로 푸르스름한 어둔 돌바닥 · 뼈 장식을 고름
 const underNormal = e => UNDERS.some(u => u.rank === e.rank.n && u.rooms.includes(e.name));   // 지하에만 사는 일반 몬스터 (바깥 지도엔 구역 없음)
@@ -861,25 +861,35 @@ function overworld(data) {
     fillRect({ x: mx - 2, y: my + 1, w: 5, h: 2 }, FLOOR);
     guard(mx - 2, my, 5, 3, 1);
   }
-  // 지하로 내려가는 곳 (UNDERS) — 대성당 앞뜰엔 고딕 묘실 문(gate — 뾰족한 돌 아치 · 양옆 돌기둥 · 해골을 새긴 문짝, 늘 열려 계단이 내려감, 사용자 요청 2026-11-22):
-  // 7 × 5 칸, 아래 가운데 세 칸이 문. 나머지 칸은 막힘 (그림은 js/mapview.js 가 MapArt.gothicGate 로 문 위에 덮어 그림).
-  // 다음 격 쪽(up)에는 지하에서 올라오는 계단 (stairs — 위 줄은 돌 우물) — 지하의 보스를 꺾어야 열림
+  // 지하로 내려가는 곳 (UNDERS) — 대성당 앞뜰, 벼랑에 붙어 앞으로 내민 흑요석 바위턱(높은 땅) 밑동에 고딕 묘실 문
+  // (gate — 뾰족한 돌 아치 · 양옆 돌기둥 · 해골을 새긴 문짝, 늘 열려 계단이 내려감, 사용자 요청 2026-11-22). 문은 5 × 4 칸, 아래 가운데 세 칸이 문.
+  // 바위턱은 wall 칸 폭 — 문 줄부터 위로 벼랑에 닿을 때까지 바위 칸 (흑요석 땅). 그림은 js/mapview.js 가 바위 면(MapArt.rockWall — 문보다 한 칸 높게)과
+  // 문(MapArt.gothicGate)을 문 칸 위에 덮어 그림. 다음 격 쪽(up)에는 지하에서 올라오는 계단 (stairs — 위 줄은 돌 우물) — 지하의 보스를 꺾어야 열림
   for (const u of UNDERS) {
     const boss = data.ENEMIES.find(e => e.name === u.boss && e.kind === 'boss');
     if (!boss || boss.rank.n !== u.rank) throw new Error(`${u.title} — ${u.boss} 이(가) ${u.rank}격 보스가 아님`);
     const free = (x0, y0, x1, y1, what) => { for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) if (!inside(x, y) || (tiles[idx(x, y)] !== FLOOR && tiles[idx(x, y)] !== ROAD)) throw new Error(`${u.title} ${what} — (${x}, ${y}) 자리가 빈 땅이 아님`); };
     {
-      const mx = Math.round(L.fc(u.mouth[0])), my = Math.round(L.fc(u.mouth[1])), GW = 7, GH = 5;
-      free(mx - 4, my - GH + 1, mx + 4, my + 2, '묘실 문');
-      const gx0 = mx - (GW >> 1), gy0 = my - GH + 1;
-      for (let y = gy0; y <= my; y++) for (let x = gx0; x < gx0 + GW; x++) {
-        const k = idx(x, y);
-        if (y === my && x >= mx - 1 && x <= mx + 1) continue;                     // 문 — 걸어 들어가는 칸
-        tiles[k] = WALL; village[k] = 2;
-        blds.push({ x, y, w: 1, h: 1, kind: 'gfoot', under: look(L.ter[k], L.bio[k]), v: blds.length });   // 막힌 칸 — 그림은 둘레 땅 그대로
+      const mx = Math.round(L.fc(u.mouth[0])), my = Math.round(L.fc(u.mouth[1])), GW = 5, GH = 4, RW = 9, RH = GH + 1;
+      free(mx - 1, my, mx + 1, my + 2, '묘실 문');
+      free(mx - (RW >> 1) - 1, my + 1, mx + (RW >> 1) + 1, my + 2, '묘실 문 앞');
+      // 바위턱 — 면 줄(문 · 그 위)은 RW 칸 폭, 그 위로는 벼랑 쪽으로 갈수록 넓게 퍼져(버팀벽처럼) 벼랑에 붙음. 줄마다 폭이 조금씩 달라 가장자리가 곧지 않게
+      const face0 = my - RH + 1;
+      for (let x = mx - (RW >> 1) - 6; x <= mx + (RW >> 1) + 6; x++) {
+        const core = Math.abs(x - mx) <= RW >> 1;
+        let reached = false;
+        for (let y = my; y >= face0 - 7; y--) {
+          const k = idx(x, y), hw = y >= face0 ? RW >> 1 : (RW >> 1) + (face0 - y) * 0.8 + L.hash(x, y, 331) * 1.2;
+          if (Math.abs(x - mx) > hw) continue;
+          if (y === my && x >= mx - 1 && x <= mx + 1) continue;               // 문 — 걸어 들어가는 칸
+          if (y < face0 && (tiles[k] === ROCK || tiles[k] === WALL)) { reached = true; break; }   // 벼랑에 닿음
+          if (tiles[k] !== FLOOR && tiles[k] !== ROAD && tiles[k] !== ROCK) { if (core) throw new Error(`${u.title} 바위턱 — (${x}, ${y}) 자리가 빈 땅이 아님`); break; }
+          tiles[k] = ROCK; L.ter[k] = OL.OBSID; L.bio[k] = 6;
+        }
+        if (core && !reached) throw new Error(`${u.title} 바위턱 — ${x} 줄이 벼랑에 닿지 않음 (묘실 문 자리를 벼랑 쪽으로)`);
       }
-      ports.push({ name: u.id, label: u.title, x: mx - 1, y: my, w: 3, h: 1, to: `${u.id}.in`, gate: true, gw: GW, gh: GH });
-      guard(mx - 4, my - GH + 1, GW + 2, GH + 3, 1);
+      ports.push({ name: u.id, label: u.title, x: mx - 1, y: my, w: 3, h: 1, to: `${u.id}.in`, gate: true, gw: GW, gh: GH, ww: RW, wh: RH });
+      guard(mx - (RW >> 1) - 1, my + 1, RW + 2, 2, 0);
     }
     {
       const mx = Math.round(L.fc(u.up[0])), my = Math.round(L.fc(u.up[1]));
