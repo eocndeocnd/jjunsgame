@@ -408,14 +408,21 @@ const MapView = (function () {
             ctx.beginPath(); ctx.ellipse(cx, cy, rx * 1.9, ry * 2.6, 0, 0, Math.PI * 2); ctx.fill();
             ctx.save(); ctx.shadowColor = '#ffd76a'; ctx.shadowBlur = T * (0.4 + 0.5 * pulse);
           }
-          ctx.fillStyle = revealed ? '#c8a24a' : '#5c3a1a';
-          ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); ctx.fill();
-          if (revealed) ctx.restore();
-          ctx.fillStyle = '#0b0603';
-          ctx.beginPath(); ctx.ellipse(cx, cy + T * 0.06, rx - T * 0.22, ry - T * 0.18, 0, 0, Math.PI * 2); ctx.fill();
+          const art = port.art && typeof MapArt !== 'undefined' ? MapArt.holeArt(port.art, port.w) : null;   // 그 자리에 맞는 그림 (구덩이 · 쇠 사다리 · 무너진 판석 · 바위 디딤돌)
+          if (art) {
+            ctx.imageSmoothingEnabled = false;
+            ctx.drawImage(art.cv, Math.round(ox + port.x * T), Math.round(oy + (port.y - art.up) * T), port.w * T, (art.up + 1) * T);
+            if (revealed) ctx.restore();
+          } else {
+            ctx.fillStyle = revealed ? '#c8a24a' : '#5c3a1a';
+            ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); ctx.fill();
+            if (revealed) ctx.restore();
+            ctx.fillStyle = '#0b0603';
+            ctx.beginPath(); ctx.ellipse(cx, cy + T * 0.06, rx - T * 0.22, ry - T * 0.18, 0, 0, Math.PI * 2); ctx.fill();
+          }
           if (revealed) {
             ctx.fillStyle = `rgba(150, 90, 230, ${0.25 + 0.25 * pulse})`;   // 구멍 속 보랏빛
-            ctx.beginPath(); ctx.ellipse(cx, cy + T * 0.1, (rx - T * 0.22) * 0.6, (ry - T * 0.18) * 0.5, 0, 0, Math.PI * 2); ctx.fill();
+            if (!art) { ctx.beginPath(); ctx.ellipse(cx, cy + T * 0.1, (rx - T * 0.22) * 0.6, (ry - T * 0.18) * 0.5, 0, 0, Math.PI * 2); ctx.fill(); }
             for (let i = 0; i < 6; i++) {                 // 둘레를 도는 반짝이
               const a = now * 1.4 + i * Math.PI / 3, sx = cx + Math.cos(a) * rx * 1.25, sy = cy + Math.sin(a) * ry * 1.7, s = T * (0.07 + 0.05 * Math.sin(now * 5 + i));
               ctx.fillStyle = '#fff3c4';

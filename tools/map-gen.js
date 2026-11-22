@@ -359,7 +359,7 @@ function generate(plan, ranks, data, opts) {
       const o = origin(mine('B')[0]), n = boss.size, nx = o.x + ((FIELD_W - n) >> 1);
       fill(o.x, o.y, FIELD_W, n + 1, WALL);
       fill(nx, o.y, n, n + 1, FLOOR, true);
-      ports.push({ ...opts.exit, x: nx, y: o.y, w: n, h: 1, hole: true });
+      ports.push({ ...opts.exit, x: nx, y: o.y, w: n, h: 1, hole: true, art: 'ladder' });   // 벽에 박힌 쇠 사다리 — 위로 올라감
       post(boss, nx, o.y + 1, true);
     }
     else post(boss, ...at(boss, center(mine('B')[0])), false);
@@ -750,7 +750,7 @@ function overworld(data) {
   const hx = Math.round(L.fc(38)) - 1;
   let hy = 0;
   while (L.zoneAt(hx + 1, hy + 1) !== 1) hy++;                 // 1격(지하수로 벽)이 시작하는 줄 바로 위
-  ports.push({ name: 'sewer', label: '지하수로', x: hx, y: hy, w: 3, h: 1, to: 'sewer.out', hole: true });
+  ports.push({ name: 'sewer', label: '지하수로', x: hx, y: hy, w: 3, h: 1, to: 'sewer.out', hole: true, art: 'pit' });   // art — 그림 (js/mapart.js 의 holeArt): 흙길 끝의 무너진 구덩이 · 사다리
   fillRect({ x: hx, y: hy, w: 3, h: 1 }, FLOOR);
   const sx = hx + 1, sy = hy - 1;
   npcs.push({ name: 'start', x: sx, y: sy });
@@ -994,7 +994,7 @@ function overworld(data) {
   for (const s of SECRET_ROOMS) {
     if (s.from && s.from !== 'overworld') continue;            // 건물 안 보스 — 그 안 지도에 (buildingInterior)
     const boss = foes.find(e => e.name === s.boss), bp = posts.find(p => p.enemy === boss.id);
-    const hole = { name: s.id, label: s.title, x: bp.x, y: bp.y - 2, w: bp.w, h: 1, to: `${s.id}.out`, opensAfter: boss.id, appears: true, hole: true };
+    const hole = { name: s.id, label: s.title, x: bp.x, y: bp.y - 2, w: bp.w, h: 1, to: `${s.id}.out`, opensAfter: boss.id, appears: true, hole: true, art: 'floor' };
     ports.push(hole);
     fillRect(hole, FLOOR);
     fillRect({ x: hole.x, y: hole.y + 1, w: hole.w, h: 1 }, FLOOR);
@@ -1402,7 +1402,7 @@ function secretRoom(data, s) {
   let oy = H - 1;
   while (tiles[oy * W + cx] !== FLOOR) oy--;                 // 한가운데 줄의 맨 아래 바닥 칸
   for (let x = cx - 1; x <= cx + 1; x++) { tiles[oy * W + x] = FLOOR; tiles[(oy - 1) * W + x] = FLOOR; }
-  const out = { name: 'out', label: '나가기', x: cx - 1, y: oy, w: 3, h: 1, to: `${s.from || 'overworld'}.${s.id}`, hole: true };
+  const out = { name: 'out', label: '나가기', x: cx - 1, y: oy, w: 3, h: 1, to: `${s.from || 'overworld'}.${s.id}`, hole: true, art: 'rock' };
   // 그 격의 큰 상자 — 굴 안쪽 오른쪽 위 (사용자 결정: 격마다 큰 상자 하나, 3격은 이 굴에)
   const chests = [];
   if (s.bigChest) {
@@ -1452,7 +1452,7 @@ function caveMap(data, c) {
   const cx = Math.round(end[0]), cy = Math.round(end[1]) - 1;
   for (let j = cy - 1; j <= cy + 1; j++) for (let i = cx - 1; i <= cx + 1; i++) tiles[at(i, j)] = FLOOR;
   const chests = [{ name: '보물상자', x: cx, y: cy, chest: `r${c.rank}-big`, rank: c.rank, big: true, item }];
-  const out = { name: 'out', label: '나가기', x: 19, y: oy, w: 3, h: 1, to: `overworld.${c.id}`, hole: true };
+  const out = { name: 'out', label: '나가기', x: 19, y: oy, w: 3, h: 1, to: `overworld.${c.id}`, hole: true, art: 'rock' };
   const lookLayer = Uint8Array.from(tiles, t => (t === WATER ? look(OL.WATER, 7) : look(OL.ROCKY, 7)));
   return buildTmj({ w: W, h: H, tiles, areas, ports: [out], npcs: [{ name: 'start', x: 20, y: oy - 1 }], chests, look: lookLayer, props: { title: c.title } });
 }
@@ -1537,7 +1537,7 @@ function buildingInterior(data, b) {
   const post = { name: foe.name, x: cx - (foe.size >> 1), y: TOP + hall.bossY, w: foe.size, h: foe.size, enemy: foe.id, blocks: false };
   const ports = [];
   for (const s of SECRET_ROOMS.filter(q => q.from === b.id && q.boss === b.boss)) {
-    const hole = { name: s.id, label: s.title, x: post.x, y: post.y - 2, w: post.w, h: 1, to: `${s.id}.out`, opensAfter: foe.id, appears: true, hole: true };
+    const hole = { name: s.id, label: s.title, x: post.x, y: post.y - 2, w: post.w, h: 1, to: `${s.id}.out`, opensAfter: foe.id, appears: true, hole: true, art: 'floor' };
     for (let j = 0; j < 2; j++) for (let i = 0; i < hole.w; i++) if (tiles[(hole.y + j) * W + hole.x + i] !== FLOOR) throw new Error(`건물 ${b.id} — 숨은 굴 구멍 자리가 바닥이 아님`);
     ports.push(hole);
   }

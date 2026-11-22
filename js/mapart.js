@@ -4176,6 +4176,98 @@
     gateCv.set(key, cv);
     return cv;
   }
+  // ---------- 드나드는 구멍 (port.hole 의 art — tools/map-gen.js, 사용자 요청 2026-11-22: 동그란 구멍 대신 그 자리에 맞는 그림) ----------
+  //   pit    흙길 끝의 무너진 구덩이 — 들쭉날쭉한 테 · 먼 쪽 안벽의 흙 층 · 늘어진 뿌리 · 솟은 나무 사다리 · 테의 돌 (2격 숲 → 지하수로)
+  //   ladder 벽에 박힌 녹슨 쇠 사다리 — 위에서 새는 희미한 빛 (지하수로 → 숲)
+  //   floor  무너져 내린 판석 바닥 — 기운 돌 조각 · 사방으로 뻗은 금 · 바닥에 고인 물빛 (성 안 → 숨은 굴)
+  //   rock   굴 끝의 바깥으로 트인 틈 — 들쭉날쭉한 위 끝 · 바깥(아래)으로 갈수록 볕이 듦 · 바닥 돌 (숨은 굴 · 동굴 → 바깥)
+  // wc 폭(칸). 돌려주는 것 { cv, up } — up 은 문 칸 위로 몇 칸까지 그렸나 (그림의 위 끝 = 문 칸 위 끝 − up 칸)
+  const holeCv = new Map();
+  function holeArt(kind, wc) {
+    const key = `${kind},${wc}`;
+    if (holeCv.has(key)) return holeCv.get(key);
+    if (typeof document === 'undefined') return null;
+    const up = kind === 'rock' ? 0 : 1, W = wc * P, H = (up + 1) * P;
+    const cv = document.createElement('canvas');
+    cv.width = W; cv.height = H;
+    const g = cv.getContext('2d'), img = g.createImageData(W, H);
+    const put = (x, y, c, a = 255) => { const i = (y * W + x) * 4; img.data[i] = Math.round(c[0]); img.data[i + 1] = Math.round(c[1]); img.data[i + 2] = Math.round(c[2]); img.data[i + 3] = a; };
+    const LN = c3('#140f0b'), cx = W / 2 - 0.5;
+    if (kind === 'pit' || kind === 'floor') {
+      // 구멍 모양 — 가운데 (cx, cy) 의 납작한 타원을 둘레 각도마다 들쭉날쭉하게
+      const cy = H - 8, rx = W / 2 - 4, ry = 7.5;
+      const R = (x, y) => { const a = Math.atan2((y + 0.5 - cy) / ry, (x + 0.5 - cx) / rx); return Math.hypot((x + 0.5 - cx) / rx, (y + 0.5 - cy) / ry) / (1 + (vnoise(a * 2.2 + 3, kind === 'pit' ? 1 : 2, 820) - 0.5) * 0.3); };
+      const dirt = ['#3a2a1c', '#4e3826', '#634a32', '#7a5c3e'], slab = ['#3e3a40', '#545058', '#6c6870', '#86828a'];
+      for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+        const r = R(x, y), dy = y + 0.5 - cy;
+        if (r < 1) {
+          if (R(x, y - 1) >= 1 || R(x - 1, y) >= 1 || R(x + 1, y) >= 1) { put(x, y, LN); continue; }   // 테두리
+          // 안 — 먼 쪽(위) 안벽이 보임: 테에서 아래로 몇 점은 흙 · 돌 층, 그 아래는 어둠
+          let wy = 0; while (wy < 12 && R(x, y - wy - 1) < 1) wy++;           // 위 테에서 몇 점 아래인가
+          let c;
+          if (wy < 6 && dy < 1.5) {
+            c = kind === 'pit' ? c3(dirt[wy < 2 ? 2 : (wy + ((x >> 2) & 1)) % 2 ? 1 : 0]) : c3(slab[wy < 2 ? 1 : 0]);
+            if (kind === 'pit' && wy >= 2 && hash(x, 0, 821) < 0.12) c = c3('#2a1d12');   // 늘어진 뿌리
+            c = mul(c, 1 - wy * 0.09);
+          } else c = mix(c3('#050304'), c3('#140e0a'), Math.max(0, 0.6 - Math.abs(dy) / ry));
+          if (kind === 'floor' && dy > 2 && dy < 4.5 && Math.abs(x - cx) < rx * 0.45 && hash(x >> 1, 0, 822) < 0.5) c = mix(c, c3('#3a6a8a'), 0.45);   // 바닥에 고인 물빛
+          put(x, y, c);
+          continue;
+        }
+        if (kind === 'pit') {
+          // 테 — 먼 쪽은 볕을 받아 밝고 가까운 쪽은 그늘 · 군데군데 돌 (크기가 다름) · 풀
+          if (r < 1.22) {
+            const lit = dy < 0 ? 3 : 1, c = c3(dirt[Math.min(3, lit + (hash(x, y, 823) < 0.2 ? -1 : 0))]);
+            put(x, y, r > 1.17 ? mul(c, 0.8) : c); continue;
+          }
+          for (const [sx, sy, sr] of [[cx - rx * 0.85, cy - 3, 2.2], [cx + rx * 0.7, cy - 5, 1.6], [cx + rx * 0.95, cy + 2, 2.5], [cx - rx * 0.4, cy + 6.5, 1.4]]) {
+            const d = Math.hypot(x + 0.5 - sx, (y + 0.5 - sy) * 1.3);
+            if (d < sr) { put(x, y, d > sr - 0.8 ? LN : c3(x < sx ? '#8a8478' : '#625e56')); break; }
+          }
+        } else {
+          // 판석이 기울며 내려앉은 조각 · 사방으로 뻗은 금 (길이 · 각도가 다름)
+          if (r < 1.28) { const tilt = hash(Math.floor(Math.atan2(dy, x + 0.5 - cx) * 3), 1, 824); put(x, y, r > 1.24 ? LN : c3(slab[dy < 0 ? (tilt < 0.5 ? 3 : 2) : tilt < 0.5 ? 1 : 0])); continue; }
+          for (let i = 0; i < 6; i++) {
+            const a = hash(i, 2, 825) * Math.PI * 2, L = 4 + hash(i, 3, 826) * 7, ux = Math.cos(a), uy = Math.sin(a) * 0.6;
+            const ox = cx + ux * rx * 1.25, oy = cy + uy * ry * 1.25 / 0.6, qx = x + 0.5 - ox, qy = y + 0.5 - oy, t = qx * ux + qy * uy;
+            if (t > 0 && t < L && Math.abs(-qx * uy + qy * ux) < 0.55 + Math.sin(t) * 0.1) { put(x, y, LN, 200); break; }
+          }
+        }
+      }
+      if (kind === 'pit') {                                                    // 나무 사다리 — 어둠 속에서 테 위로 솟음
+        for (const rx0 of [Math.round(cx - 4), Math.round(cx + 3)]) for (let y = 2; y < cy + 2; y++) { put(rx0, y, c3(y < cy - 6 ? '#8a6a44' : '#5a4430')); put(rx0 + 1, y, c3(y < cy - 6 ? '#5e4630' : '#3a2a1c')); }
+        for (let y = 4; y < cy + 1; y += 4) for (let x = Math.round(cx - 3); x <= Math.round(cx + 2); x++) put(x, y, c3(y < cy - 6 ? '#7a5c3a' : '#4a3624'));
+      }
+    } else if (kind === 'ladder') {
+      // 벽에 박힌 녹슨 쇠 사다리 — 위 칸(벽)부터 문 칸 아래 끝까지, 위에서 새는 희미한 빛
+      const l = Math.round(cx - 6), r = Math.round(cx + 5);
+      for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+        const light = y < P && x > l - 3 && x < r + 3 ? 0.22 * (1 - y / P) : 0;
+        if (x === l || x === l + 1 || x === r || x === r + 1) { const rust = hash(x, y >> 1, 830) < 0.15; put(x, y, c3(rust ? '#6a3a22' : x === l || x === r ? '#5a5a64' : '#2e2e36')); continue; }
+        if (x > l + 1 && x < r && (y % 5 === 2 || y % 5 === 3)) { put(x, y, c3(y % 5 === 2 ? '#6a6a74' : '#26262e')); continue; }
+        if (light > 0) put(x, y, c3('#c8d8f0'), Math.round(light * 255));
+      }
+    } else {
+      // 굴 끝의 바깥으로 트인 틈 — 위 끝이 들쭉날쭉한 둥근 틈, 안은 위(굴 쪽)가 어둡고 아래(바깥)로 갈수록 볕이 들어 밝음, 바닥엔 크기가 다른 돌 몇 개
+      const top = x => 3 + Math.abs((x + 0.5 - cx) / (W / 2)) ** 2 * 9 + (vnoise(x * 0.35, 6, 831) - 0.5) * 4;   // 틈의 위 끝 — 가운데가 높고 양끝은 낮게
+      for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+        const t = top(x);
+        if (y < t - 1.5 || x < 1 || x > W - 2) continue;
+        if (y < t) { put(x, y, LN); continue; }                                  // 틈의 테
+        const f = (y - t) / Math.max(1, H - t);                                  // 0 굴 쪽 … 1 바깥
+        let c = mix(c3('#0c0a08'), c3('#e8d6a4'), Math.min(1, f * f * 1.4));
+        for (const [sx, sy, sr] of [[cx - W * 0.28, H - 3, 2.6], [cx + W * 0.2, H - 2, 2], [cx + W * 0.36, H - 4.5, 1.6]]) {
+          const d = Math.hypot(x + 0.5 - sx, (y + 0.5 - sy) * 1.3);
+          if (d < sr) { c = d > sr - 0.8 ? LN : c3(x < sx ? '#6a6056' : '#3c3630'); break; }
+        }
+        put(x, y, c);
+      }
+    }
+    g.putImageData(img, 0, 0);
+    const out = { cv, up };
+    holeCv.set(key, out);
+    return out;
+  }
   // ---------- 바위턱 면 (port.wall — 고딕 묘실 문 뒤, tools/map-gen.js 의 UNDERS) — 벼랑에서 앞으로 내민 흑요석 바위턱의 남쪽 면 ----------
   // wc × hc 칸, 문보다 높게. 윗선 · 양옆은 들쭉날쭉(허물어진 바위), 맨 위는 처마 빛 · 검은 테(위는 지도의 높은 땅 윗면으로 이어짐),
   // 폭이 저마다 다른 세로 결(왼쪽 빛 · 오른쪽 그늘 · 갈라진 틈) · 드문드문 흘러내린 불줄기 · 아래로 갈수록 어둑 (지도 절벽 면 cliffPix 와 같은 빛깔)
@@ -4254,7 +4346,7 @@
     g.putImageData(img, 0, 0);
     return (mouthCv = cv);
   }
-  const api = { caveMouth, stairs, gothicGate, rockWall, MOUTH_W, MOUTH_H, setGuild, setMarket, setHome2, has: m => !!(m && m.look), drawGround, drawTrees, drawOver, liveGround, liveAir, drawRift, paintTree, texture, bake, propOf, TW, TH, TREE_STYLES, TREE_PAL, cached: m => (prepared.get(m.look) || { chunks: new Map() }).chunks.size, P, CH, VOID, GRASS, DIRT, COBBLE, TILES, WATER, LAVA, OBSID, SNOW, ROCKY, PAVE, CANAL };
+  const api = { caveMouth, stairs, gothicGate, rockWall, holeArt, MOUTH_W, MOUTH_H, setGuild, setMarket, setHome2, has: m => !!(m && m.look), drawGround, drawTrees, drawOver, liveGround, liveAir, drawRift, paintTree, texture, bake, propOf, TW, TH, TREE_STYLES, TREE_PAL, cached: m => (prepared.get(m.look) || { chunks: new Map() }).chunks.size, P, CH, VOID, GRASS, DIRT, COBBLE, TILES, WATER, LAVA, OBSID, SNOW, ROCKY, PAVE, CANAL };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.MapArt = api;
 })(typeof window !== 'undefined' ? window : globalThis);
