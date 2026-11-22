@@ -12765,20 +12765,62 @@ const MAP_FILES = {"arena":{"compressionlevel":-1,"type":"map","version":"1.10",
   }
   function levelField(m, L, k, X, Y) {
     const F = levelBlur(m, L, k);
-    const fx = X / P - 0.5, fy = Y / P - 0.5, x0 = Math.floor(fx), y0 = Math.floor(fy), ax = sm(fx - x0), ay = sm(fy - y0);
+    // 재는 자리를 크게 흔듦 — 길게 뻗은 가장자리도 물결지게 (2026-11-22, 잡음만으로는 칸 경계 곁에서 몇 점밖에 안 흔들렸음)
+    const ST = highOf(m).stairs, cx0 = Math.floor(X / P), cy0 = Math.floor(Y / P);
+    let nearStair = false;                                               // 바위 계단 곁은 흔들지 않음 — 계단(칸 단위 그림)이 가장자리와 어긋나지 않게
+    for (let j = -2; j <= 2 && !nearStair; j++) for (let i = -2; i <= 2; i++) { const x = cx0 + i, y = cy0 + j; if (x >= 0 && y >= 0 && x < m.w && y < m.h && ST[y * m.w + x]) { nearStair = true; break; } }
+    const amp = nearStair ? 0 : 1;
+    const WX = X + amp * (vnoise(X * 0.024, Y * 0.024, 410) - 0.5) * 44 + (vnoise(X * 0.08, Y * 0.08, 412) - 0.5) * 6, WY = Y + amp * (vnoise(X * 0.024, Y * 0.024, 411) - 0.5) * 44 + (vnoise(X * 0.08, Y * 0.08, 413) - 0.5) * 6;
+    const fx = WX / P - 0.5, fy = WY / P - 0.5, x0 = Math.floor(fx), y0 = Math.floor(fy), ax = sm(fx - x0), ay = sm(fy - y0);
     const v = (x, y) => (x < 0 || y < 0 || x >= m.w || y >= m.h ? 1 : F[y * m.w + x]);
     return (v(x0, y0) * (1 - ax) + v(x0 + 1, y0) * ax) * (1 - ay) + (v(x0, y0 + 1) * (1 - ax) + v(x0 + 1, y0 + 1) * ax) * ay
-      - 0.47 - (vnoise(X * 0.1, Y * 0.1, 170 + k) - 0.5) * 0.2 - (vnoise(X * 0.31, Y * 0.31, 175 + k) - 0.5) * 0.08;   // 가장자리가 곧은 줄이 되지 않게 — 큰 · 작은 물결 두 겹
+      - 0.47 - (vnoise(X * 0.055, Y * 0.055, 170 + k) - 0.5) * 0.36 - (vnoise(X * 0.17, Y * 0.17, 175 + k) - 0.5) * 0.08 - (vnoise(X * 0.4, Y * 0.4, 176 + k) - 0.5) * 0.03;   // 가장자리가 곧은 줄이 되지 않게 — 큰 · 중간 · 작은 물결 세 겹 (2026-11-22 크게: 길게 뻗은 가장자리가 곧게 보였음)
+  }
+  // 한 덩어리 높은 땅 안에서 흑요석과 다른 바위가 맞닿으면 — 칸 경계에서 곧게 바뀌지 않고 들쭉날쭉 섞이게 (blendGround 처럼 이 점을 흔든 자리의 바위 칸 겉모습, 사용자 지적 2026-11-22)
+  function cliffLook(m, e, X, Y) {
+    const tx = Math.floor(X / P), ty = Math.floor(Y / P), me = obsOf(e);
+    let mixed = false;
+    for (let dy = -2; dy <= 2 && !mixed; dy++) for (let dx = -2; dx <= 2; dx++) {
+      const i = tx + dx, j = ty + dy;
+      if (i < 0 || j < 0 || i >= m.w || j >= m.h || m.tile[j * m.w + i] !== ROCK) continue;
+      const lk = m.look[j * m.w + i];
+      if (obsOf({ bio: lk >> 4, ter: terOf(lk & 15) }) !== me) { mixed = true; break; }
+    }
+    if (!mixed) return e;
+    const wx = X + (vnoise(X * 0.035, Y * 0.035, 301) - 0.5) * 40 + (vnoise(X * 0.15, Y * 0.15, 305) - 0.5) * 10;
+    const wy = Y + (vnoise(X * 0.035, Y * 0.035, 303) - 0.5) * 40 + (vnoise(X * 0.15, Y * 0.15, 306) - 0.5) * 10;
+    const i = Math.max(0, Math.min(m.w - 1, Math.floor(wx / P))), j = Math.max(0, Math.min(m.h - 1, Math.floor(wy / P)));
+    if (m.tile[j * m.w + i] !== ROCK) return e;
+    const lk = m.look[j * m.w + i];
+    return { ...e, bio: lk >> 4, ter: terOf(lk & 15) };
   }
   function cliffPix(m, e, X, Y) {
+    {                                                                    // 바위 칸이 아닌 칸(곁의 땅)으로 번져 든 언덕 — 그 언덕(곁의 바위 칸)의 겉모습으로 (옆 땅 무늬로 칠하면 칸 경계에 곧은 줄이 남았음)
+      const cx = Math.floor(X / P), cy = Math.floor(Y / P), HS = highOf(m), ck = cy * m.w + cx;
+      if (e.t !== ROCK && !HS.high[ck] && !HS.stairs[ck]) {
+        let best = null, bd = 9;
+        for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+          const i = cx + dx, j = cy + dy;
+          if (i < 0 || j < 0 || i >= m.w || j >= m.h || m.tile[j * m.w + i] !== ROCK) continue;
+          const d = Math.hypot((i + 0.5) * P - X, (j + 0.5) * P - Y);
+          if (d < bd * P) { bd = d / P; best = m.look[j * m.w + i]; }
+        }
+        if (best !== null) e = { ...e, bio: best >> 4, ter: terOf(best & 15) };
+      }
+    }
+    e = cliffLook(m, e, X, Y);
     const obs = obsOf(e), L = levelOf(m), K = obs ? CLIFF_OBS : CLIFF_C;
     const tx = Math.floor(X / P), ty = Math.floor(Y / P);
     const ground = k => {                                                // 층 k 의 윗면 (k 0 은 그 칸의 땅)
-      if (obs && k === 0) {                                              // 흑요석 칸 바깥 — 곁의 땅 (5격 돌길 · 땅)
-        for (const [dx, dy] of [[0, 1], [-1, 0], [1, 0], [0, -1], [0, 2], [-1, 1], [1, 1]]) {
+      if (k === 0) {                                                     // 바위 칸이지만 언덕 가장자리 밖 — 가장 가까운 곁 땅의 무늬 (제 칸 무늬로 칠하면 옆 땅과의 경계가 칸 경계에 곧게 남았음, 2026-11-22)
+        let best = -1, bd = 1e9;
+        for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
           const x = tx + dx, y = ty + dy, u = x >= 0 && y >= 0 && x < m.w && y < m.h ? m.tile[y * m.w + x] : -1;
-          if (u === FLOOR || u === ROAD || u === TREE) { const lk = m.look[y * m.w + x]; return u === ROAD ? roadPixel(lk >> 4, X, Y, 1) : texture(terOf(lk & 15), lk >> 4, X, Y); }
+          if (u !== FLOOR && u !== ROAD && u !== TREE) continue;
+          const d = Math.hypot((x + 0.5) * P - X, (y + 0.5) * P - Y);
+          if (d < bd) { bd = d; best = y * m.w + x; }
         }
+        if (best >= 0) { const lk = m.look[best]; return m.tile[best] === ROAD ? roadPixel(lk >> 4, X, Y, 1) : texture(terOf(lk & 15) === ROCKY ? GRASS : terOf(lk & 15), lk >> 4, X, Y); }
       }
       if (obs) return texture(OBSID, 6, X, Y);
       const top = e.bio === 2 || e.bio === 3 || e.bio === 9 || k === 0 ? texture(k === 0 ? (e.ter === ROCKY ? GRASS : e.ter) : GRASS, e.bio, X, Y) : texture(e.ter, e.bio, X, Y);
