@@ -15,7 +15,7 @@ const path = require('path');
 const { execFileSync } = require('child_process');
 
 const ROOT = path.join(__dirname, '..', '..');
-const RANKS = { 1: ['./rank01-small.js', './rank01-big.js'], 2: ['./rank02-small.js', './rank02-big.js'], 3: ['./rank03-small.js', './rank03-mid.js', './rank03-big.js'], 4: ['./rank04-mid.js', './rank04-big.js'], 5: ['./rank05-small.js', './rank05-mid.js', './rank05-big.js'], 6: ['./rank06-mid.js', './rank06-big.js', './rank06-sins.js'] };
+const RANKS = { 1: ['./rank01-small.js', './rank01-big.js'], 2: ['./rank02-small.js', './rank02-big.js'], 3: ['./rank03-small.js', './rank03-mid.js', './rank03-big.js'], 4: ['./rank04-mid.js', './rank04-big.js'], 5: ['./rank05-small.js', './rank05-mid.js', './rank05-big.js'], 6: ['./rank06-mid.js', './rank06-big.js', './rank06-sins.js', './rank06-last.js'] };
 // 걸음 박자 — 둔한 몬스터일수록 프레임이 천천히 바뀜 (1 = 반 칸마다 A · B, 0.5 = 한 칸마다). 서 있는 정예 · 보스의 숨도 같은 박자
 // (사용자 결정 2026-11-20). 없으면 1
 // 흔들림 — 서 있을 때도 A · B 가 바뀌는 몬스터 (트렌트 잎이 바람에 흔들림, 사용자 요청 2026-11-20). 걸음 박자로 천천히
@@ -29,7 +29,8 @@ const PACE = {
   ghoul: 1.2, wraith: 0.6, vampire: 0.9, banshee: 0.7, succubus: 0.8, incubus: 0.9, deathknight: 0.6, lich: 0.5, demonlord: 0.7, ravenking: 1.2,
   whitehorse: 1.1, redhorse: 1.4, blackhorse: 0.7, palehorse: 0.6, bonedragon: 0.6, balrog: 0.5, lichking: 0.4,
   archdemon: 0.8, demongeneral: 0.9, abysstentacle: 0.5, elderdragon: 0.5, apocalypsebeast: 0.6,
-  sinenvy: 1.2, sinlust: 0.8, sinsloth: 0.3, sinpride: 0.6, sinwrath: 1, singreed: 0.8, singluttony: 0.4
+  sinenvy: 1.2, sinlust: 0.8, sinsloth: 0.3, sinpride: 0.6, sinwrath: 1, singreed: 0.8, singluttony: 0.4,
+  worldworm: 0.5, observer: 0.4, demonking: 0.5
 };
 
 const all = {}, byRank = {};
