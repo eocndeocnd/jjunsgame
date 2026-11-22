@@ -2,7 +2,7 @@
 
 > 자동으로 만든 파일입니다 (`node tools/cli.js images`). 손으로 고치지 마세요. 쓰는 법은 같은 폴더의 `README.md`.
 
-## 시트 9-A — 무기 · 보조무기 · 투구 · 갑옷 · 어깨 (9개)
+## 시트 9-A — 무기 · 보조무기 · 투구 · 갑옷 · 어깨 (9개) ✅ 다 자름
 
 저장할 이름: `design/images/sheets/rank09-A.png`
 
@@ -49,17 +49,17 @@ If a name describes a different kind of object than its type, draw the object fr
 
 | 칸 | 장비 | 부위 | 나온 곳 | 잘라서 둘 곳 |
 |---|---|---|---|---|
-| 1 | 별을 부르는 지팡이 | 무기 | 대마법사 | `assets/items/archmage_0.png` |
-| 2 | 절구공이 | 무기 | 바바 야가 | `assets/items/babayaga_0.png` |
-| 3 | 꿈을 꾸는 지팡이 | 무기 | 멀린 | `assets/items/merlin_0.png` |
-| 4 | 이름을 적은 마도서 | 보조무기 | 소환술사 | `assets/items/summoner_0.png` |
-| 5 | 끝까지 읽은 금지된 책 | 보조무기 | 흑마법사 | `assets/items/warlock_0.png` |
-| 6 | 마나가 고인 고깔모자 | 투구 | 대마법사 | `assets/items/archmage_1.png` |
-| 7 | 얼룩진 연금 앞치마 | 갑옷 | 연금술사 | `assets/items/alchemist_0.png` |
-| 8 | 그림자 로브 | 갑옷 | 흑마법사 | `assets/items/warlock_1.png` |
-| 9 | 룬을 새긴 견갑 | 어깨 | 룬 마법사 | `assets/items/runemage_0.png` |
+| 1 | 별을 부르는 지팡이 | 무기 | 대마법사 | `assets/items/archmage_0.png` ✅ |
+| 2 | 절구공이 | 무기 | 바바 야가 | `assets/items/babayaga_0.png` ✅ |
+| 3 | 꿈을 꾸는 지팡이 | 무기 | 멀린 | `assets/items/merlin_0.png` ✅ |
+| 4 | 이름을 적은 마도서 | 보조무기 | 소환술사 | `assets/items/summoner_0.png` ✅ |
+| 5 | 끝까지 읽은 금지된 책 | 보조무기 | 흑마법사 | `assets/items/warlock_0.png` ✅ |
+| 6 | 마나가 고인 고깔모자 | 투구 | 대마법사 | `assets/items/archmage_1.png` ✅ |
+| 7 | 얼룩진 연금 앞치마 | 갑옷 | 연금술사 | `assets/items/alchemist_0.png` ✅ |
+| 8 | 그림자 로브 | 갑옷 | 흑마법사 | `assets/items/warlock_1.png` ✅ |
+| 9 | 룬을 새긴 견갑 | 어깨 | 룬 마법사 | `assets/items/runemage_0.png` ✅ |
 
-## 시트 9-B — 장갑 · 허리띠 · 각반 · 신발 · 망토 (8개)
+## 시트 9-B — 장갑 · 허리띠 · 각반 · 신발 · 망토 (8개) ✅ 다 자름
 
 저장할 이름: `design/images/sheets/rank09-B.png`
 
@@ -105,16 +105,16 @@ If a name describes a different kind of object than its type, draw the object fr
 
 | 칸 | 장비 | 부위 | 나온 곳 | 잘라서 둘 곳 |
 |---|---|---|---|---|
-| 1 | 네 원소를 쥔 손 | 장갑 | 원소술사 | `assets/items/elementalist_0.png` |
-| 2 | 화염 손 | 장갑 | 샐러맨더 | `assets/items/salamander2_0.png` |
-| 3 | 약병을 꽂은 허리띠 | 허리띠 | 연금술사 | `assets/items/alchemist_1.png` |
-| 4 | 안개로 짠 허리띠 | 허리띠 | 보물상자 | `assets/items/chest_avalon_belt.png` |
-| 5 | 떡갈나무 껍질 각반 | 각반 | 드루이드 | `assets/items/druid_1.png` |
-| 6 | 땅속을 걷는 각반 | 각반 | 노움 | `assets/items/gnome_0.png` |
-| 7 | 바람의 신 | 신발 | 실프 | `assets/items/sylph2_0.png` |
-| 8 | 겨우살이 두건 | 망토 | 드루이드 | `assets/items/druid_0.png` |
+| 1 | 네 원소를 쥔 손 | 장갑 | 원소술사 | `assets/items/elementalist_0.png` ✅ |
+| 2 | 화염 손 | 장갑 | 샐러맨더 | `assets/items/salamander2_0.png` ✅ |
+| 3 | 약병을 꽂은 허리띠 | 허리띠 | 연금술사 | `assets/items/alchemist_1.png` ✅ |
+| 4 | 안개로 짠 허리띠 | 허리띠 | 보물상자 | `assets/items/chest_avalon_belt.png` ✅ |
+| 5 | 떡갈나무 껍질 각반 | 각반 | 드루이드 | `assets/items/druid_1.png` ✅ |
+| 6 | 땅속을 걷는 각반 | 각반 | 노움 | `assets/items/gnome_0.png` ✅ |
+| 7 | 바람의 신 | 신발 | 실프 | `assets/items/sylph2_0.png` ✅ |
+| 8 | 겨우살이 두건 | 망토 | 드루이드 | `assets/items/druid_0.png` ✅ |
 
-## 시트 9-C — 망토 · 반지 · 목걸이 · 팔찌 (8개)
+## 시트 9-C — 망토 · 반지 · 목걸이 · 팔찌 (8개) ✅ 다 자름
 
 저장할 이름: `design/images/sheets/rank09-C.png`
 
@@ -159,13 +159,13 @@ If a name describes a different kind of object than its type, draw the object fr
 
 | 칸 | 장비 | 부위 | 나온 곳 | 잘라서 둘 곳 |
 |---|---|---|---|---|
-| 1 | 박사의 검은 가운 | 망토 | 파우스트 | `assets/items/faust_0.png` |
-| 2 | 아발론의 안개 망토 | 망토 | 모르간 르 페이 | `assets/items/morgan_0.png` |
-| 3 | 요정 여왕의 반지 | 반지 | 모르간 르 페이 | `assets/items/morgan_1.png` |
-| 4 | 계약의 인장 | 반지 | 소환술사 | `assets/items/summoner_1.png` |
-| 5 | 탑에 갇힌 수정 | 목걸이 | 멀린 | `assets/items/merlin_2.png` |
-| 6 | 룬 뼈 목걸이 | 목걸이 | 룬 마법사 | `assets/items/runemage_1.png` |
-| 7 | 불과 얼음의 팔찌 | 팔찌 | 원소술사 | `assets/items/elementalist_1.png` |
+| 1 | 박사의 검은 가운 | 망토 | 파우스트 | `assets/items/faust_0.png` ✅ |
+| 2 | 아발론의 안개 망토 | 망토 | 모르간 르 페이 | `assets/items/morgan_0.png` ✅ |
+| 3 | 요정 여왕의 반지 | 반지 | 모르간 르 페이 | `assets/items/morgan_1.png` ✅ |
+| 4 | 계약의 인장 | 반지 | 소환술사 | `assets/items/summoner_1.png` ✅ |
+| 5 | 탑에 갇힌 수정 | 목걸이 | 멀린 | `assets/items/merlin_2.png` ✅ |
+| 6 | 룬 뼈 목걸이 | 목걸이 | 룬 마법사 | `assets/items/runemage_1.png` ✅ |
+| 7 | 불과 얼음의 팔찌 | 팔찌 | 원소술사 | `assets/items/elementalist_1.png` ✅ |
 | 8 | 되찾은 젊음의 팔찌 | 팔찌 | 파우스트 | `assets/items/faust_1.png` |
 
 ## 하나씩 뽑기 (시트가 잘 안 될 때)
