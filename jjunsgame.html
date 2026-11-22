@@ -11334,7 +11334,7 @@ const MAP_FILES = {"arena":{"compressionlevel":-1,"type":"map","version":"1.10",
       if (n < 0.04) c = c3('#3a2c46');
       const r = Math.abs(vnoise(X * 0.05, Y * 0.15, 31) - 0.5);
       if (r < 0.01) c = c3('#f07a2a'); else if (r < 0.022) c = c3('#a8361a');
-    } else if (b === 5 || t === PAVE) {                                                // 묘지돌 — 큰 돌덩이를 쌓은 벽
+    } else if (t === PAVE || (b === 5 && t !== GRASS && t !== DIRT)) {                 // 묘지돌 — 큰 돌덩이를 쌓은 벽 (5격 풀 · 흙 가장자리는 아래 흙 옆면 — 사용자 결정 2026-11-22: 벽돌처럼 보였음)
       const row = Math.floor(Y / 12), off = row % 2 ? 6 : 0, bx = ((X + off) % 10 + 10) % 10, by = ((Y % 12) + 12) % 12;
       c = c3('#3e3c46');
       if (bx === 0 || by === 0) c = c3('#2a2930'); else if (by === 1) c = c3('#4c4a56'); else if (n < 0.1) c = c3('#46444f');
@@ -11349,6 +11349,7 @@ const MAP_FILES = {"arena":{"compressionlevel":-1,"type":"map","version":"1.10",
       if (((X >> 1) + (Y >> 3)) % 7 === 0) c = c3('#4e3622');
       if (n < 0.07) c = c3('#86603e');
       if (Math.abs(vnoise(X * 0.15, Y * 0.04, 32) - 0.5) < 0.018) c = c3('#3a5a2a');
+      if (b === 5) c = mix(c, c3('#34323a'), 0.45);                                  // 5격 — 잿빛으로 어둑하게
     }
     // 위 땅의 가장자리 — 풀은 몇 점 늘어지고, 그 밖은 한 점 밝은 턱
     if (t === GRASS && fy < 2 + ((hash(X >> 1, 0, 35) * hang) | 0)) return c3((C.grass[b] || C.grass[0])[fy < 2 ? 0 : 3]);
