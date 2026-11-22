@@ -1965,7 +1965,7 @@
     [[4], ROCKY, 0.2, { pebbles: 2, mossy: 1.5, rockpile: 2, dry: 1 }],
     [[4], null, 0.32, { tuft: 2, tallgrass: 3, mossy: 2, pebbles: 1.5, flowers: 1, rockpile: 1.2, bush: 0.8 }],
     [[5], PAVE, 0.1, { leaves: 2, skull: 0.5, bones: 1 }],
-    [[5], null, 0.3, { dry: 4, grave: 2.5, bones: 1, skull: 0.8, pebbles: 1, rockpile: 1 }],
+    [[5], null, 0.276, { dry: 4, grave: 1.67, bones: 1, skull: 0.8, pebbles: 1, rockpile: 1 }],   // 묘비는 예전의 2/3 (사용자 결정 2026-11-22 — 너무 많았음), 나머지 장식 수는 그대로
     [[6], null, 0.2, { ember: 2, crystal: 2, pebbles: 1.5, rockpile: 1.2, skull: 0.6, bones: 0.8 }]
   ];
   const PETALS = { 0: ['#f4d35e', '#ee8fb0', '#ffffff', '#9fc5ff'], 3: ['#f4d35e', '#ee8fb0', '#ffffff', '#c8a0ff'], 4: ['#cfe0ff', '#ffffff', '#ffe8f0'], 7: ['#f4d35e', '#ffffff'] };

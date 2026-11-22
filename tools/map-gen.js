@@ -1211,7 +1211,10 @@ function overworld(data) {
       if (tiles[k] !== FLOOR || L.zoneAt(x, y) !== rank || L.bio[k] === 8 || fromEntry[k] < 0 || toBoss[k] < 0 || (fromLower[k] >= 0 && fromLower[k] < CHEST_FAR)) continue;
       let ring = true;
       for (let j = -1; j <= 1 && ring; j++) for (let i = -1; i <= 1; i++) if (!open(idx(x + i, y + j))) { ring = false; break; }
-      if (!ring || busy.some(([bx, by]) => Math.max(Math.abs(bx - x), Math.abs(by - y)) <= 4)) continue;
+      // 바로 아래 세 줄에 나무가 없을 것 — 키 큰 나무 그림이 위로 솟아 상자를 덮음 (사용자 지적 2026-11-22, 5격 마른 나무)
+      let treeBelow = false;
+      for (let j = 1; j <= 3 && !treeBelow; j++) for (let i = -1; i <= 1; i++) if (inside(x + i, y + j) && tiles[idx(x + i, y + j)] === TREE) { treeBelow = true; break; }
+      if (!ring || treeBelow || busy.some(([bx, by]) => Math.max(Math.abs(bx - x), Math.abs(by - y)) <= 4)) continue;
       cand.push({ x, y, d: fromEntry[k] + toBoss[k] - D });
     }
     cand.sort((p, q) => q.d - p.d || p.y - q.y || p.x - q.x);
