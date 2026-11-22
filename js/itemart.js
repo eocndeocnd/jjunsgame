@@ -126,6 +126,7 @@ const ITEM_ART = {
   'fallenking_1': 'assets/items/fallenking_1.png',
   'fallenking_2': 'assets/items/fallenking_2.png',
   'faust_0': 'assets/items/faust_0.png',
+  'faust_1': 'assets/items/faust_1.png',
   'firegiant_0': 'assets/items/firegiant_0.png',
   'forestwitch_0': 'assets/items/forestwitch_0.png',
   'forestwitch_2': 'assets/items/forestwitch_2.png',
