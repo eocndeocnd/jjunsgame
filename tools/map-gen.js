@@ -611,6 +611,26 @@ const NESTS = [
     rocks: [-0.35, 0.3, 0.75, 2.55, 3.05, 3.6, 4.2, 4.75, 5.35],      // 남쪽(흙길 쪽)은 트임 — 각도 사이가 저마다 다르게
     pieces: [{ kind: 'bones', x: -2, y: 3 }, { kind: 'bones', x: 4, y: -2 }, { kind: 'bones', x: -4, y: 0 }] }   // 알은 뺌 (사용자 결정 2026-11-21)
 ];
+// 무너진 성당 터 (사용자 결정 2026-11-22) — 지붕 없이 허물어진 작은 성당. 건물(문 · 안 지도)이 아니라 바깥 지도에 그냥 걸어 들어가는 폐허.
+// plan 은 위가 북쪽인 칸 그림: K 그 몬스터가 선 칸 · . 금 간 판석 바닥(걸을 수 있음) · , 그냥 땅 · W 무너진 돌벽 · N 깨진 둥근 창이 난 벽(두 칸) ·
+// A 제단(두 칸) · p 부러진 기둥 밑동 · r 돌무더기. 벽 · 기둥 · 제단 · 돌무더기는 막힌 소품(그림은 js/mapart.js 의 chapelPix — 지도 속성 blds),
+// 바닥 · 소품 · 둘레 두 칸은 어느 구역도 아님 (몬스터가 성당 안 · 벽에 바짝 붙어 생겨나지 않게)
+const CHAPELS = [
+  { boss: '데스 나이트', plan: [
+    'rWWWNNWWW,',     // 북쪽 벽 — 가운데 깨진 둥근 창 · 동쪽 끝은 무너져 없음
+    'W........W',
+    'W...AA...W',     // 제단
+    'W........W',
+    'W.p.KK.p.W',     // 데스 나이트 — 제단 앞 한가운데 · 양옆 기둥 밑동
+    '.....KK..W',     // 서쪽 벽이 무너진 틈
+    'W........r',
+    'W.p.......',     // 동쪽 벽이 무너진 틈 · 오른쪽 기둥은 쓰러져 돌무더기로
+    'W......r.W',
+    'W........W',
+    'r........W',
+    'WWr....rW,'      // 남쪽 정면 — 거의 다 무너져 가운데가 트인 입구
+  ] }
+];
 // 높은 땅 (사용자 결정 2026-11-21) — 걸어 올라갈 수 있는 언덕: 그 몬스터 자리를 가운데로 둥근 윗면(걸을 수 있음 · 그림은 한 층 높게),
 // 둘레는 못 지나가는 바위 테(남쪽은 두 칸 — 절벽 면이 그려지는 자리), 남쪽 테 가운데에 바위 계단(stairs — 걸을 수 있음).
 // 윗면 · 계단은 어느 구역도 아님. 지도 속성 high · stairs 로 그 칸들을 그림(js/mapart.js 의 cliffPix)에 알려 줌
@@ -869,6 +889,37 @@ function overworld(data) {
       if (!inside(x, y) || tiles[k] !== FLOOR || [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([ex, ey]) => tiles[idx(x + ex, y + ey)] === ROCK)) continue;
       tiles[k] = ROCK; keep[k] = 1; village[k] = 0;
     }
+  }
+  // 무너진 성당 터 (CHAPELS) — 바닥은 판석(겉모습 TILES), 벽 · 기둥 · 제단 · 돌무더기는 막힌 소품 (blds — kind chw · chp · cha · chr)
+  const chapel = new Uint8Array(w * h);
+  for (const C of CHAPELS) {
+    const og = posts.find(p => p.name === C.boss), kr = C.plan.findIndex(r => r.includes('K')), kc = C.plan[kr].indexOf('K');
+    const ox = og.x - kc, oy = og.y - kr, H = C.plan.length, W = C.plan[0].length;
+    const ch = (c, r) => (r >= 0 && r < H && c >= 0 && c < W ? C.plan[r][c] : ',');
+    const solidAt = (c, r) => 'WNApr'.includes(ch(c, r)), wallAt = (c, r) => 'WN'.includes(ch(c, r));
+    const inner = (c, r) => '.KApr'.includes(ch(c, r)) && c > 0 && r > 0 && c < W - 1 && r < H - 1;   // 성당 안 (바닥 · 안쪽 소품)
+    for (let r = 0; r < H; r++) for (let c = 0; c < W; c++) {
+      const t = ch(c, r), x = ox + c, y = oy + r, k = idx(x, y);
+      if (t === ',' || (t === 'A' && ch(c - 1, r) === 'A')) continue;   // 제단 오른쪽 칸 — 왼쪽 칸이 두 칸을 한꺼번에
+      if (!inside(x, y) || (tiles[k] !== FLOOR && tiles[k] !== ROAD) || (t === 'A' && tiles[k + 1] !== FLOOR && tiles[k + 1] !== ROAD)) throw new Error(`${C.boss} 성당 터 — (${x}, ${y}) 자리가 빈 땅이 아님`);
+      noArea[k] = 1; keep[k] = 1;
+      if (t === 'A') { noArea[k + 1] = 1; keep[k + 1] = 1; }
+      if (t === '.' || t === 'K') { tiles[k] = FLOOR; chapel[k] = 1; continue; }
+      const n = t === 'A' ? 2 : 1, j = L.hash(c, r, 301), b = { x, y, w: n, h: 1, v: blds.length };
+      for (let i = 0; i < n; i++) { tiles[k + i] = WALL; village[k + i] = 2; }
+      // 성당 안쪽이 어느 쪽인지 (그림이 벽 너머의 바닥을 판석 · 바깥 땅으로 나눠 칠함) · 안쪽 소품은 바닥이 다 판석
+      const ins = [[0, -1, 'n'], [0, 1, 's'], [1, 0, 'e'], [-1, 0, 'w']].filter(([ex, ey]) => inner(c + ex, r + ey) || (ch(c + ex, r + ey) === '.' && !wallAt(c + ex, r + ey))).map(q => q[2]).join('');
+      if (t === 'W' || t === 'N') {
+        // 남은 높이 — 북쪽 벽이 가장 높고, 남쪽으로 갈수록 낮게 허물어짐 (칸마다 조금씩 다르게) · 깨진 창은 가장 높게
+        const hgt = t === 'N' ? 8 : r === 0 ? 6 + Math.floor(j * 3) : r === H - 1 ? 2 + Math.floor(j * 3) : Math.max(2, Math.round(7 - r * 0.4 + (j - 0.5) * 4));
+        const link = [[0, -1, 'n'], [0, 1, 's'], [1, 0, 'e'], [-1, 0, 'w']].filter(([ex, ey]) => wallAt(c + ex, r + ey)).map(q => q[2]).join('');
+        blds.push({ ...b, kind: 'chw', hgt: Math.min(8, hgt), link, ins, ...(t === 'N' ? { win: ch(c - 1, r) === 'N' ? 'r' : 'l' } : {}) });
+      } else if (t === 'p') blds.push({ ...b, kind: 'chp', hgt: 5 + Math.floor(j * 6), fl: 1 });
+      else if (t === 'A') blds.push({ ...b, kind: 'cha', fl: 1 });
+      else blds.push({ ...b, kind: 'chr', ...(inner(c, r) ? { fl: 1 } : { ins }) });
+      if (!solidAt(c, r)) throw new Error('성당 터 — 그림 글자 확인');
+    }
+    for (let y = oy - 2; y < oy + H + 2; y++) for (let x = ox - 2; x < ox + W + 2; x++) if (inside(x, y) && !noArea[idx(x, y)]) noArea[idx(x, y)] = 2;   // 둘레 두 칸도 구역 밖
   }
   for (let k = 0; k < w * h; k++) if (village[k] === 1 && tiles[k] === FLOOR) tiles[k] = ROAD;
   // 숨은 굴로 가는 구멍 — 그 보스 바로 뒤 (보스 몸 위로 한 칸 띄워, 보스 폭만큼)
@@ -1243,7 +1294,7 @@ function overworld(data) {
   const lookLayer = new Uint8Array(w * h);
   for (let i = 0; i < w * h; i++) {
     const wet = L.ter[i] === OL.WATER || L.ter[i] === OL.CANAL;
-    lookLayer[i] = buildingCells[i] ? look(BUILD, 8) : village[i] === 2 ? look(BUILD, L.bio[i]) : lavaCells[i] ? look(OL.LAVA, L.bio[i]) : ruin(i) ? look(RUIN, L.bio[i]) : look(tiles[i] === ROAD && !wet ? OL.DIRT : L.ter[i], L.bio[i]);
+    lookLayer[i] = buildingCells[i] ? look(BUILD, 8) : village[i] === 2 ? look(BUILD, L.bio[i]) : lavaCells[i] ? look(OL.LAVA, L.bio[i]) : ruin(i) ? look(RUIN, L.bio[i]) : chapel[i] ? look(OL.TILES, L.bio[i]) : look(tiles[i] === ROAD && !wet ? OL.DIRT : L.ter[i], L.bio[i]);
   }
   // 옛 성문 — 두 탑을 감싸는 네모 (그림 js/mapart.js 의 drawOver 가 그 위에 아치를 덮어 그림)
   const gx0 = L.span(L.RUINS.towers[0], L.RUINS.towers[0])[0], gx1 = L.span(L.RUINS.towers[1], L.RUINS.towers[1])[1];

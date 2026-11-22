@@ -159,6 +159,13 @@
         const row = Math.floor(Y / 16), off = row % 2 ? 10 : 0, col = Math.floor((X + off) / 20);
         const lx = ((X + off) % 20 + 20) % 20, ly = ((Y % 16) + 16) % 16;
         const tid = hash(col, row, 16);
+        if (b === 5) {                                                                  // 무너진 성당 터 — 크기가 저마다 다른 어둑한 판석(줄 맞춘 격자 아님) · 빠진 자리엔 그 땅이 덩어리로 · 가는 금
+          if (fbm(u * 0.07, w * 0.07, 750) > 0.64) return texture(GRASS, 5, X, Y);
+          let c = stones(X, Y, 9, 751, ['#4a4652', '#56515c', '#413d48'], '#24202a');
+          if (Math.abs(vnoise(X * 0.15, Y * 0.15, 752) - 0.5) < 0.018) c = mul(c, 0.7);
+          if (fbm(u * 0.06, w * 0.06, 753) > 0.58) c = mix(c, c3('#3e4a34'), 0.35);
+          return c;
+        }
         if (b === 3 && hash(col, row, 17) < 0.14) {                                     // 왕국 — 판석이 빠진 자리엔 풀
           if (lx === 0 || ly === 0) return c3(pal[3]);
           return texture(GRASS, 3, X, Y);
@@ -505,7 +512,7 @@
   // 지도 속성 blds 의 소품 하나하나: stake 울타리 한 칸(굵기 · 키가 저마다 다른 뾰족한 통나무, 묶은 밧줄) · tent 가죽 천막(조각 가죽을 기운 자국 · 엇갈린 장대) ·
   // orchut 족장 움막(둥근 가죽 지붕 · 붉은 전쟁 칠 · 엄니 둘 · 짐승 해골) · totem 토템 · fire 모닥불 · rack 무기 걸이 · hide 가죽 말림대.
   // 빛은 왼쪽 위 — 오른쪽 면은 그늘, 그림자는 오른쪽 아래 땅에
-  const ORC_KINDS = { stake: 1, tent: 1, orchut: 1, totem: 1, fire: 1, rack: 1, hide: 1, bones: 1 };   // bones — 히드라 둥지
+  const ORC_KINDS = { stake: 1, tent: 1, orchut: 1, totem: 1, fire: 1, rack: 1, hide: 1, bones: 1, chw: 1, chp: 1, cha: 1, chr: 1 };   // bones — 히드라 둥지 · ch* — 무너진 성당 터 (chapelPix)
   const ORC_C = {
     hide: ['#3a2a20', '#4c3727', '#5e4530', '#71553a', '#846646'], seam: '#22170f', stitch: '#a08a62',
     bone: ['#6e6452', '#a39780', '#d4c8ac'], paint: '#8a2a22', rope: ['#5e5038', '#8a7a5a'], line: '#1a120e'
@@ -521,6 +528,7 @@
       return r >= 0 ? roadPixel(bio, X, Y, r) : texture(GRASS, bio, X, Y);
     };
     const shadow = (c, k = 0.66) => mul(c, k);
+    if (B.kind[0] === 'c' && B.kind[1] === 'h') return chapelPix(B, px, py, X, Y, ground);
     if (B.kind === 'stake') {
       // 울타리 한 칸 — 사용자가 준 사례대로 (2026-11-20): 칸 가운데 뾰족한 기둥, 좌우 이웃(link e · w) 쪽으로 가로대 두 줄,
       // 위아래 이웃(n · s) 쪽으로는 폭 4점의 막대가 이웃 칸까지 끊김 없이 (위아래로만 이어진 칸은 기둥 없이 막대만, 가운데 마디).
@@ -686,6 +694,97 @@
       return ground();
     }
     return ground();
+  }
+  // ---------- 무너진 성당 터 (5격 — tools/map-gen.js 의 CHAPELS, 사용자 결정 2026-11-22) ----------
+  // 소품마다 칸 안의 바닥 모양(F)을 남은 높이(H)만큼 위로 쌓아 올린 돌 (윗면 + 남쪽 앞면, 빛은 왼쪽 위 · 그림자는 오른쪽 아래):
+  //   chw 무너진 돌벽 한 칸 (이웃 벽 쪽(link)으로 이어짐, 칸마다 남은 높이가 다르고 윗선은 들쭉날쭉 · win 깨진 둥근 창) ·
+  //   chp 부러진 둥근 기둥 밑동 · cha 제단(해진 붉은 천 · 녹은 초) · chr 돌무더기(크기 · 높이가 다른 돌 몇 덩이)
+  // 벽 너머의 바닥은 성당 안쪽(ins — 그쪽 이웃이 성당 바닥)이면 판석, 바깥이면 둘레 땅
+  const CH_C = { top: ['#45414b', '#57525b', '#6b656c', '#827b7e'], face: ['#272330', '#332f3b', '#3f3a46', '#4b4651'], line: '#18141c',
+                 moss: ['#36412c', '#465436'], cloth: ['#3a1420', '#56202c', '#70303a'], wax: ['#8e8674', '#b4ab94'] };
+  function chapelPix(B, px, py, X, Y, ground) {
+    const K = CH_C, v = B.v | 0, line = c3(K.line), ox = B.x0 * P, oy = B.y0 * P;
+    const floorAt = (x, y) => {                                                    // 소품 둘레 땅 — 성당 안쪽이면 판석
+      const ins = B.ins || '';
+      const inner = B.fl || (ins.includes('e') && x > 12) || (ins.includes('w') && x < 3) || (ins.includes('s') && y > 14) || (ins.includes('n') && y < 7);
+      return inner ? texture(TILES, 5, X, Y) : ground();
+    };
+    // 돌 덩이들 — [F(x, y) 바닥 모양, H(x) 남은 높이]. 뒤(북쪽)의 것부터, 앞의 것이 덮음
+    const lumps = [];
+    if (B.kind === 'chw') {
+      const ln = B.link || '';
+      const F = (x, y) => {
+        const inX = x >= 3 && x <= 12, inY = y >= 7 && y <= 14;
+        return (inX && inY) || (inY && ((ln.includes('w') && x < 3) || (ln.includes('e') && x > 12))) || (inX && ((ln.includes('n') && y < 7) || (ln.includes('s') && y > 14)));
+      };
+      const Hc = x => Math.max(1, B.hgt - ((hash(Math.floor((x + ox) / 3), oy, 731) * 3) | 0) + (hash(Math.floor((x + ox) / 5), oy, 732) < 0.2 ? 1 : 0));   // 허물어진 윗선 — 3 · 5점마다 높이가 다름
+      lumps.push({ F, H: Hc, wall: true });
+    } else if (B.kind === 'chp') {
+      lumps.push({ F: (x, y) => x >= 2 && x <= 13 && y >= 11 && y <= 14, H: () => 2 });   // 밑동 받침돌 — 네모난 단
+      const F = (x, y) => Math.hypot((x - 7.5) / 4.4, (y - 12) / 2.6) < 1;
+      lumps.push({ F, H: x => B.hgt + 2 - (x < 5 ? 1 : x > 9 ? 2 + ((hash(x, v, 733) * 3) | 0) : x > 7 ? 1 : 0), round: true });   // 부러진 끝 — 오른쪽으로 비스듬히 떨어져 나감
+    } else if (B.kind === 'cha') {
+      lumps.push({ F: (x, y) => x >= 2 && x <= 29 && y >= 7 && y <= 14, H: () => 5, altar: true });
+    } else {
+      const n = 4 + ((hash(v, 0, 734) * 3) | 0);
+      for (let i = 0; i < n; i++) {
+        const cx = 2.5 + hash(v, i, 735) * 11, cy = 8 + hash(v, i, 736) * 6, rx = 1.6 + hash(v, i, 737) * 2.4, ry = rx * (0.6 + hash(v, i, 738) * 0.3);
+        lumps.push({ F: (x, y) => Math.hypot((x - cx) / rx, (y - cy) / ry) < 1, H: () => 1 + ((rx * 0.9 + hash(v, i, 739) * 2) | 0), cy, stone: i });
+      }
+      lumps.sort((a, b) => a.cy - b.cy);
+    }
+    // 점 (x, y) 가 어느 덩이의 몇 점 높이에 있나 — 앞의 덩이가 덮음. 윗면이면 d === H
+    const hit = (x, y) => {
+      for (let i = lumps.length - 1; i >= 0; i--) { const L = lumps[i], h = L.H(x); for (let d = h; d >= 0; d--) if (L.F(x, y + d)) return { i, d, h }; }
+      return null;
+    };
+    const s = hit(px, py);
+    if (!s) {
+      const g = floorAt(px, py);
+      if (hit(px - 1, py - 1)) return mul(g, 0.6);                                   // 그림자 — 오른쪽 아래로 한 점 · 두 점
+      if (hit(px - 2, py - 1) || hit(px - 1, py - 2)) return mul(g, 0.78);
+      return g;
+    }
+    const L = lumps[s.i], top = s.d === s.h;
+    if (L.wall && B.win) {                                                         // 깨진 둥근 창 — 두 칸 사이 가운데, 벽 윗면까지 뚫림
+      const cx = B.win === 'l' ? 15.5 : -0.5, ddx = Math.abs(px - cx), wy = py - 1, r = 3.6;   // 돌 테(밝은 쐐기돌) · 속은 어둠
+      const inWin = wy >= 0 && py <= 12 && ddx < r && (wy > r || Math.hypot(ddx, wy - r) < r);
+      const inRim = wy >= -1 && py <= 13 && ddx < r + 1.5 && (wy > r || Math.hypot(ddx, wy - r) < r + 1.5);
+      if (inWin) return ddx > r - 1 || (wy <= r && Math.hypot(ddx, wy - r) > r - 1) ? line : c3('#100c14');
+      if (inRim) return c3(K.top[wy < 3 ? 3 : 2]);
+    }
+    // 테두리 — 덩이 바깥 · 다른 덩이와 맞닿은 곳
+    const same = (x, y) => { const q = hit(x, y); return q && q.i === s.i; };
+    if (!same(px - 1, py) || !same(px + 1, py) || !same(px, py - 1) || !same(px, py + 1)) {
+      const below = hit(px, py + 1);
+      if (top && below && below.i === s.i && below.d < below.h) return c3(K.top[3]);   // 윗면 앞 모서리 — 밝은 턱 (선 대신)
+      return line;
+    }
+    if (top) {
+      // 윗면 — 왼쪽이 밝음, 이끼 · 갈라진 틈 · 떨어진 부스러기
+      let c;
+      if (L.wall) c = mul(stones(X, Y, 6, 754, [K.top[2], K.top[3], K.top[1]], K.top[0]), px < 6 ? 1.06 : px > 10 ? 0.86 : 1);   // 벽 윗면 — 쌓은 돌의 윗머리
+      else {
+        let k = L.round ? (px < 7 ? 3 : px < 9 ? 2 : 1) : 2 - (px > 12 ? 1 : 0);
+        if (hash(X, Y, 740) < 0.07) k = Math.max(0, k - 1);
+        c = c3(K.top[k]);
+      }
+      if (L.altar && px >= 11 && px <= 20) c = c3(K.cloth[px < 13 ? 2 : 1]);         // 제단 위의 해진 붉은 천
+      if (L.altar && ((px === 5 && py >= 3 && py <= 4) || (px === 25 && py >= 2 && py <= 4))) c = c3(K.wax[py === 2 || py === 3 && px === 5 ? 1 : 0]);   // 녹다 만 초 둘 (키가 다름)
+      if (!L.altar && fbm(X * 0.09, Y * 0.09, 741) > 0.62) c = mix(c, c3(K.moss[hash(X, Y, 742) < 0.5 ? 0 : 1]), 0.6);
+      return c;
+    }
+    // 앞면 — 다듬은 돌을 쌓은 줄 (줄마다 반 장 엇갈림, 장마다 폭이 조금씩 다름) · 아래로 갈수록 어둑 · 이끼 · 금
+    const fy = s.h - s.d, row = Math.floor(fy / 3), sx = px + ox + (row % 2 ? 3 : 0);
+    if (L.altar && px >= 11 && px <= 20 && py < 13 - ((hash(px, v, 743) * 3) | 0)) return c3(K.cloth[px < 13 ? 1 : 0]);   // 앞으로 늘어진 천 — 해진 아래 끝
+    if (fy % 3 === 0 || (hash(Math.floor(sx / 5), row, 744) < 0.5 ? sx % 5 === 0 : sx % 6 === 0)) return c3(K.face[0]);   // 줄눈
+    let k = fy <= 2 ? 3 : fy <= 5 ? 2 : 1;
+    if (L.round) k = px < 7 ? Math.min(3, k + 1) : px > 9 ? Math.max(0, k - 1) : k;
+    if (L.stone !== undefined) k = Math.max(1, k - (L.stone & 1));
+    let c = c3(K.face[k]);
+    if (hash(Math.floor(sx / 5), row, 745) < 0.08) c = mul(c, 0.72);                // 깨져 움푹한 돌
+    if (fy >= 4 && fbm(X * 0.1, Y * 0.1, 746) > 0.64) c = mix(c, c3(K.moss[0]), 0.55);
+    return c;
   }
   function hutGeom(B) {
     const pw = B.w * P, ph = B.h * P, d0 = (B.door.x - B.x0) * P, d1 = d0 + B.door.w * P;
@@ -2008,6 +2107,7 @@
     [[4], ROCKY, 0.2, { pebbles: 2, mossy: 1.5, rockpile: 2, dry: 1 }],
     [[4], null, 0.32, { tuft: 2, tallgrass: 3, mossy: 2, pebbles: 1.5, flowers: 1, rockpile: 1.2, bush: 0.8 }],
     [[5], PAVE, 0.1, { leaves: 2, skull: 0.5, bones: 1 }],
+    [[5], TILES, 0.14, { rubble: 1.4, debris: 1.2, dry: 1, bones: 0.5, skull: 0.3 }],   // 무너진 성당 터 바닥 — 묘비 대신 떨어진 돌 · 부스러기
     [[5], null, 0.276, { dry: 4, grave: 1.67, bones: 1, skull: 0.8, pebbles: 1, rockpile: 1 }],   // 묘비는 예전의 2/3 (사용자 결정 2026-11-22 — 너무 많았음), 나머지 장식 수는 그대로
     [[6], null, 0.2, { ember: 2, crystal: 2, pebbles: 1.5, rockpile: 1.2, skull: 0.6, bones: 0.8 }]
   ];
@@ -2082,7 +2182,7 @@
       const my = !!door && (door.name === 'myguild' || door.name === 'myguild2');
       const kind = b.kind === 'mineCity' ? 'mineNew' : b.kind === 'aptCity' ? 'apt' : my ? (GLV <= 1 ? 'shabby' : 'mine') : b.kind;
       buildings.push({ x0: b.x, y0: b.y, w: b.w, h: b.h, door, kind, roof: b.roof, tone: b.tone, v: b.v, roofOnly: !!b.roofOnly, f: b.f, G: null, my, glv: b.kind === 'mineCity' ? GLV : Math.min(3, GLV), over: b.overLot ? (b.kind === 'aptCity' ? 'home' : 'guild') : false, hang: b.over | 0,
-                       bmo: !!door && door.name === 'blackmarket' && BMO, link: b.link });
+                       bmo: !!door && door.name === 'blackmarket' && BMO, link: b.link, hgt: b.hgt, ins: b.ins, fl: b.fl, win: b.win });   // hgt · ins · fl · win — 무너진 성당 터 (chapelPix)
     }
     for (let k = 0; k < m.w * m.h; k++) {
       if ((m.look[k] & 15) !== BUILD || bAt[k] >= 0) continue;
