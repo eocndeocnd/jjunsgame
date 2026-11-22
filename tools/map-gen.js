@@ -521,8 +521,8 @@ const OVERWORLD_AREAS = {
       [51, 12, 64, 20], [37, 3, 50, 11], [51, 3, 64, 11], [23, 3, 36, 11]],
   4: [[66, 40, 80, 58], [68, 59, 86, 74], [81, 40, 100, 56], [72, 22, 86, 39], [87, 22, 100, 39],  // 숲 가장자리 → 남쪽 · 가운데 → 북쪽 눈밭 → 동쪽 아치 앞
       [87, 57, 109, 74], [101, 36, 109, 56]],
-  5: [[116, 44, 132, 58], [116, 59, 132, 73], [116, 74, 132, 89], [133, 74, 149, 89], [133, 59, 149, 73],   // 아치 앞에서 대성당 쪽으로
-      [150, 74, 167, 89], [150, 59, 167, 73]],   // 대성당 앞 · 북동쪽(옛 데몬 로드 · 발록 자리)은 몬스터 없는 빈 땅 — 둘은 지하(UNDERS)로 (사용자 결정 2026-11-22)
+  5: [[117, 44, 131, 55], [117, 60, 130, 72], [137, 52, 151, 63], [152, 45, 166, 56],   // 땅 곳곳에 (사용자 결정 2026-11-22 — 데몬 로드 · 발록이 지하로 가며 다시 놓음)
+      [137, 64, 151, 77], [153, 60, 167, 73], [153, 76, 167, 88]],      // 밴시 · 서큐버스 · 뱀파이어 자리 (AREA_FIX) — 남서쪽 성당 터 둘레 · 남쪽 가운데는 빈 땅
   6: [[131, 33, 146, 40], [114, 33, 130, 40], [113, 5, 123, 32], [124, 19, 143, 32], [124, 5, 146, 18]]   // 묘실 입구 → 용암 강 → 칠죄종 홀 → 북쪽
 };
 // 정해진 자리 — 시안 그림의 그 그림 조각 자리 (앞에 서는 것은 한 칸 아래)
@@ -536,7 +536,7 @@ const OVERWORLD_POSTS = [
   // 불의 거인은 남쪽 거친 바위밭의 용암 곁 · 구름 거인은 가운데 길 북쪽의 높은 둔덕 (GIANT_GROUNDS · HIGH_GROUNDS)
   ['돌 거인', 77.7, 39.3], ['서리 거인', 84.9, 28.9], ['불의 거인', 84.1, 66.1], ['구름 거인', 103.3, 34.5],
   ['거인왕', 'gate'],                                                   // 쐐기돌 아치
-  ['흰 말의 기사', 128, 60], ['붉은 말의 기사', 132, 60], ['검은 말의 기사', 128, 63], ['창백한 말의 기사', 132, 63],   // 네 말의 기사 광장
+  ['흰 말의 기사', 129, 61], ['붉은 말의 기사', 147, 48], ['검은 말의 기사', 160, 66], ['창백한 말의 기사', 143, 70],   // 네 기사는 서로 멀리 (사용자 결정 2026-11-22): 광장 · 대성당 동쪽 · 동쪽 가운데 · 남쪽 길가
   ['데스 나이트', 122, 77], ['리치', 160, 55], ['까마귀 왕', 158, 81],  // 영묘 둘 · 숨은 묘실
                                                                        // 불사의 왕은 대성당 아래 지하의 신전에 (UNDERS)
   ['칠죄종 · 탐욕', 127, 21], ['칠죄종 · 질투', 133, 21], ['칠죄종 · 색욕', 139, 21], ['칠죄종 · 폭식', 127, 30],
@@ -575,7 +575,9 @@ const BUILDINGS = [
 ];
 // 정해 둔 구역 — { 격: { 몬스터 id: 그 구역 자리(OVERWORLD_AREAS 의 네모) } }. 약한 차례로 정해지는 것보다 앞섬
 // 2격: 서쪽 통나무 다리를 건너면 바로 트렌트(나무 사이), 그 뒤(남쪽) 가고일 (사용자 결정 2026-11-20)
-const AREA_FIX = { 2: { treant: [6, 42, 25, 51], gargoyle: [6, 52, 25, 61] } };
+const AREA_FIX = { 2: { treant: [6, 42, 25, 51], gargoyle: [6, 52, 25, 61] },
+  // 5격: 밴시는 창백한 말의 기사 자리에 · 서큐버스는 검은 말의 기사 자리에 겹치게, 뱀파이어는 데스 나이트(성당 터)와 떨어진 동쪽 아래 (사용자 결정 2026-11-22)
+  5: { banshee: [137, 64, 151, 77], succubus: [153, 60, 167, 73], vampire: [153, 76, 167, 88] } };
 // 듬성듬성한 나무를 심는 구역 — { 몬스터 id: 나무 간격(칸) }. 트렌트는 나무 사이에서 생겨남 (사용자 결정 2026-11-20)
 const SPARSE_TREES = { treant: 6 };
 // 숲 솎기 — 시안 칸 네모 [x0, y0, x1, y1] 안의 빽빽한 숲을 gap 칸마다 한 그루로. 2격 서쪽 통나무 다리 앞 숲 — 트렌트가 그 나무 사이에 섬 (사용자 결정 2026-11-20)
@@ -861,43 +863,39 @@ function overworld(data) {
     fillRect({ x: mx - 2, y: my + 1, w: 5, h: 2 }, FLOOR);
     guard(mx - 2, my, 5, 3, 1);
   }
-  // 지하로 내려가는 곳 (UNDERS) — 대성당 앞뜰, 벼랑에 붙어 앞으로 내민 흑요석 바위턱(높은 땅) 밑동에 고딕 묘실 문
-  // (gate — 뾰족한 돌 아치 · 양옆 돌기둥 · 해골을 새긴 문짝, 늘 열려 계단이 내려감, 사용자 요청 2026-11-22). 문은 5 × 4 칸, 아래 가운데 세 칸이 문.
-  // 바위턱은 wall 칸 폭 — 문 줄부터 위로 벼랑에 닿을 때까지 바위 칸 (흑요석 땅). 그림은 js/mapview.js 가 바위 면(MapArt.rockWall — 문보다 한 칸 높게)과
-  // 문(MapArt.gothicGate)을 문 칸 위에 덮어 그림. 다음 격 쪽(up)에는 지하에서 올라오는 계단 (stairs — 위 줄은 돌 우물) — 지하의 보스를 꺾어야 열림
+  // 지하로 드나드는 곳 (UNDERS) — 흑요석 바위턱(높은 땅) 밑동에 박힌 고딕 묘실 문 (gate — 뾰족한 돌 아치 · 양옆 돌기둥 · 해골을 새긴 문짝, 사용자 요청 2026-11-22).
+  // 문은 5 × 4 칸, 아래 가운데 세 칸이 문. 그림은 js/mapview.js 가 바위 면(MapArt.rockWall — 문보다 한 칸 높게)과 문(MapArt.gothicGate)을 문 칸 위에 덮어 그림.
+  //   mouth — 대성당 앞뜰: 바위턱이 위로 벼랑 쪽으로 넓게 퍼져(버팀벽처럼) 벼랑에 붙음. 늘 열려 계단이 내려감
+  //   up    — 다음 격 들머리: 홀로 솟은 바위 둔덕(위로 갈수록 좁아짐). 지하의 보스를 꺾어야 열림 (닫히면 해골 문짝)
+  const GW = 5, GH = 4, RW = 9, RH = GH + 1;
+  const rockGate = (u, at, attach, port) => {
+    const mx = Math.round(L.fc(at[0])), my = Math.round(L.fc(at[1])), face0 = my - RH + 1;
+    const free = (x0, y0, x1, y1, what) => { for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) if (!inside(x, y) || (tiles[idx(x, y)] !== FLOOR && tiles[idx(x, y)] !== ROAD)) throw new Error(`${u.title} ${what} — (${x}, ${y}) 자리가 빈 땅이 아님`); };
+    free(mx - 1, my, mx + 1, my + 2, '묘실 문');
+    free(mx - (RW >> 1) - 1, my + 1, mx + (RW >> 1) + 1, my + 2, '묘실 문 앞');
+    // 바위턱 — 면 줄(문 · 그 위)은 RW 칸 폭. 그 위는 벼랑에 붙이면 넓게 퍼지고, 홀로 서면 좁아지며 둥글게 끝남. 줄마다 폭이 조금씩 달라 가장자리가 곧지 않게
+    for (let x = mx - (RW >> 1) - 6; x <= mx + (RW >> 1) + 6; x++) {
+      const core = Math.abs(x - mx) <= RW >> 1;
+      let reached = !attach;
+      for (let y = my; y >= face0 - 7; y--) {
+        const k = idx(x, y), j = L.hash(x, y, 331) * 1.2;
+        const hw = y >= face0 ? RW >> 1 : attach ? (RW >> 1) + (face0 - y) * 0.8 + j : (RW >> 1) - (face0 - y) * 1.4 + j;
+        if (Math.abs(x - mx) > hw) continue;
+        if (y === my && x >= mx - 1 && x <= mx + 1) continue;               // 문 — 걸어 들어가는 칸
+        if (attach && y < face0 && (tiles[k] === ROCK || tiles[k] === WALL)) { reached = true; break; }   // 벼랑에 닿음
+        if (tiles[k] !== FLOOR && tiles[k] !== ROAD && tiles[k] !== ROCK) { if (core) throw new Error(`${u.title} 바위턱 — (${x}, ${y}) 자리가 빈 땅이 아님`); break; }
+        tiles[k] = ROCK; L.ter[k] = OL.OBSID; L.bio[k] = 6;
+      }
+      if (core && !reached) throw new Error(`${u.title} 바위턱 — ${x} 줄이 벼랑에 닿지 않음 (묘실 문 자리를 벼랑 쪽으로)`);
+    }
+    ports.push({ label: u.title, x: mx - 1, y: my, w: 3, h: 1, gate: true, gw: GW, gh: GH, ww: RW, wh: RH, ...port });
+    guard(mx - (RW >> 1) - 1, my + 1, RW + 2, 2, 0);
+  };
   for (const u of UNDERS) {
     const boss = data.ENEMIES.find(e => e.name === u.boss && e.kind === 'boss');
     if (!boss || boss.rank.n !== u.rank) throw new Error(`${u.title} — ${u.boss} 이(가) ${u.rank}격 보스가 아님`);
-    const free = (x0, y0, x1, y1, what) => { for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) if (!inside(x, y) || (tiles[idx(x, y)] !== FLOOR && tiles[idx(x, y)] !== ROAD)) throw new Error(`${u.title} ${what} — (${x}, ${y}) 자리가 빈 땅이 아님`); };
-    {
-      const mx = Math.round(L.fc(u.mouth[0])), my = Math.round(L.fc(u.mouth[1])), GW = 5, GH = 4, RW = 9, RH = GH + 1;
-      free(mx - 1, my, mx + 1, my + 2, '묘실 문');
-      free(mx - (RW >> 1) - 1, my + 1, mx + (RW >> 1) + 1, my + 2, '묘실 문 앞');
-      // 바위턱 — 면 줄(문 · 그 위)은 RW 칸 폭, 그 위로는 벼랑 쪽으로 갈수록 넓게 퍼져(버팀벽처럼) 벼랑에 붙음. 줄마다 폭이 조금씩 달라 가장자리가 곧지 않게
-      const face0 = my - RH + 1;
-      for (let x = mx - (RW >> 1) - 6; x <= mx + (RW >> 1) + 6; x++) {
-        const core = Math.abs(x - mx) <= RW >> 1;
-        let reached = false;
-        for (let y = my; y >= face0 - 7; y--) {
-          const k = idx(x, y), hw = y >= face0 ? RW >> 1 : (RW >> 1) + (face0 - y) * 0.8 + L.hash(x, y, 331) * 1.2;
-          if (Math.abs(x - mx) > hw) continue;
-          if (y === my && x >= mx - 1 && x <= mx + 1) continue;               // 문 — 걸어 들어가는 칸
-          if (y < face0 && (tiles[k] === ROCK || tiles[k] === WALL)) { reached = true; break; }   // 벼랑에 닿음
-          if (tiles[k] !== FLOOR && tiles[k] !== ROAD && tiles[k] !== ROCK) { if (core) throw new Error(`${u.title} 바위턱 — (${x}, ${y}) 자리가 빈 땅이 아님`); break; }
-          tiles[k] = ROCK; L.ter[k] = OL.OBSID; L.bio[k] = 6;
-        }
-        if (core && !reached) throw new Error(`${u.title} 바위턱 — ${x} 줄이 벼랑에 닿지 않음 (묘실 문 자리를 벼랑 쪽으로)`);
-      }
-      ports.push({ name: u.id, label: u.title, x: mx - 1, y: my, w: 3, h: 1, to: `${u.id}.in`, gate: true, gw: GW, gh: GH, ww: RW, wh: RH });
-      guard(mx - (RW >> 1) - 1, my + 1, RW + 2, 2, 0);
-    }
-    {
-      const mx = Math.round(L.fc(u.up[0])), my = Math.round(L.fc(u.up[1]));
-      free(mx - 2, my - 1, mx + 2, my + 2, '계단');
-      fillRect({ x: mx - 1, y: my - 1, w: 3, h: 1 }, WALL);
-      ports.push({ name: `${u.id}up`, label: u.title, x: mx - 1, y: my, w: 3, h: 1, to: `${u.id}.up`, stairs: true, opensAfter: boss.id });
-      guard(mx - 2, my - 1, 5, 4, 1);
-    }
+    rockGate(u, u.mouth, true, { name: u.id, to: `${u.id}.in` });
+    rockGate(u, u.up, false, { name: `${u.id}up`, to: `${u.id}.up`, opensAfter: boss.id });
   }
   const lavaCells = new Uint8Array(w * h), bigRocks = [];
   for (const G of GIANT_GROUNDS) {
