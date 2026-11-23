@@ -1639,6 +1639,23 @@ const ABYSS = {                                                // 처음 시안(
         '   ..........   ',
         '     ......     '
       ]
+    },
+    '칠죄종 · 탐욕': {                                         // 「아무리 쌓아도 모자란 곳」 — 가져도 모자란 것의 자리
+      kinds: { G: 'grheap', p: 'grpile', c: 'grchest', o: ['grchest', 1], S: 'grscale', x: 'grskel', y: 'grskel' }, gold: true,   // gold — 탐욕 쪽으로 갈수록 빽빽한 흘린 금화 (그림 coinObs)
+      plan: [
+        '     ......     ',
+        '   ...GGGGG..   ',     // 금화 산
+        '  .c..GGGGG.c.  ',     // 쇠사슬 · 자물쇠로 감은 궤짝
+        ' ....p.KKK..p.. ',     // 금화 더미
+        '.S.....KKK......',     // 금화 쪽으로 기운 금 저울
+        '.S.....KKK...xx.',     // 금화에 반쯤 묻힌 해골
+        '...pp......o....',     // 금화가 넘치는 열린 궤짝
+        '..........p.....',
+        ' ..y........... ',     // 금화 밖으로 뻗은 뼈 손
+        '  ............  ',
+        '   ..........   ',
+        '     ......     '
+      ]
     }
   },
   castle: { x0: 30, x1: 94, y0: 7, y1: 40, door: 4 },         // 마왕성 바깥 (문은 아래 가운데, 벌레가 그 앞을 막음)
@@ -1672,7 +1689,7 @@ function abyssMap(data) {
   for (let y = 3; y < H - 2; y++) for (let x = 1; x < W - 1; x++) if (Math.abs(x + 0.5 - A.cx) < half(y)) tiles[idx(x, y)] = FLOOR;
   const segDist = (pts, x, y) => { let best = 1e9; for (let i = 0; i + 1 < pts.length; i++) { const [ax, ay] = pts[i], [bx, by] = pts[i + 1], dx = bx - ax, dy = by - ay, t = Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / (dx * dx + dy * dy))); best = Math.min(best, Math.hypot(x - ax - dx * t, y - ay - dy * t)); } return best; };
   // 칠죄종 턱 — 윗면(걸을 수 있음 · 한 층 높게) · 둘레 바위 테(남쪽은 두 칸) · 남쪽 테 가운데에 바위 계단. 윗면 · 테 · 둘레는 구역 밖, 나무 없음
-  const posts = [], ledges = [], sitePorts = [], blds = [], cool = new Uint8Array(W * H), lichen = new Uint8Array(W * H), petal = new Uint8Array(W * H), grease = new Uint8Array(W * H), rage = new Uint8Array(W * H), pave = [], rug = [], rageAt = [];
+  const posts = [], ledges = [], sitePorts = [], blds = [], cool = new Uint8Array(W * H), lichen = new Uint8Array(W * H), petal = new Uint8Array(W * H), grease = new Uint8Array(W * H), rage = new Uint8Array(W * H), gold = new Uint8Array(W * H), pave = [], rug = [], rageAt = [], goldAt = [];
   for (const [name, lx, ly] of A.sins) {
     const e = foeNamed(name), { rx, ry } = A.ledge, d = (x, y) => Math.hypot((x + 0.5 - lx) / rx, (y + 0.5 - ly) / ry);
     for (let y = ly - ry - 4; y <= ly + ry + 4; y++) for (let x = lx - rx - 4; x <= lx + rx + 4; x++) {
@@ -1693,12 +1710,13 @@ function abyssMap(data) {
     const site = A.sites && A.sites[name];
     if (!(site && site.inside)) posts.push({ name: e.name, x: px, y: py, w: n, h: n, enemy: e.id, blocks: false });   // inside — 건물 안 지도에 섬
     let foot = ly; while (high[idx(lx, foot + 1)] || stairs[idx(lx, foot + 1)]) foot++;
+    if (site && site.gold) goldAt.push([Math.round((px + n / 2) * 16), (py + n) * 16 - 6].join(','));   // 흘린 금화가 가장 빽빽한 곳 — 탐욕의 발밑
     if (site && site.rage) rageAt.push([Math.round((px + n / 2) * 16), (py + n) * 16 - 4].join(','));   // 갈라진 금의 가운데 — 분노의 발밑 (점 단위)
     if (site && site.rug && !site.inside) rug.push([px * 16 + 2, (py + n) * 16 - 4, (px + n) * 16 - 2, (foot + 1) * 16].join(','));   // 융단 — 발밑에서 계단 끝까지 (점 단위)
     ledges.push({ x: lx, y: foot + 1 });                       // 계단 밑 — 곁길이 닿는 곳
     // 꾸밈 (A.sites) — 글자 네모마다 막힌 소품 하나 (칸은 벽 · 겉모습 BUILD, 그림은 지도 속성 blds)
     if (site) {
-      for (const [flag, mask] of [['cool', cool], ['lichen', lichen], ['petal', petal], ['grease', grease], ['rage', rage]]) if (site[flag]) for (let y = ly - ry - 4; y <= ly + ry + 4; y++) for (let x = lx - rx - 4; x <= lx + rx + 4; x++) if (inside(x, y) && (high[idx(x, y)] || stairs[idx(x, y)] || (tiles[idx(x, y)] === ROCK && noArea[idx(x, y)]))) mask[idx(x, y)] = 1;   // 윗면 · 바위 테 · 계단 (절벽 면까지)   // 윗면 · 바위 테 · 계단 (절벽 면의 불줄기도)
+      for (const [flag, mask] of [['cool', cool], ['lichen', lichen], ['petal', petal], ['grease', grease], ['rage', rage], ['gold', gold]]) if (site[flag]) for (let y = ly - ry - 4; y <= ly + ry + 4; y++) for (let x = lx - rx - 4; x <= lx + rx + 4; x++) if (inside(x, y) && (high[idx(x, y)] || stairs[idx(x, y)] || (tiles[idx(x, y)] === ROCK && noArea[idx(x, y)]))) mask[idx(x, y)] = 1;   // 윗면 · 바위 테 · 계단 (절벽 면까지)   // 윗면 · 바위 테 · 계단 (절벽 면의 불줄기도)
       if (site.pave) { const [dx, dy, prx, pry] = site.pave; pave.push([(lx + dx) * 16, (ly + dy) * 16, prx * 16, pry * 16].map(Math.round).join(',')); }
       const { plan, kinds } = site, ox = lx - rx, oy = ly - ry, ch = (c, r) => (plan[r] || '')[c] || ' ';
       if (plan.length !== ry * 2 || plan.some(row => row.length !== rx * 2)) throw new Error(`6격 ${name} 꾸밈 — 그림이 ${rx * 2} × ${ry * 2} 가 아님`);
@@ -1833,9 +1851,9 @@ function abyssMap(data) {
     const { x, y, polygon } = outline(keepSet, box);
     return { name: e.name, x, y, polygon, rank: 6, monster: e.id, zone: zone.id };
   });
-  const highRuns = cellRuns(high), stairRuns = cellRuns(stairs), coolRuns = cellRuns(cool), lichenRuns = cellRuns(lichen), petalRuns = cellRuns(petal), greaseRuns = cellRuns(grease), rageRuns = cellRuns(rage);   // cellRuns 는 OUT_W 로 칸을 풂 — 바꿔 둔 동안에
+  const highRuns = cellRuns(high), stairRuns = cellRuns(stairs), coolRuns = cellRuns(cool), lichenRuns = cellRuns(lichen), petalRuns = cellRuns(petal), greaseRuns = cellRuns(grease), rageRuns = cellRuns(rage), goldRuns = cellRuns(gold);   // cellRuns 는 OUT_W 로 칸을 풂 — 바꿔 둔 동안에
   OUT_W = saveW; OUT_H = saveH;
-  return buildTmj({ w: W, h: H, tiles, areas, posts, ports, npcs, chests, look: lk, props: { title: zone.name, high: highRuns, stairs: stairRuns, cool: coolRuns, lichen: lichenRuns, petal: petalRuns, grease: greaseRuns, rage_cells: rageRuns, rage: rageAt.join(';'), rug: rug.join(';'), pave: pave.join(';'), blds: JSON.stringify(blds) } });
+  return buildTmj({ w: W, h: H, tiles, areas, posts, ports, npcs, chests, look: lk, props: { title: zone.name, high: highRuns, stairs: stairRuns, cool: coolRuns, lichen: lichenRuns, petal: petalRuns, grease: greaseRuns, rage_cells: rageRuns, rage: rageAt.join(';'), gold_cells: goldRuns, gold: goldAt.join(';'), rug: rug.join(';'), pave: pave.join(';'), blds: JSON.stringify(blds) } });
 }
 
 // ---------- 건물 안 (BUILDINGS) — 왕좌의 큰 방 ----------

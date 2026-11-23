@@ -513,7 +513,7 @@
   // 지도 속성 blds 의 소품 하나하나: stake 울타리 한 칸(굵기 · 키가 저마다 다른 뾰족한 통나무, 묶은 밧줄) · tent 가죽 천막(조각 가죽을 기운 자국 · 엇갈린 장대) ·
   // orchut 족장 움막(둥근 가죽 지붕 · 붉은 전쟁 칠 · 엄니 둘 · 짐승 해골) · totem 토템 · fire 모닥불 · rack 무기 걸이 · hide 가죽 말림대.
   // 빛은 왼쪽 위 — 오른쪽 면은 그늘, 그림자는 오른쪽 아래 땅에
-  const ORC_KINDS = { stake: 1, tent: 1, orchut: 1, totem: 1, fire: 1, rack: 1, hide: 1, bones: 1, chw: 1, chp: 1, cha: 1, chr: 1, gskull: 1, btorch: 1, skpile: 1, slthr: 1, slscf: 1, slblk: 1, sllad: 1, slhg: 1, slscr: 1, evtent: 1, evmir: 1, evtel: 1, evhoard: 1, lupav: 1, lucand: 1, lurose: 1, lumask: 1, luhall: 1, gltable: 1, glcaul: 1, glspit: 1, glbones: 1, glkeg: 1, glplate: 1, glslave: 1, prban: 1, prkneel: 1, prfall: 1, prhead: 1, prcastle: 1, prbig: 1, prmir: 1, wrpil: 1, wrbould: 1, wrweap: 1, wrfire: 1, wrshield: 1 };   // bones — 히드라 둥지 · ch* — 무너진 성당 터 (chapelPix) · gskull · btorch · skpile — 지하 신전 (cryptPix)
+  const ORC_KINDS = { stake: 1, tent: 1, orchut: 1, totem: 1, fire: 1, rack: 1, hide: 1, bones: 1, chw: 1, chp: 1, cha: 1, chr: 1, gskull: 1, btorch: 1, skpile: 1, slthr: 1, slscf: 1, slblk: 1, sllad: 1, slhg: 1, slscr: 1, evtent: 1, evmir: 1, evtel: 1, evhoard: 1, lupav: 1, lucand: 1, lurose: 1, lumask: 1, luhall: 1, gltable: 1, glcaul: 1, glspit: 1, glbones: 1, glkeg: 1, glplate: 1, glslave: 1, prban: 1, prkneel: 1, prfall: 1, prhead: 1, prcastle: 1, prbig: 1, prmir: 1, wrpil: 1, wrbould: 1, wrweap: 1, wrfire: 1, wrshield: 1, grheap: 1, grpile: 1, grchest: 1, grscale: 1, grskel: 1 };   // bones — 히드라 둥지 · ch* — 무너진 성당 터 (chapelPix) · gskull · btorch · skpile — 지하 신전 (cryptPix)
   const ORC_C = {
     hide: ['#3a2a20', '#4c3727', '#5e4530', '#71553a', '#846646'], seam: '#22170f', stitch: '#a08a62',
     bone: ['#6e6452', '#a39780', '#d4c8ac'], paint: '#8a2a22', rope: ['#5e5038', '#8a7a5a'], line: '#1a120e'
@@ -537,6 +537,7 @@
     if (GLUT_KINDS[B.kind]) return glutPix(B, px, py, X, Y);                        // 칠죄종 · 폭식의 턱
     if (PRIDE_KINDS[B.kind]) return pridePix(B, px, py, X, Y);                      // 칠죄종 · 오만의 턱
     if (WRATH_KINDS[B.kind]) return wrathPix(B, px, py, X, Y);                      // 칠죄종 · 분노의 턱
+    if (GREED_KINDS[B.kind]) return greedPix(B, px, py, X, Y);                      // 칠죄종 · 탐욕의 턱
     if (B.kind === 'stake') {
       // 울타리 한 칸 — 사용자가 준 사례대로 (2026-11-20): 칸 가운데 뾰족한 기둥, 좌우 이웃(link e · w) 쪽으로 가로대 두 줄,
       // 위아래 이웃(n · s) 쪽으로는 폭 4점의 막대가 이웃 칸까지 끊김 없이 (위아래로만 이어진 칸은 기둥 없이 막대만, 가운데 마디).
@@ -2035,6 +2036,124 @@
     if (Math.hypot((px - 8.5) / 6, (py - 10) / 4.4) < 1) g = mul(g, 0.62);
     return g;
   }
+  // ---------- 칠죄종 · 탐욕의 턱 (6격 마계 — ABYSS.sites, 사용자 결정 2026-11-23) — 「아무리 쌓아도 모자란 곳」 ----------
+  // 가져도 모자란 것의 자리. 바닥엔 흘린 금화 — 탐욕 쪽(지도 속성 gold — 「X,Y」 점)으로 갈수록 빽빽 (coinObs):
+  //   grheap 금화 산(왕관 · 보석 · 술잔 · 칼자루가 삐져나옴) · grpile 금화 더미(폭에 따라) · grchest 쇠사슬 · 자물쇠로 감은 궤짝(f 1 이면 열려 금화가 넘침) ·
+  //   grscale 금화 쪽으로 기운 금 저울(1 × 2) · grskel 금화에 반쯤 묻혀 손을 뻗은 해골(2 칸) · 금화 밖으로 뻗은 뼈 손(1 칸)
+  const GREED_KINDS = { grheap: 1, grpile: 1, grchest: 1, grscale: 1, grskel: 1 };
+  const GR_C = { gold: ['#3e2a0a', '#6a4a12', '#9a721e', '#c89a32', '#ecc860', '#fff0b0'], iron: ['#16151a', '#2a2930', '#44434c', '#66646e'],
+                 wood: ['#241810', '#36261a', '#4a3624'], gem: ['#2a8a5a', '#a82a3a', '#3a5ac8'], bone: ['#6e6656', '#968c76', '#bab09a'] };
+  const golds = new WeakMap();
+  function goldOf(m) {
+    let a = golds.get(m);
+    if (!a) { a = String((m.props && m.props.gold) || '').split(';').filter(Boolean).map(r => r.split(',').map(Number)); golds.set(m, a); }
+    return a;
+  }
+  // 금화 한 닢 — 5 × 4 점 칸마다 하나 둘지 정하고(가까울수록 자주), 자리 · 기울기가 흔들림. 납작한 타원 · 위는 밝고 아래 테는 짙게
+  function coinAt(X, Y, dens) {
+    const gx = Math.floor(X / 5), gy = Math.floor(Y / 4);
+    for (let j = 0; j <= 1; j++) for (let i = 0; i <= 1; i++) {
+      const cx0 = gx - i, cy0 = gy - j;
+      if (hash(cx0, cy0, 940) > dens) continue;
+      const cx = cx0 * 5 + 1.5 + hash(cx0, cy0, 941) * 2, cy = cy0 * 4 + 1 + hash(cx0, cy0, 942) * 2, d = Math.hypot((X - cx) / 1.9, (Y - cy) / 1.2);
+      if (d < 1) return c3(GR_C.gold[Y < cy ? (X < cx ? 5 : 4) : d > 0.6 ? 1 : 3]);
+    }
+    return null;
+  }
+  function coinObs(m, X, Y) {
+    const c = texture(OBSID, 6, X, Y);
+    for (const [gx, gy] of goldOf(m)) {
+      const r = Math.hypot(X - gx, (Y - gy) * 1.3), dens = r < 18 ? 0.28 : Math.max(0, 0.28 - (r - 18) / 110);   // 발밑만 빽빽 · 멀수록 드문드문
+      if (dens <= 0.02) continue;
+      const k = coinAt(X, Y, dens);
+      if (k) return k;
+      if (r < 40) return mix(c, c3(GR_C.gold[1]), 0.18 * (1 - r / 40));               // 금빛이 바닥에 비침
+    }
+    return c;
+  }
+  // 금화 더미 한 점 — 위 끝(top) 아래로: 겉은 금화가 겹겹이, 아래로 갈수록 그늘. 없으면 null
+  function hoardAt(px, py, top, W, Hb, seed) {
+    if (py < top) return null;
+    const k = coinAt(px + seed * 7, py, 0.85);
+    const depth = (py - top) / Math.max(1, Hb - top);
+    let c = k || c3(GR_C.gold[depth < 0.3 ? 3 : 2]);
+    if (depth > 0.55) c = mul(c, 1 - (depth - 0.55) * 0.6);
+    if (px > W * 0.62) c = mul(c, 0.88);
+    return c;
+  }
+  function greedPix(B, px, py, X, Y) {
+    const K = GR_C, L = SL_C, v = B.v | 0, line = c3(L.line), W = B.w * P, Hh = B.h * P;
+    const ground = () => coinObs(curMap, X, Y);
+    if (B.kind === 'grheap' || B.kind === 'grpile') {
+      // 더미의 위 끝 — 가운데가 높고 양 끝으로 낮게, 금화 결로 들쭉날쭉
+      const big = B.kind === 'grheap', cx = W / 2 - 0.5, peak = big ? 3 : Hh > 16 ? 4 : 6;
+      const top = x => peak + Math.pow(Math.abs(x - cx) / (W / 2 - 1), 1.6) * (Hh - peak - 3) + ((hash(x >> 1, v, 943) * 2) | 0);
+      if (big) {                                                                     // 삐져나온 것 — 왕관 · 술잔 · 칼자루 · 보석
+        const crx = cx - 14, cry = top(crx) - 2;
+        if (px >= crx - 4 && px <= crx + 4 && py >= cry - 3 && py <= cry + 2 && (py >= cry || Math.abs(px - crx) % 4 === 0)) return py === cry + 2 ? line : Math.abs(px - crx) < 1 && py === cry ? c3(K.gem[1]) : c3(K.gold[py < cry ? 5 : 4]);
+        const gob = slBar(px, py, cx + 12, top(cx + 12) + 1, cx + 16, top(cx + 12) - 4, 2.6);
+        if (gob) return gob.edge ? line : c3(K.gold[3]);
+        const hilt = slBar(px, py, cx + 4, top(cx + 4) + 2, cx + 7, top(cx + 4) - 8, 1.6);
+        if (hilt) return py < top(cx + 4) - 6 ? c3(K.gold[4]) : hilt.edge ? line : c3(L.wood[2]);
+        if (Math.abs(py - (top(cx + 6) - 7)) <= 0.6 && Math.abs(px - (cx + 6.5)) <= 2.5) return c3(K.gold[4]);   // 날밑
+        for (const [gx, gi] of [[cx - 4, 0], [cx + 20, 2], [cx - 24, 1]]) { const gy = top(gx) + 2; if (Math.hypot(px - gx, py - gy) < 1.6) return c3(K.gem[gi]); }   // 보석
+      }
+      const t = top(px);
+      if (py >= t - 0.5 && py < t + 0.5 && px > 0 && px < W - 1) return c3(K.gold[1]);    // 겉 테
+      const h = hoardAt(px, py, t, W, Hh, v);
+      if (h && px > 0 && px < W - 1 && py < Hh - 1) return h;
+      let g = ground();
+      if (py >= top(px - 2) && px > 1) g = mul(g, 0.66);
+      return g;
+    }
+    if (B.kind === 'grchest') {
+      // 궤짝 — 나무 몸 · 쇠 모서리. 잠긴 것은 쇠사슬 X 자 · 큰 자물쇠, 열린 것(f 1)은 뚜껑이 뒤로 젖혀지고 금화가 넘쳐 앞으로 흘러내림
+      const open = B.f === 1, body = px >= 2 && px <= 13 && py >= 7 && py <= 14, lid = open ? (px >= 2 && px <= 13 && py >= 2 && py <= 5) : (px >= 2 && px <= 13 && py >= 4 && py <= 6);
+      if (open && py >= 5 && py <= 8 && px >= 3 && px <= 12) { const k = coinAt(px + 3, py, 0.9); return k || c3(K.gold[4]); }   // 넘치는 금화
+      if (lid || body) {
+        if (px === 2 || px === 13 || py === (lid ? (open ? 2 : 4) : 14) || (body && py === 7)) return line;
+        if (px <= 3 || px >= 12) return c3(K.iron[2]);                               // 쇠 모서리
+        if (!open && ((Math.abs((px - 7.5) - (py - 10) * 1.1) < 0.8) || Math.abs((px - 7.5) + (py - 10) * 1.1) < 0.8) && body) return (px + py) & 1 ? c3(K.iron[3]) : c3(K.iron[1]);   // 사슬 X
+        if (!open && px >= 6 && px <= 9 && py >= 9 && py <= 12) return py === 9 || px === 6 || px === 9 ? line : c3(K.gold[3]);   // 자물쇠
+        return c3(L.wood[py < (lid ? 5 : 9) ? 3 : 2]);
+      }
+      let g = ground();
+      if (open && py >= 14 && Math.abs(px - 7.5) < (py - 13) * 3) { const k = coinAt(px, py, 0.8); if (k) return k; }   // 앞으로 흘러내린 금화
+      if (px > 13 && px < 16 && py > 7 && py < 15) g = mul(g, 0.64);
+      return g;
+    }
+    if (B.kind === 'grscale') {
+      // 금 저울 — 받침 · 기둥 · 기운 저울대, 사슬 달린 접시 둘 (왼쪽 접시에 금화가 쌓여 아래로)
+      const bx0 = 2, by0 = 12, bx1 = 13, by1 = 8;                                      // 저울대 — 왼쪽(금화 쪽)이 내려감
+      const beam = slBar(px, py, bx0, by0, bx1, by1, 1.6);
+      if (Math.abs(px - 7.5) <= 0.6 && py >= 6 && py <= 27) return c3(K.gold[px < 7.5 ? 4 : 3]);
+      if (py <= 6 && py >= 4 && Math.abs(px - 7.5) <= 1) return c3(K.gold[5]);
+      if (beam) return beam.edge ? line : c3(K.gold[3]);
+      for (const [ex, ey, drop] of [[bx0, by0, 12], [bx1, by1, 6]]) {
+        const py0 = ey + drop;
+        if (Math.abs(px - ex) < 0.6 && py > ey && py < py0 && (py & 1)) return c3(K.iron[3]);   // 사슬
+        if (py >= py0 && py <= py0 + 2 && Math.abs(px - ex) <= 3 - (py - py0)) return py === py0 + 2 ? line : c3(K.gold[3]);   // 접시
+        if (ex < 7 && py >= py0 - 3 && py < py0 && Math.abs(px - ex) <= 2.5) { const k = coinAt(px, py, 0.95); return k || c3(K.gold[4]); }   // 쌓인 금화
+      }
+      if (py >= 28 && Math.abs(px - 7.5) <= 4) return py === 31 || Math.abs(px - 7.5) > 3 ? line : c3(K.gold[2]);   // 받침
+      let g = ground();
+      if (px >= 8 && px <= 12 && py >= 29) g = mul(g, 0.66);
+      return g;
+    }
+    // grskel — 금화에 반쯤 묻힌 해골(2 칸: 머리 · 갈비 · 뻗은 팔) · 1 칸이면 금화 밖으로 뻗은 뼈 손만
+    const wide = W > 16, mound = x => (wide ? 9 : 11) + Math.pow(Math.abs(x - W / 2) / (W / 2), 2) * 4;
+    if (wide) {
+      const sk = Math.hypot((px - 8) / 3.6, (py - 6.5) / 3.4);
+      if (sk < 1) { if (sk > 0.78) return line; if (Math.hypot(px - 7, py - 6) < 1 || Math.hypot(px - 10, py - 6) < 1) return c3('#0c080e'); return c3(K.bone[px < 8 ? 2 : 1]); }
+      if (py >= 9 && py <= 12 && px >= 11 && px <= 17 && (px & 1) && py < mound(px)) return c3(K.bone[1]);   // 갈비
+    }
+    const arm = wide ? slBar(px, py, 18, 10, 27, 4, 1.4) : slBar(px, py, 6, 12, 9, 3, 1.4);
+    if (arm) return arm.edge ? line : c3(K.bone[2]);
+    const hx = wide ? 27 : 9, hy = wide ? 4 : 3;
+    if (Math.abs(px - hx) <= 2 && py >= hy - 3 && py <= hy && (px + py) % 2 === 0) return c3(K.bone[2]);   // 손가락
+    if (py >= mound(px)) { const k = coinAt(px + v * 5, py, 0.85); return k || c3(K.gold[py > mound(px) + 2 ? 2 : 3]); }
+    return ground();
+  }
   function hutGeom(B) {
     const pw = B.w * P, ph = B.h * P, d0 = (B.door.x - B.x0) * P, d1 = d0 + B.door.w * P;
     const G = { pw, ph, d0, d1, WL: 10, WR: pw - 10, wTop: ph - 34, fTop: ph - 7, cx: pw / 2, logs: [] };
@@ -3048,7 +3167,7 @@
     let H = highs.get(m);
     if (H) return H;
     const runs = s => { const a = new Uint8Array(m.w * m.h); for (const r of String(s || '').split(';')) { if (!r) continue; const [x, y, n] = r.split(',').map(Number); for (let i = 0; i < n; i++) a[y * m.w + x + i] = 1; } return a; };
-    H = { high: runs(m.props && m.props.high), stairs: runs(m.props && m.props.stairs), cool: runs(m.props && m.props.cool), lichen: runs(m.props && m.props.lichen), petal: runs(m.props && m.props.petal), grease: runs(m.props && m.props.grease), rage: runs(m.props && m.props.rage_cells) };   // lichen — 초록 이끼가 번진 턱 (칠죄종 · 질투)   // cool — 용암 줄이 식은 턱 (칠죄종 · 나태)
+    H = { high: runs(m.props && m.props.high), stairs: runs(m.props && m.props.stairs), cool: runs(m.props && m.props.cool), lichen: runs(m.props && m.props.lichen), petal: runs(m.props && m.props.petal), grease: runs(m.props && m.props.grease), rage: runs(m.props && m.props.rage_cells), gold: runs(m.props && m.props.gold_cells) };   // lichen — 초록 이끼가 번진 턱 (칠죄종 · 질투)   // cool — 용암 줄이 식은 턱 (칠죄종 · 나태)
     highs.set(m, H);
     return H;
   }
@@ -3138,7 +3257,7 @@
         }
         if (best >= 0) { const lk = m.look[best]; return m.tile[best] === ROAD ? roadPixel(lk >> 4, X, Y, 1) : texture(terOf(lk & 15) === ROCKY ? GRASS : terOf(lk & 15), lk >> 4, X, Y); }
       }
-      if (obs) { const rg = rugAt(m, X, Y); if (rg) return rg; const HS = highOf(m), q = ty * m.w + tx; return HS.cool[q] ? siteFloor(m, X, Y) : HS.lichen[q] ? lichenObs(X, Y) : HS.petal[q] ? petalObs(X, Y) : HS.grease[q] ? greaseObs(X, Y) : HS.rage[q] ? rageObs(m, X, Y) : texture(OBSID, 6, X, Y); }   // 융단(오만의 턱)이 먼저
+      if (obs) { const rg = rugAt(m, X, Y); if (rg) return rg; const HS = highOf(m), q = ty * m.w + tx; return HS.cool[q] ? siteFloor(m, X, Y) : HS.lichen[q] ? lichenObs(X, Y) : HS.petal[q] ? petalObs(X, Y) : HS.grease[q] ? greaseObs(X, Y) : HS.rage[q] ? rageObs(m, X, Y) : HS.gold[q] ? coinObs(m, X, Y) : texture(OBSID, 6, X, Y); }   // 융단(오만의 턱)이 먼저
       const top = e.bio === 2 || e.bio === 3 || e.bio === 9 || k === 0 ? texture(k === 0 ? (e.ter === ROCKY ? GRASS : e.ter) : GRASS, e.bio, X, Y) : texture(e.ter, e.bio, X, Y);
       return k === 0 ? top : mix(top, c3('#d8e8a0'), k === 2 ? 0.14 : 0.07);   // 높은 층일수록 볕을 더 받아 밝게
     };
