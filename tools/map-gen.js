@@ -1587,6 +1587,23 @@ const ABYSS = {                                                // 처음 시안(
         '   ..........   ',
         '     ......     '
       ]
+    },
+    '칠죄종 · 폭식': {                                         // 「끝나지 않는 잔치」 — 먹어도 허기진 것의 자리
+      kinds: { T: 'gltable', C: 'glcaul', S: 'glspit', B: 'glbones', b: 'glbones', k: 'glkeg', p: 'glplate', x: ['glslave', 1], y: ['glslave', 2] }, grease: true,   // x · y — 잡혀 온 일꾼 (솥 젓기 · 고기 굽기)   // grease — 흘린 국물 · 기름 얼룩 (그림 greaseObs)
+      plan: [
+        '     ......     ',
+        '   .BB...p...   ',     // 갉아 먹은 뼈 무더기 · 쌓인 접시
+        '  ....KKKK.CCx  ',     // 끓는 무쇠 솥 · 국자로 젓는 일꾼
+        ' ..b..KKKK.CC.. ',
+        '.k....KKKK....k.',     // 쓰러진 술통
+        '......KKKK......',
+        '.TTTT......SSSy.',     // 다 먹어 치운 긴 잔칫상 · 꼬챙이 구이 불자리 · 손잡이를 돌리는 일꾼
+        '.TTTT...........',
+        ' .............. ',
+        '  ............  ',
+        '   ..........   ',
+        '     ......     '
+      ]
     }
   },
   castle: { x0: 30, x1: 94, y0: 7, y1: 40, door: 4 },         // 마왕성 바깥 (문은 아래 가운데, 벌레가 그 앞을 막음)
@@ -1613,7 +1630,7 @@ function abyssMap(data) {
   for (let y = 3; y < H - 2; y++) for (let x = 1; x < W - 1; x++) if (Math.abs(x + 0.5 - A.cx) < half(y)) tiles[idx(x, y)] = FLOOR;
   const segDist = (pts, x, y) => { let best = 1e9; for (let i = 0; i + 1 < pts.length; i++) { const [ax, ay] = pts[i], [bx, by] = pts[i + 1], dx = bx - ax, dy = by - ay, t = Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / (dx * dx + dy * dy))); best = Math.min(best, Math.hypot(x - ax - dx * t, y - ay - dy * t)); } return best; };
   // 칠죄종 턱 — 윗면(걸을 수 있음 · 한 층 높게) · 둘레 바위 테(남쪽은 두 칸) · 남쪽 테 가운데에 바위 계단. 윗면 · 테 · 둘레는 구역 밖, 나무 없음
-  const posts = [], ledges = [], sitePorts = [], blds = [], cool = new Uint8Array(W * H), lichen = new Uint8Array(W * H), petal = new Uint8Array(W * H), pave = [];
+  const posts = [], ledges = [], sitePorts = [], blds = [], cool = new Uint8Array(W * H), lichen = new Uint8Array(W * H), petal = new Uint8Array(W * H), grease = new Uint8Array(W * H), pave = [];
   for (const [name, lx, ly] of A.sins) {
     const e = foeNamed(name), { rx, ry } = A.ledge, d = (x, y) => Math.hypot((x + 0.5 - lx) / rx, (y + 0.5 - ly) / ry);
     for (let y = ly - ry - 4; y <= ly + ry + 4; y++) for (let x = lx - rx - 4; x <= lx + rx + 4; x++) {
@@ -1637,7 +1654,7 @@ function abyssMap(data) {
     ledges.push({ x: lx, y: foot + 1 });                       // 계단 밑 — 곁길이 닿는 곳
     // 꾸밈 (A.sites) — 글자 네모마다 막힌 소품 하나 (칸은 벽 · 겉모습 BUILD, 그림은 지도 속성 blds)
     if (site) {
-      for (const [flag, mask] of [['cool', cool], ['lichen', lichen], ['petal', petal]]) if (site[flag]) for (let y = ly - ry - 4; y <= ly + ry + 4; y++) for (let x = lx - rx - 4; x <= lx + rx + 4; x++) if (inside(x, y) && (high[idx(x, y)] || stairs[idx(x, y)] || (tiles[idx(x, y)] === ROCK && noArea[idx(x, y)]))) mask[idx(x, y)] = 1;   // 윗면 · 바위 테 · 계단 (절벽 면까지)   // 윗면 · 바위 테 · 계단 (절벽 면의 불줄기도)
+      for (const [flag, mask] of [['cool', cool], ['lichen', lichen], ['petal', petal], ['grease', grease]]) if (site[flag]) for (let y = ly - ry - 4; y <= ly + ry + 4; y++) for (let x = lx - rx - 4; x <= lx + rx + 4; x++) if (inside(x, y) && (high[idx(x, y)] || stairs[idx(x, y)] || (tiles[idx(x, y)] === ROCK && noArea[idx(x, y)]))) mask[idx(x, y)] = 1;   // 윗면 · 바위 테 · 계단 (절벽 면까지)   // 윗면 · 바위 테 · 계단 (절벽 면의 불줄기도)
       if (site.pave) { const [dx, dy, prx, pry] = site.pave; pave.push([(lx + dx) * 16, (ly + dy) * 16, prx * 16, pry * 16].map(Math.round).join(',')); }
       const { plan, kinds } = site, ox = lx - rx, oy = ly - ry, ch = (c, r) => (plan[r] || '')[c] || ' ';
       if (plan.length !== ry * 2 || plan.some(row => row.length !== rx * 2)) throw new Error(`6격 ${name} 꾸밈 — 그림이 ${rx * 2} × ${ry * 2} 가 아님`);
@@ -1744,6 +1761,7 @@ function abyssMap(data) {
   for (const p of posts) if (!touch(p)) throw new Error(`6격 — ${p.name} 에 걸어서 못 감`);
   for (const c of chests) if (!seen[idx(c.x, c.y)]) throw new Error(`6격 — 보물상자 (${c.x}, ${c.y}) 에 걸어서 못 감`);
   for (const p of sitePorts) if (!seen[idx(p.x, p.y)]) throw new Error(`6격 — ${p.label} 문에 걸어서 못 감`);
+  for (let k = 0; k < W * H; k++) if ((high[k] || stairs[k]) && open(k) && !seen[k]) throw new Error(`6격 — 턱 위 (${k % W}, ${(k / W) | 0}) 칸이 소품에 갇힘 (꾸밈 그림을 고칠 것)`);
   for (let k = 0; k < W * H; k++) if (open(k) && !seen[k]) { tiles[k] = WALL; lk[k] = look(OL.OBSID, 6); }   // 갇힌 외톨이 땅은 벽으로
   // 구역 — 잡음 섞은 타원 안의 그 격 땅 (나무 · 바위 · 용암은 품어 구멍 없이, 턱 · 정해진 자리 둘레는 뺌), 걸어서 이어지는 한 덩어리
   const saveW = OUT_W, saveH = OUT_H; OUT_W = W; OUT_H = H;
@@ -1770,9 +1788,9 @@ function abyssMap(data) {
     const { x, y, polygon } = outline(keepSet, box);
     return { name: e.name, x, y, polygon, rank: 6, monster: e.id, zone: zone.id };
   });
-  const highRuns = cellRuns(high), stairRuns = cellRuns(stairs), coolRuns = cellRuns(cool), lichenRuns = cellRuns(lichen), petalRuns = cellRuns(petal);   // cellRuns 는 OUT_W 로 칸을 풂 — 바꿔 둔 동안에
+  const highRuns = cellRuns(high), stairRuns = cellRuns(stairs), coolRuns = cellRuns(cool), lichenRuns = cellRuns(lichen), petalRuns = cellRuns(petal), greaseRuns = cellRuns(grease);   // cellRuns 는 OUT_W 로 칸을 풂 — 바꿔 둔 동안에
   OUT_W = saveW; OUT_H = saveH;
-  return buildTmj({ w: W, h: H, tiles, areas, posts, ports, npcs, chests, look: lk, props: { title: zone.name, high: highRuns, stairs: stairRuns, cool: coolRuns, lichen: lichenRuns, petal: petalRuns, pave: pave.join(';'), blds: JSON.stringify(blds) } });
+  return buildTmj({ w: W, h: H, tiles, areas, posts, ports, npcs, chests, look: lk, props: { title: zone.name, high: highRuns, stairs: stairRuns, cool: coolRuns, lichen: lichenRuns, petal: petalRuns, grease: greaseRuns, pave: pave.join(';'), blds: JSON.stringify(blds) } });
 }
 
 // ---------- 건물 안 (BUILDINGS) — 왕좌의 큰 방 ----------

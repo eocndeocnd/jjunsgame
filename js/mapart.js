@@ -513,7 +513,7 @@
   // 지도 속성 blds 의 소품 하나하나: stake 울타리 한 칸(굵기 · 키가 저마다 다른 뾰족한 통나무, 묶은 밧줄) · tent 가죽 천막(조각 가죽을 기운 자국 · 엇갈린 장대) ·
   // orchut 족장 움막(둥근 가죽 지붕 · 붉은 전쟁 칠 · 엄니 둘 · 짐승 해골) · totem 토템 · fire 모닥불 · rack 무기 걸이 · hide 가죽 말림대.
   // 빛은 왼쪽 위 — 오른쪽 면은 그늘, 그림자는 오른쪽 아래 땅에
-  const ORC_KINDS = { stake: 1, tent: 1, orchut: 1, totem: 1, fire: 1, rack: 1, hide: 1, bones: 1, chw: 1, chp: 1, cha: 1, chr: 1, gskull: 1, btorch: 1, skpile: 1, slthr: 1, slscf: 1, slblk: 1, sllad: 1, slhg: 1, slscr: 1, evtent: 1, evmir: 1, evtel: 1, evhoard: 1, lupav: 1, lucand: 1, lurose: 1, lumask: 1, luhall: 1 };   // bones — 히드라 둥지 · ch* — 무너진 성당 터 (chapelPix) · gskull · btorch · skpile — 지하 신전 (cryptPix)
+  const ORC_KINDS = { stake: 1, tent: 1, orchut: 1, totem: 1, fire: 1, rack: 1, hide: 1, bones: 1, chw: 1, chp: 1, cha: 1, chr: 1, gskull: 1, btorch: 1, skpile: 1, slthr: 1, slscf: 1, slblk: 1, sllad: 1, slhg: 1, slscr: 1, evtent: 1, evmir: 1, evtel: 1, evhoard: 1, lupav: 1, lucand: 1, lurose: 1, lumask: 1, luhall: 1, gltable: 1, glcaul: 1, glspit: 1, glbones: 1, glkeg: 1, glplate: 1, glslave: 1 };   // bones — 히드라 둥지 · ch* — 무너진 성당 터 (chapelPix) · gskull · btorch · skpile — 지하 신전 (cryptPix)
   const ORC_C = {
     hide: ['#3a2a20', '#4c3727', '#5e4530', '#71553a', '#846646'], seam: '#22170f', stitch: '#a08a62',
     bone: ['#6e6452', '#a39780', '#d4c8ac'], paint: '#8a2a22', rope: ['#5e5038', '#8a7a5a'], line: '#1a120e'
@@ -534,6 +534,7 @@
     if (SLOTH_KINDS[B.kind]) return slothPix(B, px, py, X, Y);                      // 칠죄종 · 나태의 턱 (6격 마계)
     if (ENVY_KINDS[B.kind]) return envyPix(B, px, py, X, Y);                        // 칠죄종 · 질투의 턱
     if (LUST_KINDS[B.kind]) return lustPix(B, px, py, X, Y);                        // 칠죄종 · 색욕의 턱
+    if (GLUT_KINDS[B.kind]) return glutPix(B, px, py, X, Y);                        // 칠죄종 · 폭식의 턱
     if (B.kind === 'stake') {
       // 울타리 한 칸 — 사용자가 준 사례대로 (2026-11-20): 칸 가운데 뾰족한 기둥, 좌우 이웃(link e · w) 쪽으로 가로대 두 줄,
       // 위아래 이웃(n · s) 쪽으로는 폭 4점의 막대가 이웃 칸까지 끊김 없이 (위아래로만 이어진 칸은 기둥 없이 막대만, 가운데 마디).
@@ -1476,6 +1477,198 @@
     const g = Math.hypot(tx, fy - 14);
     if (g < 16) c = mix(c, c3(LU_C.flame[0]), 0.2 * (1 - g / 16));
     return c;
+  }
+  // ---------- 칠죄종 · 폭식의 턱 (6격 마계 — ABYSS.sites, 사용자 결정 2026-11-23) — 「끝나지 않는 잔치」 ----------
+  // 먹어도 허기진 것의 자리. 둘레 바닥은 흘린 국물 · 기름 얼룩과 부스러기 (greaseObs):
+  //   gltable 다 먹어 치운 긴 잔칫상(4 × 2 — 얼룩진 식탁보, 뼈만 남은 접시 · 쓰러진 술잔 · 짐승 머리뼈) · glcaul 용암 불 위에서 끓는 무쇠 솥(2 × 2 — 김 · 국자) ·
+  //   glspit 고기를 꿴 꼬챙이 구이 불자리(3 × 1) · glbones 갉아 먹은 뼈 무더기 · glkeg 쓰러진 술통 · glplate 위태롭게 쌓인 더러운 접시
+  const GLUT_KINDS = { gltable: 1, glcaul: 1, glspit: 1, glbones: 1, glkeg: 1, glplate: 1, glslave: 1 };
+  // 폭식에게 잡힌 일꾼 (glslave — 움직이지 않음, 사용자 결정 2026-11-23): 등이 굽은 마른 몸 · 해진 누더기 · 발목의 쇠고랑과 끌리는 사슬, 왼쪽(일하는 쪽)을 봄.
+  // f 1 — 솥을 젓는 자세 (두 손을 왼쪽으로 뻗어 국자 자루를 잡음) · f 2 — 꼬챙이 손잡이를 돌리는 자세 (팔을 앞으로 뻗고 다리를 벌림)
+  const GL_SLAVE = {
+    pal: { K: '#1e1620', h: '#241a18', s: '#6a5446', S: '#8c705c', L: '#a88a70', r: '#3a322c', R: '#524638', q: '#6a5c48', i: '#55535e', I: '#8a8894' },
+    1: ['................', '.......KKKK.....', '......KhhhhK....', '.....KhhSShK....', '.....KSKSSsK....', '......KSSsK.....', '...KK.KKsKK.....', '..KLLKKRRRRK....', '.KLSSSRqRRRrK...', '..KKKKRqRRrrK...', '......KRRRrrK...', '......KrRrrrK...', '......KKsKsKK...', '.......KsKsK....', '......KIIKIIK...', '......KKKiKKKiii'],
+    2: ['................', '................', '......KKKK......', '.....KhhhhK.....', '.....KhSShK.....', '.....KSKSsK.....', '......KSsKK.....', '.KKKKKKRRRK.....', 'KLSSSSRqRRrK....', '.KKKKKRqRRrK....', '......KRRRrK....', '......KrRrrK....', '......KKsKsK....', '......KsKKsK....', '.....KIIK.KIIK..', '.....KKKKiiiKKKi']
+  };
+  const GL_C = {
+    cloth: ['#5a5244', '#7a7060', '#958a74'], stain: '#4a2418', pewter: ['#3c3c44', '#5a5a64', '#7e7e88', '#a2a2aa'],
+    bone: ['#5c5446', '#837a66', '#a89e86', '#c8bea4'], meat: ['#3a160e', '#5a2414', '#7e3a1c', '#a65a2a', '#d08a44'],
+    stew: ['#3e2010', '#5e3418', '#7e4a22', '#a2662e'], iron: ['#141318', '#22212a', '#33323c', '#4a4954'], fire: ['#7a1e0e', '#e0501e', '#ffb040', '#ffe8a0'],
+    stone: ['#26222c', '#36303c', '#463f4e'], steam: '#b8b0bc', grease: ['#241610', '#30200f'], crumb: '#6a5030', wine: '#3a0812'
+  };
+  // 흘린 국물 · 기름 얼룩이 번진 흑요석 — 얼룩은 덩어리(가장자리 들쭉날쭉) · 드문드문 부스러기
+  function greaseObs(X, Y) {
+    let c = texture(OBSID, 6, X, Y);
+    if (c[0] > 120) return c;
+    const f = fbm(X * 0.05, Y * 0.07, 890);
+    if (f > 0.58) c = mix(c, c3(GL_C.grease[f > 0.66 ? 1 : 0]), f > 0.62 ? 0.7 : 0.4);
+    if (hash(X, Y, 891) < 0.012) c = c3(GL_C.crumb);
+    return c;
+  }
+  // 뼈 하나 — (x0, y0) ~ (x1, y1), 양 끝이 둥글게 불룩 (넓적다리뼈)
+  function glBone(px, py, x0, y0, x1, y1, w) {
+    const K = GL_C, s = slBar(px, py, x0, y0, x1, y1, w);
+    const knob = [[x0, y0], [x1, y1]].map(([x, y]) => Math.hypot(px - x, py - y)).some(d => d < w * 0.9 + 0.3);
+    if (!s && !knob) return null;
+    const edgeK = (s && s.edge && !knob) || [[x0, y0], [x1, y1]].some(([x, y]) => Math.abs(Math.hypot(px - x, py - y) - (w * 0.9 + 0.3)) < 0.5);
+    return edgeK ? c3(SL_C.line) : c3(K.bone[s && s.n < 0 ? 3 : 2]);
+  }
+  function glutPix(B, px, py, X, Y) {
+    const K = GL_C, L = SL_C, v = B.v | 0, line = c3(L.line), W = B.w * P;
+    const ground = () => greaseObs(X, Y);
+    const woodCol = (s, k) => s.edge ? line : c3(L.wood[Math.max(0, Math.min(4, k + (s.n < -0.3 ? 1 : s.n > 0.3 ? -1 : 0)))]);
+    if (B.kind === 'gltable') {
+      // 긴 잔칫상 — 윗면(9 ~ 18) 위에 접시 · 머리뼈 · 술잔, 앞으로 해진 식탁보(19 ~ 22), 다리 넷 중 앞 둘
+      const top = (x, y) => x >= 2 && x <= 61 && y >= 9 && y <= 18;
+      const clothEnd = x => 21 + ((hash(Math.floor(x / 3), v, 892) * 3) | 0);
+      const front = (x, y) => x >= 2 && x <= 61 && y > 18 && y <= clothEnd(x);
+      const leg = (x, y) => (x >= 5 && x <= 7 || x >= 56 && x <= 58) && y > clothEnd(x) && y <= 30;
+      if (top(px, py) || front(px, py)) {
+        // 위에 놓인 것들 — 접시(뼈) 둘 · 짐승 머리뼈 · 쓰러진 술잔 · 흘린 포도주
+        for (const [cx, cy] of [[13, 13], [44, 12]]) {
+          const d = Math.hypot((px - cx) / 6, (py - cy) / 3);
+          if (d < 1) {
+            const b = glBone(px, py, cx - 3, cy, cx + 3, cy - 1, 1.2);
+            if (b) return b;
+            return d > 0.82 ? line : c3(K.pewter[d < 0.5 ? 3 : 2]);
+          }
+        }
+        const sk = Math.hypot((px - 29) / 5, (py - 12) / 3.4);                       // 짐승 머리뼈 — 주둥이가 오른쪽
+        if (sk < 1 || (px > 31 && px < 37 && Math.abs(py - 13) < 1.6)) {
+          if ((sk > 0.82 && sk < 1) || (px === 36 && Math.abs(py - 13) < 1.6) || (px > 31 && px < 37 && Math.abs(Math.abs(py - 13) - 1.5) < 0.5)) return line;
+          if (Math.hypot(px - 28, py - 11.5) < 1.2) return c3('#0c080e');                 // 눈구멍
+          return c3(K.bone[px < 28 ? 3 : 2]);
+        }
+        const gob = slBar(px, py, 52, 15, 57, 13, 2.4);                               // 쓰러진 술잔 · 흘린 포도주
+        if (gob) return gob.edge ? line : c3(SL_C.brass[3]);
+        if (Math.hypot((px - 48) / 4, (py - 16) / 1.4) < 1 && top(px, py)) return c3(K.wine);
+        if (top(px, py)) {
+          if (py === 9 || px === 2 || px === 61) return line;
+          let c = c3(K.cloth[py < 12 ? 2 : 1]);
+          if (fbm(X * 0.15, Y * 0.25, 893) > 0.6) c = mix(c, c3(K.stain), 0.55);       // 얼룩
+          return c;
+        }
+        if (py === clothEnd(px) || px === 2 || px === 61) return line;
+        let c = c3(K.cloth[0]);
+        if (fbm(X * 0.15, Y * 0.25, 893) > 0.62) c = mix(c, c3(K.stain), 0.5);
+        return c;
+      }
+      if (leg(px, py)) return (px === 5 || px === 7 || px === 56 || px === 58 || py === 30) ? line : c3(L.wood[2]);
+      let g = ground();
+      if (top(px - 2, py - 1) || front(px - 2, py - 1) || leg(px - 1, py)) g = mul(g, 0.62);
+      if (py > 18 && py < 30 && px > 2 && px < 61) g = mul(g, 0.8);                   // 상 밑 그늘
+      return g;
+    }
+    if (B.kind === 'glslave') {
+      const G = GL_SLAVE[B.f || 1], ch = (x, y) => (G[y] || '')[x] || '.';
+      const c = ch(px, py);
+      if (c !== '.') return c3(GL_SLAVE.pal[c]);
+      let g = ground();
+      if (ch(px - 1, py - 1) !== '.' && py >= 12) g = mul(g, 0.62);                  // 발밑 그림자
+      return g;
+    }
+    if (B.kind === 'glcaul') {
+      // 무쇠 솥 — 둥근 몸 · 위 테(타원) 안에 끓는 국물(거품) · 국자 · 밑에 돌 받침과 불 · 위로 김
+      const cx = 15.5, body = Math.hypot((px - cx) / 12, (py - 18) / 10.5), rim = Math.hypot((px - cx) / 12.5, (py - 10) / 3.4), inner = Math.hypot((px - cx) / 10.5, (py - 10.2) / 2.4);
+      const ladle = slBar(px, py, 18, 10, 31, 7.5, 1.6);                              // 긴 국자 — 자루 끝을 오른쪽 일꾼이 잡음
+      if (ladle && (px > 26 || py < 10)) return ladle.edge ? line : c3(L.wood[3]);
+      if (inner < 1) {
+        const bub = [[11, 10], [18, 9.6], [14.5, 11]].some(([bx, by], i) => Math.hypot(px - bx, py - by) < 1 + (hash(v, i, 894) * 0.6));
+        if (bub) return c3(K.stew[3]);
+        return c3(K.stew[py < 10 ? 2 : 1]);
+      }
+      if (rim < 1) return rim > 0.8 || inner < 1.15 ? line : c3(K.iron[px < cx ? 3 : 2]);
+      if (body < 1 && py > 10) {
+        if (body > 0.9) return line;
+        const lit = -(px - cx) / 12 - (py - 18) / 14;
+        return c3(K.iron[lit > 0.35 ? 3 : lit > -0.1 ? 2 : lit > -0.5 ? 1 : 0]);
+      }
+      if (py >= 27) {                                                                // 밑의 불 · 돌
+        const st = [5, 26].some(sx => Math.hypot(px - sx, py - 29.5) < 3.2);
+        if (st) return c3(K.stone[px < 10 ? 2 : 1]);
+        if (px > 7 && px < 24) { const f = hash(px, py >> 1, 895); return c3(K.fire[py > 29 ? (f < 0.5 ? 1 : 0) : f < 0.3 ? 3 : 2]); }
+      }
+      let g = ground();
+      const st = Math.hypot((px - cx - 2) / 6, (py - 2) / 3) + (vnoise(px * 0.3, py * 0.3, 896 + v) - 0.5) * 0.6;   // 김
+      if (py < 8 && st < 1) g = mix(g, c3(K.steam), 0.3 * (1 - st));
+      if (body < 1.12 && px > cx) g = mul(g, 0.66);
+      if (Math.hypot(px - cx, py - 29) < 12) g = mix(g, c3(K.fire[1]), 0.12);
+      return g;
+    }
+    if (B.kind === 'glspit') {
+      // 꼬챙이 구이 — 양 끝 갈래 막대, 가로 꼬챙이에 꿴 큰 고기(번들거림), 밑에 돌 테 · 불씨
+      const rod = slBar(px, py, 3, 5, 45, 5, 1.4), crank = slBar(px, py, 45, 5, 47, 8.5, 1.4);   // 오른쪽 끝 손잡이 — 일꾼이 돌림
+      if (crank) return crank.edge ? line : c3(K.iron[3]);
+      const fork = [slBar(px, py, 4, 15, 4, 4, 2), slBar(px, py, 44, 15, 44, 4, 2)];
+      for (const f of fork) if (f) return woodCol(f, 2);
+      if (py <= 6 && (Math.abs(px - 2.5) < 1 || Math.abs(px - 5.5) < 1 || Math.abs(px - 42.5) < 1 || Math.abs(px - 45.5) < 1) && py >= 2) return c3(L.wood[3]);   // 갈래 끝
+      const meat = Math.hypot((px - 24) / 9, (py - 6) / 4.6);
+      if (meat < 1) {
+        if (meat > 0.86) return line;
+        if (Math.abs(py - 5) < 0.6 && Math.abs(px - 24) > 7.5) return c3(K.iron[2]);
+        const lit = -(px - 24) / 9 - (py - 6) / 5;
+        if (lit > 0.5 && hash(px, py, 897) < 0.4) return c3(K.meat[4]);               // 기름 번들
+        return c3(K.meat[lit > 0.2 ? 3 : lit > -0.3 ? 2 : 1]);
+      }
+      if (rod) return rod.edge ? line : c3(K.iron[3]);
+      const pit = Math.hypot((px - 24) / 18, (py - 12.5) / 3.4);
+      if (pit < 1) {
+        if (pit > 0.78) return c3(K.stone[hash(Math.floor(px / 3), 0, 898) < 0.5 ? 2 : 1]);
+        const f = hash(px, py, 899);
+        return c3(K.fire[f < 0.12 ? 3 : f < 0.4 ? 2 : f < 0.75 ? 1 : 0]);
+      }
+      let g = ground();
+      if (meat < 1.2 && px > 24 && py > 6) g = mul(g, 0.7);
+      if (pit < 1.6) g = mix(g, c3(K.fire[1]), 0.15 * (1.6 - pit));
+      return g;
+    }
+    if (B.kind === 'glbones') {
+      // 갉아 먹은 뼈 무더기 — 넓적다리뼈 · 갈비 몇 개가 엇갈려 쌓임 (v 마다 다름), 폭 2 칸이면 더 많이
+      if (!B.bones) {
+        const n = W > 16 ? 7 : 4;
+        B.bones = [...Array(n)].map((_, i) => {
+          const cx = 3 + hash(v, i, 900) * (W - 6), cy = 8 + hash(v, i, 901) * 5, a = (hash(v, i, 902) - 0.5) * 2.4, l = 3 + hash(v, i, 903) * 3;
+          return [cx - Math.cos(a) * l, cy - Math.sin(a) * l, cx + Math.cos(a) * l, cy + Math.sin(a) * l, 1 + hash(v, i, 904) * 0.5];
+        }).sort((a, b) => (a[1] + a[3]) - (b[1] + b[3]));
+      }
+      for (let i = B.bones.length - 1; i >= 0; i--) { const b = glBone(px, py, ...B.bones[i]); if (b) return b; }
+      let g = ground();
+      if (B.bones.some(b => glBone(px - 1, py - 1, ...b))) g = mul(g, 0.62);
+      return g;
+    }
+    if (B.kind === 'glkeg') {
+      // 쓰러진 술통 — 옆으로 누운 통(가운데가 불룩 · 길이로 난 널 이음 · 쇠테 둘), 열린 끝에서 흘러나온 검붉은 것
+      const fl = v & 1, fx = fl ? 15 - px : px, hh = x => 4.6 - ((x - 7) / 6) ** 2 * 1.4;
+      const end = Math.hypot((fx - 12.5) / 1.8, (py - 8.5) / hh(12.5));
+      if (end < 1) return end > 0.7 ? line : Math.hypot(fx - 12.6, py - 9.4) < 1.1 ? c3('#0c080e') : c3(L.wood[2]);   // 마개 구멍
+      if (fx >= 1 && fx <= 12 && Math.abs(py - 8.5) <= hh(fx)) {
+        const dy = py - 8.5;
+        if (fx === 1 || Math.abs(Math.abs(dy) - hh(fx)) < 0.6) return line;
+        if (fx === 4 || fx === 9) return c3(K.iron[dy < 0 ? 3 : 2]);                  // 쇠테
+        if (Math.abs(dy - (-1.6 + (fx & 1) * 0.2)) < 0.5 || Math.abs(dy - 1.8) < 0.5) return c3(L.wood[0]);   // 널 이음
+        return c3(L.wood[dy < -2 ? 4 : dy < 0.5 ? 3 : dy < 2.5 ? 2 : 1]);
+      }
+      let g = ground();
+      if (Math.hypot((fx - 14.2) / 2.2, (py - 13.6) / 1.6) < 1) g = mix(g, c3(K.wine), 0.8);
+      if (fx > 2 && fx < 13 && py > 12 && py < 15) g = mul(g, 0.66);
+      return g;
+    }
+    // glplate — 위태롭게 쌓인 더러운 접시 (위로 갈수록 한쪽으로 비뚤어짐) · 맨 위에 뼈 하나
+    const n = 5 + (v % 2);
+    for (let i = n - 1; i >= 0; i--) {
+      const cy = 13.5 - i * 2.2, cx = 7.5 + Math.sin(i * 0.9 + v) * 0.5 + i * 0.35, d = Math.hypot((px - cx) / 5.6, (py - cy) / 1.9);
+      if (d < 1) {
+        if (i === n - 1) { const b = glBone(px, py, cx - 2.5, cy - 0.6, cx + 2.5, cy - 1.2, 0.9); if (b) return b; }
+        if (d > 0.72 && py >= cy) return line;                                       // 접시 아래 테
+        if (d > 0.72) return c3(K.pewter[3]);                                        // 접시 위 테 — 밝게
+        let c = c3(K.pewter[2]);
+        if (hash(Math.floor(px / 2), i + v * 7, 905) < 0.3) c = mix(c, c3(K.stain), 0.5);   // 남은 얼룩
+        return c;
+      }
+    }
+    let g = ground();
+    if (px > 9 && px < 15 && py > 12 && py < 16) g = mul(g, 0.66);
+    return g;
   }
   function hutGeom(B) {
     const pw = B.w * P, ph = B.h * P, d0 = (B.door.x - B.x0) * P, d1 = d0 + B.door.w * P;
@@ -2486,7 +2679,7 @@
     let H = highs.get(m);
     if (H) return H;
     const runs = s => { const a = new Uint8Array(m.w * m.h); for (const r of String(s || '').split(';')) { if (!r) continue; const [x, y, n] = r.split(',').map(Number); for (let i = 0; i < n; i++) a[y * m.w + x + i] = 1; } return a; };
-    H = { high: runs(m.props && m.props.high), stairs: runs(m.props && m.props.stairs), cool: runs(m.props && m.props.cool), lichen: runs(m.props && m.props.lichen), petal: runs(m.props && m.props.petal) };   // lichen — 초록 이끼가 번진 턱 (칠죄종 · 질투)   // cool — 용암 줄이 식은 턱 (칠죄종 · 나태)
+    H = { high: runs(m.props && m.props.high), stairs: runs(m.props && m.props.stairs), cool: runs(m.props && m.props.cool), lichen: runs(m.props && m.props.lichen), petal: runs(m.props && m.props.petal), grease: runs(m.props && m.props.grease) };   // lichen — 초록 이끼가 번진 턱 (칠죄종 · 질투)   // cool — 용암 줄이 식은 턱 (칠죄종 · 나태)
     highs.set(m, H);
     return H;
   }
@@ -2576,7 +2769,7 @@
         }
         if (best >= 0) { const lk = m.look[best]; return m.tile[best] === ROAD ? roadPixel(lk >> 4, X, Y, 1) : texture(terOf(lk & 15) === ROCKY ? GRASS : terOf(lk & 15), lk >> 4, X, Y); }
       }
-      if (obs) { const HS = highOf(m), q = ty * m.w + tx; return HS.cool[q] ? siteFloor(m, X, Y) : HS.lichen[q] ? lichenObs(X, Y) : HS.petal[q] ? petalObs(X, Y) : texture(OBSID, 6, X, Y); }
+      if (obs) { const HS = highOf(m), q = ty * m.w + tx; return HS.cool[q] ? siteFloor(m, X, Y) : HS.lichen[q] ? lichenObs(X, Y) : HS.petal[q] ? petalObs(X, Y) : HS.grease[q] ? greaseObs(X, Y) : texture(OBSID, 6, X, Y); }
       const top = e.bio === 2 || e.bio === 3 || e.bio === 9 || k === 0 ? texture(k === 0 ? (e.ter === ROCKY ? GRASS : e.ter) : GRASS, e.bio, X, Y) : texture(e.ter, e.bio, X, Y);
       return k === 0 ? top : mix(top, c3('#d8e8a0'), k === 2 ? 0.14 : 0.07);   // 높은 층일수록 볕을 더 받아 밝게
     };
