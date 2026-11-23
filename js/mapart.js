@@ -513,7 +513,7 @@
   // 지도 속성 blds 의 소품 하나하나: stake 울타리 한 칸(굵기 · 키가 저마다 다른 뾰족한 통나무, 묶은 밧줄) · tent 가죽 천막(조각 가죽을 기운 자국 · 엇갈린 장대) ·
   // orchut 족장 움막(둥근 가죽 지붕 · 붉은 전쟁 칠 · 엄니 둘 · 짐승 해골) · totem 토템 · fire 모닥불 · rack 무기 걸이 · hide 가죽 말림대.
   // 빛은 왼쪽 위 — 오른쪽 면은 그늘, 그림자는 오른쪽 아래 땅에
-  const ORC_KINDS = { stake: 1, tent: 1, orchut: 1, totem: 1, fire: 1, rack: 1, hide: 1, bones: 1, chw: 1, chp: 1, cha: 1, chr: 1, gskull: 1, btorch: 1, skpile: 1 };   // bones — 히드라 둥지 · ch* — 무너진 성당 터 (chapelPix) · gskull · btorch · skpile — 지하 신전 (cryptPix)
+  const ORC_KINDS = { stake: 1, tent: 1, orchut: 1, totem: 1, fire: 1, rack: 1, hide: 1, bones: 1, chw: 1, chp: 1, cha: 1, chr: 1, gskull: 1, btorch: 1, skpile: 1, slthr: 1, slscf: 1, slblk: 1, sllad: 1, slhg: 1, slscr: 1 };   // bones — 히드라 둥지 · ch* — 무너진 성당 터 (chapelPix) · gskull · btorch · skpile — 지하 신전 (cryptPix)
   const ORC_C = {
     hide: ['#3a2a20', '#4c3727', '#5e4530', '#71553a', '#846646'], seam: '#22170f', stitch: '#a08a62',
     bone: ['#6e6452', '#a39780', '#d4c8ac'], paint: '#8a2a22', rope: ['#5e5038', '#8a7a5a'], line: '#1a120e'
@@ -531,6 +531,7 @@
     const shadow = (c, k = 0.66) => mul(c, k);
     if (B.kind[0] === 'c' && B.kind[1] === 'h') return chapelPix(B, px, py, X, Y, ground);
     if (B.kind === 'gskull' || B.kind === 'btorch' || B.kind === 'skpile') return cryptPix(B, px, py, X, Y);
+    if (SLOTH_KINDS[B.kind]) return slothPix(B, px, py, X, Y);                      // 칠죄종 · 나태의 턱 (6격 마계)
     if (B.kind === 'stake') {
       // 울타리 한 칸 — 사용자가 준 사례대로 (2026-11-20): 칸 가운데 뾰족한 기둥, 좌우 이웃(link e · w) 쪽으로 가로대 두 줄,
       // 위아래 이웃(n · s) 쪽으로는 폭 4점의 막대가 이웃 칸까지 끊김 없이 (위아래로만 이어진 칸은 기둥 없이 막대만, 가운데 마디).
@@ -877,6 +878,229 @@
     if (Math.abs(fx - (cx - 6 * kx + (py - 6 * ky) * 0.35 + Math.sin(py * 0.5 / ky) * 1.5 * kx)) < 0.6 && py > 4 * ky && py < 18 * ky) return line;   // 금
     if (fbm(X * 0.08, Y * 0.08, 768) > 0.66) k = Math.max(1, k - 1);
     return c3(K.bone[k]);
+  }
+  // ---------- 칠죄종 · 나태의 턱 (6격 마계 — tools/map-gen.js 의 ABYSS.sites, 사용자 결정 2026-11-23) — 「끝내지 못한 것들」 ----------
+  // 나태가 하다 만 것이 그대로 남은 자리. 소품마다 칸 안에서 (빛은 왼쪽 위 · 그림자는 오른쪽 아래, 둘레 바닥은 턱 윗면의 흑요석):
+  //   slthr 쌓다 만 돌 왕좌(3 × 2 칸 — 왼쪽만 높고 오른쪽은 계단처럼 끊김, 삐뚤게 올려 둔 돌 · 거미줄) ·
+  //   slscf 짓다 만 둥근 돌기둥과 나무 비계(2 × 2 — 부러져 매달린 널빤지 · 거미줄) · slblk 다듬다 만 돌덩이(f 1 이면 곡괭이가 박힌 채) ·
+  //   sllad 바닥에 눕혀 둔 사다리(2 × 1 — 가로대 하나 빠짐) · slhg 쓰러진 모래시계(2 × 1 — 모래가 멈춤 · 금 간 유리로 조금 샘) ·
+  //   slscr 먼지 쌓인 책 · 두루마리 더미(미룬 일 — v 마다 다르게)
+  const SLOTH_KINDS = { slthr: 1, slscf: 1, slblk: 1, sllad: 1, slhg: 1, slscr: 1 };
+  const SL_C = {
+    top: ['#3a3544', '#494353', '#585163', '#6a6374'], face: ['#1f1b27', '#282331', '#322c3c', '#3d3747'], dust: '#7c7686', line: '#120e18',
+    wood: ['#28201b', '#362a22', '#46382c', '#584636', '#6a5643'], rope: ['#4a3f30', '#6a5a42'],
+    iron: ['#1c1b22', '#33323b', '#53515c', '#75727d'], web: '#aca6ba',
+    brass: ['#33240f', '#4f3a1c', '#6c5228', '#8a6c36'], glass: '#8a9ab4', sand: ['#5a4830', '#7a6244', '#9a805a', '#b49a6e'],
+    paper: ['#5a5040', '#7c705a', '#9a8d72', '#b8a98a'], cushion: ['#24182a', '#33223b', '#432e4c', '#54395c'], cover: [['#2e161d', '#45222b', '#5c2f38'], ['#18212e', '#243245', '#33445a'], ['#23251a', '#343826', '#464b33']], ribbon: '#6a2430'
+  };
+  // 돌 덩이 목록에서 점 (x, y) 를 덮는 것 — 뒤의 것부터 적고, 앞(나중)의 것이 덮음. 덩이 = 앞면(yb 까지 h 줄) + 그 위 윗면(d 줄)
+  function slHit(list, x, y) {
+    for (let i = list.length - 1; i >= 0; i--) {
+      const b = list[i], fTop = b.yb - b.h + 1;
+      if (x >= b.x0 && x <= b.x1 && y >= fTop - b.d && y <= b.yb) return { b, i, top: y < fTop, fTop };
+    }
+    return null;
+  }
+  // 덩이 한 점의 색 — 바깥 테두리 · 덩이 사이 줄눈(왼쪽 · 위쪽에만 한 점) · 윗면(왼쪽이 밝음 · 앞 모서리는 밝은 턱 · 먼지) · 앞면(아래로 어둑 · 깨진 자국)
+  function slBlockCol(list, s, px, py, X, Y, seed) {
+    const K = SL_C, b = s.b, line = c3(K.line), q = (x, y) => slHit(list, x, y);
+    const l = q(px - 1, py), u = q(px, py - 1), r = q(px + 1, py), d = q(px, py + 1);
+    if (!l || !u || !r || !d || l.i !== s.i || u.i !== s.i) return line;
+    if (s.top) {
+      let k = px - b.x0 < 3 ? 3 : b.x1 - px < 2 ? 1 : 2;
+      if (py === s.fTop - 1) k = 3;                                                 // 앞 모서리 — 밝은 턱
+      let c = c3(K.top[k]);
+      if (fbm(X * 0.22, Y * 0.22, seed) > 0.52) c = mix(c, c3(K.dust), 0.42);       // 쌓인 먼지 (아무도 안 치움)
+      if (hash(X, Y, seed + 1) < 0.05) c = mul(c, 0.82);
+      return c;
+    }
+    const fy = py - s.fTop;
+    let k = fy === 0 ? 3 : py === b.yb - 1 ? 0 : px - b.x0 < 2 ? 3 : b.x1 - px < 3 ? 1 : 2;
+    let c = c3(K.face[k]);
+    if (hash(Math.floor(X / 3), Math.floor(Y / 2), seed + 2) < 0.07) c = mul(c, 0.72);   // 깨진 자국 · 끌 자국
+    if (fy > 0 && fbm(X * 0.3, Y * 0.3, seed + 3) > 0.64) c = mix(c, c3(K.dust), 0.18);
+    return c;
+  }
+  // 거미줄 — 모서리 (ax, ay) 에서 각도 a0 ~ a1 로 퍼지는 부채꼴 (실 네 가닥은 사이가 고르지 않게, 둘레 줄은 가운데로 처짐). 덮는 정도를 돌려 줌 (0 이면 없음)
+  function slWeb(px, py, ax, ay, a0, a1, R, seed) {
+    const dx = px - ax, dy = py - ay, r = Math.hypot(dx, dy);
+    if (r < 1 || r > R) return 0;
+    let a = Math.atan2(dy, dx);
+    if (a < a0 - 0.05 || a > a1 + 0.05) return 0;
+    const th = [a0, a0 + (a1 - a0) * (0.3 + hash(seed, 1, 790) * 0.1), a0 + (a1 - a0) * (0.62 + hash(seed, 2, 790) * 0.1), a1];
+    for (const t of th) if (Math.abs(a - t) * r < 0.55) return 0.55;
+    for (let i = 0; i + 1 < th.length; i++) if (a >= th[i] && a <= th[i + 1]) {
+      const f = (a - th[i]) / (th[i + 1] - th[i]), sag = 1 - 0.16 * Math.sin(Math.PI * f);
+      for (const rr of [R * 0.45, R * 0.82]) if (Math.abs(r - rr * sag) < 0.5) return 0.4;
+    }
+    return 0;
+  }
+  // 막대(나무 · 쇠) — (x0, y0) 에서 (x1, y1) 까지 굵기 w. 점이 막대 위면 { t (0 ~ 1), side (-1 왼쪽 위 테 · 0 속 · 1 오른쪽 아래 테) }
+  function slBar(px, py, x0, y0, x1, y1, w) {
+    const vx = x1 - x0, vy = y1 - y0, L = Math.hypot(vx, vy), ux = vx / L, uy = vy / L;
+    const t = (px - x0) * ux + (py - y0) * uy, n = -(px - x0) * uy + (py - y0) * ux;
+    if (t < -0.5 || t > L + 0.5 || Math.abs(n) > w / 2 + 0.5) return null;
+    return { t: t / L, n, edge: Math.abs(n) > w / 2 - 0.5 || t < 0.5 || t > L - 0.5 };
+  }
+  function slothPix(B, px, py, X, Y) {
+    const K = SL_C, v = B.v | 0, line = c3(K.line);
+    const ground = () => curMap ? siteFloor(curMap, X, Y) : coolObs(X, Y);       // 턱 윗면 — 식은 흑요석 (깐 벽돌 위면 벽돌)
+    const woodCol = (s, k) => s.edge ? line : c3(K.wood[Math.max(0, Math.min(4, k + (s.n < -0.3 ? 1 : s.n > 0.3 ? -1 : 0) + (hash(X >> 1, Y, 791) < 0.1 ? -1 : 0)))]);
+    const webOver = (c, a) => a ? mix(c, c3(K.web), a) : c;
+    if (B.kind === 'slthr' || B.kind === 'slblk') {
+      if (!B.lumps) {
+        const j = (i, s) => Math.round((hash(v, i, s) - 0.5) * 2);                    // 한 점쯤 흔들림 — 같은 모양이 되풀이되지 않게
+        B.lumps = B.kind === 'slthr' ? [                                               // 반만 지은 왕좌 — 왼쪽 반은 다 올리고 오른쪽 반은 아래 줄뿐 (짝이 없어 하다 만 것이 보임)
+          { x0: 2, x1: 45, yb: 31, h: 3, d: 3 },                                       // 받침단
+          { x0: 13, x1: 23 + j(1, 792), yb: 18, h: 6, d: 2 }, { x0: 24 + j(1, 792), x1: 34, yb: 18, h: 6, d: 2 },   // 등받이 아랫줄 — 다 쌓음
+          { x0: 13, x1: 23, yb: 12, h: 6, d: 2 },                                      // 등받이 윗줄 — 왼쪽 반만 (오른쪽은 아랫줄 윗면에 먼지)
+          { x0: 15, x1: 21, yb: 6, h: 4, d: 2 },                                       // 등받이 꼭대기 — 왼쪽 반에만
+          { x0: 13, x1: 34, yb: 27, h: 4, d: 5 },                                      // 앉는 자리
+          { x0: 4, x1: 12, yb: 27, h: 6, d: 4 },                                       // 왼쪽 팔걸이 (오른쪽 팔걸이는 아직 바닥에)
+          { x0: 37, x1: 44, yb: 29, h: 3, d: 3 }                                       // 오른쪽 팔걸이가 될 돌 — 받침단 끝에 삐뚤게 내려놓음
+        ] : B.f ? [
+          { x0: 1, x1: 10, yb: 15, h: 4, d: 3 }, { x0: 8, x1: 14, yb: 13 + j(2, 793), h: 3, d: 3 }, { x0: 3, x1: 9, yb: 8, h: 3, d: 2 }   // 곡괭이가 박힌 돌 무더기
+        ] : [
+          { x0: 6, x1: 14, yb: 12, h: 3, d: 3 }, { x0: 1, x1: 9, yb: 15, h: 4, d: 3 }, { x0: 9 + j(3, 794), x1: 13, yb: 15, h: 2, d: 2 }   // 깎다 만 돌 둘 · 부스러기 덩이
+        ];
+      }
+      const list = B.lumps;
+      // 곡괭이 — 돌 윗면에 날이 박히고 자루는 오른쪽 위로 (slblk f 1)
+      if (B.kind === 'slblk' && B.f) {
+        const hd = slBar(px, py, 2.5, 6.5, 8.5, 4.5, 2);                              // 쇠 날 — 반쯤 박힘
+        const hn = slBar(px, py, 6.5, 5.5, 13.5, 0.5, 2);                             // 나무 자루
+        if (hn && py <= 5) return woodCol(hn, 3);
+        if (hd && py <= 6) return hd.edge ? line : c3(K.iron[hd.n < 0 ? 3 : 2]);
+      }
+      const web = B.kind === 'slthr' ? slWeb(px, py, 22, 3, 0.05, Math.PI / 2 - 0.05, 13, v) : 0;   // 꼭대기 오른쪽 모서리에서 빈 오른쪽 반으로 친 거미줄
+      const s = slHit(list, px, py);
+      if (s && B.kind === 'slthr' && s.i === 5 && px >= 15 && px <= 32 && py >= s.fTop - 4 && py <= s.fTop) {   // 앉는 자리의 빛바랜 방석 — 오래 깔고 앉아 가운데가 꺼짐 · 먼지
+        if (px === 15 || px === 32 || py === s.fTop - 4) return c3(K.line);
+        let k = py === s.fTop ? 0 : px < 18 ? 3 : Math.abs(px - 23.5) < 4 && py > s.fTop - 3 ? 1 : 2;
+        let c = c3(K.cushion[k]);
+        if (fbm(X * 0.3, Y * 0.3, 801) > 0.58) c = mix(c, c3(K.dust), 0.3);
+        return webOver(c, web);
+      }
+      if (s) return webOver(slBlockCol(list, s, px, py, X, Y, 795 + s.i * 3), web);
+      let g = ground();
+      if (slHit(list, px - 1, py - 1)) g = mul(g, 0.6);                              // 그림자 — 오른쪽 아래로 한 점 · 두 점
+      else if (slHit(list, px - 2, py - 1) || slHit(list, px - 1, py - 2)) g = mul(g, 0.78);
+      g = webOver(g, web);
+      if (B.kind === 'slblk' && B.f && py <= 6) {                                     // 곡괭이 그림자
+        if (slBar(px - 1, py - 1, 6.5, 5.5, 13.5, 0.5, 2)) g = mul(g, 0.7);
+      }
+      return g;
+    }
+    if (B.kind === 'slscf') {
+      // 짓다 만 둥근 돌기둥 — 북(드럼) 셋을 쌓다 멈춤 (맨 위는 반쯤만), 둘레에 나무 비계
+      const pole = (x, y, i) => i === 0 ? slBar(x, y, 4, 1, 4, 31, 2) : slBar(x, y, 28.5, 3, 27, 31, 2);
+      const plank = (x, y) => slBar(x, y, 1, 13, 30, 13, 3);
+      const broken = (x, y) => slBar(x, y, 27, 18, 9, 27, 2);                          // 부러져 한쪽 끝이 내려앉은 널빤지
+      const cx = 15.5, R = 6;
+      const drum = (x, y) => {                                                        // 기둥 — 원기둥 북마다 (아래부터), 윗면은 납작한 타원
+        const dx = x - cx;
+        if (Math.abs(dx) > R + 0.3) return null;
+        const e = Math.sqrt(Math.max(0, 1 - (dx / R) ** 2)) * 2;
+        for (const [yb, h, half] of [[19, 5, 1], [25, 6, 0], [31, 6, 0]]) {
+          if (half && dx > 1.5) continue;                                             // 맨 위 북은 왼쪽 반만 놓임 (오른쪽은 비어 아래 북 윗면이 드러남)
+          if (y <= yb + e - 1 && y >= yb - h - e) return { yb, h, top: y < yb - h + e, dx, e };
+        }
+        return null;
+      };
+      // 앞에서 뒤로 — 널빤지 · 막대 · 기둥
+      const pl = plank(px, py);
+      if (pl) return pl.edge ? line : c3(K.wood[py === 12 ? 4 : 3 - (hash(Math.floor(X / 5), 1, 796) < 0.3 ? 1 : 0)]);
+      for (const i of [0, 1]) {
+        const p = pole(px, py, i);
+        if (!p) continue;
+        if (Math.abs(py - 13) <= 2) return (py === 11 || py === 15) ? line : c3(K.rope[px % 2 ? 1 : 0]);   // 널빤지를 묶은 밧줄
+        return woodCol(p, i ? 1 : 2);
+      }
+      const br = broken(px, py);
+      if (br) return br.edge ? line : c3(K.wood[2]);
+      const s = drum(px, py);
+      if (s) {
+        const on = (x, y) => { const q = drum(x, y); return q && q.yb === s.yb; };
+        if (!on(px - 1, py) || !on(px + 1, py) || !on(px, py - 1) || !on(px, py + 1)) return line;
+        if (s.top) return fbm(X * 0.25, Y * 0.25, 797) > 0.5 ? mix(c3(K.top[2]), c3(K.dust), 0.45) : c3(K.top[s.dx < -2 ? 3 : 2]);
+        let c = c3(K.face[s.dx < -3 ? 3 : s.dx < 0 ? 2 : s.dx < 3 ? 1 : 0]);
+        if (Math.abs(s.dx + 1.5) < 0.5 && py > s.yb - s.h + 2) c = mul(c, 0.85);      // 세로로 판 홈 하나 (다 못 팜)
+        return c;
+      }
+      let g = ground();
+      if (drum(px - 1, py - 1) || plank(px - 1, py - 2) || pole(px - 2, py, 0) || pole(px - 2, py, 1)) g = mul(g, 0.64);
+      g = webOver(g, slWeb(px, py, 5, 2, 0.15, Math.PI / 2 - 0.1, 10, v + 7));          // 왼쪽 막대 꼭대기에서 기둥 쪽으로 친 거미줄
+      return g;
+    }
+    if (B.kind === 'sllad') {
+      // 바닥에 눕혀 둔 사다리 — 두 기둥 사이 가로대(사이가 조금씩 다름), 하나는 빠지고 밑동만
+      const rails = [slBar(px, py, 2, 6, 29, 5, 2), slBar(px, py, 2, 11, 29, 10, 2)];
+      for (const r of rails) if (r) return woodCol(r, 3);
+      const rungs = [4, 9, 13.5, 18, 23.5, 27];
+      for (let i = 0; i < rungs.length; i++) {
+        const x = rungs[i], gone = i === 3;
+        const r = slBar(px, py, x, 7, x - 0.4, gone ? 7.6 : 10, 2);
+        if (r) return r.edge ? line : c3(K.wood[2]);
+      }
+      let g = ground();
+      if (slBar(px - 1, py - 1, 2, 6, 29, 5, 2) || slBar(px - 1, py - 1, 2, 11, 29, 10, 2)) g = mul(g, 0.62);
+      return g;
+    }
+    if (B.kind === 'slhg') {
+      // 멈춘 모래시계 — 세워진 큰 모래시계 (1 × 2 칸). 위 · 아래 놋쇠 판 · 앞 기둥 둘 · 유리 둘 사이 가는 목.
+      // 위 유리에 모래가 남았는데 떨어지던 줄기가 목 아래 공중에서 멈춤, 아래엔 작은 더미. 기둥과 위 판 사이에 거미줄
+      const cx = 7.5, prof = y => y < 6 || y > 26 ? 0 : Math.max(1, 4.8 * Math.sqrt(Math.max(0, 1 - ((y - (y < 16 ? 11 : 21)) / 5.2) ** 2)));
+      const glass = (x, y) => Math.abs(x - cx) < prof(y);
+      const plate = (x, y) => (y >= 2 && y <= 5 && x >= 1 && x <= 14) ? (y <= 3 ? 'top' : 'face') : (y >= 27 && y <= 31 && x >= 0 && x <= 15) ? (y <= 28 ? 'top' : 'face') : null;
+      const post = (x, y) => y >= 6 && y <= 26 && (x === 2 || x === 3 || x === 12 || x === 13);
+      const pl = plate(px, py);
+      if (pl) {
+        if (!plate(px - 1, py) || !plate(px + 1, py) || !plate(px, py - 1) || !plate(px, py + 1) || py === 4 || py === 29) return py === 4 || py === 29 ? c3(K.brass[3]) : line;
+        let c = c3(K.brass[pl === 'top' ? 2 : px < 4 ? 2 : 1]);
+        if (pl === 'top' && fbm(X * 0.3, Y * 0.3, 802) > 0.5) c = mix(c, c3(K.dust), 0.45);
+        return c;
+      }
+      const web = slWeb(px, py, 4, 6, 0.1, Math.PI / 2 - 0.1, 7, v);
+      if (post(px, py)) return webOver(px === 2 || px === 12 ? c3(K.brass[3]) : c3(K.brass[1]), web * 0.6);
+      if (glass(px, py)) {
+        const r = prof(py), dx = px - cx;
+        if (Math.abs(dx) > r - 1) return c3('#2a2838');                                 // 유리 테
+        if (py < 16 && py >= 12) return c3(K.sand[dx < -1 ? 3 : dx < 1 ? 2 : 1]);       // 위 유리에 남은 모래 — 다 떨어지지 못함
+        if (py > 16 && py <= 19 && (px === 7 || px === 8)) return c3(K.sand[px === 7 ? 3 : 2]);   // 공중에서 멈춘 모래 줄기
+        if (py >= 23 && Math.abs(dx) < (py - 22) * 1.3) return c3(K.sand[py === 23 ? 3 : dx < 0 ? 2 : 1]);   // 아래 더미
+        if (dx < -1 && dx > -3 && Math.abs(py - (py < 16 ? 9 : 20)) < 2) return mix(texture(OBSID, 6, X, Y), c3('#dce4f4'), 0.6);   // 유리 빛
+        return webOver(mix(mul(ground(), 0.85), c3(K.glass), 0.28), web);
+      }
+      let g = ground();
+      if (glass(px - 1, py - 1) || post(px - 1, py - 1) || post(px - 2, py - 1) || (py >= 6 && plate(px - 1, py - 2))) g = mul(g, 0.66);
+      return webOver(g, web);
+    }
+    // slscr — 먼지 쌓인 책 · 두루마리 더미 (v 마다 쌓인 모양이 다름)
+    if (!B.stack) {
+      const alt = v & 1;
+      B.stack = alt
+        ? [{ x0: 2, x1: 12, yb: 15, h: 3, d: 4, c: 0 }, { x0: 4, x1: 13, yb: 12, h: 2, d: 4, c: 2 }, { x0: 3, x1: 10, yb: 10, h: 2, d: 3, c: 1 }]
+        : [{ x0: 3, x1: 14, yb: 15, h: 2, d: 4, c: 1 }, { x0: 1, x1: 9, yb: 15, h: 3, d: 3, c: 2 }];
+      B.scroll = alt ? { x0: 5, x1: 13, y: 6 } : { x0: 4, x1: 12, y: 9 };
+    }
+    const sc = B.scroll;
+    if (px >= sc.x0 && px <= sc.x1 && Math.abs(py - sc.y) <= 1.5) {                   // 굴린 두루마리 — 가운데 끈
+      if (px === sc.x0 || px === sc.x1 || Math.abs(py - sc.y) > 1) return line;
+      if (Math.abs(px - (sc.x0 + sc.x1) / 2) < 1) return c3(K.ribbon);
+      return c3(K.paper[py < sc.y ? 3 : py > sc.y ? 1 : 2]);
+    }
+    const st = B.stack, s = slHit(st, px, py);
+    if (s) {
+      const b = s.b, cv = K.cover[b.c];
+      const l = slHit(st, px - 1, py), u = slHit(st, px, py - 1), r = slHit(st, px + 1, py), d = slHit(st, px, py + 1);
+      if (!l || !u || !r || !d || l.i !== s.i || u.i !== s.i) return line;
+      if (s.top) { let c = c3(cv[px - b.x0 < 3 ? 2 : 1]); if (fbm(X * 0.3, Y * 0.3, 799 + s.i) > 0.45) c = mix(c, c3(K.dust), 0.5); return c; }
+      if (px <= b.x0 + 1) return c3(cv[0]);                                          // 책등 쪽 표지
+      return c3(K.paper[(py + (hash(px >> 2, s.i, 800) < 0.4 ? 1 : 0)) % 3 === 0 ? 1 : 2]);   // 종이 끝 — 장마다 조금씩 어긋남
+    }
+    let g = ground();
+    if (slHit(st, px - 1, py - 1) || (px - 1 >= sc.x0 && px - 1 <= sc.x1 && Math.abs(py - 1 - sc.y) <= 1.5)) g = mul(g, 0.64);
+    return webOver(g, v & 1 ? slWeb(px, py, 13, 2, Math.PI / 2, Math.PI, 8, v) : 0);
   }
   function hutGeom(B) {
     const pw = B.w * P, ph = B.h * P, d0 = (B.door.x - B.x0) * P, d1 = d0 + B.door.w * P;
@@ -1837,11 +2061,53 @@
   }
   // 지도 속성 high · stairs (「x,y,길이;…」) → 칸 표시
   const highs = new WeakMap();
+  // 식은 흑요석 — 나태의 턱 (용암마저 흐르다 멈춤): 흑요석 땅(texture 의 OBSID)과 같은 무늬인데 갈라진 틈의 불만 식어 잿빛
+  function coolObs(X, Y) {
+    const u = X / 2, w = Y / 2, v = fbm(u * 0.07, w * 0.07, 3) * 0.55 + vnoise(X * 0.33, Y * 0.33, 5) * 0.2 + hash(X, Y, 1) * 0.25;
+    let c = shadeOf(C.obsid, v);
+    if (hash(X, Y, 23) < 0.004) c = c3('#8a6aa8');
+    else if (hash(X - 1, Y - 1, 23) < 0.004) c = c3('#5a4472');
+    if (fbm(u * 0.02, w * 0.02, 27) > 0.55) {
+      const r = Math.abs(vnoise(u * 0.05, w * 0.05, 24) - 0.5);
+      if (r < 0.005) c = c3('#5e5464'); else if (r < 0.011) c = c3('#3c3344'); else if (r < 0.018) c = mix(c, c3('#0e0a12'), 0.45);   // 식은 재 · 검은 틈
+    }
+    return c;
+  }
+  // 칠죄종 턱의 깐 바닥 (지도 속성 pave — 「X,Y,RX,RY;…」 점 단위 타원) — 어두운 벽돌을 조금 깖. 줄마다 엇갈리고 벽돌 폭이 저마다 다름,
+  // 가장자리는 벽돌이 하나씩 빠지며 흩어짐 (곧은 경계 없음) · 안쪽에도 빠진 자리 몇 개 · 먼지. 빠진 자리는 그 밑 땅
+  const paves = new WeakMap();
+  function paveOf(m) {
+    let a = paves.get(m);
+    if (!a) { a = String((m.props && m.props.pave) || '').split(';').filter(Boolean).map(r => { const [x, y, rx, ry] = r.split(',').map(Number); return { x, y, rx, ry }; }); paves.set(m, a); }
+    return a;
+  }
+  const SLAB = { brick: ['#29242f', '#302a37', '#38313f'], lit: '#433b4b', dark: '#1f1a25', mortar: '#120e16', dust: '#6c6676' };
+  function slabAt(p, X, Y) {
+    const RH = 5, row = Math.floor(Y / RH), sy = Y - row * RH, off = (hash(row, 0, 810) * 12) | 0, xx = X + off, BW = 10;
+    const edge = c => c * BW + Math.round((hash(c, row, 811) - 0.5) * 5);              // 벽돌 경계 — 폭 6 ~ 14 점
+    let c = Math.floor(xx / BW);
+    if (xx < edge(c)) c--;
+    else if (xx >= edge(c + 1)) c++;
+    const bx0 = edge(c), bx1 = edge(c + 1) - 1, lx = xx - bx0;
+    const mx = (bx0 + bx1) / 2 - off, my = row * RH + 2;
+    const d = Math.hypot((mx - p.x) / p.rx, (my - p.y) / p.ry) + (vnoise(mx * 0.05, my * 0.05, 812) - 0.5) * 0.3;
+    if (!(d < 0.7 || (d < 1.05 && hash(c, row, 813) > (d - 0.7) / 0.35)) || hash(c, row, 814) < 0.06) return null;   // 가장자리 · 빠진 벽돌
+    if (sy === 0 || lx === 0) return c3(SLAB.mortar);                               // 줄눈 — 위 · 왼쪽 한 점
+    const t = hash(c, row, 815);
+    let col = sy === 1 && lx < bx1 - bx0 - 1 ? c3(SLAB.lit) : sy === RH - 1 || lx === bx1 - bx0 ? c3(SLAB.dark) : c3(SLAB.brick[t < 0.35 ? 0 : t < 0.75 ? 1 : 2]);
+    if (hash(c, row, 816) < 0.12 && Math.abs(lx - (2 + ((hash(c, row, 817) * 5) | 0)) - (sy - 2)) < 0.6) col = c3(SLAB.mortar);   // 금 간 벽돌
+    if (fbm(X * 0.18, Y * 0.18, 818) > 0.56) col = mix(col, c3(SLAB.dust), 0.3);
+    return col;
+  }
+  function siteFloor(m, X, Y) {
+    for (const p of paveOf(m)) { const c = slabAt(p, X, Y); if (c) return c; }
+    return coolObs(X, Y);
+  }
   function highOf(m) {
     let H = highs.get(m);
     if (H) return H;
     const runs = s => { const a = new Uint8Array(m.w * m.h); for (const r of String(s || '').split(';')) { if (!r) continue; const [x, y, n] = r.split(',').map(Number); for (let i = 0; i < n; i++) a[y * m.w + x + i] = 1; } return a; };
-    H = { high: runs(m.props && m.props.high), stairs: runs(m.props && m.props.stairs) };
+    H = { high: runs(m.props && m.props.high), stairs: runs(m.props && m.props.stairs), cool: runs(m.props && m.props.cool) };   // cool — 용암 줄이 식은 턱 (칠죄종 · 나태)
     highs.set(m, H);
     return H;
   }
@@ -1931,7 +2197,7 @@
         }
         if (best >= 0) { const lk = m.look[best]; return m.tile[best] === ROAD ? roadPixel(lk >> 4, X, Y, 1) : texture(terOf(lk & 15) === ROCKY ? GRASS : terOf(lk & 15), lk >> 4, X, Y); }
       }
-      if (obs) return texture(OBSID, 6, X, Y);
+      if (obs) return highOf(m).cool[ty * m.w + tx] ? siteFloor(m, X, Y) : texture(OBSID, 6, X, Y);
       const top = e.bio === 2 || e.bio === 3 || e.bio === 9 || k === 0 ? texture(k === 0 ? (e.ter === ROCKY ? GRASS : e.ter) : GRASS, e.bio, X, Y) : texture(e.ter, e.bio, X, Y);
       return k === 0 ? top : mix(top, c3('#d8e8a0'), k === 2 ? 0.14 : 0.07);   // 높은 층일수록 볕을 더 받아 밝게
     };
@@ -1966,7 +2232,8 @@
         if (s > CLIFF_H - 5) c = mul(c, 1 - (s - (CLIFF_H - 5)) * 0.07);    // 밑동 — 어둑
         if (obs) {                                                         // 흑요석 면 — 드문드문 흘러내린 불줄기 (굵기 · 길이가 다름)
           const lr = Math.abs(vnoise(X * 0.035, Y * 0.06, 31) - 0.5), on = vnoise(X * 0.02, 0.5, 33) > 0.62;   // 몇 군데에만
-          if (on && lr < 0.006) c = c3('#f07a2a'); else if (on && lr < 0.014) c = c3('#a8361a');
+          const cool = highOf(m).cool[ty * m.w + tx];                          // 나태의 턱 — 흘러내리다 식은 줄
+          if (on && lr < 0.006) c = c3(cool ? '#4e4456' : '#f07a2a'); else if (on && lr < 0.014) c = c3(cool ? '#2e2636' : '#a8361a');
           return c;
         }
         const vine = hash(Math.floor(X / 3), k, 187), vlen = 3 + Math.floor(hash(Math.floor(X / 3), k, 188) * 9);
@@ -2272,7 +2539,8 @@
     return { name, ox: (hash(tx, ty, 123) * (P - PROP_W[name] + 1)) | 0, oy: (hash(tx, ty, 124) * (P - PROP_H[name] + 1)) | 0, flip: hash(tx, ty, 127) < 0.5,
              petal: WHITE, petalShade: WHITE, grass: C.grass[e.bio] || C.grass[0] };
   }
-  function propPixel(pr, lx, ly, under) {
+  const COOL_INK = { f: '#5e5464', F: '#3c3344', g: '#6e6474' };            // 나태의 턱 (식은 땅) — 빛나던 불돌 소품도 잿빛
+  function propPixel(pr, lx, ly, under, cool) {
     const sx = lx - pr.ox, sy = ly - pr.oy, rows = PROP_ART[pr.name];
     if (sy < 0 || sy >= rows.length || sx < 0 || sx >= PROP_W[pr.name]) return under;
     const ch = rows[sy][pr.flip ? PROP_W[pr.name] - 1 - sx : sx];
@@ -2282,7 +2550,7 @@
     if (ch === 'q') return pr.petalShade;
     if (ch === 'y') return c3('#f8e070');
     if (ch >= 'a' && ch <= 'd') return c3(pr.grass[{ a: 3, b: 1, c: 0, d: 2 }[ch]]);
-    return c3(PROP_INK[ch] || '#ff00ff');
+    return c3((cool && COOL_INK[ch]) || PROP_INK[ch] || '#ff00ff');
   }
 
   // ---------- 지도마다 한 번 — 물 깊이 (물가에서 몇 칸) · 그려 둔 덩어리 ----------
@@ -3328,7 +3596,7 @@
       if (e.t === POOL) return shoreRim(m, A, e, X, Y, texture(e.gTer, e.gBio, X, Y));   // 물 칸 안으로 둥글게 나온 땅
     }
     let c = paintGround(m, A, e, X, Y, lx, ly);
-    if (e.prop && !(e.nearRoad && roadField(m, X, Y, 0) >= -0.08) && !highOf(m).stairs[Math.floor(Y / P) * m.w + Math.floor(X / P)]) c = propPixel(e.prop, lx, ly, c);   // 바위 계단 위엔 꽃 · 돌 없음
+    if (e.prop && !(e.nearRoad && roadField(m, X, Y, 0) >= -0.08) && !highOf(m).stairs[Math.floor(Y / P) * m.w + Math.floor(X / P)]) c = propPixel(e.prop, lx, ly, c, highOf(m).cool[Math.floor(Y / P) * m.w + Math.floor(X / P)]);   // 바위 계단 위엔 꽃 · 돌 없음
     if (e.dais) {
       const R = P - 1, d = Math.min(e.dais.l ? lx : 99, e.dais.r ? R - lx : 99, e.dais.u ? ly : 99, e.dais.d ? R - ly : 99);
       if (d === 0) c = c3(CK.line); else if (d <= 2) c = mix(c, c3(CK.gold), d === 1 ? 0.5 : 0.25);

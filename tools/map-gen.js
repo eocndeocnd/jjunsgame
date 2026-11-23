@@ -1532,6 +1532,28 @@ const ABYSS = {                                                // 처음 시안(
   areas: [['아크데몬', 46, 222, 26, 10], ['심연의 촉수', 78, 202, 26, 10], ['고대룡', 50, 171, 26, 12], ['마신장', 51, 86, 26, 11], ['종말의 짐승', 74, 56, 26, 10]],
   sins: [['칠죄종 · 나태', 23, 197], ['칠죄종 · 질투', 95, 185], ['칠죄종 · 색욕', 94, 160], ['칠죄종 · 폭식', 27, 141], ['칠죄종 · 오만', 94, 128], ['칠죄종 · 분노', 29, 107], ['칠죄종 · 탐욕', 97, 99]],
   ledge: { rx: 8, ry: 6 },                                     // 칠죄종 턱 윗면 — 16 × 12 칸 (꾸밀 자리, 줄이지 않음)
+  // 칠죄종 턱마다 꾸밈 (사용자 결정 2026-11-23 — 하나씩 보여 주고 정함). 그림은 턱 윗면 16 × 12 칸 (위가 북쪽, 왼쪽 위 = 턱 가운데에서 (-8, -6)):
+  // ' ' 턱 밖 · . 턱 윗면 · K 그 칠죄종이 선 칸 · 글자 네모 하나 = 막힌 소품 하나 (그림은 js/mapart.js 의 slothPix …)
+  sites: {
+    '칠죄종 · 나태': {                                         // 「끝내지 못한 것들」 — 하다 만 것이 그대로 남은 자리
+      kinds: { T: 'slthr', S: 'slscf', B: ['slblk', 1], b: 'slblk', L: 'sllad', H: 'slhg', r: 'slscr' }, cool: true,   // cool — 이 턱은 용암 줄마저 식음 (그림 coolObs)
+      pave: [0.5, -1.2, 4.5, 3.9],                             // 나태 둘레에 조금 깐 어두운 벽돌 — 턱 가운데에서 잰 타원 가운데 · 반지름 (칸, 사용자 결정 2026-11-23)
+      plan: [
+        '     ......     ',
+        '   ....TTT...   ',
+        '  ...B.TTT.r..  ',     // 쌓다 만 왕좌 · 곡괭이가 박힌 돌 · 미룬 책 더미
+        ' .SS...KKK..H.. ',     // 짓다 만 기둥과 비계 · 멈춘 모래시계
+        '..SS...KKK..H...',
+        '.b.....KKK......',
+        '..LL..........r.',     // 눕혀 둔 사다리 · 책 더미 하나 더
+        '................',
+        ' .............. ',
+        '  ............  ',
+        '   ..........   ',
+        '     ......     '
+      ]
+    }
+  },
   castle: { x0: 30, x1: 94, y0: 7, y1: 40, door: 4 },         // 마왕성 바깥 (문은 아래 가운데, 벌레가 그 앞을 막음)
   mound: [62, 231],                                            // 지하 묘실로 내려가는 바위 둔덕의 문 (아래 가운데)
   merchant: [73, 234], chests: [[13, 164], [113, 113], [16, 63, 'big']]
@@ -1550,7 +1572,7 @@ function abyssMap(data) {
   for (let y = 3; y < H - 2; y++) for (let x = 1; x < W - 1; x++) if (Math.abs(x + 0.5 - A.cx) < half(y)) tiles[idx(x, y)] = FLOOR;
   const segDist = (pts, x, y) => { let best = 1e9; for (let i = 0; i + 1 < pts.length; i++) { const [ax, ay] = pts[i], [bx, by] = pts[i + 1], dx = bx - ax, dy = by - ay, t = Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / (dx * dx + dy * dy))); best = Math.min(best, Math.hypot(x - ax - dx * t, y - ay - dy * t)); } return best; };
   // 칠죄종 턱 — 윗면(걸을 수 있음 · 한 층 높게) · 둘레 바위 테(남쪽은 두 칸) · 남쪽 테 가운데에 바위 계단. 윗면 · 테 · 둘레는 구역 밖, 나무 없음
-  const posts = [], ledges = [];
+  const posts = [], ledges = [], blds = [], cool = new Uint8Array(W * H), pave = [];
   for (const [name, lx, ly] of A.sins) {
     const e = foeNamed(name), { rx, ry } = A.ledge, d = (x, y) => Math.hypot((x + 0.5 - lx) / rx, (y + 0.5 - ly) / ry);
     for (let y = ly - ry - 4; y <= ly + ry + 4; y++) for (let x = lx - rx - 4; x <= lx + rx + 4; x++) {
@@ -1571,6 +1593,26 @@ function abyssMap(data) {
     posts.push({ name: e.name, x: px, y: py, w: n, h: n, enemy: e.id, blocks: false });
     let foot = ly; while (high[idx(lx, foot + 1)] || stairs[idx(lx, foot + 1)]) foot++;
     ledges.push({ x: lx, y: foot + 1 });                       // 계단 밑 — 곁길이 닿는 곳
+    // 꾸밈 (A.sites) — 글자 네모마다 막힌 소품 하나 (칸은 벽 · 겉모습 BUILD, 그림은 지도 속성 blds)
+    const site = A.sites && A.sites[name];
+    if (site) {
+      if (site.cool) for (let y = ly - ry - 4; y <= ly + ry + 4; y++) for (let x = lx - rx - 4; x <= lx + rx + 4; x++) if (inside(x, y) && (high[idx(x, y)] || stairs[idx(x, y)] || (tiles[idx(x, y)] === ROCK && noArea[idx(x, y)]))) cool[idx(x, y)] = 1;   // 윗면 · 바위 테 · 계단 (절벽 면의 불줄기도)
+      if (site.pave) { const [dx, dy, prx, pry] = site.pave; pave.push([(lx + dx) * 16, (ly + dy) * 16, prx * 16, pry * 16].map(Math.round).join(',')); }
+      const { plan, kinds } = site, ox = lx - rx, oy = ly - ry, ch = (c, r) => (plan[r] || '')[c] || ' ';
+      if (plan.length !== ry * 2 || plan.some(row => row.length !== rx * 2)) throw new Error(`6격 ${name} 꾸밈 — 그림이 ${rx * 2} × ${ry * 2} 가 아님`);
+      for (let r = 0; r < plan.length; r++) for (let c = 0; c < plan[r].length; c++) {
+        const t = ch(c, r), x = ox + c, y = oy + r, k = idx(x, y);
+        if ((t === ' ') !== !high[k]) throw new Error(`6격 ${name} 꾸밈 — (${x}, ${y}) 턱 모양이 그림과 다름`);
+        if (t === 'K') { if (x < px || x >= px + n || y < py || y >= py + n) throw new Error(`6격 ${name} 꾸밈 — K 가 그 자리가 아님`); continue; }
+        if (t === ' ' || t === '.' || ch(c - 1, r) === t || ch(c, r - 1) === t) continue;   // 소품의 나머지 칸 — 왼쪽 위 칸이 한꺼번에
+        const kd = kinds[t];
+        if (!kd) throw new Error(`6격 ${name} 꾸밈 — 글자 ${t} 를 모름`);
+        let w = 0, h = 0; while (ch(c + w, r) === t) w++; while (ch(c, r + h) === t) h++;
+        for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) { const q = idx(x + i, y + j); tiles[q] = WALL; lk[q] = look(BUILD, 6); }
+        const [kind, f] = Array.isArray(kd) ? kd : [kd, 0];
+        blds.push({ x, y, w, h, kind, v: blds.length, ...(f ? { f } : {}) });
+      }
+    }
   }
   // 용암 강 — 건널 곳(gaps)은 둘레 땅 그대로 · 칠죄종 턱 둘레는 비켜 감
   for (const r of A.rivers) for (let x = 0; x < W; x++) {
@@ -1681,9 +1723,9 @@ function abyssMap(data) {
     const { x, y, polygon } = outline(keepSet, box);
     return { name: e.name, x, y, polygon, rank: 6, monster: e.id, zone: zone.id };
   });
-  const highRuns = cellRuns(high), stairRuns = cellRuns(stairs);
+  const highRuns = cellRuns(high), stairRuns = cellRuns(stairs), coolRuns = cellRuns(cool);   // cellRuns 는 OUT_W 로 칸을 풂 — 바꿔 둔 동안에
   OUT_W = saveW; OUT_H = saveH;
-  return buildTmj({ w: W, h: H, tiles, areas, posts, ports, npcs, chests, look: lk, props: { title: zone.name, high: highRuns, stairs: stairRuns } });
+  return buildTmj({ w: W, h: H, tiles, areas, posts, ports, npcs, chests, look: lk, props: { title: zone.name, high: highRuns, stairs: stairRuns, cool: coolRuns, pave: pave.join(';'), blds: JSON.stringify(blds) } });
 }
 
 // ---------- 건물 안 (BUILDINGS) — 왕좌의 큰 방 ----------
