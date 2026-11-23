@@ -2108,22 +2108,26 @@ test('6격 마계(abyss) — 남쪽 묘실 문에서 북쪽으로 갈수록 센 
   const m = loadMap('abyss');
   const zi = data.ZONES.findIndex(z => z.rank === 6), foes = data.ENEMIES.filter(e => e.zoneIndex === zi);
   assert.deepEqual(m.areas.map(a => a.monster).sort(), foes.filter(e => e.kind === 'normal').map(e => e.id).sort());
-  const onMap = foes.filter(e => e.kind === 'elite').map(e => e.id).sort();
-  assert.deepEqual(m.posts.map(p => p.enemy).sort(), onMap, '정예 여덟(칠죄종 · 벌레) — 마왕 · 관측자는 성 안');
+  const inside = { sinlust: 'ballroom' };                                         // 건물 안에 선 칠죄종 → 그 건물 문 이름 (색욕의 무도회장)
+  const onMap = foes.filter(e => e.kind === 'elite' && !inside[e.id]).map(e => e.id).sort();
+  assert.deepEqual(m.posts.map(p => p.enemy).sort(), onMap, '정예 일곱(칠죄종 여섯 · 벌레) — 색욕은 무도회장 안 · 마왕 · 관측자는 성 안');
   // 북쪽(위)으로 갈수록 셈 — 일반 구역 · 칠죄종 각각 세기 차례대로 위로
   const lv = id => data.ENEMIES.find(e => e.id === id).level;
   const midY = a => areaCells(m, a).reduce((s, i) => s + ((i / m.w) | 0), 0) / areaCells(m, a).length;
   const byLv = [...m.areas].sort((a, b) => lv(a.monster) - lv(b.monster));
   for (let i = 1; i < byLv.length; i++) assert.ok(midY(byLv[i]) < midY(byLv[i - 1]), `${byLv[i].name} 이(가) ${byLv[i - 1].name} 보다 북쪽`);
-  const sins = m.posts.filter(p => p.enemy.startsWith('sin')).sort((a, b) => lv(a.enemy) - lv(b.enemy));
-  for (let i = 1; i < sins.length; i++) assert.ok(sins[i].y < sins[i - 1].y, `${sins[i].name} 이(가) ${sins[i - 1].name} 보다 북쪽`);
-  assert.ok(sins.every(p => !p.blocks), '칠죄종은 길을 막지 않음');
+  const sinY = id => { const p = m.posts.find(q => q.enemy === id); return p ? p.y : m.ports.find(q => q.name === inside[id]).y; };
+  const sins = foes.filter(e => e.set === 'sins').map(e => e.id).sort((a, b) => lv(a) - lv(b));
+  assert.equal(sins.length, 7);
+  for (let i = 1; i < sins.length; i++) assert.ok(sinY(sins[i]) < sinY(sins[i - 1]), `${sins[i]} 이(가) ${sins[i - 1]} 보다 북쪽`);
+  assert.ok(m.posts.filter(p => p.enemy.startsWith('sin')).every(p => !p.blocks), '칠죄종은 길을 막지 않음');
   // 들어서는 곳에서 — 칠죄종을 그대로 두고도 모든 구역 · 칠죄종 · 벌레 앞에 닿고, 마왕성 문은 벌레를 꺾어야 닿음
   const start = m.start.y * m.w + m.start.x, gate = m.ports.find(p => p.name === 'demoncastle'), worm = m.posts.find(p => p.enemy === 'worldworm');
   assert.ok(worm.blocks && worm.y === gate.y + 1 && worm.x === gate.x, '벌레가 마왕성 문 바로 앞을 막음');
   const posts = new Set(m.posts.flatMap(p => cellsOf(m, p)));
   const d = walk(m, [start], posts);
   for (const a of m.areas) assert.ok(areaCells(m, a).some(i => d[i] >= 0), `${a.name} 구역`);
+  for (const id of Object.values(inside)) assert.ok(cellsOf(m, m.ports.find(p => p.name === id)).some(i => d[i] >= 0), `${id} 문에 닿음`);
   assert.ok(!cellsOf(m, gate).some(i => d[i] >= 0), '벌레를 꺾기 전엔 마왕성 문에 못 닿음');
   const d2 = walk(m, [start], new Set(m.posts.filter(p => p !== worm).flatMap(p => cellsOf(m, p))));
   assert.ok(cellsOf(m, gate).some(i => d2[i] >= 0), '벌레를 꺾으면 마왕성 문까지');
@@ -2135,4 +2139,11 @@ test('6격 마계(abyss) — 남쪽 묘실 문에서 북쪽으로 갈수록 센 
   assert.equal(hub.to, 'hub.overworld');
   assert.equal(hub.opensAfter, 'demonking');
   assert.equal(c.ports.find(p => p.name === 'out').to, 'abyss.demoncastle');
+  // 무도회장 안 — 색욕, 나가는 문은 마계의 무도회장 문으로 · 문에서 색욕 앞까지 걸어서 닿음
+  const b = loadMap('ballroom');
+  assert.deepEqual(b.posts.map(p => p.enemy), ['sinlust']);
+  assert.equal(b.ports.find(p => p.name === 'out').to, 'abyss.ballroom');
+  assert.equal(m.ports.find(p => p.name === 'ballroom').to, 'ballroom.out');
+  const lust = b.posts[0], db = walk(b, [b.start.y * b.w + b.start.x], new Set(cellsOf(b, lust)));
+  assert.ok([...Array(lust.w)].some((_, i) => db[(lust.y + lust.h) * b.w + lust.x + i] >= 0), '문에서 색욕 앞까지');
 });
