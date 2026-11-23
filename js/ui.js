@@ -1967,6 +1967,9 @@ function onMapEvents(evs) {
     } else if (e.type === 'shop' && /^(chiefS|raidS|raidD)\d$/.test(e.npc.shop)) {   // 4대 길드 S급 — 한마디
       sHunterLine(e.npc.shop);
       changed = true;
+    } else if (e.type === 'shop' && /^gdesk[0-3]$/.test(e.npc.shop)) {   // 4대 길드 안 접수 창구 — 한마디
+      guildDeskTalk(e.npc.shop);
+      changed = true;
     } else if (e.type === 'shop' && (e.npc.shop === 'raidboss' || /^exboss\d$/.test(e.npc.shop))) {   // S 위 등급의 보스 (게이트 안 · EX 는 옛 동네 · 광장에도)
       raidBossTalk();
       changed = true;
@@ -2032,8 +2035,8 @@ function onMapEvents(evs) {
       changed = true;
     } else if (e.type === 'closed' && Date.now() - closedSaidAt > 2000 && e.port.unlock === 'armor') {
       closedSaidAt = Date.now();
-      const boss = zoneBoss(ZONES.findIndex(z => z.rank === 1));
-      pushLog('info', `${e.port.label} — 아직 줄이 쳐져 있다. 「준비 중」. ${boss ? `제1격의 보스 ${boss.name}${josa(boss.name, '을', '를')} 꺾으면 열린다고 한다.` : ''}`);
+      // 도시는 격 · 그 공간을 모름 — 「곧 연다」고만 (도시의 열림은 시간이 지나서로 풀이, 사용자 결정)
+      pushLog('info', `${e.port.label} — 아직 줄이 쳐져 있다. 「상품 준비 중 — 곧 문을 엽니다」.`);
       changed = true;
     } else if (e.type === 'closed' && Date.now() - closedSaidAt > 2000) {
       closedSaidAt = Date.now();
@@ -3092,6 +3095,20 @@ function sHunterLine(shop) {
   if (isTalkOpen()) return;
   const i = +shop.slice(-1), down = shop.startsWith('raidD');
   playTalk([{ who: `bg${i}`, text: S_WAIT[i][down ? 'down' : 'wait'] }], null, { end: '알겠다' });
+}
+// 4대 길드 안 접수 창구 (tools/map-gen.js 의 BIG_GUILD_ROOMS — 사용자 결정 2026-11-23: 우선 창구만, 할 거리는 나중에).
+// 직원은 도시 사람 — 격 · 그 공간 · 보스를 모름 (헌터 등급 · 길드 일만 앎). 닿을 때마다 그 길드다운 한마디 하나 (차례대로 돌아감)
+const GUILD_DESK = [
+  ['「홍염 길드 접수처다. 용건 없으면 비켜 줘. 여긴 늘 바쁘거든.」', '「입단 신청? 지금은 안 받아. 소문날 만큼 세지면 그때 와.」', '(벽의 불꽃 깃발 아래서 길드원들이 큰 소리로 떠든다.) 「…아, 신경 쓰지 마. 원래 시끄러워.」'],
+  ['(두 손을 모아 포권한다.) 「청해 길드에 오신 것을 환영합니다.」', '「지금은 외부 의뢰를 받지 않고 있습니다. 양해 부탁드립니다.」', '「저희는 옛 문파의 가르침을 잇는 곳입니다. 서두르지 않는 것이 저희의 방식이지요.」'],
+  ['「크라운 길드에 어서 오세요~ 상담은 유료입니다. …농담이에요, 반쯤은.」', '「순위판 보셨죠? 저희는 늘 위에 있어요. 실력이든, 뭐든.」', '(창구 직원이 반짝이는 반지를 낀 손으로 서류를 덮는다.) 「아무것도 아니에요. 무슨 일로 오셨죠?」'],
+  ['(창구 너머 사람이 고개를 들지 않는다.) 「…달 길드. 찾는 게 있으면 말해. 들어줄지는 모르지만.」', '「지금은 아무것도 팔지 않아. 정보도, 사람도.」', '「…당신, 요즘 자주 보이더군. 우리도 보고 있어.」']
+];
+const guildDeskSaid = [0, 0, 0, 0];
+function guildDeskTalk(shop) {
+  if (isTalkOpen()) return;
+  const i = +shop.slice(-1), lines = GUILD_DESK[i], line = lines[guildDeskSaid[i]++ % lines.length];
+  playTalk([{ who: `bg${i}`, text: line }], null, { end: '알겠다' });
 }
 function chiefTalk() {
   if (isTalkOpen() || !chiefCalls()) return;

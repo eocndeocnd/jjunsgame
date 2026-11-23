@@ -1739,11 +1739,11 @@ const CITY = {
   ],
   buildings: [
     { kind: 'hq', x: 13, y: 1, w: 20, h: 13, door: { x: 21, w: 4, name: 'association', label: '헌터 협회', to: 'assoc.out' } },   // 안은 ASSOC (1층 로비 — 등록 창구)
-    { kind: 'guild', tone: 0, x: 2, y: 5, w: 8, h: 9, door: { x: 5, w: 2, name: 'guild1', label: '홍염 길드' } },
-    { kind: 'guild', tone: 1, x: 36, y: 5, w: 8, h: 9, door: { x: 39, w: 2, name: 'guild2', label: '청해 길드' } },
+    { kind: 'guild', tone: 0, x: 2, y: 5, w: 8, h: 9, door: { x: 5, w: 2, name: 'guild1', label: '홍염 길드', to: 'hongyeom.out' } },
+    { kind: 'guild', tone: 1, x: 36, y: 5, w: 8, h: 9, door: { x: 39, w: 2, name: 'guild2', label: '청해 길드', to: 'cheonghae.out' } },
     { kind: 'dept', x: 4, y: 28, w: 12, h: 8, door: { x: 8, w: 4, name: 'dept', label: '헌터백화점', to: 'dept.out' } },   // 안은 DEPT (1층)
-    { kind: 'guild', tone: 2, x: 27, y: 27, w: 8, h: 9, door: { x: 30, w: 2, name: 'guild3', label: '크라운 길드' } },
-    { kind: 'guild', tone: 3, x: 37, y: 27, w: 8, h: 9, door: { x: 40, w: 2, name: 'guild4', label: '달 길드' } },
+    { kind: 'guild', tone: 2, x: 27, y: 27, w: 8, h: 9, door: { x: 30, w: 2, name: 'guild3', label: '크라운 길드', to: 'crown.out' } },
+    { kind: 'guild', tone: 3, x: 37, y: 27, w: 8, h: 9, door: { x: 40, w: 2, name: 'guild4', label: '달 길드', to: 'dal.out' } },
     // 가운데 빈터 — 내 길드가 4단계부터 여기에 (사용자 결정 2026-11-19). 그 전엔 빈터 그대로 (overLot — 겉모습은 빈터, 그림은 mapart 가 길드 단계대로)
     { kind: 'mineCity', overLot: true, f: 4, x: 16, y: 45, w: 14, h: 7, door: { x: 21, w: 4, name: 'myguild2', label: '', to: 'guild2.out', unlock: 'guildCity' } },
     // 오른쪽 빈터 — 새 집 (고급 아파트, 사용자 결정 2026-11-19). 사기 전엔 빈터 그대로 · 「분양」 (overLot — 그림은 mapart 가 산 뒤에 아파트로)
@@ -2092,6 +2092,20 @@ const BM = {
   signs: []
 };
 const bmInterior = () => storeInterior(BM);
+// ---------- 4대 길드 안 (사용자 결정 2026-11-23) — 우선 접수 창구만 (안의 할 거리는 나중에) ----------
+// 위 벽: 의뢰 게시판 · 길드 문장 깃발 · 의뢰 게시판. 가운데 위에 접수 창구(계산대 둘 사이에 직원 — 닿으면 그 길드다운 한마디, js/ui.js 의 guildDeskTalk),
+// 양옆 긴 의자 · 네 귀퉁이 화분. 빛깔 · 문장은 길드마다 (theme bg0~3 — js/mapart.js 의 STC_BG: 홍염 붉은 불꽃 · 청해 푸른 물결 · 크라운 금빛 왕관 · 달 은빛 초승달)
+const BIG_GUILD_ROOMS = [['hongyeom', '홍염'], ['cheonghae', '청해'], ['crown', '크라운'], ['dal', '달']].map(([id, name], i) => ({
+  id, title: `${name} 길드`, w: 11, h: 7, to: `city.guild${i + 1}`, theme: `bg${i}`, outLabel: '도시로',
+  wall: [{ x: 0, w: 3, kind: 'board' }, { x: 4, w: 3, kind: 'emblem' }, { x: 8, w: 3, kind: 'board' }],
+  props: [
+    { kind: 'counter', x: 3, y: 0, w: 2 }, { kind: 'counter', x: 6, y: 0, w: 2 },        // 접수 창구 — 사이 (5, 0) 에 직원
+    { kind: 'plant', x: 0, y: 0, w: 1 }, { kind: 'plant', x: 10, y: 0, w: 1 }, { kind: 'plant', x: 0, y: 6, w: 1 }, { kind: 'plant', x: 10, y: 6, w: 1 },
+    { kind: 'bench', x: 0, y: 3, w: 2 }, { kind: 'bench', x: 9, y: 3, w: 2 }
+  ],
+  clerks: [{ x: 5, y: 0, shop: `gdesk${i}`, label: `${name} 길드 접수` }],
+  signs: []
+}));
 const assocInterior = () => storeInterior(ASSOC);
 // ---------- 내 길드 (도시 계획 6번) — 옛 동네의 빈 건물 안 ----------
 // 위 벽: 의뢰 게시판 · 길드 깃발(3단계부터) · 의뢰 게시판. 가운데 위에 길드 장부(창구), 양옆에 사무 책상 다섯 — 책상 아래 칸에 앉은 동료(seats).
@@ -2184,6 +2198,7 @@ function allMaps(data) {
   for (const s of SECRET_ROOMS) out[s.id] = secretRoom(data, s);
   for (const c of CAVES) out[c.id] = caveMap(data, c);
   for (const u of UNDERS) out[u.id] = cryptMap(data, u);
+  for (const g of BIG_GUILD_ROOMS) out[g.id] = storeInterior(g, data);
   for (const b of BUILDINGS) out[b.id] = b.room ? storeInterior(ROOMS[b.room], data) : buildingInterior(data, b);
   REALMS.forEach((r, i) => { out[r.name] = realm(data, r, i); });
   return out;

@@ -1124,6 +1124,19 @@
     carpet: ['#3e3a26', '#36321f', '#48442c', '#2c2919'], gold: '#7a6a42', goldDim: '#4e432a', wine: '#3e3a26', red: '#8a3a52', glow: '#7ed05a',
     line: '#140e0a', wall: '#4a3628', velvet: '#1e1610', steel: ['#c8c4b8', '#9a968a', '#e0dccf', '#6a665c'], quilt: ['#3e2a4a', '#4e365a']
   };
+  // 4대 길드 안 (theme bg0~3 — tools/map-gen.js 의 BIG_GUILD_ROOMS, 사용자 결정 2026-11-23) — 길드마다 빛깔 · 벽의 문장 깃발(emblem)
+  //   0 홍염 — 검붉은 돌 바닥 · 불빛 주홍 테 · 짙은 붉은 깔개 · 불꽃     1 청해 — 옅은 청회색 돌 · 옥빛 테 · 깊은 바다빛 깔개 · 물결
+  //   2 크라운 — 흰 대리석 · 번쩍이는 금 · 자줏빛 벨벳 깔개 · 왕관        3 달 — 어둑한 남빛 돌 · 은빛 테 · 한밤 깔개 · 초승달
+  const STC_BG = [
+    { ivory: ['#5a4a44', '#52433d', '#63524b', '#463a35'], seam: '#3a2e2a', dark: ['#2a1c1a', '#241816', '#301f1c', '#1c1311'], carpet: ['#7a1e16', '#701a13', '#86241b', '#5e150f'],
+      gold: '#e08a3a', goldDim: '#8a4a22', wine: '#7a1e16', red: '#e05a2a', glow: '#ffb060', line: '#120c0a', wall: '#5a4842', velvet: '#2a1614', steel: ['#e8d0c0', '#b89a88', '#fff0e0', '#7a5e50'], emblem: 'fire' },
+    { ivory: ['#c8d2d8', '#bfcad0', '#d2dbe0', '#aab5bc'], seam: '#9aa6ae', dark: ['#16222c', '#121d26', '#1a2833', '#0e171e'], carpet: ['#1e4a6e', '#1a4363', '#23547c', '#163a57'],
+      gold: '#8fd0c8', goldDim: '#4a8a84', wine: '#1e4a6e', red: '#2a8ab0', glow: '#9ff0e8', line: '#0a1218', wall: '#d6dee2', velvet: '#12263a', steel: ['#e0eef0', '#a8c4c8', '#ffffff', '#6a8a90'], emblem: 'wave' },
+    { ivory: ['#f2eee6', '#ebe6dc', '#f8f5ee', '#dcd6c8'], seam: '#c9c0ad', dark: ['#2e1a2a', '#281626', '#341e30', '#20111e'], carpet: ['#5a1a4a', '#521743', '#661e54', '#46123a'],
+      gold: '#f0c040', goldDim: '#a07a20', wine: '#5a1a4a', red: '#c02a4a', glow: '#ffe080', line: '#14100c', wall: '#f4efe2', velvet: '#2a1026', steel: ['#fff7dc', '#e0c870', '#ffffff', '#9a7a2c'], emblem: 'crown' },
+    { ivory: ['#3a3a4c', '#343446', '#424256', '#2c2c3c'], seam: '#24242e', dark: ['#12121c', '#0e0e18', '#161622', '#0a0a12'], carpet: ['#24234a', '#201f42', '#2a2956', '#1a193a'],
+      gold: '#b8b8e0', goldDim: '#6a6a90', wine: '#24234a', red: '#7a6ac0', glow: '#d0c8ff', line: '#08080e', wall: '#33334a', velvet: '#141424', steel: ['#d8d8f0', '#a0a0c4', '#f4f4ff', '#5e5e80'], emblem: 'moon' }
+  ];
   let STC = STC_DEPT;                                                              // 덩어리를 그릴 때마다 그 지도의 것으로 (chunk)
   const STORE_KINDS = { counter: 1, case: 1, rope: 1, plant: 1, bench: 1, pillar: 1, kiosk: 1, desk: 1, bed: 1, fridge: 1, cauldron: 1, books: 1, shroom: 1 };
   const storeZones = (m, A) => A.storeZones || (A.storeZones = JSON.parse((m.props && m.props.wall) || '[]'));
@@ -1404,6 +1417,32 @@
         const len = 8 + Math.floor(hash(row, z.x, 388) * (ZW - 26));
         if (ix - 6 < len) return ry === 1 ? mix(c3(STC.glow), WHITE, 0.25) : c3(STC.glow);   // 남은 시간 막대
         return (ix % 3 === 0 && ry === 1) ? c3('#1d3348') : c3('#0a1220');
+      }
+      if (z.kind === 'emblem') {                                                    // 4대 길드 문장 깃발 — 금빛 봉에 걸린 길드 빛깔 깃발(아래가 V 로 파임), 가운데 문장
+        const cx = ZW / 2 - 0.5, dx = zx - cx, ax = Math.abs(dx), bw = ZW / 2 - 7, bottom = 34 + ax * 0.45;
+        if (fy >= 4 && fy <= 5 && ax < bw + 3) return c3(fy === 4 ? STC.gold : STC.goldDim);                          // 봉
+        if (ax > bw || fy < 6 || fy > bottom) return wall;
+        if (ax > bw - 1 || fy > bottom - 1) return c3(STC.gold);                                                  // 금테
+        const ex = dx, ey = fy - 19;                                                                              // 문장 — 가운데 (0, 19)
+        let on = 0;                                                                                               // 0 없음 · 1 바깥 · 2 안쪽 빛
+        if (STC.emblem === 'fire') {                                                                              // 불꽃 — 아래가 둥근 물방울, 위로 갈라진 혀 둘
+          const body = Math.hypot(ex / 5.5, (ey - 3) / 5) < 1 || (ey < 3 && ey > -9 && ax < (ey + 9) * 0.5 && !(ey < -3 && Math.abs(ex - 1.5) < 1));
+          if (body) on = Math.hypot(ex / 2.6, (ey - 3) / 3) < 1 ? 2 : 1;
+        } else if (STC.emblem === 'wave') {                                                                       // 물결 — 말려 올라간 파도 두 겹
+          for (const [oy, amp] of [[-2, 3], [4, 2.4]]) { const wy = ey - oy - Math.sin((ex + 9) * 0.42) * amp; if (ax < 9 && Math.abs(wy) < 1.3) on = oy < 0 ? 2 : 1; }
+          if (Math.hypot(ex - 4, ey + 4) < 2.4 && Math.hypot(ex - 3, ey + 3) > 1.2) on = 2;                      // 파도 끝의 말림
+        } else if (STC.emblem === 'crown') {                                                                      // 왕관 — 띠 위로 뾰족한 끝 셋 · 끝마다 구슬
+          if (ey >= 3 && ey <= 6 && ax < 8) on = 1;
+          for (const px of [-7, 0, 7]) { if (ey < 3 && ey > -6 + (px === 0 ? -2 : 0) && Math.abs(ex - px) < (ey + 7) * 0.35) on = 1; if (Math.hypot(ex - px, ey + (px === 0 ? 8.5 : 6.5)) < 1.4) on = 2; }
+          if (ey === 4 && (ax === 4 || ax === 0)) on = 2;                                                       // 띠의 보석
+        } else {                                                                                                  // 초승달 — 큰 원에서 어긋난 원을 덜어냄 · 작은 별 하나
+          if (Math.hypot(ex, ey) < 7.5 && Math.hypot(ex - 3.5, ey - 2) > 6.2) on = 1;
+          if (Math.hypot(ex - 6, ey + 6) < 1.1) on = 2;
+        }
+        if (on) return c3(on === 2 ? STC.glow : STC.gold);
+        let c = c3(STC.carpet[dx < -bw * 0.3 ? 2 : dx > bw * 0.4 ? 3 : 0]);                                     // 깃발 천 — 왼쪽 빛 · 오른쪽 그늘
+        if (fy < 9) c = mul(c, 0.85);
+        return c;
       }
       if (z.kind === 'crest') {                                                     // 협회 문장 — 남색 판 위 방패(흰 테 · H), 양옆으로 흐르는 청록 빛줄
         const mx = zx - ZW / 2 + 0.5, sy = fy - 5;
@@ -3404,7 +3443,7 @@
   // 덩어리 하나 (CH×CH 칸) — 캔버스에 한 번 그려 둠. 용암이 있으면 용암 점만 칠한 빛 판(.glow)도 — 움직이는 것(liveGround)이 일렁이게 얹음
   function chunk(m, cx, cy) {
     const th = m.props && m.props.theme;
-    STC = th === 'hq' ? STC_HQ : th === 'home' ? STC_HOME : th === 'home2' ? STC_HOME2 : th === 'bm' ? STC_BM : th === 'gate' ? STC_GATE : th === 'raid' ? STC_RAID : th === 'sand' ? STC_SAND : th === 'void' ? STC_VOID : th === 'witch' ? STC_WITCH : th === 'guild' ? STC_GUILD[Math.max(0, Math.min(4, GLV - 1))] : STC_DEPT;   // 가게 안의 빛깔 — 헌터백화점 · 헌터 협회 · 내 길드(단계마다)
+    STC = th === 'hq' ? STC_HQ : th === 'home' ? STC_HOME : th === 'home2' ? STC_HOME2 : th === 'bm' ? STC_BM : th === 'gate' ? STC_GATE : th === 'raid' ? STC_RAID : th === 'sand' ? STC_SAND : th === 'void' ? STC_VOID : th === 'witch' ? STC_WITCH : th === 'guild' ? STC_GUILD[Math.max(0, Math.min(4, GLV - 1))] : /^bg[0-3]$/.test(th || '') ? STC_BG[+th[2]] : STC_DEPT;   // 가게 안의 빛깔 — 헌터백화점 · 헌터 협회 · 내 길드(단계마다)
     const w = Math.min(CH, m.w - cx * CH), h = Math.min(CH, m.h - cy * CH), pw = w * P;
     const cv = document.createElement('canvas');
     cv.width = pw; cv.height = h * P;
