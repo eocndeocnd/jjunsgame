@@ -1604,6 +1604,24 @@ const ABYSS = {                                                // 처음 시안(
         '   ..........   ',
         '     ......     '
       ]
+    },
+    '칠죄종 · 오만': {                                         // 작지만 화려한 제 성 — 오만은 안 지도(PRIDE_CASTLE)에. 바깥 턱엔 성문에서 계단까지 보라 융단 · 깃발 · 무릎 꿇린 조각상 · 쓰러뜨린 남의 석상 · 다른 왕의 머리 (사용자 결정 2026-11-23)
+      kinds: { H: 'prcastle', b: 'prban', k: ['prkneel', 1], q: ['prkneel', 2], F: 'prfall', h: 'prhead' }, rug: true,   // rug — 성문에서 계단 끝까지 보라 융단 (그림 rugAt)
+      inside: { letter: 'H', id: 'pridecastle', label: '오만의 성', door: [1, 3] },  // 성 아래 줄 왼쪽에서 1칸 · 폭 3 이 성문 (계단과 줄이 맞음)
+      plan: [
+        '     .HHHHH     ',     // 오만의 성 (5 × 4)
+        '   ...HHHHH..   ',
+        '  ...bHHHHHb..  ',     // 양옆 제 문장 깃발
+        ' ....bHHHHHb... ',
+        '.FF.............',     // 쓰러뜨려 동강 낸 남의 석상
+        '.....k.....q....',     // 융단 양옆에 무릎 꿇린 돌 조각상 넷
+        '.............h..',     // 다른 왕의 돌 머리
+        '.....k.....q....',
+        ' .............. ',
+        '  ............  ',
+        '   ..........   ',
+        '     ......     '
+      ]
     }
   },
   castle: { x0: 30, x1: 94, y0: 7, y1: 40, door: 4 },         // 마왕성 바깥 (문은 아래 가운데, 벌레가 그 앞을 막음)
@@ -1618,6 +1636,13 @@ const BALLROOM = { id: 'ballroom', title: '무도회장', boss: '칠죄종 · �
   hall: { w: 18, h: 14, aisle: 4, bossY: 4, pillarX: 3, pillarRows: [7, 11], pillar: 2 },
   decor: [['lupav', 7, 1, 4, 2], ['lucand', 5, 3, 1, 2], ['lucand', 12, 3, 1, 2], ['lucand', 0, 0, 1, 2], ['lucand', 17, 0, 1, 2],
           ['lumask', 2, 4, 1, 1], ['lumask', 15, 9, 1, 1], ['lumask', 11, 12, 1, 1]] };
+// 오만의 성 안 (사용자 결정 2026-11-23) — 턱 위 작은 성(ABYSS.sites 의 inside)으로 들어가는 방. 맨 위에 아주 큰 오만의 석상(5 × 6), 그 앞 단 위에 오만,
+// 양옆 · 벽가에 흠 없는 금테 거울, 제 문장 깃발, 보라 깔개 양옆에 무릎 꿇린 돌 조각상. 바닥 · 벽 · 기둥 · 깔개는 theme pride
+const PRIDE_CASTLE = { id: 'pridecastle', title: '오만의 성', boss: '칠죄종 · 오만', elite: true, map: 'abyss', theme: 'pride',
+  hall: { w: 17, h: 16, aisle: 3, bossY: 6, pillarX: 2, pillarRows: [9, 13], pillar: 2 },
+  decor: [['prbig', 6, 0, 5, 6], ['prmir', 4, 1, 1, 2], ['prmir', 12, 1, 1, 2], ['prban', 2, 0, 1, 2], ['prban', 14, 0, 1, 2],
+          ['prmir', 0, 4, 1, 2], ['prmir', 16, 4, 1, 2], ['prmir', 0, 10, 1, 2], ['prmir', 16, 10, 1, 2],
+          ['prkneel', 5, 11, 1, 1, 1], ['prkneel', 11, 11, 1, 1, 2], ['prkneel', 5, 14, 1, 1, 1], ['prkneel', 11, 14, 1, 1, 2]] };
 function abyssMap(data) {
   const A = ABYSS, W = A.W, H = A.H, idx = (x, y) => y * W + x, inside = (x, y) => x >= 0 && y >= 0 && x < W && y < H;
   const n1 = valueNoise(61), n2 = valueNoise(62), hash = (x, y, s) => { const v = Math.sin(x * 127.1 + y * 311.7 + s * 74.7) * 43758.5453; return v - Math.floor(v); };
@@ -1630,7 +1655,7 @@ function abyssMap(data) {
   for (let y = 3; y < H - 2; y++) for (let x = 1; x < W - 1; x++) if (Math.abs(x + 0.5 - A.cx) < half(y)) tiles[idx(x, y)] = FLOOR;
   const segDist = (pts, x, y) => { let best = 1e9; for (let i = 0; i + 1 < pts.length; i++) { const [ax, ay] = pts[i], [bx, by] = pts[i + 1], dx = bx - ax, dy = by - ay, t = Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / (dx * dx + dy * dy))); best = Math.min(best, Math.hypot(x - ax - dx * t, y - ay - dy * t)); } return best; };
   // 칠죄종 턱 — 윗면(걸을 수 있음 · 한 층 높게) · 둘레 바위 테(남쪽은 두 칸) · 남쪽 테 가운데에 바위 계단. 윗면 · 테 · 둘레는 구역 밖, 나무 없음
-  const posts = [], ledges = [], sitePorts = [], blds = [], cool = new Uint8Array(W * H), lichen = new Uint8Array(W * H), petal = new Uint8Array(W * H), grease = new Uint8Array(W * H), pave = [];
+  const posts = [], ledges = [], sitePorts = [], blds = [], cool = new Uint8Array(W * H), lichen = new Uint8Array(W * H), petal = new Uint8Array(W * H), grease = new Uint8Array(W * H), pave = [], rug = [];
   for (const [name, lx, ly] of A.sins) {
     const e = foeNamed(name), { rx, ry } = A.ledge, d = (x, y) => Math.hypot((x + 0.5 - lx) / rx, (y + 0.5 - ly) / ry);
     for (let y = ly - ry - 4; y <= ly + ry + 4; y++) for (let x = lx - rx - 4; x <= lx + rx + 4; x++) {
@@ -1651,6 +1676,7 @@ function abyssMap(data) {
     const site = A.sites && A.sites[name];
     if (!(site && site.inside)) posts.push({ name: e.name, x: px, y: py, w: n, h: n, enemy: e.id, blocks: false });   // inside — 건물 안 지도에 섬
     let foot = ly; while (high[idx(lx, foot + 1)] || stairs[idx(lx, foot + 1)]) foot++;
+    if (site && site.rug && !site.inside) rug.push([px * 16 + 2, (py + n) * 16 - 4, (px + n) * 16 - 2, (foot + 1) * 16].join(','));   // 융단 — 발밑에서 계단 끝까지 (점 단위)
     ledges.push({ x: lx, y: foot + 1 });                       // 계단 밑 — 곁길이 닿는 곳
     // 꾸밈 (A.sites) — 글자 네모마다 막힌 소품 하나 (칸은 벽 · 겉모습 BUILD, 그림은 지도 속성 blds)
     if (site) {
@@ -1673,6 +1699,7 @@ function abyssMap(data) {
           const I = site.inside, dx = x + I.door[0], dy = y + h - 1;
           for (let i = 0; i < I.door[1]; i++) tiles[idx(dx + i, dy)] = FLOOR;
           sitePorts.push({ name: I.id, label: I.label, x: dx, y: dy, w: I.door[1], h: 1, to: `${I.id}.out`, door: true });
+          if (site.rug) rug.push([dx * 16 + 2, (dy + 1) * 16, (dx + I.door[1]) * 16 - 2, (foot + 1) * 16].join(','));   // 융단 — 문 앞에서 계단 끝까지
         }
       }
     }
@@ -1790,7 +1817,7 @@ function abyssMap(data) {
   });
   const highRuns = cellRuns(high), stairRuns = cellRuns(stairs), coolRuns = cellRuns(cool), lichenRuns = cellRuns(lichen), petalRuns = cellRuns(petal), greaseRuns = cellRuns(grease);   // cellRuns 는 OUT_W 로 칸을 풂 — 바꿔 둔 동안에
   OUT_W = saveW; OUT_H = saveH;
-  return buildTmj({ w: W, h: H, tiles, areas, posts, ports, npcs, chests, look: lk, props: { title: zone.name, high: highRuns, stairs: stairRuns, cool: coolRuns, lichen: lichenRuns, petal: petalRuns, grease: greaseRuns, pave: pave.join(';'), blds: JSON.stringify(blds) } });
+  return buildTmj({ w: W, h: H, tiles, areas, posts, ports, npcs, chests, look: lk, props: { title: zone.name, high: highRuns, stairs: stairRuns, cool: coolRuns, lichen: lichenRuns, petal: petalRuns, grease: greaseRuns, rug: rug.join(';'), pave: pave.join(';'), blds: JSON.stringify(blds) } });
 }
 
 // ---------- 건물 안 (BUILDINGS) — 왕좌의 큰 방 ----------
@@ -2500,9 +2527,10 @@ function allMaps(data) {
   out.abyss = abyssMap(data);
   out[DEMON_CASTLE.id] = buildingInterior(data, DEMON_CASTLE);
   out[BALLROOM.id] = buildingInterior(data, BALLROOM);
+  out[PRIDE_CASTLE.id] = buildingInterior(data, PRIDE_CASTLE);
   for (const b of BUILDINGS) out[b.id] = b.room ? storeInterior(ROOMS[b.room], data) : buildingInterior(data, b);
   REALMS.forEach((r, i) => { out[r.name] = realm(data, r, i); });
   return out;
 }
 
-module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, looksPng, encodePng, generate, sewer, overworld, hub, oldtown, city, deptInterior, dept2Interior, assocInterior, guildInterior, guild2Interior, homeInterior, home2Interior, arenaInterior, bmInterior, gateinInterior, chiefInterior, raidInterior, storeInterior, OLDTOWN, CITY, DEPT, DEPT2, ASSOC, GUILD, GUILD2, HOME, HOME2, ARENA, BM, GATEIN, CHIEF, RAID, W1, W2, W3, SKY, CITY_BIO, secretRoom, buildingInterior, allMaps, layoutFromPlan, HUB_DOORS, REALMS, SEWER, SECRET_ROOMS, CAVES, caveMap, BUILDINGS, BUILD, DOORWAY, CARPET, RUIN, UNDERS, ABYSS, DEMON_CASTLE, BALLROOM, abyssMap };
+module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, looksPng, encodePng, generate, sewer, overworld, hub, oldtown, city, deptInterior, dept2Interior, assocInterior, guildInterior, guild2Interior, homeInterior, home2Interior, arenaInterior, bmInterior, gateinInterior, chiefInterior, raidInterior, storeInterior, OLDTOWN, CITY, DEPT, DEPT2, ASSOC, GUILD, GUILD2, HOME, HOME2, ARENA, BM, GATEIN, CHIEF, RAID, W1, W2, W3, SKY, CITY_BIO, secretRoom, buildingInterior, allMaps, layoutFromPlan, HUB_DOORS, REALMS, SEWER, SECRET_ROOMS, CAVES, caveMap, BUILDINGS, BUILD, DOORWAY, CARPET, RUIN, UNDERS, ABYSS, DEMON_CASTLE, BALLROOM, PRIDE_CASTLE, abyssMap };

@@ -2108,7 +2108,7 @@ test('6격 마계(abyss) — 남쪽 묘실 문에서 북쪽으로 갈수록 센 
   const m = loadMap('abyss');
   const zi = data.ZONES.findIndex(z => z.rank === 6), foes = data.ENEMIES.filter(e => e.zoneIndex === zi);
   assert.deepEqual(m.areas.map(a => a.monster).sort(), foes.filter(e => e.kind === 'normal').map(e => e.id).sort());
-  const inside = { sinlust: 'ballroom' };                                         // 건물 안에 선 칠죄종 → 그 건물 문 이름 (색욕의 무도회장)
+  const inside = { sinlust: 'ballroom', sinpride: 'pridecastle' };                                         // 건물 안에 선 칠죄종 → 그 건물 문 이름 (색욕의 무도회장)
   const onMap = foes.filter(e => e.kind === 'elite' && !inside[e.id]).map(e => e.id).sort();
   assert.deepEqual(m.posts.map(p => p.enemy).sort(), onMap, '정예 일곱(칠죄종 여섯 · 벌레) — 색욕은 무도회장 안 · 마왕 · 관측자는 성 안');
   // 북쪽(위)으로 갈수록 셈 — 일반 구역 · 칠죄종 각각 세기 차례대로 위로
@@ -2140,6 +2140,9 @@ test('6격 마계(abyss) — 남쪽 묘실 문에서 북쪽으로 갈수록 센 
   assert.equal(hub.opensAfter, 'demonking');
   assert.equal(c.ports.find(p => p.name === 'out').to, 'abyss.demoncastle');
   // 무도회장 안 — 색욕, 나가는 문은 마계의 무도회장 문으로 · 문에서 색욕 앞까지 걸어서 닿음
+  const pc = loadMap('pridecastle');                                                // 오만의 성 안 — 오만
+  assert.deepEqual(pc.posts.map(p => p.enemy), ['sinpride']);
+  assert.equal(pc.ports.find(p => p.name === 'out').to, 'abyss.pridecastle');
   const b = loadMap('ballroom');
   assert.deepEqual(b.posts.map(p => p.enemy), ['sinlust']);
   assert.equal(b.ports.find(p => p.name === 'out').to, 'abyss.ballroom');

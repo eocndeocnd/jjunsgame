@@ -513,7 +513,7 @@
   // 지도 속성 blds 의 소품 하나하나: stake 울타리 한 칸(굵기 · 키가 저마다 다른 뾰족한 통나무, 묶은 밧줄) · tent 가죽 천막(조각 가죽을 기운 자국 · 엇갈린 장대) ·
   // orchut 족장 움막(둥근 가죽 지붕 · 붉은 전쟁 칠 · 엄니 둘 · 짐승 해골) · totem 토템 · fire 모닥불 · rack 무기 걸이 · hide 가죽 말림대.
   // 빛은 왼쪽 위 — 오른쪽 면은 그늘, 그림자는 오른쪽 아래 땅에
-  const ORC_KINDS = { stake: 1, tent: 1, orchut: 1, totem: 1, fire: 1, rack: 1, hide: 1, bones: 1, chw: 1, chp: 1, cha: 1, chr: 1, gskull: 1, btorch: 1, skpile: 1, slthr: 1, slscf: 1, slblk: 1, sllad: 1, slhg: 1, slscr: 1, evtent: 1, evmir: 1, evtel: 1, evhoard: 1, lupav: 1, lucand: 1, lurose: 1, lumask: 1, luhall: 1, gltable: 1, glcaul: 1, glspit: 1, glbones: 1, glkeg: 1, glplate: 1, glslave: 1 };   // bones — 히드라 둥지 · ch* — 무너진 성당 터 (chapelPix) · gskull · btorch · skpile — 지하 신전 (cryptPix)
+  const ORC_KINDS = { stake: 1, tent: 1, orchut: 1, totem: 1, fire: 1, rack: 1, hide: 1, bones: 1, chw: 1, chp: 1, cha: 1, chr: 1, gskull: 1, btorch: 1, skpile: 1, slthr: 1, slscf: 1, slblk: 1, sllad: 1, slhg: 1, slscr: 1, evtent: 1, evmir: 1, evtel: 1, evhoard: 1, lupav: 1, lucand: 1, lurose: 1, lumask: 1, luhall: 1, gltable: 1, glcaul: 1, glspit: 1, glbones: 1, glkeg: 1, glplate: 1, glslave: 1, prban: 1, prkneel: 1, prfall: 1, prhead: 1, prcastle: 1, prbig: 1, prmir: 1 };   // bones — 히드라 둥지 · ch* — 무너진 성당 터 (chapelPix) · gskull · btorch · skpile — 지하 신전 (cryptPix)
   const ORC_C = {
     hide: ['#3a2a20', '#4c3727', '#5e4530', '#71553a', '#846646'], seam: '#22170f', stitch: '#a08a62',
     bone: ['#6e6452', '#a39780', '#d4c8ac'], paint: '#8a2a22', rope: ['#5e5038', '#8a7a5a'], line: '#1a120e'
@@ -535,6 +535,7 @@
     if (ENVY_KINDS[B.kind]) return envyPix(B, px, py, X, Y);                        // 칠죄종 · 질투의 턱
     if (LUST_KINDS[B.kind]) return lustPix(B, px, py, X, Y);                        // 칠죄종 · 색욕의 턱
     if (GLUT_KINDS[B.kind]) return glutPix(B, px, py, X, Y);                        // 칠죄종 · 폭식의 턱
+    if (PRIDE_KINDS[B.kind]) return pridePix(B, px, py, X, Y);                      // 칠죄종 · 오만의 턱
     if (B.kind === 'stake') {
       // 울타리 한 칸 — 사용자가 준 사례대로 (2026-11-20): 칸 가운데 뾰족한 기둥, 좌우 이웃(link e · w) 쪽으로 가로대 두 줄,
       // 위아래 이웃(n · s) 쪽으로는 폭 4점의 막대가 이웃 칸까지 끊김 없이 (위아래로만 이어진 칸은 기둥 없이 막대만, 가운데 마디).
@@ -1670,6 +1671,257 @@
     if (px > 9 && px < 15 && py > 12 && py < 16) g = mul(g, 0.66);
     return g;
   }
+  // ---------- 칠죄종 · 오만의 턱 (6격 마계 — ABYSS.sites, 사용자 결정 2026-11-23) — 「스스로 세운 제단」 ----------
+  // 무릎 꿇는 법을 모르는 것이 저를 받드는 곳. 계단에서 오만의 발밑까지 보라 융단(rugAt — 계단 위로도 흘러내림):
+  //   prban 제 문장(왕관)을 단 보라 깃발(1 × 2) · 성(prcastle) · 성 안의 큰 석상(prbig) · 거울(prmir) 은 아래 「오만의 성」 ·
+  //   prkneel 억지로 무릎 꿇린 돌 조각상(f 1 오른쪽 · f 2 왼쪽을 봄, v % 3 === 2 면 머리가 떨어져 곁에 뒹굶) ·
+  //   prfall 쓰러뜨려 두 동강 낸 남의 석상(2 × 1) · prhead 굴러다니는 다른 왕의 돌 머리(관이 벗겨짐)
+  const PRIDE_KINDS = { prban: 1, prkneel: 1, prfall: 1, prhead: 1, prcastle: 1, prbig: 1, prmir: 1 };
+  const PR_C = {
+    ivory: ['#5e584a', '#857d68', '#aaa088', '#cdc2a6', '#e4dabe'], gold: ['#4a3612', '#76581e', '#a88232', '#d8b456'],
+    stone: ['#26222c', '#3a3640', '#4e4a54', '#625e68', '#7a7680'], plinth: ['#2a2430', '#3a3242', '#4a4054', '#5a5066'],
+    purple: ['#1c0e24', '#28143a', '#331a48', '#3e2056', '#4c2a66'], line: '#120e18'
+  };
+  const PR_KNEEL = ['................', '................', '......KKK.......', '.....KdddK......', '.....KcdcK......', '......KcK.......', '....KKcccKK.....', '...KdcccccbK....', '...KdKcccKbK....', '...KcKcccKbK....', '....KKbbbbK.....', '....KcbbbbbKK...', '....KcbbKbbbbK..', '....KbbK.KbbK...', '...KbbbKKKbbK...', '...KKKKK.KKKK...'];   // 한쪽 무릎을 꿇고 고개 숙인 돌 사람 (오른쪽을 봄)
+  // 융단 (지도 속성 rug — 「x0,y0,x1,y1;…」 점 단위 네모): 보라 바탕 · 금 테 두 줄 · 닳은 자리 · 먼지 없이 반질 (오만이 날마다 걷는 길)
+  const rugs = new WeakMap();
+  function rugOf(m) {
+    let a = rugs.get(m);
+    if (!a) { a = String((m.props && m.props.rug) || '').split(';').filter(Boolean).map(r => r.split(',').map(Number)); rugs.set(m, a); }
+    return a;
+  }
+  function rugAt(m, X, Y) {
+    for (const [x0, y0, x1, y1] of rugOf(m)) {
+      if (X < x0 || X >= x1 || Y < y0 || Y >= y1) continue;
+      const u = X - x0, w = x1 - x0, K = PR_C;
+      if (u === 0 || u === w - 1) return c3(K.line);
+      if (u === 1 || u === w - 2) return c3(K.gold[2]);
+      if (u === 3 || u === w - 4) return c3(K.gold[1]);
+      let c = c3(K.purple[u < 7 ? 3 : u > w - 8 ? 1 : 2]);
+      if (fbm(X * 0.12, Y * 0.08, 911) > 0.68) c = mul(c, 0.9);                        // 닳은 자리 — 조금만
+      return c;
+    }
+    return null;
+  }
+  function pridePix(B, px, py, X, Y) {
+    const K = PR_C, L = SL_C, v = B.v | 0, line = c3(K.line), W = B.w * P;
+    const ground = () => curMap && curMap.props && curMap.props.theme === 'pride' ? prideFloor(X, Y) : rugAt(curMap, X, Y) || texture(OBSID, 6, X, Y);   // 성 안이면 대리석 바닥
+    if (B.kind === 'prcastle') return prideCastlePix(B, px, py, X, Y) || ground();
+    if (B.kind === 'prbig') return prideBigPix(B, px, py, X, Y, ground);
+    if (B.kind === 'prmir') return prideMirrorPix(B, px, py, X, Y, ground);
+    if (B.kind === 'prban') {
+      // 깃대 · 금 끝장식 · 가로대에 드리운 보라 깃발(제비꼬리 끝) · 가운데 금 왕관 문장
+      if (py <= 2 && Math.abs(px - 7.5) <= 1) return c3(K.gold[py === 0 ? 3 : 2]);
+      if (px >= 7 && px <= 8 && py > 2 && py <= 31) return px === 7 ? c3(L.wood[3]) : c3(L.wood[1]);
+      if (py === 4 && px >= 2 && px <= 13) return c3(K.gold[2]);
+      const tail = py > 21 && Math.abs(px - 7.5) < (py - 21) * 0.9;                     // 제비꼬리
+      if (py >= 5 && py <= 26 && px >= 3 && px <= 12 && !tail) {
+        if (px === 3 || px === 12 || (py === 26) || (py > 21 && Math.abs(Math.abs(px - 7.5) - (py - 21) * 0.9) < 0.7)) return line;
+        const cr = py >= 10 && py <= 14 && Math.abs(px - 7.5) <= 3 && (py >= 12 || Math.abs(px - 7.5) < 0.6 || Math.abs(Math.abs(px - 7.5) - 2.5) < 0.6);
+        if (cr) return c3(K.gold[py >= 13 ? 2 : 3]);
+        const fold = Math.sin(px * 1.1 + v);
+        return c3(K.purple[fold > 0.5 ? 3 : fold > -0.4 ? 2 : 1]);
+      }
+      let g = ground();
+      if (px > 12 && px < 15 && py > 5 && py < 26) g = mul(g, 0.66);
+      if (py >= 29 && px > 8 && px < 11) g = mul(g, 0.66);
+      return g;
+    }
+    if (B.kind === 'prkneel') {
+      const fx = B.f === 2 ? 15 - px : px, headless = v % 3 === 2;
+      let ch = (PR_KNEEL[py] || '')[fx] || '.';
+      if (headless && py >= 2 && py <= 5) ch = py === 5 && ch === 'K' ? 'K' : '.';
+      if (ch !== '.') return ch === 'K' ? line : c3(K.stone[{ a: 1, b: 2, c: 3, d: 4 }[ch]]);
+      if (headless) {                                                                // 떨어진 머리 — 곁에 뒹굶
+        const d = Math.hypot(fx - 13, py - 13);
+        if (d < 2.2) return d > 1.5 ? line : c3(K.stone[fx < 13 ? 4 : 3]);
+      }
+      let g = ground();
+      if (((PR_KNEEL[py - 1] || '')[fx - (B.f === 2 ? -1 : 1)] || '.') !== '.' && py >= 12) g = mul(g, 0.62);
+      return g;
+    }
+    if (B.kind === 'prfall') {
+      // 쓰러뜨린 남의 석상 — 왼쪽에 관 쓴 머리(관은 비뚤어짐) · 몸 · 허리에서 동강(틈 · 부스러기) · 다리와 발끝이 위로
+      const head = Math.hypot((px - 5) / 3.2, (py - 9) / 3) < 1, crown = px >= 0 && px <= 2 && py >= 6 && py <= 12 && (px === 2 || py === 7 || py === 9 || py === 11);
+      const body = px >= 8 && px <= 16 && Math.abs(py - 9.5) <= 3.4, legs = px >= 19 && px <= 28 && Math.abs(py - 10) <= 2.4, feet = px >= 27 && px <= 29 && py >= 5 && py <= 8;
+      const on = (x, y) => Math.hypot((x - 5) / 3.2, (y - 9) / 3) < 1 || (x >= 8 && x <= 16 && Math.abs(y - 9.5) <= 3.4) || (x >= 19 && x <= 28 && Math.abs(y - 10) <= 2.4) || (x >= 27 && x <= 29 && y >= 5 && y <= 8);
+      if (crown) return c3(K.stone[3]);
+      if (head || body || legs || feet) {
+        if (!on(px - 1, py) || !on(px + 1, py) || !on(px, py - 1) || !on(px, py + 1)) return line;
+        if (head && Math.abs(px - 6) < 0.6 && Math.abs(py - 8) < 1) return line;         // 깨진 얼굴
+        return c3(K.stone[py < 8 ? 4 : py < 11 ? 3 : 2]);
+      }
+      let g = ground();
+      if (px >= 16 && px <= 19 && py >= 11 && py <= 13 && hash(px, py, 914) < 0.5) return c3(K.stone[2]);   // 부스러기
+      if (on(px - 1, py - 1)) g = mul(g, 0.66);
+      return g;
+    }
+    // prhead — 다른 왕의 돌 머리 (옆으로 뒹굶, 관은 벗겨져 곁에)
+    const d = Math.hypot((px - 6.5) / 4.6, (py - 9) / 4.2);
+    if (d < 1) {
+      if (d > 0.82) return line;
+      if (Math.abs(py - 8) < 0.6 && (Math.abs(px - 5) < 0.6 || Math.abs(px - 8) < 0.6)) return line;   // 눈 (감김)
+      if (Math.abs(px - 10.2 + (py - 9) * 0.4) < 0.6 && py > 5 && py < 12) return line;  // 금
+      return c3(K.stone[px < 6 ? 4 : 3]);
+    }
+    const cr = px >= 10 && px <= 14 && py >= 11 && py <= 14 && (py >= 13 || px === 10 || px === 12 || px === 14);
+    if (cr) return c3(K.stone[py === 14 ? 2 : 3]);
+    let g = ground();
+    if (Math.hypot((px - 7.5) / 4.6, (py - 10) / 4.2) < 1) g = mul(g, 0.66);
+    return g;
+  }
+  // ---------- 오만의 성 (6격 마계 — 바깥 건물 prcastle · 안 지도 pridecastle · theme pride, 사용자 결정 2026-11-23) ----------
+  // 바깥 (5 × 4 칸): 작지만 화려한 성문 성 — 양옆 상아빛 둥근 탑(금 띠 · 보라 원뿔 지붕 · 금 끝장식과 보라 작은 깃발 · 금빛 새는 좁은 창),
+  // 가운데 금 톱니 성벽 · 금 왕관 문장, 아래 큰 금테 아치 성문(보라 두 짝). 빛은 왼쪽 위
+  const PC_C = { ivory: ['#4a4438', '#686050', '#8a8270', '#aaa08a', '#c4baa0'], roof: ['#1e1030', '#2c1844', '#3c225a', '#4e2e72'],
+                 marble: ['#6a6254', '#7c7464', '#8e8674'], seam: '#7a5c22', mirror: ['#1c2230', '#2a3448', '#3e4c66', '#a8b8d0'] };
+  function prideCastlePix(B, px, py, X, Y) {
+    const K = PR_C, C = PC_C, line = c3(K.line), W = B.w * P, Hh = B.h * P;
+    const d0 = B.door ? (B.door.x - B.x0) * P : 16, d1 = B.door ? d0 + B.door.w * P - 1 : W - 17, dc = (d0 + d1) / 2;
+    // 탑 둘 — 몸(아래 py 14 ~) · 원뿔 지붕(위)
+    for (const tx of [7.5, W - 8.5]) {
+      const dx = px - tx;
+      if (py <= 3 && Math.abs(dx) < 0.6) return c3(K.gold[3]);                          // 끝장식
+      if (py <= 3 && py >= 1 && dx > 0.5 && dx < 5 - py * 0.8) return c3(K.purple[py === 2 ? 4 : 3]);   // 작은 깃발
+      const coneW = (py - 3) * 0.72;
+      if (py > 3 && py <= 15 && Math.abs(dx) <= coneW + 0.5) {
+        if (Math.abs(dx) > coneW - 0.5 || py === 15) return py === 15 ? c3(K.gold[2]) : line;
+        return c3(C.roof[dx < -2 ? 3 : dx < 1 ? 2 : 1]);
+      }
+      if (py > 15 && Math.abs(dx) <= 7.5) {
+        if (Math.abs(dx) > 6.5 || py === Hh - 1) return line;
+        if (py === 22 || py === 23 || py === 46) return c3(K.gold[py === 22 ? 3 : 2]);   // 금 띠
+        if (Math.abs(dx) < 1.2 && py >= 28 && py <= 36) return c3(py < 31 ? K.gold[3] : K.gold[2]);   // 좁은 창 — 금빛
+        return c3(C.ivory[dx < -3 ? 4 : dx < 0 ? 3 : dx < 3 ? 2 : 1]);
+      }
+    }
+    // 가운데 성벽 — 금 톱니(위 끝) · 왕관 문장 · 아치 성문
+    if (py < 18) return null;
+    if (py <= 21) {
+      const m = Math.floor((px - 15) / 5) % 2 === 0;                                  // 톱니
+      if (!m) return null;
+      return py === 18 || (px - 15) % 5 === 0 || (px - 15) % 5 === 4 ? line : c3(K.gold[py === 19 ? 3 : 2]);
+    }
+    if (py === 22) return line;
+    const archTop = 43 - Math.sqrt(Math.max(0, ((d1 - d0) / 2) ** 2 - (px - dc) ** 2)) * 0.36;   // 성문 아치 — 위에 왕관 문장이 보이게
+    if (px >= d0 - 1 && px <= d1 + 1 && py >= archTop - 2) {
+      if (py < archTop || px <= d0 || px >= d1) return c3(K.gold[py < archTop - 1 ? 3 : 2]);   // 금테
+      if (Math.abs(px - dc) < 1) return line;
+      if (Math.abs(Math.abs(px - dc) - 4) < 1 && Math.abs(py - 49) <= 1) return c3(K.gold[3]);   // 손잡이
+      const e = px < dc ? px - d0 : d1 - px;
+      if (py === Hh - 1) return line;
+      return c3(K.purple[(e % 7 === 0 && e > 0) ? 1 : px < dc ? 3 : 2]);             // 문짝 — 세로 판
+    }
+    const cr = py >= 25 && py <= 31 && Math.abs(px - dc) <= 5 && (py >= 28 || Math.abs(px - dc) < 0.6 || Math.abs(Math.abs(px - dc) - 4.5) < 0.6);
+    if (cr) return c3(K.gold[py >= 30 ? 2 : 3]);                                       // 금 왕관 문장
+    const row = Math.floor((py - 23) / 5), sx = px + (row % 2 ? 3 : 0);
+    if ((py - 23) % 5 === 0 || sx % 8 === Math.floor(hash(Math.floor(sx / 8), row, 920) * 2)) return c3(C.ivory[1]);   // 다듬은 돌 줄눈
+    return c3(C.ivory[px < W / 2 - 10 ? 3 : 2]);
+  }
+  // 성 안 바닥 — 크림빛 대리석 큰 판(16점) · 금 줄눈 · 판마다 결 (theme pride)
+  function prideFloor(X, Y) {
+    const C = PC_C, gx = Math.floor(X / 16), gy = Math.floor(Y / 16), lx = ((X % 16) + 16) % 16, ly = ((Y % 16) + 16) % 16;
+    if (lx === 0 || ly === 0) return c3(C.seam);
+    let c = c3(C.marble[(gx + gy) & 1 ? 1 : 2]);
+    const r = Math.abs(vnoise(X * 0.06 + gx * 2.3, Y * 0.04 + gy * 1.9, 921) - 0.5);
+    if (r < 0.018) c = mix(c, c3(C.marble[0]), 0.6);
+    if (lx === 1 || ly === 1) c = mix(c, c3('#d8ccb0'), 0.25);                         // 판 가장자리 빛
+    return c;
+  }
+  // 성 안 위 벽 — 상아빛 벽 · 금 벽기둥(64점마다) · 그 사이 금테 벽 거울 · 위 금 처마
+  function prideWall(m, e, X, Y, lx, ly) {
+    const K = PR_C, C = PC_C, fy = (3 - e.up) * P + ly;
+    if (fy < 5) return fy === 4 ? c3(K.line) : c3(K.gold[fy < 2 ? 3 : 1]);
+    const sx = X - (m.w * P >> 1) + 32, ph = ((sx % 64) + 64) % 64;
+    if (ph < 6) return ph === 0 || ph === 5 ? c3(K.line) : c3(K.gold[ph < 3 ? 3 : 2]);    // 금 벽기둥
+    const mx = ph - 35, mir = Math.abs(mx) <= 11 && fy >= 10 && fy <= 38;
+    if (mir) {                                                                         // 벽 거울 — 금테, 위는 둥글게
+      const top = 10 + (11 - Math.sqrt(Math.max(0, 121 - mx * mx))) * 0.5;
+      if (fy >= top) {
+        if (fy < top + 2 || Math.abs(mx) >= 10 || fy >= 37) return c3(K.gold[fy < top + 1 ? 3 : 2]);
+        const sh = mx + (fy - 24) * 0.6;
+        if (sh > -7 && sh < -4.5) return c3(C.mirror[3]);
+        return c3(C.mirror[fy < 20 ? 2 : fy < 30 ? 1 : 0]);
+      }
+    }
+    let c = c3(C.ivory[fy > 40 ? 1 : 2]);
+    if (fy === 40) c = c3(K.gold[2]);
+    if (fy >= 44) c = mul(c, 0.72);
+    return c;
+  }
+  // 성 안 거울 (prmir — 1 × 2): 흠 없는 큰 거울, 굵은 금테 위에 왕관 장식 · 받침 다리
+  // 아주 큰 석상 (prbig — 5 × 6): 받침돌 위 오만의 석상 — 치켜든 머리 · 높은 관, 넓은 어깨받이 · 갑주, 오른손 손거울을 들여다봄, 왼손은 칼자루, 뒤로 퍼진 망토
+  function prideBigPix(B, px, py, X, Y, ground) {
+    const K = PR_C, line = c3(K.line), W = B.w * P, Hh = B.h * P, cx = W / 2 - 0.5, base = Hh - 22;
+    if (py >= base) {                                                                  // 받침돌 — 두 단, 앞면 금 글귀
+      const inset = py < base + 6 ? 6 : 2;
+      if (px < inset || px > W - 1 - inset) { let g = ground(); if (px > W - 1 - inset && px < W && py > base + 2) g = mul(g, 0.64); return g; }
+      if (py === base || py === base + 6 || px === inset || px === W - 1 - inset || py === Hh - 1) return line;
+      if (py >= base + 10 && py <= base + 14 && Math.abs(px - cx) < 24) return py === base + 12 && hash(px >> 1, 1, 922) < 0.75 ? c3(K.gold[3]) : c3(K.gold[1]);
+      return c3(K.plinth[px < 14 ? 3 : px > W - 15 ? 0 : py < base + 6 ? 2 : 1]);
+    }
+    // 석상 (점 그대로 그림, 빛은 왼쪽 위) — 뒤의 망토부터 앞의 관까지 차례로: 앞의 것이 덮고, 다른 덩이와 맞닿은 앞쪽 가장자리엔 선
+    const parts = B.parts || (B.parts = [
+      ['cloak', (x, y) => y >= 32 && y < base && Math.abs(x - cx) <= 15 + (y - 32) * 0.4],
+      ['skirt', (x, y) => y >= 56 && y < base && Math.abs(x - cx) <= 12],
+      ['chest', (x, y) => y >= 30 && y < 58 && Math.abs(x - cx) <= 13 - (y - 30) * 0.12],
+      ['larm', (x, y) => !!slBar(x, y, cx - 16, 33, cx - 18, 52, 6)],
+      ['sword', (x, y) => (Math.abs(x - (cx - 15)) <= 1 && y >= 55 && y < base) || (y >= 53 && y <= 55 && Math.abs(x - (cx - 15)) <= 5)],
+      ['lhand', (x, y) => Math.hypot(x - (cx - 16), y - 52) < 3.2],
+      ['pauld', (x, y) => Math.hypot((x - (cx - 13)) / 7.5, (y - 33) / 5.5) < 1 || Math.hypot((x - (cx + 13)) / 7.5, (y - 33) / 5.5) < 1],
+      ['neck', (x, y) => y >= 25 && y <= 31 && x >= cx - 3 && x <= cx + 4],
+      ['rarm', (x, y) => !!slBar(x, y, cx + 16, 33, cx + 23, 21, 6) || !!slBar(x, y, cx + 23, 21, cx + 20, 10, 5)],
+      ['head', (x, y) => Math.hypot((x - (cx + 1)) / 7.5, (y - 18) / 8.6) < 1],
+      ['mirror', (x, y) => Math.hypot((x - (cx + 14)) / 4.4, (y - 9) / 5.6) < 1],
+      ['crown', (x, y) => y >= 2 && y <= 11 && Math.abs(x - (cx + 1)) <= 8 && (y >= 7 || [-7, -3.5, 0, 3.5, 7].some((t, i) => Math.abs(x - (cx + 1) - t) <= (y - 2) * 0.35 + 0.3 && y >= (i === 2 ? 2 : 4)))]
+    ]);
+    const partAt = (x, y) => { for (let i = parts.length - 1; i >= 0; i--) if (parts[i][1](x, y)) return i; return -1; };
+    const i = partAt(px, py);
+    if (i < 0) { let g = ground(); if (partAt(px - 3, py - 2) >= 0) g = mul(g, 0.66); return g; }
+    for (const [ex, ey] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) { const j = partAt(px + ex, py + ey); if (j < i) return line; }   // 바깥 · 뒤의 덩이와 맞닿은 곳
+    const name = parts[i][0], dx = px - cx, Iv = K.ivory;
+    if (name === 'crown') return py >= 9 && (px & 3) === 1 && py <= 10 ? c3('#6a2a8a') : c3(K.gold[dx < 1 ? 3 : 2]);   // 관 — 띠에 박힌 보석
+    if (name === 'mirror') { const d = Math.hypot((px - (cx + 14)) / 4.4, (py - 9) / 5.6); return d > 0.72 ? c3(K.gold[2]) : (px - cx - 14) + (py - 9) * 0.5 < -1 ? c3('#dce4f4') : c3(PC_C.mirror[2]); }
+    if (name === 'sword') return c3(K.gold[py <= 55 ? 3 : 2]);
+    if (name === 'head') {
+      const hx = px - (cx + 1), hy = py - 18;
+      if (hy === -1 && (Math.abs(hx + 3) < 1.1 || Math.abs(hx - 4) < 1.1)) return line;          // 반쯤 감은 눈 — 거울 쪽(오른쪽)으로 곁눈
+      if (hy === -2 && (Math.abs(hx + 3) < 1.6 || Math.abs(hx - 4) < 1.6)) return c3(Iv[1]);      // 치켜든 눈썹 그늘
+      if (hx >= 1 && hx <= 2 && hy >= 0 && hy <= 3) return c3(Iv[hx === 2 ? 1 : 3]);            // 코
+      if (hy === 6 && hx >= -1 && hx <= 3) return c3(Iv[1]);                                   // 다문 입 — 한쪽이 올라감
+      if (hy === 5 && hx === 4) return c3(Iv[1]);
+      if (Math.abs(hx) >= 6 && hy < 4) return c3(Iv[2]);                                       // 관 밑 머리칼
+      const lit = -hx / 8 - hy / 10;
+      return c3(Iv[lit > 0.35 ? 4 : lit > -0.1 ? 3 : lit > -0.5 ? 2 : 1]);
+    }
+    if (name === 'chest') {
+      if (Math.abs(dx) < 0.6) return c3(Iv[1]);                                               // 가슴판 가운데 줄
+      if (py === 44 || py === 45) return c3(K.gold[py === 44 ? 3 : 2]);                         // 금 띠
+      return c3(Iv[dx < -6 ? 4 : dx < 2 ? 3 : dx < 8 ? 2 : 1]);
+    }
+    if (name === 'skirt') return c3(Iv[(Math.floor((dx + 12) / 4.5) % 2) ? 2 : (dx < 0 ? 3 : 1)]);   // 비늘 치마 판
+    if (name === 'cloak') return c3(Iv[Math.sin(dx * 0.5) > 0.4 ? 2 : 1]);                       // 망토 주름 — 뒤라 어둑
+    if (name === 'pauld') { const sx = px < cx ? cx - 13 : cx + 13, lit = -(px - sx) / 7 - (py - 33) / 5; return c3(Iv[lit > 0.4 ? 4 : lit > -0.2 ? 3 : 2]); }
+    if (name === 'lhand' || name === 'neck') return c3(Iv[dx < 0 ? 3 : 2]);
+    return c3(Iv[name === 'larm' ? 3 : 2]);                                                    // 팔
+  }
+  function prideMirrorPix(B, px, py, X, Y, ground) {
+    const K = PR_C, C = PC_C, line = c3(K.line), cx = 7.5;
+    if (py <= 3 && Math.abs(px - cx) <= 3 && (py >= 2 || Math.abs(px - cx) < 0.6 || Math.abs(Math.abs(px - cx) - 2.5) < 0.6)) return c3(K.gold[py >= 2 ? 2 : 3]);   // 왕관 장식
+    const fr = Math.hypot((px - cx) / 6.4, (py - 15) / 11.5);
+    if (fr < 1) {
+      if (fr > 0.92) return line;
+      const gl = Math.hypot((px - cx) / 4.8, (py - 15) / 9.8);
+      if (gl >= 1) return c3(K.gold[px < cx ? 3 : 2]);
+      const sh = (px - cx) + (py - 15) * 0.5;
+      if (sh > -4 && sh < -2.4) return c3(C.mirror[3]);
+      return c3(C.mirror[py < 10 ? 2 : py < 20 ? 1 : 0]);
+    }
+    if (py >= 26 && (Math.abs(px - 3.5) < 1 || Math.abs(px - 11.5) < 1)) return py === 31 ? line : c3(K.gold[1]);   // 받침 다리
+    let g = ground();
+    if (Math.hypot((px - cx - 2) / 6.4, (py - 16) / 11.5) < 1) g = mul(g, 0.68);
+    return g;
+  }
   function hutGeom(B) {
     const pw = B.w * P, ph = B.h * P, d0 = (B.door.x - B.x0) * P, d1 = d0 + B.door.w * P;
     const G = { pw, ph, d0, d1, WL: 10, WR: pw - 10, wTop: ph - 34, fTop: ph - 7, cx: pw / 2, logs: [] };
@@ -2441,6 +2693,7 @@
   // 위 벽(바닥 바로 위 세 칸)은 벽돌 벽면 — 깃발과 횃불이 번갈아 걸림. 옆 · 아래 벽은 어두운 벽 윗면(바닥 쪽 가장자리만 살짝 밝게)
   function hallWall(m, e, X, Y, lx, ly) {
     if (e.up && m.props && m.props.theme === 'ballroom') return ballWall(m, e, X, Y, lx, ly);   // 색욕의 무도회장
+    if (e.up && m.props && m.props.theme === 'pride') return prideWall(m, e, X, Y, lx, ly);      // 오만의 성
     if (e.up) {
       const fy = (3 - e.up) * P + ly, FH = 3 * P;
       if (fy < 5) return fy === 4 ? c3(CK.line) : c3(CK.inner);
@@ -2466,10 +2719,12 @@
   // 돌기둥 — 덩어리(e.pb, 칸) 자리의 바닥은 기둥 그늘만 (오른쪽 · 아래로 짙게). 기둥 그림은 drawTrees 가 나무처럼 따로 — 칸 위로 솟게
   function pillarFloor(e, X, Y) {
     const b = e.pb, fx = (X - b.x0 * P) / ((b.x1 - b.x0) * P), fy = (Y - b.y0 * P) / ((b.y1 - b.y0) * P);
-    return mul(curMap && curMap.props && curMap.props.theme === 'ballroom' ? ballFloor(X, Y) : texture(TILES, 8, X, Y), 0.9 - Math.max(0, fx - 0.4) * 0.35 - fy * 0.1);
+    const th = curMap && curMap.props && curMap.props.theme;
+    return mul(th === 'ballroom' ? ballFloor(X, Y) : th === 'pride' ? prideFloor(X, Y) : texture(TILES, 8, X, Y), 0.9 - Math.max(0, fx - 0.4) * 0.35 - fy * 0.1);
   }
   // 기둥 그림 — 폭 BW · 높이 BH 점: 위는 네모난 기둥머리(윗면 · 판돌 · 둥근 받침), 아래는 받침돌, 사이는 세로 홈이 난 둥근 몸 (왼쪽 빛)
   // 무도회장 기둥 — 검은 자줏빛 대리석 몸 · 금 머리와 받침, 이끼 없음 (theme ballroom)
+  const PRIDE_PILLAR = { top: ['#a88232', '#76581e', '#d8b456', '#4a3612'], face: ['#a49a84', '#8a8270', '#beb49c', '#6a6252'], line: '#120e18', ivy: null };   // 오만의 성 — 흰 대리석 몸 · 금 머리
   const BALL_PILLAR = { top: ['#a88232', '#76581e', '#d8b456', '#4a3612'], face: ['#4a3044', '#3a2436', '#5a3a52', '#24141f'], line: '#0e0a12', ivy: null };
   function paintPillar(put, BW, BH, K = CK) {
     const CAP = 14, BASE = 10, IN = 6, line = c3(K.line);
@@ -2504,17 +2759,18 @@
     const W = bw * P, Hh = PILLAR_H, cv = document.createElement('canvas');
     cv.width = W; cv.height = Hh;
     const g = cv.getContext('2d'), img = g.createImageData(W, Hh), d = img.data;
-    paintPillar((x, y, c) => { const i = (y * W + x) * 4; d[i] = c[0]; d[i + 1] = c[1]; d[i + 2] = c[2]; d[i + 3] = 255; }, W, Hh, theme === 'ballroom' ? BALL_PILLAR : CK);
+    paintPillar((x, y, c) => { const i = (y * W + x) * 4; d[i] = c[0]; d[i + 1] = c[1]; d[i + 2] = c[2]; d[i + 3] = 255; }, W, Hh, theme === 'ballroom' ? BALL_PILLAR : theme === 'pride' ? PRIDE_PILLAR : CK);
     g.putImageData(img, 0, 0);
     return (pillarSprites[key] = cv);
   }
   const PILLAR_H = 72;                                              // 기둥 높이 4.5칸 — 자리(2~3칸)보다 위로 솟음
   // 붉은 깔개 — 가장자리에 금줄, 가운데는 마름모 무늬, 군데군데 해짐
   function carpetPix(e, X, Y, lx) {
-    const R = P - 1, edge = Math.min(e.cL ? 99 : lx, e.cR ? 99 : R - lx);
-    if (edge === 0) return c3('#3e1013');
+    const R = P - 1, edge = Math.min(e.cL ? 99 : lx, e.cR ? 99 : R - lx), pr = curMap && curMap.props && curMap.props.theme === 'pride';   // 오만의 성 — 보라 깔개
+    if (edge === 0) return c3(pr ? '#1c0e24' : '#3e1013');
     if (edge === 1 || edge === 3) return c3('#c8a24a');
-    if (edge === 2) return c3('#5e1a1e');
+    if (edge === 2) return c3(pr ? '#28143a' : '#5e1a1e');
+    if (pr) { let c = c3(PR_C.purple[edge < 6 ? 3 : 2]); if (fbm(X * 0.05, Y * 0.05, 115) > 0.7) c = mul(c, 0.9); return c; }
     const dx = Math.abs(((X % 16) + 16) % 16 - 8), dy = Math.abs(((Y % 16) + 16) % 16 - 8);
     let c = c3(dx + dy === 5 ? '#8a3a2a' : '#6e1e24');
     if (fbm(X * 0.04, Y * 0.04, 115) > 0.7) c = mix(c, c3('#9a6a58'), 0.3);           // 닳아 바랜 자리
@@ -2769,7 +3025,7 @@
         }
         if (best >= 0) { const lk = m.look[best]; return m.tile[best] === ROAD ? roadPixel(lk >> 4, X, Y, 1) : texture(terOf(lk & 15) === ROCKY ? GRASS : terOf(lk & 15), lk >> 4, X, Y); }
       }
-      if (obs) { const HS = highOf(m), q = ty * m.w + tx; return HS.cool[q] ? siteFloor(m, X, Y) : HS.lichen[q] ? lichenObs(X, Y) : HS.petal[q] ? petalObs(X, Y) : HS.grease[q] ? greaseObs(X, Y) : texture(OBSID, 6, X, Y); }
+      if (obs) { const rg = rugAt(m, X, Y); if (rg) return rg; const HS = highOf(m), q = ty * m.w + tx; return HS.cool[q] ? siteFloor(m, X, Y) : HS.lichen[q] ? lichenObs(X, Y) : HS.petal[q] ? petalObs(X, Y) : HS.grease[q] ? greaseObs(X, Y) : texture(OBSID, 6, X, Y); }   // 융단(오만의 턱)이 먼저
       const top = e.bio === 2 || e.bio === 3 || e.bio === 9 || k === 0 ? texture(k === 0 ? (e.ter === ROCKY ? GRASS : e.ter) : GRASS, e.bio, X, Y) : texture(e.ter, e.bio, X, Y);
       return k === 0 ? top : mix(top, c3('#d8e8a0'), k === 2 ? 0.14 : 0.07);   // 높은 층일수록 볕을 더 받아 밝게
     };
@@ -2782,7 +3038,7 @@
       let down = 0;
       const deep = ty + 3 < m.h && L[(ty + 1) * m.w + tx] >= k && L[(ty + 2) * m.w + tx] >= k && L[(ty + 3) * m.w + tx] >= k;   // 세 칸 아래까지 같은 층이면 절벽이 닿지 않음
       if (!deep) for (let d = 1; d <= CLIFF_H; d++) if (levelField(m, L, k, X, Y + d) < 0) { down = d; break; }
-      if (down && highOf(m).stairs[ty * m.w + tx]) return stairPix(X, CLIFF_H - down);   // 계단 칸 — 절벽 면 대신 바위 디딤돌
+      if (down && highOf(m).stairs[ty * m.w + tx]) { const st = stairPix(X, CLIFF_H - down), rg = rugAt(m, X, Y); return rg ? mix(rg, st, 0.38) : st; }   // 융단이 계단 위로 흘러내림   // 계단 칸 — 절벽 면 대신 바위 디딤돌
       if (down) {
         const s = CLIFF_H - down;                                          // 0 = 면의 위 끝
         if (s < 2) return s === 0 ? mix(ground(k), WHITE, 0.08) : c3(K.line);   // 풀 처마 끝 · 검은 테
@@ -4168,7 +4424,7 @@
       if (e.t === POOL) return shoreRim(m, A, e, X, Y, texture(e.gTer, e.gBio, X, Y));   // 물 칸 안으로 둥글게 나온 땅
     }
     let c = paintGround(m, A, e, X, Y, lx, ly);
-    if (e.prop && !(e.nearRoad && roadField(m, X, Y, 0) >= -0.08) && !highOf(m).stairs[Math.floor(Y / P) * m.w + Math.floor(X / P)]) c = propPixel(e.prop, lx, ly, c, highOf(m).cool[Math.floor(Y / P) * m.w + Math.floor(X / P)]);   // 바위 계단 위엔 꽃 · 돌 없음
+    if (e.prop && !(e.nearRoad && roadField(m, X, Y, 0) >= -0.08) && !highOf(m).stairs[Math.floor(Y / P) * m.w + Math.floor(X / P)] && !rugAt(m, X, Y)) c = propPixel(e.prop, lx, ly, c, highOf(m).cool[Math.floor(Y / P) * m.w + Math.floor(X / P)]);   // 바위 계단 위엔 꽃 · 돌 없음
     if (e.dais) {
       const R = P - 1, d = Math.min(e.dais.l ? lx : 99, e.dais.r ? R - lx : 99, e.dais.u ? ly : 99, e.dais.d ? R - ly : 99);
       if (d === 0) c = c3(CK.line); else if (d <= 2) c = mix(c, c3(CK.gold), d === 1 ? 0.5 : 0.25);
@@ -4222,6 +4478,7 @@
     if (e.bio === CITY) return cityGround(m, A, e, X, Y, lx, ly);
     if ((t === WALL || t < 0) && m.props && m.props.interior) return hallWall(m, e, X, Y, lx, ly);
     if (m.props && m.props.theme === 'ballroom') return ballFloor(X, Y);           // 무도회장 — 대리석 체크 바닥
+    if (m.props && m.props.theme === 'pride') return prideFloor(X, Y);             // 오만의 성 — 크림빛 대리석 · 금 줄눈
     if (e.wallEdge) {                                                    // 굴 벽과 바닥의 경계 — 구불구불하게
       const sf = solidField(m, X, Y);
       if (t === WALL || t < 0) {
