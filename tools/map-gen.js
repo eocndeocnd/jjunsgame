@@ -1462,11 +1462,11 @@ function caveMap(data, c) {
 // 신전 문 → 신전 큰 방(판석 · 기둥 · 양옆 파란 불꽃 횃불 · 구석의 해골 무더기 · 안쪽 벽 앞의 거대한 해골 둘) → 두 해골 사이 조금 앞에 보스 →
 // 그 뒤 안쪽 벽의 고딕 문(up — 보스를 꺾어야 열려 위로 가는 계단, 바깥 지도의 다음 격으로). 굴 벽은 구불구불, 신전 벽은 곧게
 function cryptMap(data, u) {
-  const W = 40, H = 92, noise = valueNoise(37), at = (x, y) => y * W + x;
+  const W = 48, H = 116, OX = 4, noise = valueNoise(37), at = (x, y) => y * W + x;   // OX — 신전 · 문을 가운데로 (방을 넓히며 지도를 넓힘, 사용자 결정 2026-11-23)
   const tiles = new Uint8Array(W * H).fill(WALL), lk = new Uint8Array(W * H).fill(look(OL.OBSID, 6)), blds = [];   // 굴 — 흑요석 땅(어둑하고 군데군데 용암 금)
   const fill = (x, y, w, h, t, l) => { for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) { tiles[at(x + i, y + j)] = t; if (l !== undefined) lk[at(x + i, y + j)] = l; } };
-  // 굴 — 지나는 점 [x, y, 넓이]: 계단 → 첫 방 → 둘째 방 → 신전 문
-  const path = [[20, 88, 2.2], [14, 82, 2.4], [18, 76, 2.6], [25, 69, 6.4], [19, 61, 2.6], [12, 55, 2.6], [15, 48, 6.8], [21, 41, 2.8], [20, 36, 2.4]];
+  // 굴 — 지나는 점 [x, y, 넓이]: 계단 → 첫 방(데몬 로드) → 둘째 방(발록) → 신전 문. 두 방은 넓고 여유롭게 (반지름 10 안팎 — 사용자 결정 2026-11-23, 예전 6.5)
+  const path = [[24, 112, 2.4], [18, 105, 2.6], [22, 98, 2.8], [29, 86, 10], [21, 73, 2.8], [14, 67, 2.8], [21, 53, 10.5], [25, 40, 3], [24, 36, 2.6]];
   const rooms = [path[3], path[6]];
   for (let y = 35; y < H - 1; y++) for (let x = 1; x < W - 1; x++) {
     let best = 9;
@@ -1478,16 +1478,22 @@ function cryptMap(data, u) {
     }
     if (best < 1 - (noise(x * 0.35, y * 0.35) - 0.5) * 0.5) tiles[at(x, y)] = FLOOR;
   }
-  for (let y = path[0][1]; y <= H - 2; y++) fill(19, y, 3, 1, FLOOR);           // 계단까지 — 맨 아래 줄 바로 위
+  for (let y = path[0][1]; y <= H - 2; y++) fill(19 + OX, y, 3, 1, FLOOR);      // 계단까지 — 맨 아래 줄 바로 위
+  {                                                                              // 들어온 곳에서 걸어서 못 가는 외톨이 바닥은 벽으로 (몬스터가 갇혀 생겨나지 않게)
+    const seen = new Uint8Array(W * H), q = [at(20 + OX, H - 2)];
+    seen[q[0]] = 1;
+    for (let n = 0; n < q.length; n++) for (const d of [1, -1, W, -W]) { const j = q[n] + d; if (!seen[j] && tiles[j] === FLOOR) { seen[j] = 1; q.push(j); } }
+    for (let k = 0; k < W * H; k++) if (tiles[k] === FLOOR && !seen[k]) tiles[k] = WALL;
+  }
   // 용암 웅덩이 — 둘째 방(발록)에 둘 · 첫 방(데몬 로드)에 하나, 크기가 다름. 둘레 한 칸이 모두 바닥인 칸만 (벽과 곧게 맞닿지 않게 · 길을 막지 않게 방 가장자리 쪽).
   // 너무 작으면(한두 칸) 네모로 보여서 반지름 2 안팎으로
-  const lava = [[rooms[1][0] - 3.5, rooms[1][1] - 2.5, 2.6], [rooms[1][0] + 3.5, rooms[1][1] + 3, 2.1], [rooms[0][0] + 3.5, rooms[0][1] - 2.5, 2]];
+  const lava = [[rooms[1][0] - 5, rooms[1][1] - 4, 3], [rooms[1][0] + 5, rooms[1][1] + 4, 2.4], [rooms[1][0] - 1, rooms[1][1] + 6.5, 1.8], [rooms[0][0] + 5, rooms[0][1] - 4, 2.3]];
   for (const [px, py, r] of lava) for (let y = Math.floor(py - r - 1); y <= py + r + 1; y++) for (let x = Math.floor(px - r - 1); x <= px + r + 1; x++)
     if (tiles[at(x, y)] === FLOOR && Math.hypot(x + 0.5 - px, (y + 0.5 - py) * 1.2) < r && [-1, 0, 1].every(j => [-1, 0, 1].every(i => tiles[at(x + i, y + j)] !== WALL))) { tiles[at(x, y)] = WATER; lk[at(x, y)] = look(OL.LAVA, 7); }
-  // 신전 — 큰 방(x 7~32 · y 12~33), 아래 가운데 문(굴과 이음), 안쪽 벽 가운데 고딕 문(보스 폭) 너머가 위로 가는 계단
-  const T6 = look(OL.TILES, CRYPT_BIO), hx = 7, hy = 12, hw = 26, hh = 22;
+  // 신전 — 큰 방(x 11~36 · y 12~33), 아래 가운데 문(굴과 이음), 안쪽 벽 가운데 고딕 문(보스 폭) 너머가 위로 가는 계단
+  const T6 = look(OL.TILES, CRYPT_BIO), hx = 7 + OX, hy = 12, hw = 26, hh = 22;
   fill(hx, hy, hw, hh, FLOOR, T6);
-  fill(18, hy + hh, 4, 3, FLOOR, T6);                                          // 신전 문 — 굴 길로
+  fill(hx + 11, hy + hh, 4, 3, FLOOR, T6);                                     // 신전 문 — 굴 길로
   const foe = data.ENEMIES.find(e => e.name === u.boss && e.kind === 'boss'), n = foe.size;
   const cx = hx + (hw >> 1) - (n >> 1);                                         // 고딕 문 · 보스의 왼쪽 끝
   // 보스 — 거대한 해골 둘 사이, 조금 앞으로 (사용자 결정 2026-11-22 — 통로 안이 아니라 큰 방에). 그 뒤 안쪽 벽의 고딕 문(gate)은 보스를 꺾어야 열림
@@ -1501,7 +1507,7 @@ function cryptMap(data, u) {
   };
   put(cx - 6, hy, 4, 3, 'gskull');                                              // 안쪽 벽 앞의 거대한 해골 둘 — 통로 양옆 (횃불 너머)
   put(cx + n + 2, hy, 4, 3, 'gskull', { flip: 1 });
-  for (const [x, y] of [[hx, 18], [hx + hw - 1, 18], [hx, 25], [hx + hw - 1, 25], [cx - 2, hy], [cx + n + 1, hy], [17, hy + hh - 1], [22, hy + hh - 1]]) put(x, y, 1, 1, 'btorch');   // 파란 불꽃 횃불 — 벽을 따라 · 통로 어귀 · 신전 문 양옆
+  for (const [x, y] of [[hx, 18], [hx + hw - 1, 18], [hx, 25], [hx + hw - 1, 25], [cx - 2, hy], [cx + n + 1, hy], [hx + 10, hy + hh - 1], [hx + 15, hy + hh - 1]]) put(x, y, 1, 1, 'btorch');   // 파란 불꽃 횃불 — 벽을 따라 · 통로 어귀 · 신전 문 양옆
   for (const [x, y, w, h] of [[hx, hy + hh - 2, 2, 2], [hx + hw - 2, hy + hh - 3, 2, 2], [hx + 1, hy, 2, 1]]) put(x, y, w, h, 'skpile');   // 구석의 해골 무더기 (크기가 다름)
   // 구역 — 방마다 그 몬스터 (방 둘레 네모 — 바닥 칸만 구역으로 셈). 바깥 지도엔 없는 몬스터
   const areas = u.rooms.map((name, i) => {
@@ -1511,11 +1517,11 @@ function cryptMap(data, u) {
     return { name, x: Math.max(1, Math.floor(rx - r)), y: Math.max(1, Math.floor(ry - r)), w: r * 2, h: r * 2, rank: u.rank, monster: e.id, zone: u.zone };
   });
   const ports = [
-    { name: 'in', label: '나가기', x: 19, y: H - 1, w: 3, h: 1, to: `overworld.${u.id}`, stairs: true },
+    { name: 'in', label: '나가기', x: 19 + OX, y: H - 1, w: 3, h: 1, to: `overworld.${u.id}`, stairs: true },
     { name: 'up', label: u.title, x: cx, y: hy - 1, w: n, h: 1, to: `overworld.${u.id}up`, gate: true, gw: n + 4, gh: 6, opensAfter: foe.id }   // 안쪽 벽의 고딕 문 — 열리면 위로 가는 계단
   ];
-  fill(19, H - 1, 3, 1, FLOOR); fill(cx, hy - 1, n, 1, FLOOR, T6);
-  return buildTmj({ w: W, h: H, tiles, areas, posts: [post], ports, npcs: [{ name: 'start', x: 20, y: H - 2 }], look: lk, props: { title: u.title, blds: JSON.stringify(blds) } });
+  fill(19 + OX, H - 1, 3, 1, FLOOR); fill(cx, hy - 1, n, 1, FLOOR, T6);
+  return buildTmj({ w: W, h: H, tiles, areas, posts: [post], ports, npcs: [{ name: 'start', x: 20 + OX, y: H - 2 }], look: lk, props: { title: u.title, blds: JSON.stringify(blds) } });
 }
 
 // ---------- 건물 안 (BUILDINGS) — 왕좌의 큰 방 ----------
