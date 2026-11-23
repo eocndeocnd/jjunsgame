@@ -1552,6 +1552,23 @@ const ABYSS = {                                                // 처음 시안(
         '   ..........   ',
         '     ......     '
       ]
+    },
+    '칠죄종 · 질투': {                                         // 「엿보는 자리」 — 남의 것을 들여다보고 훔쳐 모으는 곳
+      kinds: { T: 'evtent', M: 'evmir', E: 'evtel', h: 'evhoard' }, lichen: true,   // lichen — 바닥에 초록 이끼가 번짐 (그림 lichenObs)
+      plan: [
+        '     ......     ',
+        '   ...TTTT...   ',     // 훔친 천을 기운 천막
+        '  ....TTTT..M.  ',     // 둘레에 반원으로 선 금 간 거울 셋
+        ' ..M...KK...M.. ',
+        '...M...KK.......',
+        '.E..............',     // 길 쪽(서쪽)을 겨눈 망원경
+        '.E.........M..h.',     // 훔쳐 온 물건 더미
+        '....hh.....M....',
+        ' .............. ',
+        '  ............  ',
+        '   ..........   ',
+        '     ......     '
+      ]
     }
   },
   castle: { x0: 30, x1: 94, y0: 7, y1: 40, door: 4 },         // 마왕성 바깥 (문은 아래 가운데, 벌레가 그 앞을 막음)
@@ -1572,7 +1589,7 @@ function abyssMap(data) {
   for (let y = 3; y < H - 2; y++) for (let x = 1; x < W - 1; x++) if (Math.abs(x + 0.5 - A.cx) < half(y)) tiles[idx(x, y)] = FLOOR;
   const segDist = (pts, x, y) => { let best = 1e9; for (let i = 0; i + 1 < pts.length; i++) { const [ax, ay] = pts[i], [bx, by] = pts[i + 1], dx = bx - ax, dy = by - ay, t = Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / (dx * dx + dy * dy))); best = Math.min(best, Math.hypot(x - ax - dx * t, y - ay - dy * t)); } return best; };
   // 칠죄종 턱 — 윗면(걸을 수 있음 · 한 층 높게) · 둘레 바위 테(남쪽은 두 칸) · 남쪽 테 가운데에 바위 계단. 윗면 · 테 · 둘레는 구역 밖, 나무 없음
-  const posts = [], ledges = [], blds = [], cool = new Uint8Array(W * H), pave = [];
+  const posts = [], ledges = [], blds = [], cool = new Uint8Array(W * H), lichen = new Uint8Array(W * H), pave = [];
   for (const [name, lx, ly] of A.sins) {
     const e = foeNamed(name), { rx, ry } = A.ledge, d = (x, y) => Math.hypot((x + 0.5 - lx) / rx, (y + 0.5 - ly) / ry);
     for (let y = ly - ry - 4; y <= ly + ry + 4; y++) for (let x = lx - rx - 4; x <= lx + rx + 4; x++) {
@@ -1596,7 +1613,7 @@ function abyssMap(data) {
     // 꾸밈 (A.sites) — 글자 네모마다 막힌 소품 하나 (칸은 벽 · 겉모습 BUILD, 그림은 지도 속성 blds)
     const site = A.sites && A.sites[name];
     if (site) {
-      if (site.cool) for (let y = ly - ry - 4; y <= ly + ry + 4; y++) for (let x = lx - rx - 4; x <= lx + rx + 4; x++) if (inside(x, y) && (high[idx(x, y)] || stairs[idx(x, y)] || (tiles[idx(x, y)] === ROCK && noArea[idx(x, y)]))) cool[idx(x, y)] = 1;   // 윗면 · 바위 테 · 계단 (절벽 면의 불줄기도)
+      for (const [flag, mask] of [['cool', cool], ['lichen', lichen]]) if (site[flag]) for (let y = ly - ry - 4; y <= ly + ry + 4; y++) for (let x = lx - rx - 4; x <= lx + rx + 4; x++) if (inside(x, y) && (high[idx(x, y)] || stairs[idx(x, y)] || (tiles[idx(x, y)] === ROCK && noArea[idx(x, y)]))) mask[idx(x, y)] = 1;   // 윗면 · 바위 테 · 계단 (절벽 면까지)   // 윗면 · 바위 테 · 계단 (절벽 면의 불줄기도)
       if (site.pave) { const [dx, dy, prx, pry] = site.pave; pave.push([(lx + dx) * 16, (ly + dy) * 16, prx * 16, pry * 16].map(Math.round).join(',')); }
       const { plan, kinds } = site, ox = lx - rx, oy = ly - ry, ch = (c, r) => (plan[r] || '')[c] || ' ';
       if (plan.length !== ry * 2 || plan.some(row => row.length !== rx * 2)) throw new Error(`6격 ${name} 꾸밈 — 그림이 ${rx * 2} × ${ry * 2} 가 아님`);
@@ -1723,9 +1740,9 @@ function abyssMap(data) {
     const { x, y, polygon } = outline(keepSet, box);
     return { name: e.name, x, y, polygon, rank: 6, monster: e.id, zone: zone.id };
   });
-  const highRuns = cellRuns(high), stairRuns = cellRuns(stairs), coolRuns = cellRuns(cool);   // cellRuns 는 OUT_W 로 칸을 풂 — 바꿔 둔 동안에
+  const highRuns = cellRuns(high), stairRuns = cellRuns(stairs), coolRuns = cellRuns(cool), lichenRuns = cellRuns(lichen);   // cellRuns 는 OUT_W 로 칸을 풂 — 바꿔 둔 동안에
   OUT_W = saveW; OUT_H = saveH;
-  return buildTmj({ w: W, h: H, tiles, areas, posts, ports, npcs, chests, look: lk, props: { title: zone.name, high: highRuns, stairs: stairRuns, cool: coolRuns, pave: pave.join(';'), blds: JSON.stringify(blds) } });
+  return buildTmj({ w: W, h: H, tiles, areas, posts, ports, npcs, chests, look: lk, props: { title: zone.name, high: highRuns, stairs: stairRuns, cool: coolRuns, lichen: lichenRuns, pave: pave.join(';'), blds: JSON.stringify(blds) } });
 }
 
 // ---------- 건물 안 (BUILDINGS) — 왕좌의 큰 방 ----------

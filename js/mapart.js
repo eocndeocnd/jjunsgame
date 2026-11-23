@@ -513,7 +513,7 @@
   // 지도 속성 blds 의 소품 하나하나: stake 울타리 한 칸(굵기 · 키가 저마다 다른 뾰족한 통나무, 묶은 밧줄) · tent 가죽 천막(조각 가죽을 기운 자국 · 엇갈린 장대) ·
   // orchut 족장 움막(둥근 가죽 지붕 · 붉은 전쟁 칠 · 엄니 둘 · 짐승 해골) · totem 토템 · fire 모닥불 · rack 무기 걸이 · hide 가죽 말림대.
   // 빛은 왼쪽 위 — 오른쪽 면은 그늘, 그림자는 오른쪽 아래 땅에
-  const ORC_KINDS = { stake: 1, tent: 1, orchut: 1, totem: 1, fire: 1, rack: 1, hide: 1, bones: 1, chw: 1, chp: 1, cha: 1, chr: 1, gskull: 1, btorch: 1, skpile: 1, slthr: 1, slscf: 1, slblk: 1, sllad: 1, slhg: 1, slscr: 1 };   // bones — 히드라 둥지 · ch* — 무너진 성당 터 (chapelPix) · gskull · btorch · skpile — 지하 신전 (cryptPix)
+  const ORC_KINDS = { stake: 1, tent: 1, orchut: 1, totem: 1, fire: 1, rack: 1, hide: 1, bones: 1, chw: 1, chp: 1, cha: 1, chr: 1, gskull: 1, btorch: 1, skpile: 1, slthr: 1, slscf: 1, slblk: 1, sllad: 1, slhg: 1, slscr: 1, evtent: 1, evmir: 1, evtel: 1, evhoard: 1 };   // bones — 히드라 둥지 · ch* — 무너진 성당 터 (chapelPix) · gskull · btorch · skpile — 지하 신전 (cryptPix)
   const ORC_C = {
     hide: ['#3a2a20', '#4c3727', '#5e4530', '#71553a', '#846646'], seam: '#22170f', stitch: '#a08a62',
     bone: ['#6e6452', '#a39780', '#d4c8ac'], paint: '#8a2a22', rope: ['#5e5038', '#8a7a5a'], line: '#1a120e'
@@ -532,6 +532,7 @@
     if (B.kind[0] === 'c' && B.kind[1] === 'h') return chapelPix(B, px, py, X, Y, ground);
     if (B.kind === 'gskull' || B.kind === 'btorch' || B.kind === 'skpile') return cryptPix(B, px, py, X, Y);
     if (SLOTH_KINDS[B.kind]) return slothPix(B, px, py, X, Y);                      // 칠죄종 · 나태의 턱 (6격 마계)
+    if (ENVY_KINDS[B.kind]) return envyPix(B, px, py, X, Y);                        // 칠죄종 · 질투의 턱
     if (B.kind === 'stake') {
       // 울타리 한 칸 — 사용자가 준 사례대로 (2026-11-20): 칸 가운데 뾰족한 기둥, 좌우 이웃(link e · w) 쪽으로 가로대 두 줄,
       // 위아래 이웃(n · s) 쪽으로는 폭 4점의 막대가 이웃 칸까지 끊김 없이 (위아래로만 이어진 칸은 기둥 없이 막대만, 가운데 마디).
@@ -1101,6 +1102,134 @@
     let g = ground();
     if (slHit(st, px - 1, py - 1) || (px - 1 >= sc.x0 && px - 1 <= sc.x1 && Math.abs(py - 1 - sc.y) <= 1.5)) g = mul(g, 0.64);
     return webOver(g, v & 1 ? slWeb(px, py, 13, 2, Math.PI / 2, Math.PI, 8, v) : 0);
+  }
+  // ---------- 칠죄종 · 질투의 턱 (6격 마계 — ABYSS.sites, 사용자 결정 2026-11-23) — 「엿보는 자리」 ----------
+  // 남의 것을 들여다보고 훔쳐 모으는 곳. 둘레 바닥은 초록 이끼가 번진 흑요석 (lichenObs):
+  //   evtent 훔친 천 조각을 기운 작은 천막(4 × 2 — 조각마다 빛깔이 다르고 바늘땀이 듬성듬성, 안쪽 어둠에 금빛) ·
+  //   evmir 서 있는 금 간 거울(1 × 2 — v 마다 금 · 떨어져 나간 조각이 다름) · evtel 길 쪽(서쪽)을 겨눈 놋쇠 망원경(1 × 2 — 세발 받침) ·
+  //   evhoard 훔쳐 온 물건 더미(작은 왕관 · 한 짝뿐인 장화 · 문장을 긁어낸 방패 · 류트 · 동전 — 폭 2 칸이면 더 많이)
+  const ENVY_KINDS = { evtent: 1, evmir: 1, evtel: 1, evhoard: 1 };
+  const EV_C = {
+    patch: [['#3e2228', '#55303a'], ['#22293a', '#313c55'], ['#3c3720', '#55502e'], ['#243426', '#334a36'], ['#33243e', '#4a3558'], ['#3a2f24', '#524331']],
+    thread: '#a0946e', gold: ['#5a4214', '#8a6a24', '#c49a3c', '#e8c868'], frame: ['#2a2014', '#45361c', '#655026', '#857034'],
+    glass: ['#10191a', '#18282a', '#243a38', '#33504a'], gleam: '#a6ccb8', lichen: ['#161e1a', '#1c2a1e', '#243424', '#30442c'], spore: '#6e9a70',
+    boot: ['#2a1c14', '#3e2a1e', '#56402c'], shield: ['#1c2638', '#2a3a56', '#3a5076']
+  };
+  // 초록 이끼가 번진 흑요석 — 흑요석 무늬 위에 덩어리진 이끼(가장자리는 듬성듬성) · 드물게 옅은 포자 점. 불 틈은 덮지 않음
+  function lichenObs(X, Y) {
+    const c = texture(OBSID, 6, X, Y);
+    if (c[0] > 120) return c;
+    const p = fbm(X * 0.045, Y * 0.06, 820);
+    if (p < 0.56) return c;
+    const K = EV_C, d = p - 0.56;
+    if (d < 0.06 && hash(X >> 1, Y, 821) < 0.55) return c;                          // 가장자리 — 듬성듬성
+    if (d > 0.08 && hash(X, Y, 822) < 0.004) return c3(K.spore);
+    const k = d > 0.14 ? (hash(X, Y >> 1, 823) < 0.3 ? 3 : 2) : d > 0.07 ? 1 : 0;
+    return mix(c, c3(K.lichen[k]), 0.62);
+  }
+  function envyPix(B, px, py, X, Y) {
+    const K = EV_C, L = SL_C, v = B.v | 0, line = c3(L.line), W = B.w * P;
+    const ground = () => lichenObs(X, Y);
+    const woodCol = (s, k) => s.edge ? line : c3(L.wood[Math.max(0, Math.min(4, k + (s.n < -0.3 ? 1 : s.n > 0.3 ? -1 : 0)))]);
+    if (B.kind === 'evtent') {
+      // 천막 — 앞에서 본 낮은 세모 (꼭대기 32, 3 · 밑변 2 ~ 61), 가운데 세모난 어둠 (안에 금빛 하나)
+      const outT = (x, y) => y >= 3 + Math.abs(x - 31.5) * 0.92 && y <= 30;
+      const inT = (x, y) => y >= 13 + Math.abs(x - 31.5) * 1.5 && y <= 30;
+      const pole = slBar(px, py, 31.5, 0, 31.5, 4, 2);
+      if (pole) return woodCol(pole, 3);
+      if (outT(px, py)) {
+        if (!outT(px - 1, py) || !outT(px + 1, py) || !outT(px, py - 1) || py === 30) return line;
+        if (inT(px, py)) {
+          if (!inT(px - 1, py) || !inT(px + 1, py) || !inT(px, py - 1)) return c3(K.thread);   // 입구 가장자리 — 기운 실
+          if (Math.hypot(px - 35, py - 26) < 1.6) return c3(K.gold[py < 26 ? 3 : 2]);     // 안쪽 어둠에 금빛 — 훔친 것
+          return c3(py > 27 ? '#08060c' : '#0e0a14');
+        }
+        // 조각 — 줄마다 엇갈린 들쭉날쭉한 네모, 조각마다 빛깔 · 왼쪽(볕) 면은 밝게
+        const row = Math.floor((py + 2) / 6), ox = (hash(row, v, 830) * 9) | 0, col = Math.floor((px + ox + Math.round((hash(px >> 2, row, 831) - 0.5) * 2)) / 9);
+        const id = hash(col, row, 832 + v), pal = K.patch[(id * K.patch.length) | 0];
+        const bnd = (px + ox) % 9 === 0 || (py + 2) % 6 === 0;
+        if (bnd) return hash(px, py, 833) < 0.5 ? c3(K.thread) : c3(pal[0]);             // 바늘땀 — 듬성듬성
+        let c = c3(pal[px < 31.5 ? 1 : 0]);
+        if (fbm(X * 0.2, Y * 0.2, 834) > 0.6) c = mul(c, 0.82);                       // 해진 얼룩
+        return c;
+      }
+      let g = ground();
+      if (outT(px - 2, py) || outT(px - 1, py - 1)) g = mul(g, 0.64);
+      return g;
+    }
+    if (B.kind === 'evmir') {
+      // 서 있는 거울 — 둥근 놋쇠 테 · 다리 둘. 유리는 어둑한 청록, 왼쪽 위로 빛 한 줄기, 금 (v 마다 다름), 떨어져 나간 조각 (v % 3 === 2)
+      const cx = 7.5, cy = 12.5, fr = (x, y) => Math.hypot((x - cx) / 6.2, (y - cy) / 10.4), gl = (x, y) => Math.hypot((x - cx) / 4.7, (y - cy) / 8.9);
+      const legs = [slBar(px, py, 4.5, 21, 2.5, 30, 2), slBar(px, py, 10.5, 21, 12.5, 30, 2)];
+      for (const s of legs) if (s && py > 20) return s.edge ? line : c3(K.frame[2]);
+      const f = fr(px, py);
+      if (f < 1) {
+        if (f > 1 - 1 / 6) return line;
+        const g = gl(px, py);
+        if (g >= 1) return c3(K.frame[(px - cx) - (py - cy) * 0.5 < 0 ? 3 : 1]);
+        if (g > 1 - 1 / 4.7) return c3(K.frame[0]);
+        const ix = 5 + hash(v, 0, 835) * 5, iy = 9 + hash(v, 1, 835) * 8, a = Math.atan2(py - iy, px - ix), r = Math.hypot(px - ix, py - iy);
+        if (v % 3 === 2 && r < 3.4 && a > -0.6 && a < 1.4) return c3('#08060c');          // 떨어져 나간 조각
+        for (let i = 0; i < 5; i++) {                                                  // 금 — 맞은 자리에서 사방으로 (길이 · 각도가 다름)
+          const ai = hash(v, i, 836) * Math.PI * 2, li = 3 + hash(v, i, 837) * 7, wob = Math.sin(r * 1.3 + i) * 0.12;
+          let da = Math.abs(((a - ai - wob) + Math.PI * 3) % (Math.PI * 2) - Math.PI);
+          if (r < li && da * r < 0.6) return c3(K.gleam);
+        }
+        const sh = (px - cx) + (py - cy) * 0.55;
+        if (sh > -4.2 && sh < -2.6 && py < cy) return mix(c3(K.glass[3]), c3(K.gleam), 0.35);   // 빛 한 줄기
+        return c3(K.glass[py < cy - 4 ? 2 : py < cy + 3 ? 1 : 0]);
+      }
+      let g = ground();
+      if (fr(px - 2, py - 1) < 1 || (py > 20 && legs.some((_, i) => slBar(px - 1, py - 1, i ? 10.5 : 4.5, 21, i ? 12.5 : 2.5, 30, 2)))) g = mul(g, 0.64);
+      return g;
+    }
+    if (B.kind === 'evtel') {
+      // 망원경 — 세발 받침(나무) 위 놋쇠 통이 서쪽 위를 겨눔, 동쪽 끝에 쇠 눈대기 · 서쪽 끝은 렌즈
+      const tube = slBar(px, py, 13, 13, 1.5, 8, 3), eye = slBar(px, py, 15, 14, 13, 13, 2);
+      if (Math.hypot(px - 1.5, py - 8) < 1.8) return Math.hypot(px - 1.5, py - 8) > 1.2 ? line : c3(px < 1.5 && py < 8 ? K.gleam : K.glass[2]);   // 렌즈
+      if (tube) return tube.edge ? line : c3(K.gold[tube.n < -0.4 ? 3 : tube.n < 0.5 ? 2 : 1]);
+      if (eye) return eye.edge ? line : c3(L.iron[2]);
+      if (Math.abs(px - 8.5) <= 1.5 && py >= 12 && py <= 14) return py === 14 || Math.abs(px - 8.5) > 1 ? line : c3(L.iron[2]);   // 받침 머리
+      const legs = [slBar(px, py, 8.5, 14, 2.5, 31, 2), slBar(px, py, 8.5, 14, 14.5, 31, 2), slBar(px, py, 8.5, 14, 9.5, 29, 2)];
+      for (let i = 0; i < 3; i++) if (legs[i]) return woodCol(legs[i], i === 2 ? 1 : 3);
+      let g = ground();
+      if (slBar(px - 1, py - 1, 8.5, 14, 14.5, 31, 2) || slBar(px - 1, py - 1, 8.5, 14, 2.5, 31, 2)) g = mul(g, 0.66);
+      return g;
+    }
+    // evhoard — 훔쳐 온 물건 더미 (밑에 깔린 천 위에 물건들 — 폭 2 칸이면 방패 · 류트까지)
+    const wide = W > 16, hx = W / 2 - 0.5;
+    const heap = (x, y) => Math.hypot((x - hx) / (W / 2 - 1), (y - 12.5) / 3.4) < 1;
+    if (wide) {
+      const sd = Math.hypot(px - 9, py - 8);                                          // 방패 — 남의 문장을 긁어 지운 자국
+      if (sd < 5.5) {
+        if (sd > 4.8) return line;
+        if (Math.abs((px - 9) - (py - 8)) < 0.6 || Math.abs((px - 9) + (py - 8) * 0.8) < 0.6) return c3('#6e7890');
+        return c3(K.shield[px < 8 && py < 7 ? 2 : sd < 3 ? 1 : 0]);
+      }
+      const body = Math.hypot((px - 23) / 3.4, (py - 10.5) / 3.8), neck = slBar(px, py, 25, 8, 30, 1, 2);
+      if (neck) return woodCol(neck, 2);
+      if (body < 1) return body > 0.72 ? line : Math.hypot(px - 23, py - 10.5) < 1.2 ? c3('#0e0a12') : c3(L.wood[px < 23 ? 4 : 3]);
+    }
+    const crx = wide ? 14 : 3.5, cry = 7;                                             // 작은 왕관 — 비뚤게 얹힘
+    if (px >= crx && px <= crx + 6 && py >= cry && py <= cry + 4) {
+      const tip = [0, 3, 6].some(t => Math.abs(px - crx - t) < 0.6) || py >= cry + 2;
+      if (tip) return py === cry + 4 || px === crx || px === crx + 6 ? c3(K.gold[0]) : (px === crx + 3 && py === cry + 3 ? c3('#4a8a50') : c3(K.gold[py === cry + 2 ? 3 : 2]));
+    }
+    const bx = wide ? 26 : 10, by = 9;                                                // 한 짝뿐인 장화
+    if ((px >= bx && px <= bx + 3 && py >= by && py <= by + 5) || (px >= bx - 2 && px <= bx + 3 && py >= by + 4 && py <= by + 5)) {
+      const e = px === bx + 3 || py === by + 5 || py === by || (px === bx && py < by + 4) || (px === bx - 2);
+      return e ? line : c3(K.boot[px < bx + 1 ? 2 : 1]);
+    }
+    if (heap(px, py)) {
+      if (!heap(px, py - 1)) return line;
+      const coin = hash(px >> 1, py, 838 + v) < 0.09;
+      if (coin) return c3(K.gold[hash(px, py, 839) < 0.5 ? 3 : 2]);
+      const pal = K.patch[(hash(Math.floor(px / 5), v, 840) * K.patch.length) | 0];
+      return c3(pal[py < 12 ? 1 : 0]);
+    }
+    let g = ground();
+    if (heap(px - 1, py - 1)) g = mul(g, 0.62);
+    return g;
   }
   function hutGeom(B) {
     const pw = B.w * P, ph = B.h * P, d0 = (B.door.x - B.x0) * P, d1 = d0 + B.door.w * P;
@@ -2107,7 +2236,7 @@
     let H = highs.get(m);
     if (H) return H;
     const runs = s => { const a = new Uint8Array(m.w * m.h); for (const r of String(s || '').split(';')) { if (!r) continue; const [x, y, n] = r.split(',').map(Number); for (let i = 0; i < n; i++) a[y * m.w + x + i] = 1; } return a; };
-    H = { high: runs(m.props && m.props.high), stairs: runs(m.props && m.props.stairs), cool: runs(m.props && m.props.cool) };   // cool — 용암 줄이 식은 턱 (칠죄종 · 나태)
+    H = { high: runs(m.props && m.props.high), stairs: runs(m.props && m.props.stairs), cool: runs(m.props && m.props.cool), lichen: runs(m.props && m.props.lichen) };   // lichen — 초록 이끼가 번진 턱 (칠죄종 · 질투)   // cool — 용암 줄이 식은 턱 (칠죄종 · 나태)
     highs.set(m, H);
     return H;
   }
@@ -2197,7 +2326,7 @@
         }
         if (best >= 0) { const lk = m.look[best]; return m.tile[best] === ROAD ? roadPixel(lk >> 4, X, Y, 1) : texture(terOf(lk & 15) === ROCKY ? GRASS : terOf(lk & 15), lk >> 4, X, Y); }
       }
-      if (obs) return highOf(m).cool[ty * m.w + tx] ? siteFloor(m, X, Y) : texture(OBSID, 6, X, Y);
+      if (obs) { const HS = highOf(m), q = ty * m.w + tx; return HS.cool[q] ? siteFloor(m, X, Y) : HS.lichen[q] ? lichenObs(X, Y) : texture(OBSID, 6, X, Y); }
       const top = e.bio === 2 || e.bio === 3 || e.bio === 9 || k === 0 ? texture(k === 0 ? (e.ter === ROCKY ? GRASS : e.ter) : GRASS, e.bio, X, Y) : texture(e.ter, e.bio, X, Y);
       return k === 0 ? top : mix(top, c3('#d8e8a0'), k === 2 ? 0.14 : 0.07);   // 높은 층일수록 볕을 더 받아 밝게
     };
