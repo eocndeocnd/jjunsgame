@@ -2335,6 +2335,24 @@ function avatarWarp() {
   return true;
 }
 
+// ---------- 길잡이가 데려다 준다 (사용자 결정 2026-11-23) ----------
+// 마왕을 한 번이라도 꺾으면 그 공간에 걸린 제한이 풀려, 회차 맨 처음(1격 — 아직 다른 격에 들어서기 전)에
+// 길잡이가 2~6격 가운데 하나로 데려다 줍니다. 닿는 곳은 그 격에 처음 들어서는 정해진 자리 (지도의 entry — map-gen.js 의 OVERWORLD_ENTRY).
+// 에너지는 들지 않고, 건너뛴 보스는 안 꺾인 채로 남습니다. 지하수로 안에서만인지는 ui.js 가 봅니다 (guideTpButton).
+const GUIDE_TP_MAX = 6;
+function guideTpZones() { return ZONES.map((z, i) => i).filter(i => i > 0 && ZONES[i].rank <= GUIDE_TP_MAX); }
+function canGuideTp() {
+  const run = State.run;
+  if (!run || run.over || run.encounter || run.zoneIndex !== 0 || !wallSeen()) return false;
+  return run.zonesVisited.every(zi => zi === 0);
+}
+function guideTp(zi) {
+  if (!canGuideTp() || !guideTpZones().includes(zi)) return false;
+  pushLog('info', '길잡이가 데려다 준다 — 눈앞이 하얘졌다가 걷힌다.');
+  walkIntoZone(zi);                    // 「…에 들어섰다」 · 저장
+  return true;
+}
+
 // 처치하면 전리품마다 확률을 굴려(기운이 붙으면 그 배수만큼) 빼앗습니다 — 한 번에 많아야 DROP_MAX(2)개 (사용자 결정).
 // 셋이 걸리면 처음 얻는 것부터 남기고, 같은 처지끼리는 무작위로 버립니다.
 // 이미 가진 것이 또 나오면 **자동으로 분해되어** 그 부위의 강화석이 됩니다 —

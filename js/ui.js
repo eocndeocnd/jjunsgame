@@ -817,6 +817,12 @@ function renderHud(zone) {
     save();
     setTimeout(() => { if (!isTalkOpen()) playTalk(SPECIAL_TALK, () => spotlightGear(SPECIAL_SLOT_IDS[0]), { end: '칸을 본다' }); }, 400);
   }
+  // 마왕을 꺾은 뒤 처음으로 회차 맨 처음 지하수로에 서면 — 제한이 풀려 데려다 줄 수 있다고 (사용자 결정 2026-11-23)
+  else if (!State.meta.tpTold && calm && guideTpHere()) {
+    State.meta.tpTold = true;
+    save();
+    setTimeout(() => { if (!isTalkOpen()) playTalk(TP_TALK, () => { tpOpen = true; render(); }, { end: '골라 본다' }); }, 400);
+  }
   // 처음으로 포인트가 생기면 길잡이가 한 번 알려 줌 (사용자 결정 2026-11-21 — 분배가 있는 줄 몰랐음)
   else if (run.unspent > 0 && !State.meta.allocTold && calm) {
     State.meta.allocTold = true;
@@ -1750,6 +1756,27 @@ function warpButton() {
       </button>`;
 }
 
+// 길잡이가 데려다 준다 — 마왕을 꺾은 뒤, 회차 맨 처음 지하수로 안에서만 (game.js 의 canGuideTp). 누르면 2~6격 목록이 펼쳐짐
+let tpOpen = false;
+function guideTpHere() { return canGuideTp() && !!zoneMap && currentMapId() === zoneMap[ZONES[0].id]; }
+function guideTpButton() {
+  if (!guideTpHere()) { tpOpen = false; return ''; }
+  const list = tpOpen ? `<div class="tp-list">${guideTpZones().map(zi => {
+    const z = ZONES[zi], r = RANKS.find(x => x.n === z.rank);
+    return `<button class="btn tp-go" data-tp="${zi}"><span class="btn-line">제${r.n}격 · ${r.name}</span><span class="cost">${z.name}</span></button>`;
+  }).join('')}</div>` : '';
+  return `
+      <button id="tpBtn" class="btn warp-btn tp-btn">
+        <span class="btn-line">길잡이가 데려다 준다 ${tpOpen ? '▴' : '▾'}</span>
+        <span class="cost">그 격에 처음 들어서는 자리로 — 에너지 0</span>
+      </button>${list}`;
+}
+const TP_TALK = [
+  { who: 'guide', text: '마왕이 쓰러지면서 이 공간에 걸려 있던 <b>제한</b>이 풀렸어.' },
+  { who: 'guide', text: '이제 회차를 시작할 때 여기서 <b>1~6격 어디로든</b> 데려다 줄 수 있어. 그 격에 처음 들어서는 자리로.' },
+  { who: 'guide', text: '건너뛴 보스는 안 꺾인 채로 남아. 너무 센 데로 가면 금방 무너지니까 잘 골라.' }
+];
+
 // ============================================================
 //  월드맵 — 걷다가 닿으면 조우 · 싸움 · 결과 창이 지도 위에 뜹니다
 // ============================================================
@@ -1818,6 +1845,12 @@ function mapPaused() {
 
 // 그 지도에서 그 지역의 들머리 — 가장 약한 일반의 구역 들머리(구역 한가운데, map.js 의 areaMid). 첫 지역이거나 지역이 없는 지도(문의 광장)면 그 지도의 시작점.
 function mapEntrance(data, zi) {
+  // 그 격에 처음 들어서는 자리(지도의 entry)가 있으면 그 곁의 빈 칸 — 길잡이가 데려다 줄 때 · 화신이 데려다 줄 때
+  const ent = data.npcs.find(n => n.name === 'entry' && ZONES[zi] && n.zone === ZONES[zi].id);
+  if (ent) {
+    const spot = freeNear(data, ent.x, ent.y);
+    if (spot) return spot;
+  }
   const weakest = zi > 0 && ENEMIES.find(e => e.zoneIndex === zi && e.kind === 'normal');
   const a = weakest && data.areas.find(x => x.monster === weakest.id);
   return a ? { x: a.mid.x, y: a.mid.y } : data.start;
@@ -1909,6 +1942,24 @@ function fadeThrough(fn) {
 
 // 문 바로 앞의 걸을 수 있는 칸 (아래 · 위 · 오른쪽 · 왼쪽 순) — 들어서자마자 도로 나가지 않게 문 위가 아니라 그 앞.
 // 아직 서 있는 정예 · 보스의 몸 위는 빼고 (보스 뒤 구멍으로 거꾸로 들어오면 — 그런 칸이 없으면 그 지도의 시작점)
+// (x, y) 에서 가장 가까운 설 수 있는 칸 — 막힌 칸 · 문 · 살아 있는 자리를 피해 둘레로 넓혀 가며 (6칸까지)
+function freeNear(data, x0, y0) {
+  const inRect = (p, x, y) => x >= p.x && y >= p.y && x < p.x + (p.w || 1) && y < p.y + (p.h || 1);
+  const alive = MapView.gameHooks().postAlive;
+  const free = (x, y) => x >= 0 && y >= 0 && x < data.w && y < data.h && !data.solid[y * data.w + x]
+    && !data.ports.some(p => inRect(p, x, y)) && !data.posts.some(p => inRect(p, x, y) && alive(p.enemy));
+  for (let r = 0; r <= 6; r++) {
+    let best = null, bd = Infinity;
+    for (let y = y0 - r; y <= y0 + r; y++) for (let x = x0 - r; x <= x0 + r; x++) {
+      if (Math.max(Math.abs(x - x0), Math.abs(y - y0)) !== r || !free(x, y)) continue;
+      const d = Math.hypot(x - x0, y - y0);
+      if (d < bd) { bd = d; best = { x, y }; }
+    }
+    if (best) return best;
+  }
+  return null;
+}
+
 function doorStep(data, port) {
   const inRect = (p, x, y) => x >= p.x && y >= p.y && x < p.x + (p.w || 1) && y < p.y + (p.h || 1);
   const alive = MapView.gameHooks().postAlive;
@@ -2096,7 +2147,7 @@ function renderMapLayer(onMap, frame) {
   if (onMap) syncMap();
   if (onMap && mapView.world) mapView.world.player.speedMul = passiveMult('stride');   // 패시브 「발걸음」
   // 아무도 마주하지 않으면 창 없이 지도만 — 화신 문이 있으면 위에 작게 (떠돌이 상인은 지도 위 🎒 에 닿으면 상점 — 예전 「들른다」 단추는 뺌)
-  const hud = onMap && !frame ? warpButton() : '';
+  const hud = onMap && !frame ? guideTpButton() + warpButton() : '';
   $('mapOverlay').innerHTML = frame || (hud ? `<div class="map-hud">${hud}</div>` : '');
 }
 
@@ -2161,6 +2212,14 @@ function wireJourney() {
     b.addEventListener('click', closeRosterModal);
   }
   on('warpBtn',      () => { if (fightLocked()) return; if (avatarWarp()) { Sound.play('zoneMove'); render(); } });
+  on('tpBtn',        () => { if (fightLocked()) return; tpOpen = !tpOpen; render(); });
+  for (const b of document.querySelectorAll('[data-tp]')) {
+    b.addEventListener('click', () => {
+      if (fightLocked()) return;
+      const zi = Number(b.dataset.tp);
+      fadeThrough(() => { if (guideTp(zi)) { tpOpen = false; Sound.play('zoneMove'); } });
+    });
+  }
   on('engageBtn',    () => {
     // 싸우기 직전의 레벨 · 경험치 · 에너지 — 전투를 보여주는 동안은 이 값으로 그리고, 끝나면 여기서부터 올라가는 모습을 보여줍니다
     const run = State.run;

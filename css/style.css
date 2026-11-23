@@ -2574,6 +2574,12 @@ body.fight-locked #dollSwapBtn { display: none; }
   padding: 12px 18px;
 }
 
+/* 길잡이가 데려다 준다 — 마왕을 꺾은 뒤 회차 맨 처음 지하수로에서. 누르면 2~6격 목록 */
+.btn.warp-btn.tp-btn { --b: #2f6a7a; --b-hi: #4a8fa0; --b-lo: #1a3f4a; padding: 9px 14px; }
+.tp-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 6px; }
+.btn.tp-go { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 10px; }
+.btn.tp-go .cost { font-size: 0.8em; opacity: 0.85; }
+
 /* 화신이 되었을 때 결과창 위의 창 — 그림 칸(나중에 화신 그림이 들어올 자리)과 한마디 */
 .avatar-gain-card { text-align: center; }
 .ag-art {

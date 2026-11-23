@@ -523,7 +523,6 @@ const OVERWORLD_AREAS = {
       [87, 57, 109, 74], [101, 36, 109, 56]],
   5: [[117, 44, 131, 55], [117, 60, 130, 72], [137, 52, 151, 63], [152, 45, 166, 56],   // 땅 곳곳에 (사용자 결정 2026-11-22 — 데몬 로드 · 발록이 지하로 가며 다시 놓음)
       [137, 64, 151, 77], [153, 60, 167, 73], [153, 76, 167, 88]],      // 밴시 · 서큐버스 · 뱀파이어 자리 (AREA_FIX) — 남서쪽 성당 터 둘레 · 남쪽 가운데는 빈 땅
-  6: [[131, 33, 146, 40], [114, 33, 130, 40], [113, 5, 123, 32], [124, 19, 143, 32], [124, 5, 146, 18]]   // 묘실 입구 → 용암 강 → 칠죄종 홀 → 북쪽
 };
 // 정해진 자리 — 시안 그림의 그 그림 조각 자리 (앞에 서는 것은 한 칸 아래)
 //   [이름, x, y] 그 칸을 가운데로 그 적의 크기(n × n, data.js ENEMY_SIZE)만큼
@@ -539,12 +538,9 @@ const OVERWORLD_POSTS = [
   ['흰 말의 기사', 129, 61], ['붉은 말의 기사', 147, 48], ['검은 말의 기사', 160, 66], ['창백한 말의 기사', 143, 70],   // 네 기사는 서로 멀리 (사용자 결정 2026-11-22): 광장 · 대성당 동쪽 · 동쪽 가운데 · 남쪽 길가
   ['데스 나이트', 135.5, 77], ['리치', 160, 55], ['까마귀 왕', 158, 81],  // 남쪽 길 끝의 무너진 성당 터 (CHAPELS) · 영묘 · 숨은 묘실
                                                                        // 불사의 왕은 대성당 아래 지하의 신전에 (UNDERS)
-  ['칠죄종 · 탐욕', 127, 21], ['칠죄종 · 질투', 133, 21], ['칠죄종 · 색욕', 139, 21], ['칠죄종 · 폭식', 127, 30],
-  ['칠죄종 · 오만', 133, 30], ['칠죄종 · 분노', 139, 30], ['칠죄종 · 나태', 142, 25],          // 홀의 불꽃 받침
-  ['세계수를 먹는 벌레', 'gate'],                                       // 왕좌의 방으로 가는 굴
-  ['마왕', 155, 23], ['관측자', 157, 30]                             // 왕좌 · 문 곁 (왕좌의 방을 줄이며 한 칸 안쪽으로)
+                                                                       // 6격(칠죄종 · 벌레 · 마왕 · 관측자)은 따로 뽑는 지도 abyss 에 (ABYSS — 사용자 결정 2026-11-23)
 ];
-const OVERWORLD_ENTRY = { 2: [38, 60], 3: [44, 28], 4: [66, 50], 5: [116, 48], 6: [136, 39] };   // 구멍 앞 · 옛 성문 자리 · 숲 가장자리 · 아치 너머 · 묘실 입구
+const OVERWORLD_ENTRY = { 2: [38, 60], 3: [44, 28], 4: [66, 50], 5: [116, 48] };   // 구멍 앞 · 옛 성문 자리 · 숲 가장자리 · 아치 너머 · 묘실 입구
 // 숨은 굴 — 보스를 꺾으면 그 보스 바로 뒤(위로 한 칸 띄워)에 구멍이 나타나고(appears), 들어가면 히든 하나만 있는 작은 굴 (사용자 결정 — 3격만).
 // 구멍은 열리기 전엔 보이지도 막히지도 않는 그냥 땅. 굴의 구멍으로 나오면 다시 그 구멍 앞
 // 동굴 (사용자 결정 2026-11-22 — 4격 큰 상자가 3격 만티코어 곁에 있어 3격에서 너무 쉽게 얻어서) — 그 격 땅 깊은 곳의 바위 턱 남쪽 절벽에 굴 입구(cave),
@@ -556,7 +552,7 @@ const CAVES = [
 // 첫 방 · 둘째 방(rooms — 그 격의 일반 몬스터, 바깥 지도엔 없음) · 용암 웅덩이 → 신전(거대한 해골 · 파란 불꽃 횃불 · 기둥)의 보스 →
 // 보스를 꺾어야 열리는 위로 가는 계단 → 바깥 지도 up(시안 칸 — 다음 격의 들머리)의 계단으로 올라옴
 const UNDERS = [
-  { id: 'crypt', title: '대성당 아래 묘실', rank: 5, zone: 'necropolis', boss: '불사의 왕', rooms: ['데몬 로드', '발록'], mouth: [136, 45.6], up: [136, 38.6] }
+  { id: 'crypt', title: '대성당 아래 묘실', rank: 5, zone: 'necropolis', boss: '불사의 왕', rooms: ['데몬 로드', '발록'], mouth: [136, 45.6], next: 'abyss.in' }   // next — 보스를 꺾으면 열리는 위로 가는 문이 닿는 곳 (6격 마계)
 ];
 const CRYPT_BIO = 11;                                        // 지하 신전 바닥 — 그림(js/mapart.js)이 이 격 번호로 푸르스름한 어둔 돌바닥 · 뼈 장식을 고름
 const underNormal = e => UNDERS.some(u => u.rank === e.rank.n && u.rooms.includes(e.name));   // 지하에만 사는 일반 몬스터 (바깥 지도엔 구역 없음)
@@ -670,7 +666,8 @@ const GIANT_GROUNDS = [
                              [5, -2, 1, 1], [6, 1, 1, 1], [4, 5, 1, 1], [1, 6, 1, 1], [-3, 6, 1, 1], [-10, 6, 1, 1]],
     lava: [[-3, -2], [-3, -1], [-4, -1], [-4, 0], [-5, 0], [-5, 1], [-4, 1], [-5, 2], [-6, 2], [-6, 3], [-7, 3], [-7, 4], [-8, 4], [-8, 5], [-9, 5]] }   // 거인 서쪽으로 흘러내리는 용암 줄기
 ];
-const OVERWORLD_MERCHANTS = { forest: [34, 58], ruins: [40, 26], giantpass: [70, 46], necropolis: [120, 50], abyss: [128, 37] };
+const OVERWORLD_MERCHANTS = { forest: [34, 58], ruins: [40, 26], giantpass: [70, 46], necropolis: [120, 50] };
+const OW_RANKS = [2, 3, 4, 5];                                 // 바깥 지도(overworld)에 있는 격 — 6격은 따로 뽑는 지도 abyss (사용자 결정 2026-11-23)
 
 // 칸 모음(구멍 없는 한 덩어리) → 둘레를 시계 방향으로 도는 다각형. 꼭짓점은 칸 모서리 (칸 단위, x · y 에서 잰 값).
 // 둘레의 변마다 「구역이 오른쪽」 방향으로 잇고, 곧게 이어지는 꼭짓점은 뺍니다
@@ -743,6 +740,8 @@ function overworld(data) {
   for (const b of L.BRIDGES) fillRect(b.vertical ? rectOf(b.x, b.y, b.x + b.wide - 1, b.y + b.len - 1) : rectOf(b.x, b.y, b.x + b.len - 1, b.y + b.wide - 1), ROAD);
   // 처음 · 1격 자리는 어둠으로 — 따로 뽑은 지하수로(sewer) 지도
   for (let i = 0; i < w * h; i++) if ([1, 7].includes(L.zoneAt(i % w, (i / w) | 0))) tiles[i] = WALL;
+  // 6격 자리도 어둠으로 — 따로 뽑은 마계(abyss) 지도. 5격과 가르는 흑요석 벼랑(바위 칸)만 남겨 5격의 북쪽 끝이 벼랑 (사용자 결정 2026-11-23)
+  for (let i = 0; i < w * h; i++) if (L.zoneAt(i % w, (i / w) | 0) === 6 && tiles[i] !== ROCK) { tiles[i] = WALL; L.ter[i] = L.VOID; }
 
   // 2) 구역 · 정해진 자리 · 상인 · 시작점 · 문
   const areas = [], posts = [], npcs = [], ports = [], seeds = {};
@@ -880,7 +879,7 @@ function overworld(data) {
   // 지하로 드나드는 곳 (UNDERS) — 흑요석 바위턱(높은 땅) 밑동에 박힌 고딕 묘실 문 (gate — 뾰족한 돌 아치 · 양옆 돌기둥 · 해골을 새긴 문짝, 사용자 요청 2026-11-22).
   // 문은 5 × 4 칸, 아래 가운데 세 칸이 문. 그림은 js/mapview.js 가 바위 면(MapArt.rockWall — 문보다 한 칸 높게)과 문(MapArt.gothicGate)을 문 칸 위에 덮어 그림.
   //   mouth — 대성당 앞뜰: 바위턱이 위로 벼랑 쪽으로 넓게 퍼져(버팀벽처럼) 벼랑에 붙음. 늘 열려 계단이 내려감
-  //   up    — 다음 격 들머리: 홀로 솟은 바위 둔덕(위로 갈수록 좁아짐). 지하의 보스를 꺾어야 열림 (닫히면 해골 문짝)
+  //   (attach 없이) — 홀로 솟은 바위 둔덕(위로 갈수록 좁아짐). 6격 마계(abyss) 남쪽 끝의 지하 묘실로 내려가는 문이 이 모양
   const GW = 5, GH = 4, RW = 9, RH = GH + 1;
   const rockGate = (u, at, attach, port) => {
     const mx = Math.round(L.fc(at[0])), my = Math.round(L.fc(at[1])), face0 = my - RH + 1;
@@ -909,7 +908,6 @@ function overworld(data) {
     const boss = data.ENEMIES.find(e => e.name === u.boss && e.kind === 'boss');
     if (!boss || boss.rank.n !== u.rank) throw new Error(`${u.title} — ${u.boss} 이(가) ${u.rank}격 보스가 아님`);
     rockGate(u, u.mouth, true, { name: u.id, to: `${u.id}.in` });
-    rockGate(u, u.up, false, { name: `${u.id}up`, to: `${u.id}.up`, opensAfter: boss.id });
   }
   const lavaCells = new Uint8Array(w * h), bigRocks = [];
   for (const G of GIANT_GROUNDS) {
@@ -1000,7 +998,7 @@ function overworld(data) {
     fillRect({ x: hole.x, y: hole.y + 1, w: hole.w, h: 1 }, FLOOR);
     guard(hole.x, hole.y, hole.w, 2, 1);
   }
-  const hiddenElsewhere = new Set([...SECRET_ROOMS.map(s => s.hidden), ...BUILDINGS.map(b => b.boss), ...UNDERS.map(u => u.boss)]);
+  const hiddenElsewhere = new Set([...SECRET_ROOMS.map(s => s.hidden), ...BUILDINGS.map(b => b.boss), ...UNDERS.map(u => u.boss), ...foes.filter(e => e.rank.n === 6).map(e => e.name)]);   // 6격은 abyss 지도에
   const missing = foes.filter(e => !hiddenElsewhere.has(e.name) && !posts.some(p => p.enemy === e.id));
   // 그 격 보스가 서 있는 곳 — 건물 안이면 그 건물의 문 (구역 차례 · 보물상자 자리를 잴 때)
   const bossSpot = zi => {
@@ -1025,7 +1023,7 @@ function overworld(data) {
     return d;
   };
   // 구역이 퍼져 나갈 곳 — 시안의 구역 자리 한가운데 (나무가 덮지 않게 비워 둠). 구역 모양은 나무까지 다 둔 뒤 5) 에서
-  for (let rank = 2; rank <= 6; rank++) {
+  for (const rank of OW_RANKS) {
     const zi = data.ZONES.findIndex(z => z.rank === rank), zone = data.ZONES[zi];
     const normals = data.ENEMIES.filter(e => e.zoneIndex === zi && e.kind === 'normal' && !underNormal(e));
     if (OVERWORLD_AREAS[rank].length !== normals.length) throw new Error(`${rank}격 — 구역 ${OVERWORLD_AREAS[rank].length}개, 일반 ${normals.length}종`);
@@ -1037,12 +1035,11 @@ function overworld(data) {
     const [mx, my] = L.spot1(...OVERWORLD_MERCHANTS[zone.id]);
     npcs.push({ name: 'merchant', x: mx, y: my, zone: zone.id });
     guard(mx, my, 1, 1, 1);
+    // 그 격에 처음 들어서는 자리 — 길잡이가 데려다 줄 때 닿는 곳 (사용자 결정 2026-11-23). 서는 칸은 ui.js 의 mapEntrance 가 곁의 빈 칸으로
+    const [ex, ey] = L.spot1(...OVERWORLD_ENTRY[rank]);
+    npcs.push({ name: 'entry', x: ex, y: ey, zone: zone.id });
   }
-  // 마왕 뒤 — 관측자 곁에 문의 광장으로 가는 문 (마왕을 꺾어야 열림) · 시안의 문 그림은 155 · 156 칸 사이가 가운데
-  const king = foes.find(e => e.rank.n === 6 && e.kind === 'boss');
-  const hub = { name: 'hub', label: '문의 광장', x: Math.round(L.fc(155.5)) - 1, y: L.spot1(0, 31)[1], w: 2, h: 1, to: 'hub.overworld', opensAfter: king.id };
-  ports.push(hub);
-  guard(hub.x, hub.y, 2, 1, 2);
+  // 문의 광장으로 가는 문은 마왕성 안 왕좌 뒤 (DEMON_CASTLE — abyss 지도)
 
   // 3) 나무 · 바위 무더기 — 시안의 숲덩이 잡음이 짙은 자리에만 (덩어리 숲 — 사이는 넓게 트임)
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
@@ -1090,7 +1087,6 @@ function overworld(data) {
     }
   };
   flood(idx(sx, sy));
-  for (const u of UNDERS) { const p = ports.find(q => q.name === `${u.id}up`); flood(idx(p.x, p.y + 1)); }   // 지하를 지나 올라오는 곳 — 바깥 지도로는 이어지지 않아도 걸어서 닿는 땅 (벼랑을 뚫지 않게)
   const carve = from => {                                    // 나무 · 바위만 지나 가장 가까운 닿는 칸까지 — 그 길의 나무 · 바위를 바닥으로
     const back = new Int32Array(w * h).fill(-2), q = [from];
     back[from] = -1;
@@ -1129,7 +1125,7 @@ function overworld(data) {
   //    구역 속에 갇힌 나무 · 바위는 구역에 넣어 구멍 없이.
   //    약한 것부터 길을 따라: 들어오는 곳에서의 거리 − 보스까지의 거리가 작은 구역부터, 가장 약한 것은 들어오는 곳에서 걸어서 가장 먼저 닿는 구역
   const mids = [];                                           // 구역 들머리 [x, y] — 보물상자를 그 곁에 두지 않게
-  for (let rank = 2; rank <= 6; rank++) {
+  for (const rank of OW_RANKS) {
     const zi = data.ZONES.findIndex(z => z.rank === rank), zone = data.ZONES[zi];
     const normals = data.ENEMIES.filter(e => e.zoneIndex === zi && e.kind === 'normal' && !underNormal(e));
     const land = k => seen[k] && open(k) && L.zoneAt(k % w, (k / w) | 0) === rank && L.bio[k] !== 8 && !noArea[k];
@@ -1317,7 +1313,7 @@ function overworld(data) {
   const cellsOfRect = r => { const out = []; for (let j = 0; j < (r.h || 1); j++) for (let i = 0; i < (r.w || 1); i++) out.push([r.x + i, r.y + j]); return out; };
   const busy = [...posts.flatMap(cellsOfRect), ...ports.flatMap(cellsOfRect), ...npcs.map(n => [n.x, n.y])];
   busy.push(...mids);                                         // 구역 들머리
-  for (let rank = 2; rank <= 6; rank++) {
+  for (const rank of OW_RANKS) {
     const zi = data.ZONES.findIndex(z => z.rank === rank);
     const boss = bossSpot(zi);
     const fromEntry = walkFrom([idx(...L.spot1(...OVERWORLD_ENTRY[rank]))]);
@@ -1514,11 +1510,11 @@ function cryptMap(data, u) {
     const e = data.ENEMIES.find(q => q.name === name && q.kind === 'normal');
     if (!e || e.rank.n !== u.rank) throw new Error(`지하 ${u.id} — ${name} 이(가) ${u.rank}격 일반 몬스터가 아님`);
     const [rx, ry, rr] = rooms[i], r = Math.ceil(rr) + 1;
-    return { name, x: Math.max(1, Math.floor(rx - r)), y: Math.max(1, Math.floor(ry - r)), w: r * 2, h: r * 2, rank: u.rank, monster: e.id, zone: u.zone };
+    return { name, x: Math.max(1, Math.floor(rx - r)), y: Math.max(1, Math.floor(ry - r)), w: r * 2, h: r * 2, rank: u.rank, monster: e.id, zone: u.zone };   // extra 아님 — 지역 · 도감 셈에 들어감 (zoneMap 은 지도 이름 차례로 overworld 가 이김)
   });
   const ports = [
     { name: 'in', label: '나가기', x: 19 + OX, y: H - 1, w: 3, h: 1, to: `overworld.${u.id}`, stairs: true },
-    { name: 'up', label: u.title, x: cx, y: hy - 1, w: n, h: 1, to: `overworld.${u.id}up`, gate: true, gw: n + 4, gh: 6, opensAfter: foe.id }   // 안쪽 벽의 고딕 문 — 열리면 위로 가는 계단
+    { name: 'up', label: u.title, x: cx, y: hy - 1, w: n, h: 1, to: u.next, gate: true, gw: n + 4, gh: 6, opensAfter: foe.id }   // 안쪽 벽의 고딕 문 — 열리면 위로 가는 계단
   ];
   fill(19 + OX, H - 1, 3, 1, FLOOR); fill(cx, hy - 1, n, 1, FLOOR, T6);
   return buildTmj({ w: W, h: H, tiles, areas, posts: [post], ports, npcs: [{ name: 'start', x: 20 + OX, y: H - 2 }], look: lk, props: { title: u.title, blds: JSON.stringify(blds) } });

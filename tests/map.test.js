@@ -2056,3 +2056,32 @@ test('거인의 동굴 — 4격 큰 상자는 4격 동쪽 깊은 곳 바위 턱�
   const d2 = walk(cave, [s]);
   assert.ok([[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => d2[(chest.y + dy) * cave.w + chest.x + dx] >= 0), '걸어서 닿음');
 });
+
+test('overworld — 2~6격마다 처음 들어서는 자리(entry) 곁에 설 칸이 있고, 거기서 걸어 가장 먼저 닿는 구역이 그 격 (길잡이가 데려다 줄 때)', () => {
+  const data = loadData();
+  const m = M.parseTiled(JSON.parse(fs.readFileSync(path.join(ROOT, 'maps/overworld.tmj'), 'utf8')), 'overworld');
+  const entries = m.npcs.filter(n => n.name === 'entry');
+  assert.deepEqual(entries.map(n => n.zone), data.ZONES.filter(z => z.rank >= 2 && z.rank <= 6).map(z => z.id));
+  const inRect = (p, x, y) => x >= p.x && y >= p.y && x < p.x + (p.w || 1) && y < p.y + (p.h || 1);
+  const blocked = new Set();
+  for (const p of m.posts) for (const i of cellsOf(m, p)) blocked.add(i);
+  for (const p of m.ports) for (const i of cellsOf(m, p)) blocked.add(i);
+  for (const e of entries) {
+    let spot = null;                                   // ui.js 의 freeNear 와 같은 셈
+    for (let r = 0; r <= 6 && !spot; r++) {
+      let bd = Infinity;
+      for (let y = e.y - r; y <= e.y + r; y++) for (let x = e.x - r; x <= e.x + r; x++) {
+        if (Math.max(Math.abs(x - e.x), Math.abs(y - e.y)) !== r || x < 0 || y < 0 || x >= m.w || y >= m.h) continue;
+        const i = y * m.w + x;
+        if (m.solid[i] || m.ports.some(p => inRect(p, x, y)) || m.posts.some(p => inRect(p, x, y))) continue;
+        const d = Math.hypot(x - e.x, y - e.y);
+        if (d < bd) { bd = d; spot = { x, y }; }
+      }
+    }
+    assert.ok(spot, `${e.zone} — 설 칸이 없음`);
+    const d = walk(m, [spot.y * m.w + spot.x], blocked);
+    let best = -1, bd = Infinity;
+    m.areas.forEach((a, k) => { if (!a.zone) return; for (const i of areaCells(m, a)) if (d[i] >= 0 && d[i] < bd) { bd = d[i]; best = k; } });
+    assert.ok(best >= 0 && m.areas[best].zone === e.zone, `${e.zone} — 가장 먼저 닿는 구역이 ${best >= 0 ? m.areas[best].zone : '없음'}`);
+  }
+});
