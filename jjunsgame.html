@@ -11515,6 +11515,21 @@ const MAP_FILES = {"abyss":{"compressionlevel":-1,"type":"map","version":"1.10",
     return c3(CK.ivy[(hash(px, py, 105) * 3) | 0]);
   }
 
+  // 마왕성 빛깔 (사용자 결정 2026-11-23) — 3격 성 그림의 점 색을 재료별로 바꿈: 돌 → 검은 자줏빛 흑요석 돌(밝기 그대로 단계만), 파란 기와 → 검붉은 기와,
+  // 풀 · 담쟁이 → 핏빛 덩굴, 창 · 활 쏘는 틈 → 붉게 달아오른 빛, 금 · 밝은 장식 → 어두운 청동, 붉은 깃발 → 짙은 핏빛, 나무 → 검게 그을린 나무
+  let castleRaw = false;                                                            // 이번 점이 성 둘레 땅이면 바꾸지 않음
+  const DEMON_STONE = ['#08060c', '#17101c', '#2a1e30', '#3e2e46', '#54405c', '#6a5272'], DEMON_ROOF = ['#0c0406', '#2a0c12', '#4a141e', '#6a2230'];
+  const ramp = (pal, t) => { t = Math.max(0, Math.min(0.999, t)) * (pal.length - 1); const i = Math.floor(t); return mix(c3(pal[i]), c3(pal[i + 1]), t - i); };
+  function demonTone(c) {
+    const [r, g, b] = c, mx = Math.max(r, g, b), mn = Math.min(r, g, b), lum = (0.3 * r + 0.59 * g + 0.11 * b) / 255;
+    if (Math.abs(r - 0x14) < 3 && Math.abs(g - 0x10) < 3 && Math.abs(b - 0x18) < 3) return c3('#b02a18');   // 창 · 틈 (CK.win) — 붉은 빛
+    if (g - Math.max(r, b) > 18) return mix(c3('#1a060c'), c3('#6a1824'), Math.min(1, lum * 2.4));  // 풀 · 담쟁이 → 핏빛 덩굴
+    if (b > r * 1.08 && b >= g && mx - mn > 8) return ramp(DEMON_ROOF, lum * 1.55);                       // 파란 기와 → 검붉은 기와
+    if (r > g * 1.5 && r > b * 1.3) return [r * 0.8, g * 0.3, b * 0.42];                                    // 붉은 깃발 → 짙은 핏빛
+    if (r > 150 && g > 100 && b < 110) return mix(c3('#2e1c0c'), c3('#8a5a26'), Math.min(1, lum * 1.2));    // 금 · 밝은 장식 → 어두운 청동
+    if (r > b * 1.35 && g > b * 1.1 && lum < 0.42 && mx - mn > 14) return mix(c3('#0e0806'), c3('#3a2418'), Math.min(1, lum * 2.6));   // 나무 → 그을린 나무
+    return ramp(DEMON_STONE, lum * 1.25);                                                                   // 돌 → 검은 자줏빛 돌
+  }
   function castleGeom(B) {
     const pw = B.w * P, ph = B.h * P, M = 14, WT = 26, FACE = 40;
     const d0 = B.door ? (B.door.x - B.x0) * P : (pw >> 1) - 32, d1 = B.door ? d0 + B.door.w * P : d0 + 64;
@@ -11523,6 +11538,7 @@ const MAP_FILES = {"abyss":{"compressionlevel":-1,"type":"map","version":"1.10",
     G.front = [{ cx: d0 - 16, cy: ph - 69, r: rg, body: 62 }, { cx: d1 + 16, cy: ph - 69, r: rg, body: 62 },
                { cx: r + 1, cy: ph - 71, r, body: 61 }, { cx: pw - r - 1, cy: ph - 71, r, body: 61 }];
     G.back = [{ cx: r + 1, cy: 28, r, body: 47 }, { cx: pw - r - 1, cy: 28, r, body: 47 }];
+    G.demon = !!B.door && B.door.name === 'demoncastle';                             // 6격 마왕성 — 같은 생김새를 마족 빛깔로 (demonTone)
     G.turrets = [{ cx: kx0 + 2, cy: G.ry1 - 8, r: 18, body: G.kyf - (G.ry1 - 8) - 4 }, { cx: kx1 - 2, cy: G.ry1 - 8, r: 18, body: G.kyf - (G.ry1 - 8) - 4 }];
     return G;
   }
@@ -11594,6 +11610,7 @@ const MAP_FILES = {"abyss":{"compressionlevel":-1,"type":"map","version":"1.10",
       if (px < M + WT + 6 || py < nTop + NF + 6) c = mul(c, 0.8);
       return c;
     }
+    if (G.demon) { castleRaw = true; return texture(OBSID, 6, X, Y); }          // 마왕성 둘레 — 마계 땅 그대로
     return texture(GRASS, 3, X, Y);                                             // 성 둘레 — 풀
   }
   function keepPix(G, px, py, X, Y) {
@@ -11617,7 +11634,7 @@ const MAP_FILES = {"abyss":{"compressionlevel":-1,"type":"map","version":"1.10",
       let c = pick4(CK.roof, base + (hash(col, row, 99) - 0.5) * 0.3);
       if (ly === rowH - 1) c = mul(c, 0.72); else if (sx === 0) c = mul(c, 0.82); else if (ly === 0) c = mix(c, WHITE, 0.06);
       if (hash(col, row, 100) < 0.008) c = mul(c, 0.45);                           // 빠진 기와 (드물게)
-      if (fbm(X * 0.02, Y * 0.02, 101) > 0.7) c = mix(c, c3('#4e5a3a'), 0.35);       // 이끼
+      if (!G.demon && fbm(X * 0.02, Y * 0.02, 101) > 0.7) c = mix(c, c3('#4e5a3a'), 0.35);   // 이끼 (마왕성 지붕엔 없음)
       return c;
     }
     if (px < kx0 || px >= kx1 || py < ry1 || py >= kyf) return null;              // 앞 벽면
@@ -13460,7 +13477,9 @@ const MAP_FILES = {"abyss":{"compressionlevel":-1,"type":"map","version":"1.10",
     if (B.kind) return cityBuilding(B, X - B.x0 * P, Y - B.y0 * P, X, Y);   // 도시의 건물
     if (B.door && B.door.name === 'witchhut') { if (!B.G) B.G = hutGeom(B); return hutPix(B.G, X - B.x0 * P, Y - B.y0 * P, X, Y); }   // 숲의 마녀의 오두막
     if (!B.G) B.G = castleGeom(B);
-    return castlePix(B.G, X - B.x0 * P, Y - B.y0 * P, X, Y);
+    castleRaw = false;
+    const cc = castlePix(B.G, X - B.x0 * P, Y - B.y0 * P, X, Y);
+    return B.G.demon && !castleRaw ? demonTone(cc) : cc;
   }
 
   // ---------- 가게 안 (지도 속성 store — 헌터백화점 1층, tools/map-gen.js 의 DEPT) ----------
