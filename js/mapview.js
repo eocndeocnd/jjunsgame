@@ -383,7 +383,7 @@ const MapView = (function () {
           continue;
         }
         if (port.gate && typeof MapArt !== 'undefined') {     // 고딕 묘실 문 — 문 칸을 아래 가운데로 gw × gh 칸 (닫히면 해골 문짝, 열리면 계단)
-          const gw = +port.gw, gh = +port.gh, spr = MapArt.gothicGate(gw, gh, port.w, open ? (m.id === 'overworld' ? 'down' : 'up') : 'closed');
+          const gw = +port.gw, gh = +port.gh, spr = MapArt.gothicGate(gw, gh, port.w, open ? (port.gdir || (m.id === 'overworld' ? 'down' : 'up')) : 'closed');   // gdir — 문 너머 계단 쪽 (6격 마계의 묘실 문은 내려감)
           if (port.ww) {                                  // 문 뒤 바위턱 면 — 문보다 높게 (높은 땅 밑동에 붙은 문)
             const ww = +port.ww, wh = +port.wh, rw = MapArt.rockWall(ww, wh);
             if (rw) { ctx.imageSmoothingEnabled = false; ctx.drawImage(rw, Math.round(ox + (port.x + port.w / 2 - ww / 2) * T), Math.round(oy + (port.y + 1 - wh) * T), ww * T, wh * T); }

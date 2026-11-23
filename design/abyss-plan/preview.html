@@ -1,0 +1,98 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>6격 새 지도 배치 시안</title>
+<!-- 6격 「마계의 왕좌」 새 지도 배치 시안 (게임에는 아직 안 들어감 — 사용자 결정을 받으면 tools/map-gen.js 의 따로 뽑는 지도로).
+     가로는 지금 6격 땅 폭(141칸) 그대로 · 세로로 길게(280칸). 아래(남쪽) 지하 묘실 출구에서 위(북쪽)로 갈수록 센 상대:
+     일반 구역은 좌우로 번갈아 · 칠죄종은 길 옆 높은 턱(곁길로 찾아가야 만남, 길을 막지 않음) · 끝에 세계수를 먹는 벌레가 마왕성 문을 막고, 성 안에 마왕. -->
+<style>
+  body { margin: 0; background: #1a1418; color: #eee; font: 13px system-ui; }
+  canvas { display: block; image-rendering: pixelated; height: 760px; }
+</style>
+<canvas id="c"></canvas>
+<script src="../../js/mobsprites.js"></script>
+<script>
+const W = 141, H = 280, S = 3, cx = 70;
+const cv = document.getElementById('c'); cv.width = W * S; cv.height = H * S;
+const g = cv.getContext('2d');
+const hash = (x, y, s) => { const v = Math.sin(x * 127.1 + y * 311.7 + s * 74.7) * 43758.5453; return v - Math.floor(v); };
+const vnoise = (x, y, s) => { const x0 = Math.floor(x), y0 = Math.floor(y), fx = x - x0, fy = y - y0, sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy);
+  const a = hash(x0, y0, s), b = hash(x0 + 1, y0, s), c = hash(x0, y0 + 1, s), d = hash(x0 + 1, y0 + 1, s); return (a + (b - a) * sx) + ((c + (d - c) * sx) - (a + (b - a) * sx)) * sy; };
+
+// ---- 배치 (칸 좌표, 위가 북쪽) ----
+const ROAD = [[70, 270], [66, 252], [58, 238], [76, 222], [64, 204], [80, 186], [62, 168], [78, 150], [62, 132], [80, 114], [64, 96], [76, 78], [70, 58], [70, 48]];
+const RIVERS = [   // 용암 강 — 세기 층 사이를 굽이치며 가로지름, 건널 곳(gaps)은 둘 이상 (길 하나만 막지 않게)
+  { y: 216, amp: 4, ph: 0.3, gaps: [64, 104] },
+  { y: 170, amp: 5, ph: 1.7, gaps: [30, 70] },
+  { y: 134, amp: 4, ph: 3.1, gaps: [70, 110] },
+  { y: 80, amp: 3, ph: 4.4, gaps: [30, 72] }
+];
+const AREAS = [   // 일반 구역 — 길 쪽으로 넓게 (가운데 길을 품음, 사용자 결정 2026-11-23). 좌우로 번갈아 치우침 · 북쪽일수록 셈
+  { id: 'archdemon', name: '아크데몬', x: 52, y: 256, rx: 30, ry: 12 },
+  { id: 'abysstentacle', name: '심연의 촉수', x: 88, y: 230, rx: 30, ry: 12 },
+  { id: 'elderdragon', name: '고대룡', x: 56, y: 194, rx: 30, ry: 14 },
+  { id: 'demongeneral', name: '마신장', x: 58, y: 98, rx: 30, ry: 12 },
+  { id: 'apocalypsebeast', name: '종말의 짐승', x: 84, y: 64, rx: 30, ry: 11 }
+];
+const SINS = [   // 칠죄종 — 길 옆 높은 턱(불꽃 받침), 곁길로 찾아감. 좌우로 번갈아 · 북쪽일수록 셈 (세기 차례: 나태 < 질투 < 색욕 < 폭식 < 오만 < 분노 < 탐욕)
+  { id: 'sinsloth', name: '나태', x: 26, y: 224 },
+  { id: 'sinenvy', name: '질투', x: 108, y: 210 },
+  { id: 'sinlust', name: '색욕', x: 106, y: 182 },
+  { id: 'singluttony', name: '폭식', x: 30, y: 160 },
+  { id: 'sinpride', name: '오만', x: 106, y: 146 },
+  { id: 'sinwrath', name: '분노', x: 32, y: 122 },
+  { id: 'singreed', name: '탐욕', x: 110, y: 112 }
+];
+const CASTLE = { x0: 34, x1: 106, y0: 8, y1: 46, gate: 70 };   // 마왕성 — 3격 버려진 성처럼 들어가는 건물 (문 한가운데를 벌레가 막음)
+const ENTRY = { x: 70, y: 272 };                               // 지하 묘실에서 올라오는 바위 둔덕의 문
+
+// ---- 땅 ----
+const half = y => (y < 50 ? 58 : 64) + (vnoise(y * 0.06, 1, 3) - 0.5) * 12 - (y > 262 ? (y - 262) * 3 : 0);
+const land = (x, y) => Math.abs(x + 0.5 - cx) < half(y) && y > 2 && y < H - 2;
+const riverAt = (r, x) => r.y + Math.sin(x * 0.07 + r.ph) * r.amp + (vnoise(x * 0.1, r.y, 7) - 0.5) * 3;
+const inRiver = (x, y) => RIVERS.some(r => Math.abs(y - riverAt(r, x)) < 2.2 && !r.gaps.some(gx => Math.abs(x - gx) < 4));
+const onBridge = (x, y) => RIVERS.some(r => Math.abs(y - riverAt(r, x)) < 2.6 && r.gaps.some(gx => Math.abs(x - gx) < 4));
+const segDist = (pts, x, y) => { let best = 1e9; for (let i = 0; i + 1 < pts.length; i++) { const [ax, ay] = pts[i], [bx, by] = pts[i + 1], dx = bx - ax, dy = by - ay, t = Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / (dx * dx + dy * dy))); best = Math.min(best, Math.hypot(x - ax - dx * t, y - ay - dy * t)); } return best; };
+// 곁길 — 길에서 가장 가까운 점에서 그 정예의 턱 계단까지
+const SIDE = SINS.map(s => { let bp = null, bd = 1e9; for (let i = 0; i + 1 < ROAD.length; i++) for (let k = 0; k <= 10; k++) { const t = k / 10, px = ROAD[i][0] + (ROAD[i + 1][0] - ROAD[i][0]) * t, py = ROAD[i][1] + (ROAD[i + 1][1] - ROAD[i][1]) * t, d = Math.hypot(px - s.x, py - s.y); if (d < bd) { bd = d; bp = [px, py]; } } return [bp, [s.x + (bp[0] > s.x ? 6 : -6) * 0.2, s.y + 8]]; });
+const ledge = (x, y) => SINS.find(s => Math.hypot((x + 0.5 - s.x) / 9, (y + 0.5 - s.y) / 6.5) < 1);
+
+const img = g.createImageData(W * S, H * S);
+const put = (x, y, c) => { for (let j = 0; j < S; j++) for (let i = 0; i < S; i++) { const k = ((y * S + j) * W * S + x * S + i) * 4; img.data[k] = c[0]; img.data[k + 1] = c[1]; img.data[k + 2] = c[2]; img.data[k + 3] = 255; } };
+const hex = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+  let c;
+  if (!land(x, y)) c = hex('#0a0810');
+  else if (x >= CASTLE.x0 && x < CASTLE.x1 && y >= CASTLE.y0 && y < CASTLE.y1) c = hex(y > CASTLE.y1 - 6 ? '#2a2030' : '#3a2e44');
+  else if (ledge(x, y)) { const s = ledge(x, y), e = Math.hypot((x + 0.5 - s.x) / 9, (y + 0.5 - s.y) / 6.5); c = hex(e > 0.82 && y > s.y ? '#1c1424' : '#4a3a5a'); }
+  else if (onBridge(x, y)) c = hex('#5a5260');
+  else if (inRiver(x, y)) c = hex(hash(x, y, 9) < 0.3 ? '#ffb040' : '#e0601e');
+  else if (segDist(ROAD, x + 0.5, y + 0.5) < 2.2 || SIDE.some(p => segDist(p, x + 0.5, y + 0.5) < 1.3)) c = hex('#4e4248');
+  else { const v = vnoise(x * 0.2, y * 0.2, 5); c = hex(v > 0.62 ? '#2e2436' : v < 0.3 ? '#1e1826' : '#261e2e'); if (hash(x, y, 11) < 0.02) c = hex('#6a4a8a'); }
+  put(x, y, c);
+}
+g.putImageData(img, 0, 0);
+
+// 구역 — 반투명 테두리
+const COL = ['#f0c060', '#80d0ff', '#ff9070', '#c0a0ff', '#ff6060'];
+AREAS.forEach((a, i) => {
+  g.save(); g.globalAlpha = 0.18; g.fillStyle = COL[i]; g.beginPath(); g.ellipse(a.x * S, a.y * S, a.rx * S, a.ry * S, 0, 0, 7); g.fill(); g.restore();
+  g.strokeStyle = COL[i]; g.lineWidth = 1.5; g.setLineDash([5, 4]); g.beginPath(); g.ellipse(a.x * S, a.y * S, a.rx * S, a.ry * S, 0, 0, 7); g.stroke(); g.setLineDash([]);
+});
+// 성 — 탑 넷 · 가운데 문
+g.fillStyle = '#4a3c58'; for (const [tx, ty] of [[CASTLE.x0, CASTLE.y0], [CASTLE.x1 - 8, CASTLE.y0], [CASTLE.x0, CASTLE.y1 - 10], [CASTLE.x1 - 8, CASTLE.y1 - 10]]) g.fillRect(tx * S, ty * S, 8 * S, 10 * S);
+g.fillStyle = '#0a0610'; g.fillRect((CASTLE.gate - 2) * S, (CASTLE.y1 - 6) * S, 4 * S, 6 * S);
+g.fillStyle = '#c04040'; g.fillRect((CASTLE.x0 + 30) * S, (CASTLE.y0 + 10) * S, 12 * S, 2 * S);
+// 들어오는 곳
+g.fillStyle = '#3a3040'; g.fillRect((ENTRY.x - 4) * S, (ENTRY.y - 4) * S, 9 * S, 4 * S);
+g.fillStyle = '#0a0610'; g.fillRect((ENTRY.x - 1) * S, (ENTRY.y - 2) * S, 3 * S, 2 * S);
+// 몬스터 도트
+const sprite = (id, x, y, cells) => { const s = MOB_SPRITES[id]; if (!s) return; const n = s.a.length, z = cells * S / n; s.a.forEach((row, j) => [...row].forEach((ch, i) => { if (ch !== '.') { g.fillStyle = s.pal[ch]; g.fillRect(x * S + i * z, y * S + j * z, z + 0.4, z + 0.4); } })); };
+const label = (t, x, y, col) => { g.font = 'bold 12px system-ui'; g.textAlign = 'center'; g.fillStyle = '#000'; g.fillText(t, x * S + 1, y * S + 1); g.fillStyle = col; g.fillText(t, x * S, y * S); };
+AREAS.forEach((a, i) => { sprite(a.id, a.x - 3, a.y - 5, a.id === 'archdemon' || a.id === 'demongeneral' ? 4 : 5); label(a.name, a.x, a.y + 6, COL[i]); });
+SINS.forEach(s => { sprite(s.id, s.x - 3, s.y - 5, s.id === 'singluttony' ? 6 : s.id === 'sinenvy' || s.id === 'sinlust' ? 4 : 5); label('칠죄종 · ' + s.name, s.x, s.y + 9, '#ffd0ff'); });
+sprite('worldworm', CASTLE.gate - 4, CASTLE.y1 - 2, 8); label('세계수를 먹는 벌레 (성문을 막음)', CASTLE.gate, CASTLE.y1 + 11, '#b0ff90');
+label('마왕성 — 들어가면 안에 마왕 · 관측자 · 문의 광장 문', CASTLE.gate, CASTLE.y0 + 7, '#ffb0b0');
+label('지하 묘실에서 올라오는 문', ENTRY.x, ENTRY.y + 6, '#ddd');
+// 북쪽 화살표 · 세기
+g.fillStyle = '#ddd'; g.font = '11px system-ui'; g.textAlign = 'left'; g.fillText('↑ 북쪽 = 센 상대', 4, 14);
+</script>

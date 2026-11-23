@@ -443,24 +443,26 @@ const cellsOf = (m, a) => { const out = []; for (let y = a.y; y < a.y + a.h; y++
 // 구역의 칸 — 다각형 구역은 감싸는 네모가 아니라 그 안에 드는 칸만
 const areaCells = (m, a) => cellsOf(m, a).filter(i => m.areaAt[i] === a.index);
 
-test('overworld — 2~6격 몬스터가 모두 한 번씩, 구역 39개 · 숲 남쪽 끝 구멍으로 지하수로에', () => {
+test('overworld — 2~5격 몬스터가 모두 한 번씩(지하 묘실의 것 · 6격 마계는 따로), 구역 32개 · 숲 남쪽 끝 구멍으로 지하수로에 · 대성당 앞뜰 묘실 문으로 지하에', () => {
   const data = loadData();
   const m = M.parseTiled(JSON.parse(fs.readFileSync(path.join(ROOT, 'maps/overworld.tmj'), 'utf8')), 'overworld');
-  const foes = data.ENEMIES.filter(e => e.rank.n >= 2 && e.rank.n <= 6);
+  const under = new Set(gen.UNDERS.flatMap(u => u.rooms));                               // 지하 묘실에만 사는 일반 몬스터
+  const foes = data.ENEMIES.filter(e => e.rank.n >= 2 && e.rank.n <= 5);
   const areaMonsters = m.areas.filter(a => a.monster).map(a => a.monster).sort();
-  assert.deepEqual(areaMonsters, foes.filter(e => e.kind === 'normal').map(e => e.id).sort());
-  const elsewhere = [...gen.SECRET_ROOMS.map(r => r.hidden), ...gen.BUILDINGS.map(b => b.boss)]   // 숨은 굴에 따로 선 히든 · 건물 안 보스
+  assert.deepEqual(areaMonsters, foes.filter(e => e.kind === 'normal' && !under.has(e.name)).map(e => e.id).sort());
+  const elsewhere = [...gen.SECRET_ROOMS.map(r => r.hidden), ...gen.BUILDINGS.map(b => b.boss), ...gen.UNDERS.map(u => u.boss)]   // 숨은 굴의 히든 · 건물 안 보스 · 지하의 보스
     .map(name => data.ENEMIES.find(e => e.name === name).id);
   assert.deepEqual(m.posts.map(p => p.enemy).sort(), foes.filter(e => e.kind !== 'normal' && !elsewhere.includes(e.id)).map(e => e.id).sort());
-  assert.equal(areaMonsters.length, 39);
+  assert.equal(areaMonsters.length, 32);
   assert.deepEqual(m.ports.map(p => [p.to, p.opensAfter, !!p.hole]),
-    [['sewer.out', undefined, true], ['castle.out', undefined, false], ['witchhut.out', undefined, false], ['giantcave.out', undefined, false], ['hub.overworld', 'demonking', false]]);
+    [['sewer.out', undefined, true], ['castle.out', undefined, false], ['witchhut.out', undefined, false], ['giantcave.out', undefined, false], ['crypt.in', undefined, false]]);
+  assert.ok(!m.areas.some(a => a.rank === 6) && !m.posts.some(p => data.ENEMIES.find(e => e.id === p.enemy).rank.n === 6), '6격은 따로 뽑는 지도(abyss)');
   const hole = m.ports.find(p => p.name === 'sewer');
   assert.ok(!m.solid[(hole.y - 1) * m.w + hole.x + 1] && m.solid[(hole.y + 1) * m.w + hole.x + 1], '구멍 위는 걸을 수 있는 숲, 아래는 어둠');
   assert.ok(Math.abs(m.start.x - (hole.x + 1)) <= 1 && m.start.y === hole.y - 1, '지도의 시작점은 구멍 바로 위');
-  // 길을 막는 것은 다음 격으로 가는 틈의 보스 둘과 세계수를 먹는 벌레뿐 (숲과 왕국은 한 땅이라 트롤 킹은 막지 않음) — 크기는 data.js 그대로
+  // 길을 막는 것은 다음 격으로 가는 틈의 거인왕 · 트롤 부락의 골짜기를 막는 트롤 킹뿐 — 크기는 data.js 그대로
   const blockers = m.posts.filter(p => p.blocks);
-  assert.deepEqual(blockers.map(p => p.enemy).sort(), ['giantking', 'lichking', 'trollking', 'worldworm']);
+  assert.deepEqual(blockers.map(p => p.enemy).sort(), ['giantking', 'trollking']);
   const sizeOf = id => data.ENEMIES.find(e => e.id === id).size;
   assert.ok(blockers.every(p => p.w === sizeOf(p.enemy) && p.h === sizeOf(p.enemy)));
   assert.ok(blockers.some(p => p.w > 3), '큰 보스가 막는 틈은 그만큼 넓음');
@@ -469,7 +471,7 @@ test('overworld — 2~6격 몬스터가 모두 한 번씩, 구역 39개 · 숲 �
 test('overworld — 같은 격 구역끼리는 보스 없이 걸어서 이어지고, 숲 · 고원은 넓게 트였다', () => {
   const m = M.parseTiled(JSON.parse(fs.readFileSync(path.join(ROOT, 'maps/overworld.tmj'), 'utf8')), 'overworld');
   const posts = new Set(m.posts.flatMap(p => cellsOf(m, p)));
-  for (let rank = 2; rank <= 6; rank++) {
+  for (let rank = 2; rank <= 5; rank++) {
     const mine = m.areas.filter(a => a.rank === rank), first = mine[0];
     const d = walk(m, [first.mid.y * m.w + first.mid.x], posts);
     for (const a of mine) assert.ok(areaCells(m, a).some(i => d[i] >= 0), `${rank}격 ${a.name} 구역`);
@@ -483,7 +485,7 @@ test('overworld — 같은 격 구역끼리는 보스 없이 걸어서 이어지
   }
 });
 
-test('overworld — 한 줄로 열린다: 구멍 앞에서 2 · 3 · 4격 → 5격(거인왕) · 6격(불사의 왕) · 왕좌의 방(벌레)', () => {
+test('overworld — 한 줄로 열린다: 구멍 앞에서 2 · 3 · 4격 → 5격(거인왕) → 대성당 앞뜰 묘실 문(지하로)', () => {
   const m = M.parseTiled(JSON.parse(fs.readFileSync(path.join(ROOT, 'maps/overworld.tmj'), 'utf8')), 'overworld');
   const start = m.start.y * m.w + m.start.x;
   const allPosts = new Set(m.posts.flatMap(p => cellsOf(m, p)));   // 큰 자리는 몸 칸 다
@@ -493,16 +495,15 @@ test('overworld — 한 줄로 열린다: 구멍 앞에서 2 · 3 · 4격 → 5�
   };
   const ranks = blocked => {                                       // 그 격의 구역 하나라도 닿는 격들
     const d = walk(m, [start], blocked);
-    return [2, 3, 4, 5, 6].filter(r => m.areas.filter(a => a.rank === r).some(a => areaCells(m, a).some(i => d[i] >= 0)));
+    return [2, 3, 4, 5].filter(r => m.areas.filter(a => a.rank === r).some(a => areaCells(m, a).some(i => d[i] >= 0)));
   };
   assert.deepEqual(ranks(allPosts), [2, 3, 4], '구멍 앞 숲에서 그대로 왕국 · 4격');
   assert.deepEqual(ranks(but('giantking')), [2, 3, 4, 5], '아치 너머 5격');
-  assert.deepEqual(ranks(but('giantking', 'lichking')), [2, 3, 4, 5, 6], '묘실 너머 6격');
-  // 문의 광장 문 — 세계수를 먹는 벌레가 막은 굴 너머 왕좌의 방
-  const port = cellsOf(m, m.ports.find(p => p.name === 'hub'));
+  // 지하 묘실로 내려가는 문 — 5격 대성당 앞뜰, 거인왕을 꺾어야 닿음
+  const port = cellsOf(m, m.ports.find(p => p.name === 'crypt'));
   const reaches = blocked => { const d = walk(m, [start], blocked); return port.some(i => d[i] >= 0); };
-  assert.ok(!reaches(but('giantking', 'lichking')), '벌레가 막음');
-  assert.ok(reaches(but('giantking', 'lichking', 'worldworm', 'demonking')), '벌레를 꺾으면 문까지');
+  assert.ok(!reaches(allPosts), '거인왕이 막음');
+  assert.ok(reaches(but('giantking')), '거인왕을 꺾으면 묘실 문까지');
   // 지도 전체가 이어져 있다
   const all = walk(m, [start]);
   assert.ok(m.areas.every(a => areaCells(m, a).filter(i => !m.solid[i]).every(i => all[i] >= 0)), '모든 구역의 걸을 수 있는 칸에 닿음');
@@ -812,7 +813,7 @@ test('숨은 굴 — 3격 보스(몰락한 왕)를 꺾으면 성 안 바로 뒤�
 test('문의 광장 — 일곱 장의 문은 그 앞 격 보스를 꺾어야 열리고, 마왕의 성으로 가는 문은 늘 열림 · 모두 걸어서 닿음', () => {
   const data = loadData();
   const hub = M.parseTiled(JSON.parse(fs.readFileSync(path.join(ROOT, 'maps/hub.tmj'), 'utf8')), 'hub');
-  const over = M.parseTiled(JSON.parse(fs.readFileSync(path.join(ROOT, 'maps/overworld.tmj'), 'utf8')), 'overworld');
+  const castle = M.parseTiled(JSON.parse(fs.readFileSync(path.join(ROOT, 'maps/demoncastle.tmj'), 'utf8')), 'demoncastle');
   assert.equal(hub.props.title, '문의 광장');
   assert.equal(hub.areas.length, 0, '몬스터 없음');
   const bossOf = rank => data.ENEMIES.find(e => e.rank.n === rank && e.kind === 'boss').id;
@@ -824,9 +825,9 @@ test('문의 광장 — 일곱 장의 문은 그 앞 격 보스를 꺾어야 열
     assert.equal(p.zone, data.ZONES.find(z => z.rank === d.first).id);
   }
   const back = hub.ports.find(p => p.name === 'overworld');
-  assert.equal(back.to, 'overworld.hub');
+  assert.equal(back.to, 'demoncastle.hub');
   assert.equal(back.opensAfter, undefined);
-  assert.ok(over.ports.some(p => p.name === 'hub'), '돌아갈 곳 — overworld 의 hub 문');
+  assert.ok(castle.ports.some(p => p.name === 'hub' && p.to === 'hub.overworld'), '돌아갈 곳 — 마왕성 안 왕좌 뒤의 문');
   // 시작점에서 모든 문의 바로 앞(아래 칸)까지 걸어서 닿음
   const d = walk(hub, [hub.start.y * hub.w + hub.start.x]);
   for (const p of hub.ports) {
@@ -845,7 +846,7 @@ test('지도 전부 — 스무 지역이 저마다 한 장에만, 296마리가 �
   const zoneMaps = {}, normals = [], posts = [];
   for (const name of allMapNames()) {
     const m = loadMap(name);
-    for (const a of m.areas) if (a.zone && !a.extra) (zoneMaps[a.zone] = zoneMaps[a.zone] || new Set()).add(name);
+    for (const a of m.areas) if (a.zone && !a.extra && !gen.UNDERS.some(u => u.id === name)) (zoneMaps[a.zone] = zoneMaps[a.zone] || new Set()).add(name);   // 지하 묘실은 5격의 둘째 장 (그 지역의 지도는 바깥 지도)
     normals.push(...m.areas.filter(a => a.monster && !a.extra).map(a => a.monster));   // extra — 동굴에 한 번 더 둔 구역
     posts.push(...m.posts.map(p => p.enemy));
   }
@@ -1136,7 +1137,7 @@ test('도시 — 옛 동네(집 앞에서 시작 · 골목 막다른 곳의 이�
   const oldBlds = checkTown(old, dOld), cityBlds = checkTown(city, dCity);
   assert.deepEqual(old.ports.filter(q => q.door).map(q => q.name).sort(), ['blackmarket', 'home', 'myguild']);
   assert.deepEqual(city.ports.filter(q => q.door).map(q => q.name).sort(), ['association', 'dept', 'guild1', 'guild2', 'guild3', 'guild4', 'home2', 'myguild2']);
-  assert.deepEqual(city.ports.filter(q => q.door && q.to).map(q => q.name).sort(), ['association', 'dept', 'home2', 'myguild2'], '열린 문은 헌터 협회 · 헌터백화점 · 내 길드(4단계부터 — unlock guildCity) · 새 집(산 뒤 — unlock home2)');
+  assert.deepEqual(city.ports.filter(q => q.door && q.to).map(q => q.name).sort(), ['association', 'dept', 'guild1', 'guild2', 'guild3', 'guild4', 'home2', 'myguild2'], '열린 문은 헌터 협회 · 헌터백화점 · 4대 길드(접수 창구) · 내 길드(4단계부터 — unlock guildCity) · 새 집(산 뒤 — unlock home2)');
   assert.deepEqual(old.ports.filter(q => q.door && q.to).map(q => q.name), ['home', 'myguild', 'blackmarket'], '옛 동네에서 열리는 문은 집 · 내 길드 · 암시장 (길드 · 암시장은 게임이 잠금 — unlock guild · bm)');
   const bmDoor = old.ports.find(q => q.name === 'blackmarket'), bm = loadMap('bm');
   assert.deepEqual([bmDoor.to, bmDoor.unlock, bm.ports.find(q => q.name === 'out').to], ['bm.out', 'bm', 'oldtown.blackmarket']);
@@ -2057,11 +2058,12 @@ test('거인의 동굴 — 4격 큰 상자는 4격 동쪽 깊은 곳 바위 턱�
   assert.ok([[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => d2[(chest.y + dy) * cave.w + chest.x + dx] >= 0), '걸어서 닿음');
 });
 
-test('overworld — 2~6격마다 처음 들어서는 자리(entry) 곁에 설 칸이 있고, 거기서 걸어 가장 먼저 닿는 구역이 그 격 (길잡이가 데려다 줄 때)', () => {
+test('2~6격마다 처음 들어서는 자리(entry) 곁에 설 칸이 있고, 거기서 걸어 가장 먼저 닿는 구역이 그 격 (길잡이가 데려다 줄 때) — 2~5격은 바깥 지도 · 6격은 마계(abyss)', () => {
   const data = loadData();
-  const m = M.parseTiled(JSON.parse(fs.readFileSync(path.join(ROOT, 'maps/overworld.tmj'), 'utf8')), 'overworld');
+  for (const [name, ranks] of [['overworld', [2, 3, 4, 5]], ['abyss', [6]]]) {
+  const m = M.parseTiled(JSON.parse(fs.readFileSync(path.join(ROOT, `maps/${name}.tmj`), 'utf8')), name);
   const entries = m.npcs.filter(n => n.name === 'entry');
-  assert.deepEqual(entries.map(n => n.zone), data.ZONES.filter(z => z.rank >= 2 && z.rank <= 6).map(z => z.id));
+  assert.deepEqual(entries.map(n => n.zone), data.ZONES.filter(z => ranks.includes(z.rank)).map(z => z.id));
   const inRect = (p, x, y) => x >= p.x && y >= p.y && x < p.x + (p.w || 1) && y < p.y + (p.h || 1);
   const blocked = new Set();
   for (const p of m.posts) for (const i of cellsOf(m, p)) blocked.add(i);
@@ -2084,4 +2086,53 @@ test('overworld — 2~6격마다 처음 들어서는 자리(entry) 곁에 설 �
     m.areas.forEach((a, k) => { if (!a.zone) return; for (const i of areaCells(m, a)) if (d[i] >= 0 && d[i] < bd) { bd = d[i]; best = k; } });
     assert.ok(best >= 0 && m.areas[best].zone === e.zone, `${e.zone} — 가장 먼저 닿는 구역이 ${best >= 0 ? m.areas[best].zone : '없음'}`);
   }
+  }
+});
+
+test('지하 묘실 — 들어온 계단에서 데몬 로드 · 발록의 방을 지나 신전의 불사의 왕까지, 뒤의 고딕 문은 불사의 왕을 꺾어야 열려 6격 마계로', () => {
+  const m = loadMap('crypt');
+  assert.deepEqual(m.areas.map(a => a.monster).sort(), ['balrog', 'demonlord']);
+  const boss = m.posts.find(p => p.enemy === 'lichking');
+  assert.ok(boss, '신전의 불사의 왕');
+  const up = m.ports.find(p => p.name === 'up');
+  assert.equal(up.to, 'abyss.in');
+  assert.equal(up.opensAfter, 'lichking');
+  const d = walk(m, [m.start.y * m.w + m.start.x], new Set(cellsOf(m, up)));          // 닫힌 문은 벽과 같음
+  for (const a of m.areas) assert.ok(areaCells(m, a).some(i => d[i] >= 0), `${a.name} 방에 닿음`);
+  const near = []; for (let x = boss.x; x < boss.x + boss.w; x++) near.push((boss.y + boss.h) * m.w + x);
+  assert.ok(near.some(i => d[i] >= 0), '불사의 왕 앞에 닿음');
+});
+
+test('6격 마계(abyss) — 남쪽 묘실 문에서 북쪽으로 갈수록 센 상대 · 칠죄종은 턱 위(길을 막지 않음) · 벌레가 막은 마왕성 문 · 성 안에 마왕 · 관측자 · 문의 광장 문', () => {
+  const data = loadData();
+  const m = loadMap('abyss');
+  const zi = data.ZONES.findIndex(z => z.rank === 6), foes = data.ENEMIES.filter(e => e.zoneIndex === zi);
+  assert.deepEqual(m.areas.map(a => a.monster).sort(), foes.filter(e => e.kind === 'normal').map(e => e.id).sort());
+  const onMap = foes.filter(e => e.kind === 'elite').map(e => e.id).sort();
+  assert.deepEqual(m.posts.map(p => p.enemy).sort(), onMap, '정예 여덟(칠죄종 · 벌레) — 마왕 · 관측자는 성 안');
+  // 북쪽(위)으로 갈수록 셈 — 일반 구역 · 칠죄종 각각 세기 차례대로 위로
+  const lv = id => data.ENEMIES.find(e => e.id === id).level;
+  const midY = a => areaCells(m, a).reduce((s, i) => s + ((i / m.w) | 0), 0) / areaCells(m, a).length;
+  const byLv = [...m.areas].sort((a, b) => lv(a.monster) - lv(b.monster));
+  for (let i = 1; i < byLv.length; i++) assert.ok(midY(byLv[i]) < midY(byLv[i - 1]), `${byLv[i].name} 이(가) ${byLv[i - 1].name} 보다 북쪽`);
+  const sins = m.posts.filter(p => p.enemy.startsWith('sin')).sort((a, b) => lv(a.enemy) - lv(b.enemy));
+  for (let i = 1; i < sins.length; i++) assert.ok(sins[i].y < sins[i - 1].y, `${sins[i].name} 이(가) ${sins[i - 1].name} 보다 북쪽`);
+  assert.ok(sins.every(p => !p.blocks), '칠죄종은 길을 막지 않음');
+  // 들어서는 곳에서 — 칠죄종을 그대로 두고도 모든 구역 · 칠죄종 · 벌레 앞에 닿고, 마왕성 문은 벌레를 꺾어야 닿음
+  const start = m.start.y * m.w + m.start.x, gate = m.ports.find(p => p.name === 'demoncastle'), worm = m.posts.find(p => p.enemy === 'worldworm');
+  assert.ok(worm.blocks && worm.y === gate.y + 1 && worm.x === gate.x, '벌레가 마왕성 문 바로 앞을 막음');
+  const posts = new Set(m.posts.flatMap(p => cellsOf(m, p)));
+  const d = walk(m, [start], posts);
+  for (const a of m.areas) assert.ok(areaCells(m, a).some(i => d[i] >= 0), `${a.name} 구역`);
+  assert.ok(!cellsOf(m, gate).some(i => d[i] >= 0), '벌레를 꺾기 전엔 마왕성 문에 못 닿음');
+  const d2 = walk(m, [start], new Set(m.posts.filter(p => p !== worm).flatMap(p => cellsOf(m, p))));
+  assert.ok(cellsOf(m, gate).some(i => d2[i] >= 0), '벌레를 꺾으면 마왕성 문까지');
+  assert.deepEqual(m.ports.find(p => p.name === 'in').to, 'crypt.up');
+  // 마왕성 안 — 마왕 · 관측자, 왕좌 뒤 문의 광장 문(마왕을 꺾어야 열림), 나가는 문은 마계로
+  const c = loadMap('demoncastle');
+  assert.deepEqual(c.posts.map(p => p.enemy).sort(), ['demonking', 'observer']);
+  const hub = c.ports.find(p => p.name === 'hub');
+  assert.equal(hub.to, 'hub.overworld');
+  assert.equal(hub.opensAfter, 'demonking');
+  assert.equal(c.ports.find(p => p.name === 'out').to, 'abyss.demoncastle');
 });

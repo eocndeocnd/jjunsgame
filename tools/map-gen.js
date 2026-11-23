@@ -1520,6 +1520,172 @@ function cryptMap(data, u) {
   return buildTmj({ w: W, h: H, tiles, areas, posts: [post], ports, npcs: [{ name: 'start', x: 20 + OX, y: H - 2 }], look: lk, props: { title: u.title, blds: JSON.stringify(blds) } });
 }
 
+// ---------- 6격 마계 (abyss) — 따로 뽑는 세로로 긴 지도 (사용자 결정 2026-11-23, 시안 design/abyss-plan/preview.html) ----------
+// 처음 시안(가로는 예전 6격 땅 폭 141칸 · 세로 280칸)을 88% 로 줄임 — 124 × 240. 남쪽 끝의 바위 둔덕 문(지하 묘실 출구가 닿는 곳)에서 북쪽으로 갈수록 센 상대:
+// 일반 구역은 가운데 길을 품고 좌우로 번갈아 치우침 · 칠죄종은 길 옆 높은 턱(꾸밈은 나중에 — 턱 윗면은 그 꾸밈을 위해 비워 둠)에서
+// 곁길로 찾아가야 만남 (길을 막지 않음) · 세기 층 사이를 용암 강이 가르고 건널 곳은 강마다 둘 · 북쪽 끝 마왕성 문을 세계수를 먹는 벌레가 막음,
+// 마왕성 안(DEMON_CASTLE — 3격 성처럼 들어가는 큰 방)에 마왕 · 관측자 · 문의 광장으로 가는 문
+const ABYSS = {                                                // 처음 시안(141 × 280)을 88% 로 줄이고 빈 가장자리를 좁힘 (사용자 결정 2026-11-23 — 웅장하되 쓰지 않는 땅이 많았음)
+  W: 124, H: 240, cx: 62, half: [50, 57],                      // half — 땅의 반폭 (마왕성 줄 · 그 아래), 잡음으로 ±5
+  road: [[62, 234], [58, 222], [51, 209], [67, 195], [57, 180], [71, 164], [55, 148], [69, 132], [55, 116], [71, 100], [57, 84], [67, 69], [62, 51], [62, 44]],
+  rivers: [{ y: 190, amp: 3.5, ph: 0.3, gaps: [57, 92] }, { y: 150, amp: 4.4, ph: 1.7, gaps: [27, 62] }, { y: 118, amp: 3.5, ph: 3.1, gaps: [62, 97] }, { y: 70, amp: 2.6, ph: 4.4, gaps: [27, 64] }],
+  areas: [['아크데몬', 46, 222, 26, 10], ['심연의 촉수', 78, 202, 26, 10], ['고대룡', 50, 171, 26, 12], ['마신장', 51, 86, 26, 11], ['종말의 짐승', 74, 56, 26, 10]],
+  sins: [['칠죄종 · 나태', 23, 197], ['칠죄종 · 질투', 95, 185], ['칠죄종 · 색욕', 94, 160], ['칠죄종 · 폭식', 27, 141], ['칠죄종 · 오만', 94, 128], ['칠죄종 · 분노', 29, 107], ['칠죄종 · 탐욕', 97, 99]],
+  ledge: { rx: 8, ry: 6 },                                     // 칠죄종 턱 윗면 — 16 × 12 칸 (꾸밀 자리, 줄이지 않음)
+  castle: { x0: 30, x1: 94, y0: 7, y1: 40, door: 4 },         // 마왕성 바깥 (문은 아래 가운데, 벌레가 그 앞을 막음)
+  mound: [62, 231],                                            // 지하 묘실로 내려가는 바위 둔덕의 문 (아래 가운데)
+  merchant: [73, 234], chests: [[13, 164], [113, 113], [16, 63, 'big']]
+};
+const DEMON_CASTLE = { id: 'demoncastle', title: '마왕성', boss: '마왕', map: 'abyss', hidden: '관측자', hub: { label: '문의 광장', to: 'hub.overworld' },
+  hall: { w: 26, h: 34, aisle: 4, bossY: 5, pillarX: 4, pillarRows: [12, 19, 26], pillar: 2 } };
+function abyssMap(data) {
+  const A = ABYSS, W = A.W, H = A.H, idx = (x, y) => y * W + x, inside = (x, y) => x >= 0 && y >= 0 && x < W && y < H;
+  const n1 = valueNoise(61), n2 = valueNoise(62), hash = (x, y, s) => { const v = Math.sin(x * 127.1 + y * 311.7 + s * 74.7) * 43758.5453; return v - Math.floor(v); };
+  const tiles = new Uint8Array(W * H).fill(WALL), lk = new Uint8Array(W * H).fill(look(OL.OBSID, 6));
+  const keep = new Uint8Array(W * H), noArea = new Uint8Array(W * H), high = new Uint8Array(W * H), stairs = new Uint8Array(W * H);
+  const zi = data.ZONES.findIndex(z => z.rank === 6), zone = data.ZONES[zi], foes = data.ENEMIES.filter(e => e.zoneIndex === zi);
+  const foeNamed = name => { const e = foes.find(q => q.name === name); if (!e) throw new Error(`6격 — ${name} 이(가) 없음`); return e; };
+  // 땅 — 가운데에서 좌우로 들쭉날쭉한 폭, 아래 끝은 좁아짐
+  const half = y => (y < A.castle.y1 + 4 ? A.half[0] : A.half[1]) + (n1(y * 0.06, 1) - 0.5) * 10 - (y > H - 8 ? (y - (H - 8)) * 4 : 0);
+  for (let y = 3; y < H - 2; y++) for (let x = 1; x < W - 1; x++) if (Math.abs(x + 0.5 - A.cx) < half(y)) tiles[idx(x, y)] = FLOOR;
+  const segDist = (pts, x, y) => { let best = 1e9; for (let i = 0; i + 1 < pts.length; i++) { const [ax, ay] = pts[i], [bx, by] = pts[i + 1], dx = bx - ax, dy = by - ay, t = Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / (dx * dx + dy * dy))); best = Math.min(best, Math.hypot(x - ax - dx * t, y - ay - dy * t)); } return best; };
+  // 칠죄종 턱 — 윗면(걸을 수 있음 · 한 층 높게) · 둘레 바위 테(남쪽은 두 칸) · 남쪽 테 가운데에 바위 계단. 윗면 · 테 · 둘레는 구역 밖, 나무 없음
+  const posts = [], ledges = [];
+  for (const [name, lx, ly] of A.sins) {
+    const e = foeNamed(name), { rx, ry } = A.ledge, d = (x, y) => Math.hypot((x + 0.5 - lx) / rx, (y + 0.5 - ly) / ry);
+    for (let y = ly - ry - 4; y <= ly + ry + 4; y++) for (let x = lx - rx - 4; x <= lx + rx + 4; x++) {
+      if (!inside(x, y) || d(x, y) >= 1) continue;
+      const k = idx(x, y);
+      if (tiles[k] !== FLOOR) throw new Error(`6격 ${name} 턱 — (${x}, ${y}) 자리가 빈 땅이 아님`);
+      high[k] = 1; keep[k] = 1; noArea[k] = 1;
+    }
+    for (let y = ly - ry - 4; y <= ly + ry + 4; y++) for (let x = lx - rx - 4; x <= lx + rx + 4; x++) {
+      if (!inside(x, y) || high[idx(x, y)]) continue;
+      const k = idx(x, y), near = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, 1], [1, -1], [-1, -1], [0, -2], [1, -2], [-1, -2]].some(([ex, ey]) => inside(x + ex, y + ey) && high[idx(x + ex, y + ey)]);
+      if (near) { if (tiles[k] === FLOOR) tiles[k] = ROCK; keep[k] = 1; noArea[k] = 1; }
+      else if (Math.hypot((x + 0.5 - lx) / (rx + 3), (y + 0.5 - ly) / (ry + 3)) < 1) { keep[k] = 1; noArea[k] = 1; }
+    }
+    const sx = lx - 1;                                         // 바위 계단 — 남쪽 테를 위에서 아래로 뚫음
+    for (let x = sx; x < sx + 3; x++) { let y = ly; while (high[idx(x, y + 1)]) y++; for (let j = y + 1; tiles[idx(x, j)] === ROCK; j++) { tiles[idx(x, j)] = FLOOR; stairs[idx(x, j)] = 1; } }
+    const n = e.size, px = Math.round(lx - n / 2), py = Math.round(ly - n / 2) - 2;   // 윗면 가운데에서 조금 북쪽 (남쪽 반은 꾸밀 자리 · 계단 앞)
+    posts.push({ name: e.name, x: px, y: py, w: n, h: n, enemy: e.id, blocks: false });
+    let foot = ly; while (high[idx(lx, foot + 1)] || stairs[idx(lx, foot + 1)]) foot++;
+    ledges.push({ x: lx, y: foot + 1 });                       // 계단 밑 — 곁길이 닿는 곳
+  }
+  // 용암 강 — 건널 곳(gaps)은 둘레 땅 그대로 · 칠죄종 턱 둘레는 비켜 감
+  for (const r of A.rivers) for (let x = 0; x < W; x++) {
+    if (r.gaps.some(gx => Math.abs(x - gx) < 4)) continue;
+    const ry = r.y + Math.sin(x * 0.07 + r.ph) * r.amp + (n2(x * 0.1, r.y) - 0.5) * 3;
+    for (let y = Math.floor(ry - 2.2); y <= ry + 2.2; y++) if (inside(x, y) && tiles[idx(x, y)] === FLOOR && !noArea[idx(x, y)] && Math.abs(y + 0.5 - ry) < 2.2) { tiles[idx(x, y)] = WATER; lk[idx(x, y)] = look(OL.LAVA, 6); }
+  }
+  // 큰길 · 곁길 (흙길 칸) — 곁길은 큰길에서 가장 가까운 점부터 그 턱의 계단 밑까지
+  const sides = ledges.map(L => {
+    let bp = null, bd = 1e9;
+    for (let i = 0; i + 1 < A.road.length; i++) for (let k = 0; k <= 20; k++) {
+      const t = k / 20, px = A.road[i][0] + (A.road[i + 1][0] - A.road[i][0]) * t, py = A.road[i][1] + (A.road[i + 1][1] - A.road[i][1]) * t, dd = Math.hypot(px - L.x, py - L.y);
+      if (dd < bd) { bd = dd; bp = [px, py]; }
+    }
+    return [bp, [L.x + 0.5, L.y + 0.5]];
+  });
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const k = idx(x, y);
+    if (high[k] || stairs[k]) continue;
+    const onRoad = segDist(A.road, x + 0.5, y + 0.5) < 2.2, onSide = sides.some(p => segDist(p, x + 0.5, y + 0.5) < 1.2);
+    if (!onRoad && !onSide) continue;
+    if (tiles[k] === FLOOR || (tiles[k] === WATER && onRoad) || (tiles[k] === WATER && onSide)) { tiles[k] = ROAD; lk[k] = look(OL.DIRT, 5); keep[k] = 1; }   // 길 그림은 잿빛 진흙(5격 흙 빛) — 밝은 흙이 마계에 튐   // 강을 건너는 자리도 흙길 (용암을 메움)
+  }
+  // 마왕성 — 바깥은 건물 칸(그림은 성), 아래 가운데 문. 벌레가 문 바로 앞을 몸으로 막음
+  const C = A.castle;
+  for (let y = C.y0; y < C.y1; y++) for (let x = C.x0; x < C.x1; x++) { const k = idx(x, y); tiles[k] = WALL; lk[k] = look(BUILD, 8); noArea[k] = 1; }
+  const dx0 = A.cx - (C.door >> 1);
+  const ports = [{ name: DEMON_CASTLE.id, label: DEMON_CASTLE.title, x: dx0, y: C.y1 - 1, w: C.door, h: 1, to: `${DEMON_CASTLE.id}.out`, door: true }];
+  for (let i = 0; i < C.door; i++) tiles[idx(dx0 + i, C.y1 - 1)] = FLOOR;
+  const worm = foeNamed('세계수를 먹는 벌레');
+  posts.push({ name: worm.name, x: dx0, y: C.y1, w: worm.size, h: worm.size, enemy: worm.id, blocks: true });
+  for (let y = C.y1; y < C.y1 + worm.size + 3; y++) for (let x = dx0 - 3; x < dx0 + worm.size + 3; x++) {
+    const k = idx(x, y);
+    if (tiles[k] === WALL) throw new Error('6격 — 마왕성 문 앞이 빈 땅이 아님');
+    if (tiles[k] === WATER) tiles[k] = FLOOR;
+    keep[k] = 1; noArea[k] = 1;
+  }
+  // 지하 묘실로 내려가는 바위 둔덕의 문 (gate — 아래 가운데 세 칸이 문, 늘 열림 · 그림은 내려가는 계단)
+  {
+    const [mx, my] = A.mound, RW = 9, RH = 5;
+    for (let y = my - RH - 3; y <= my; y++) for (let x = mx - (RW >> 1) - 2; x <= mx + (RW >> 1) + 2; x++) {
+      const j = hash(x, y, 71) * 1.2, hw = y > my - RH ? RW >> 1 : (RW >> 1) - (my - RH + 1 - y) * 1.4 + j;
+      if (Math.abs(x - mx) > hw || (y === my && Math.abs(x - mx) <= 1)) continue;
+      const k = idx(x, y);
+      if (tiles[k] === WALL) continue;
+      tiles[k] = ROCK; keep[k] = 1; noArea[k] = 1;
+    }
+    for (let x = mx - 1; x <= mx + 1; x++) { tiles[idx(x, my)] = FLOOR; lk[idx(x, my)] = look(OL.OBSID, 6); }
+    ports.push({ name: 'in', label: '대성당 아래 묘실', x: mx - 1, y: my, w: 3, h: 1, to: 'crypt.up', gate: true, gw: 5, gh: 4, ww: RW, wh: RH, gdir: 'down' });
+    for (let y = my + 1; y <= my + 3; y++) for (let x = mx - 3; x <= mx + 3; x++) {
+      const k = idx(x, y);
+      if (tiles[k] === WALL) throw new Error('6격 — 묘실 문 앞이 빈 땅이 아님');
+      if (tiles[k] === ROCK) tiles[k] = FLOOR;
+      keep[k] = 1; noArea[k] = 1;
+    }
+  }
+  // 상인 · 보물상자 · 들어서는 곳
+  const npcs = [{ name: 'start', x: A.mound[0], y: A.mound[1] + 2 }, { name: 'entry', x: A.mound[0], y: A.mound[1] + 2, zone: zone.id }, { name: 'merchant', x: A.merchant[0], y: A.merchant[1], zone: zone.id }];
+  const item = (data.ITEMS.find(i => i.chest && i.rank.n === 6) || {}).id;
+  const clear3 = (x, y) => { for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) { const t = tiles[idx(x + i, y + j)]; if ((t !== FLOOR && t !== ROAD) || noArea[idx(x + i, y + j)]) return false; } return true; };
+  const near = (x0, y0) => { for (let r = 0; r <= 10; r++) for (let j = -r; j <= r; j++) for (let i = -r; i <= r; i++) if (Math.max(Math.abs(i), Math.abs(j)) === r && clear3(x0 + i, y0 + j)) return [x0 + i, y0 + j]; throw new Error(`6격 — (${x0}, ${y0}) 곁에 보물상자 둘 자리가 없음`); };
+  const chests = A.chests.map(([x0, y0, big], i) => { const [x, y] = near(x0, y0); return { name: '보물상자', x, y, chest: big ? 'r6-big' : `r6-${i + 1}`, rank: 6, ...(big ? { big: true, item } : {}) }; });   // 정한 자리 곁의 트인 땅
+  for (const q of [...npcs, ...chests]) for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) {
+    const k = idx(q.x + i, q.y + j);
+    if (tiles[k] !== FLOOR && tiles[k] !== ROAD) throw new Error(`6격 — ${q.name} (${q.x}, ${q.y}) 둘레가 빈 땅이 아님`);
+    keep[k] = 1;
+  }
+  // 나무 · 바위 — 듬성듬성 (둘레가 비어 있을 때만, 길 · 턱 · 정해진 자리 곁은 비움)
+  for (let y = 4; y < H - 4; y++) for (let x = 2; x < W - 2; x++) {
+    const k = idx(x, y);
+    if (tiles[k] !== FLOOR || keep[k]) continue;
+    const g = n1(x * 0.16, y * 0.16), r = hash(x, y, 72);
+    const alone = ![[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [1, -1], [-1, 1], [1, 1], [-2, 0], [0, -2]].some(([ex, ey]) => tiles[idx(x + ex, y + ey)] === TREE || tiles[idx(x + ex, y + ey)] === ROCK);
+    if (alone && g > 0.6 && r < 0.18) tiles[k] = TREE;
+    else if (alone && r < 0.006) tiles[k] = ROCK;
+  }
+  // 걸어서 닿는가 — 들어서는 곳에서 (닫힌 마왕성 문 · 벌레 몸은 지나가지 못함, 턱 위 · 계단도 걸음)
+  const open = k => tiles[k] === FLOOR || tiles[k] === ROAD;
+  const seen = new Uint8Array(W * H), q = [idx(A.mound[0], A.mound[1] + 2)];
+  seen[q[0]] = 1;
+  for (let n = 0; n < q.length; n++) for (const d of [1, -1, W, -W]) { const j = q[n] + d; if (!seen[j] && open(j)) { seen[j] = 1; q.push(j); } }
+  const touch = p => { for (let y = p.y - 1; y <= p.y + p.h; y++) for (let x = p.x - 1; x <= p.x + p.w; x++) { const inBody = x >= p.x && x < p.x + p.w && y >= p.y && y < p.y + p.h; if (!inBody && inside(x, y) && seen[idx(x, y)]) return true; } return false; };
+  for (const p of posts) if (!touch(p)) throw new Error(`6격 — ${p.name} 에 걸어서 못 감`);
+  for (const c of chests) if (!seen[idx(c.x, c.y)]) throw new Error(`6격 — 보물상자 (${c.x}, ${c.y}) 에 걸어서 못 감`);
+  for (let k = 0; k < W * H; k++) if (open(k) && !seen[k]) { tiles[k] = WALL; lk[k] = look(OL.OBSID, 6); }   // 갇힌 외톨이 땅은 벽으로
+  // 구역 — 잡음 섞은 타원 안의 그 격 땅 (나무 · 바위 · 용암은 품어 구멍 없이, 턱 · 정해진 자리 둘레는 뺌), 걸어서 이어지는 한 덩어리
+  const saveW = OUT_W, saveH = OUT_H; OUT_W = W; OUT_H = H;
+  const normals = foes.filter(e => e.kind === 'normal' && !underNormal(e));
+  if (normals.length !== A.areas.length) throw new Error(`6격 — 구역 ${A.areas.length}개, 일반 ${normals.length}종`);
+  const areas = A.areas.map(([name, ax, ay, rx, ry]) => {
+    const e = foeNamed(name), mine = new Set();
+    for (let y = ay - ry - 3; y <= ay + ry + 3; y++) for (let x = ax - rx - 3; x <= ax + rx + 3; x++) {
+      if (!inside(x, y)) continue;
+      const k = idx(x, y), wob = 1 + (n2(x * 0.15, y * 0.15) - 0.5) * 0.25;
+      if (Math.hypot((x + 0.5 - ax) / rx, (y + 0.5 - ay) / ry) < wob && tiles[k] !== WALL && !noArea[k] && !high[k] && !stairs[k]) mine.add(k);
+    }
+    let start = -1, bd = 1e9;
+    for (const k of mine) if (open(k)) { const dd = Math.hypot(k % W - ax, ((k / W) | 0) - ay); if (dd < bd) { bd = dd; start = k; } }
+    if (start < 0) throw new Error(`6격 — ${name} 구역에 걸을 땅이 없음`);
+    const keepSet = new Set([start]), st = [start];
+    while (st.length) { const k = st.pop(); for (const d of [1, -1, W, -W]) { const j = k + d; if (mine.has(j) && !keepSet.has(j)) { keepSet.add(j); st.push(j); } } }
+    const xs = [...keepSet].map(k => k % W), ys = [...keepSet].map(k => (k / W) | 0);
+    const box = { x: Math.min(...xs) - 1, y: Math.min(...ys) - 1, w: Math.max(...xs) - Math.min(...xs) + 3, h: Math.max(...ys) - Math.min(...ys) + 3 };
+    const outside = new Set(), qq = [];                         // 구멍 메우기 — 네모 둘레에서 바깥을 따라 퍼져 닿지 않는 칸은 품음
+    for (let y = box.y; y < box.y + box.h; y++) for (let x = box.x; x < box.x + box.w; x++) if ((x === box.x || y === box.y || x === box.x + box.w - 1 || y === box.y + box.h - 1) && !keepSet.has(idx(x, y))) { outside.add(idx(x, y)); qq.push([x, y]); }
+    while (qq.length) { const [x, y] = qq.pop(); for (const [ex, ey] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const nx = x + ex, ny = y + ey, j = idx(nx, ny); if (nx < box.x || ny < box.y || nx >= box.x + box.w || ny >= box.y + box.h || keepSet.has(j) || outside.has(j)) continue; outside.add(j); qq.push([nx, ny]); } }
+    for (let y = box.y + 1; y < box.y + box.h - 1; y++) for (let x = box.x + 1; x < box.x + box.w - 1; x++) if (!keepSet.has(idx(x, y)) && !outside.has(idx(x, y))) keepSet.add(idx(x, y));
+    const { x, y, polygon } = outline(keepSet, box);
+    return { name: e.name, x, y, polygon, rank: 6, monster: e.id, zone: zone.id };
+  });
+  const highRuns = cellRuns(high), stairRuns = cellRuns(stairs);
+  OUT_W = saveW; OUT_H = saveH;
+  return buildTmj({ w: W, h: H, tiles, areas, posts, ports, npcs, chests, look: lk, props: { title: zone.name, high: highRuns, stairs: stairRuns } });
+}
+
 // ---------- 건물 안 (BUILDINGS) — 왕좌의 큰 방 ----------
 // 위는 세 칸 높이의 벽면(그림이 벽돌 벽 · 깃발 · 횃불로), 옆 · 아래는 벽 윗면. 아래 벽 가운데에 바깥 문으로 나가는 문간.
 // 문간에서 붉은 깔개를 따라 곧장 올라가면 맨 위 가운데 단 위에 보스, 기둥은 깔개 양옆에 줄지어 (사용자 결정 — 예전 큰 방은 기둥이 한쪽에 몰려 있었음).
@@ -1527,7 +1693,7 @@ function cryptMap(data, u) {
 function buildingInterior(data, b) {
   const hall = b.hall, TOP = 3, SIDE = 2, BOTTOM = 2;
   const W = hall.w + SIDE * 2, H = TOP + hall.h + BOTTOM, cx = W >> 1;
-  if (hall.w % 2 === 0 || hall.aisle % 2 === 0) throw new Error(`건물 ${b.id} — 방 폭 · 깔개 폭은 홀수여야 가운데가 맞음`);
+  if ((hall.w - hall.aisle) % 2) throw new Error(`건물 ${b.id} — 방 폭 · 깔개 폭은 둘 다 홀수거나 둘 다 짝수여야 가운데가 맞음`);
   const tiles = new Uint8Array(W * H).fill(WALL), lk = new Uint8Array(W * H).fill(look(OL.TILES, 8));
   const fill = (r, t) => { for (let j = 0; j < r.h; j++) for (let i = 0; i < r.w; i++) tiles[(r.y + j) * W + r.x + i] = t; };
   fill({ x: SIDE, y: TOP, w: hall.w, h: hall.h }, FLOOR);
@@ -1535,7 +1701,7 @@ function buildingInterior(data, b) {
     fill({ x, y: TOP + y, w: hall.pillar, h: hall.pillar }, ROCK);
   const foe = data.ENEMIES.find(e => e.name === b.boss);
   if (!foe || foe.kind !== 'boss') throw new Error(`건물 ${b.id} — ${b.boss} 이(가) 보스가 아님`);
-  if (foe.size % 2 === 0) throw new Error(`건물 ${b.id} — 보스 크기가 짝수라 깔개 가운데에 못 섬`);
+  if ((hall.w - foe.size) % 2) throw new Error(`건물 ${b.id} — 보스 크기와 방 폭이 홀짝이 달라 깔개 가운데에 못 섬`);
   const post = { name: foe.name, x: cx - (foe.size >> 1), y: TOP + hall.bossY, w: foe.size, h: foe.size, enemy: foe.id, blocks: false };
   const ports = [];
   for (const s of SECRET_ROOMS.filter(q => q.from === b.id && q.boss === b.boss)) {
@@ -1544,14 +1710,25 @@ function buildingInterior(data, b) {
     ports.push(hole);
   }
   // 나가는 문 — 아래 벽 첫 줄 가운데, 깔개와 같은 폭
-  const out = { name: 'out', label: '나가기', x: cx - (hall.aisle >> 1), y: TOP + hall.h, w: hall.aisle, h: 1, to: `overworld.${b.id}`, door: true };
+  const out = { name: 'out', label: '나가기', x: cx - (hall.aisle >> 1), y: TOP + hall.h, w: hall.aisle, h: 1, to: `${b.map || 'overworld'}.${b.id}`, door: true };
   fill(out, FLOOR);
   for (let i = 0; i < out.w; i++) lk[out.y * W + out.x + i] = look(DOORWAY, 8);
   // 꾸밈 — 보스 발밑엔 한 칸 넓은 단(금테), 문간에서 그 단까지 가운데 붉은 깔개
   for (let y = post.y - 1; y <= post.y + post.h; y++) for (let x = post.x - 1; x <= post.x + post.w; x++) if (tiles[y * W + x] === FLOOR) lk[y * W + x] = look(OL.TILES, 6);
   for (let y = post.y + post.h + 1; y < out.y; y++) for (let x = out.x; x < out.x + out.w; x++) if (tiles[y * W + x] === FLOOR) lk[y * W + x] = look(CARPET, 8);
   ports.push(out);
-  return buildTmj({ w: W, h: H, tiles, posts: [post], ports, npcs: [{ name: 'start', x: out.x + (out.w >> 1), y: out.y - 1 }], look: lk, props: { title: b.title, interior: true } });
+  const posts = [post];
+  // 히든 (b.hidden — 마왕성의 관측자): 보스 오른쪽 옆, 두 칸 띄워. 보스를 꺾어야 나타나는 것은 게임이 정함 (히든 규칙)
+  if (b.hidden) {
+    const h = data.ENEMIES.find(e => e.name === b.hidden && e.kind === 'hidden');
+    if (!h) throw new Error(`건물 ${b.id} — ${b.hidden} 이(가) 히든이 아님`);
+    const hp = { name: h.name, x: post.x + post.w + 3, y: post.y, w: h.size, h: h.size, enemy: h.id, blocks: false };
+    for (let j = 0; j < h.size; j++) for (let i = 0; i < h.size; i++) if (tiles[(hp.y + j) * W + hp.x + i] !== FLOOR) throw new Error(`건물 ${b.id} — ${b.hidden} 자리가 바닥이 아님`);
+    posts.push(hp);
+  }
+  // 다른 지도로 가는 문 (b.hub — 마왕성: 왕좌 뒤 맨 위 줄 가운데, 보스를 꺾어야 열림 · 문의 광장으로)
+  if (b.hub) ports.push({ name: 'hub', label: b.hub.label, x: cx - 1, y: TOP, w: 2, h: 1, to: b.hub.to, opensAfter: foe.id });
+  return buildTmj({ w: W, h: H, tiles, posts, ports, npcs: [{ name: 'start', x: out.x + (out.w >> 1), y: out.y - 1 }], look: lk, props: { title: b.title, interior: true } });
 }
 
 // ---------- 7~20격 — 비슷한 것끼리 일곱 장 (docs/MAP-REFERENCE-PLAN.md 2-2) ----------
@@ -1655,7 +1832,7 @@ function hub(data) {
   // 남쪽 — 마왕의 성으로 돌아가는 문 (늘 열림)
   let sy = H - 1;
   while (tiles[sy * W + cx] !== ROAD && tiles[sy * W + cx] !== FLOOR) sy--;
-  ports.push({ name: 'overworld', label: '마왕의 성으로', x: cx - 1, y: sy, w: 3, h: 1, to: 'overworld.hub' });
+  ports.push({ name: 'overworld', label: '마왕의 성으로', x: cx - 1, y: sy, w: 3, h: 1, to: 'demoncastle.hub' });   // 마왕성 안 왕좌 뒤 (DEMON_CASTLE)
   const npcs = [{ name: 'start', x: cx, y: sy - 2 }];
   return buildTmj({ w: W, h: H, tiles, ports, npcs, props: { title: '문의 광장' } });
 }
@@ -2201,9 +2378,11 @@ function allMaps(data) {
   for (const c of CAVES) out[c.id] = caveMap(data, c);
   for (const u of UNDERS) out[u.id] = cryptMap(data, u);
   for (const g of BIG_GUILD_ROOMS) out[g.id] = storeInterior(g, data);
+  out.abyss = abyssMap(data);
+  out[DEMON_CASTLE.id] = buildingInterior(data, DEMON_CASTLE);
   for (const b of BUILDINGS) out[b.id] = b.room ? storeInterior(ROOMS[b.room], data) : buildingInterior(data, b);
   REALMS.forEach((r, i) => { out[r.name] = realm(data, r, i); });
   return out;
 }
 
-module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, looksPng, encodePng, generate, sewer, overworld, hub, oldtown, city, deptInterior, dept2Interior, assocInterior, guildInterior, guild2Interior, homeInterior, home2Interior, arenaInterior, bmInterior, gateinInterior, chiefInterior, raidInterior, storeInterior, OLDTOWN, CITY, DEPT, DEPT2, ASSOC, GUILD, GUILD2, HOME, HOME2, ARENA, BM, GATEIN, CHIEF, RAID, W1, W2, W3, SKY, CITY_BIO, secretRoom, buildingInterior, allMaps, layoutFromPlan, HUB_DOORS, REALMS, SEWER, SECRET_ROOMS, CAVES, caveMap, BUILDINGS, BUILD, DOORWAY, CARPET, RUIN };
+module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, looksPng, encodePng, generate, sewer, overworld, hub, oldtown, city, deptInterior, dept2Interior, assocInterior, guildInterior, guild2Interior, homeInterior, home2Interior, arenaInterior, bmInterior, gateinInterior, chiefInterior, raidInterior, storeInterior, OLDTOWN, CITY, DEPT, DEPT2, ASSOC, GUILD, GUILD2, HOME, HOME2, ARENA, BM, GATEIN, CHIEF, RAID, W1, W2, W3, SKY, CITY_BIO, secretRoom, buildingInterior, allMaps, layoutFromPlan, HUB_DOORS, REALMS, SEWER, SECRET_ROOMS, CAVES, caveMap, BUILDINGS, BUILD, DOORWAY, CARPET, RUIN, UNDERS, ABYSS, DEMON_CASTLE, abyssMap };
