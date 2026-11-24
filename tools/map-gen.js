@@ -1902,7 +1902,7 @@ function buildingInterior(data, b) {
     posts.push(hp);
   }
   // 다른 지도로 가는 문 (b.hub — 마왕성: 왕좌 뒤 맨 위 줄 가운데, 보스를 꺾어야 열림 · 문의 광장으로)
-  if (b.hub) ports.push({ name: 'hub', label: b.hub.label, x: cx - 1, y: TOP, w: 2, h: 1, to: b.hub.to, opensAfter: foe.id });
+  if (b.hub) ports.push({ name: 'hub', label: b.hub.label, x: cx - 1, y: TOP, w: 2, h: 1, to: b.hub.to, opensAfter: foe.id, gate: true, gw: 4, gh: 4, gdir: 'up' });   // 뒷벽의 고딕 문 — 닫히면 해골 문짝, 열리면 위로 가는 계단 (그림 MapArt.gothicGate)
   // 꾸밈 소품 (b.decor — [kind, 방 안 x, y, w, h]: 막힌 칸, 그림은 지도 속성 blds) · 테마 (b.theme — 바닥 · 벽 그림, js/mapart.js 의 ballFloor · ballWall)
   const blds = [];
   for (const [kind, hx, hy, w, h, f] of b.decor || []) {
