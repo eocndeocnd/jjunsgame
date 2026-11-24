@@ -1662,8 +1662,13 @@ const ABYSS = {                                                // 처음 시안(
   mound: [62, 231],                                            // 지하 묘실로 내려가는 바위 둔덕의 문 (아래 가운데)
   merchant: [73, 234], chests: [[13, 164], [113, 113], [16, 63, 'big']]
 };
-const DEMON_CASTLE = { id: 'demoncastle', title: '마왕성', boss: '마왕', map: 'abyss', hidden: '관측자', hub: { label: '문의 광장', to: 'hub.overworld' },
-  hall: { w: 26, h: 34, aisle: 4, bossY: 5, pillarX: 4, pillarRows: [12, 19, 26], pillar: 2 } };
+const DEMON_CASTLE = { id: 'demoncastle', title: '마왕성', boss: '마왕', map: 'abyss', hidden: '관측자', hub: { label: '문의 광장', to: 'hub.overworld' }, theme: 'demon',
+  hall: { w: 58, h: 28, aisle: 4, bossY: 5, pillarX: [6, 16], pillarRows: [10, 16, 22], pillar: 2 },   // 바깥 마왕성처럼 가로로 넓게 (사용자 결정 2026-11-25)
+  // 꾸밈 (사용자 결정 2026-11-25) — 마왕 뒤 거대한 왕좌(문의 광장 문으로는 양옆으로 돌아감) · 깔개 양옆 화로 여섯 · 양쪽 벽가 용암 홈 여섯 · 해골 든 쇠우리 넷 · 뼈 무더기
+  decor: [['dmthrone', 26, 1, 6, 3], ['dmcage', 2, 1, 1, 2], ['dmcage', 55, 1, 1, 2], ['dmcage', 12, 1, 1, 2], ['dmcage', 45, 1, 1, 2],
+          ['dmbraz', 25, 11, 1, 2], ['dmbraz', 32, 11, 1, 2], ['dmbraz', 25, 17, 1, 2], ['dmbraz', 32, 17, 1, 2], ['dmbraz', 25, 23, 1, 2], ['dmbraz', 32, 23, 1, 2],
+          ['dmlava', 0, 5, 1, 5], ['dmlava', 57, 5, 1, 5], ['dmlava', 0, 13, 1, 5], ['dmlava', 57, 13, 1, 5], ['dmlava', 0, 21, 1, 5], ['dmlava', 57, 21, 1, 5],
+          ['dmbones', 8, 3, 2, 1], ['dmbones', 48, 4, 2, 1], ['dmbones', 11, 25, 1, 1], ['dmbones', 47, 26, 1, 1], ['dmbones', 21, 6, 1, 1], ['dmbones', 37, 20, 1, 1]] };
 // 색욕의 무도회장 안 (사용자 결정 2026-11-23) — 턱 위 작은 건물(ABYSS.sites 의 inside)로 들어가는 방. 문에서 붉은 깔개를 따라 맨 위 단의 색욕,
 // 그 뒤 휘장을 걷은 정자 · 양옆 촛대, 기둥 두 줄, 벽가 촛대 · 떨어진 가면. 바닥 · 벽은 theme ballroom (대리석 체크 · 자줏빛 비단 벽 · 휘장 · 분홍 촛불 벽등)
 const BALLROOM = { id: 'ballroom', title: '무도회장', boss: '칠죄종 · 색욕', elite: true, map: 'abyss', theme: 'ballroom',
@@ -1867,7 +1872,7 @@ function buildingInterior(data, b) {
   const tiles = new Uint8Array(W * H).fill(WALL), lk = new Uint8Array(W * H).fill(look(OL.TILES, 8));
   const fill = (r, t) => { for (let j = 0; j < r.h; j++) for (let i = 0; i < r.w; i++) tiles[(r.y + j) * W + r.x + i] = t; };
   fill({ x: SIDE, y: TOP, w: hall.w, h: hall.h }, FLOOR);
-  for (const y of hall.pillarRows) for (const x of [SIDE + hall.pillarX, W - 1 - SIDE - hall.pillarX - (hall.pillar - 1)])   // 깔개 양옆 — 가운데에 맞춰 마주 보게
+  for (const y of hall.pillarRows) for (const pxs of [].concat(hall.pillarX)) for (const x of [SIDE + pxs, W - 1 - SIDE - pxs - (hall.pillar - 1)])   // 깔개 양옆 — 가운데에 맞춰 마주 보게 (pillarX 가 배열이면 여러 줄)
     fill({ x, y: TOP + y, w: hall.pillar, h: hall.pillar }, ROCK);
   const foe = data.ENEMIES.find(e => e.name === b.boss);
   if (!foe || (foe.kind !== 'boss' && !(b.elite && foe.kind === 'elite'))) throw new Error(`건물 ${b.id} — ${b.boss} 이(가) 보스가 아님`);   // b.elite — 정예가 서는 방 (색욕의 무도회장)
@@ -1908,6 +1913,13 @@ function buildingInterior(data, b) {
       tiles[k] = WALL; lk[k] = look(BUILD, 8);
     }
     blds.push({ x, y, w, h, kind, v: blds.length, ...(f ? { f } : {}) });
+  }
+  {                                                                                // 걸어서 닿는가 — 시작점에서 (보스 · 히든 몸은 못 지나감) 모든 문 · 보스 곁
+    const body = new Set(posts.flatMap(p => { const a = []; for (let j = 0; j < p.h; j++) for (let i = 0; i < p.w; i++) a.push((p.y + j) * W + p.x + i); return a; }));
+    const st = out.y * W - W + out.x + (out.w >> 1), seen = new Uint8Array(W * H), q = [st]; seen[st] = 1;
+    for (let n = 0; n < q.length; n++) for (const d of [1, -1, W, -W]) { const j = q[n] + d; if (j >= 0 && j < W * H && !seen[j] && tiles[j] === FLOOR && !body.has(j)) { seen[j] = 1; q.push(j); } }
+    for (const p of ports) if (!seen[p.y * W + p.x] && !(p.y === out.y)) throw new Error(`건물 ${b.id} — ${p.label} 에 걸어서 못 감 (꾸밈이 길을 막음)`);
+    if (![...Array(foe.size)].some((_, i) => seen[(post.y + post.h) * W + post.x + i])) throw new Error(`건물 ${b.id} — ${foe.name} 앞에 걸어서 못 감`);
   }
   const props = { title: b.title, interior: true, ...(b.theme ? { theme: b.theme } : {}), ...(blds.length ? { blds: JSON.stringify(blds) } : {}) };
   return buildTmj({ w: W, h: H, tiles, posts, ports, npcs: [{ name: 'start', x: out.x + (out.w >> 1), y: out.y - 1 }], look: lk, props });
