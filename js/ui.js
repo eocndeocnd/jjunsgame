@@ -4209,6 +4209,30 @@ const TALK_WHO = { me: () => heroName(), guide: () => '???', nameless: () => '�
                    bg0: () => `${BIG_GUILDS[0].name} 길드`, bg1: () => `${BIG_GUILDS[1].name} 길드`, bg2: () => `${BIG_GUILDS[2].name} 길드`, bg3: () => `${BIG_GUILDS[3].name} 길드`, desk: () => '협회 직원', chief: () => '헌터 협회장', end: () => '', union: () => '세계 헌터 연합', raidboss: () => raidFoe().name, gateboss: () => { const g = gateInNow(); return g ? findFoe(g).name : '게이트 보스'; },
                    proctor: () => '시험 감독', examiner: () => (examinerNow() || { name: '시험관' }).name };
 let talkScript = [], talkIndex = 0, talkDone = null, talkOpts = {};
+// 말거는 창 — 화신 · 신 · 규격외 존재가 말할 때는 파란 상태창 (사용자 결정 2026-11-25 — 후보 A 틀 + F 격마다 빛깔, design/ui/talk-window.html).
+// avatar 화신 = 파랑 · god 신 = 흰금 · outer 규격외(외신) = 보라에 글자가 깨짐. 글은 한 자씩 찍히고, 찍히는 동안 「다음」을 누르면 한 번에 다 나옴
+// (말을 거는 신은 아직 없음 — 생기면 그 who 를 'god' 으로)
+const TALK_SYS = { nameless: 'avatar', raidboss: () => (raidNow() && raidNow().tier === 2 ? 'outer' : '') };
+function talkSys(who) { const v = TALK_SYS[who]; return (typeof v === 'function' ? v() : v) || ''; }
+let talkTyping = null;                 // { el, html, timer } — 한 자씩 찍는 중
+function typeTalk(el, html) {
+  stopTyping();
+  const parts = html.match(/<[^>]+>|&[^;]+;|[\s\S]/g) || [];
+  let i = 0, out = '';
+  el.innerHTML = '<span class="sys-caret"></span>';
+  talkTyping = { el, html, timer: setInterval(() => {
+    out += parts[i++];
+    while (i < parts.length && parts[i][0] === '<') out += parts[i++];
+    el.innerHTML = out + '<span class="sys-caret"></span>';
+    if (i >= parts.length) stopTyping();
+  }, 34) };
+}
+function stopTyping(finish) {
+  if (!talkTyping) return;
+  clearInterval(talkTyping.timer);
+  if (finish) talkTyping.el.innerHTML = talkTyping.html + '<span class="sys-caret"></span>';
+  talkTyping = null;
+}
 function isTalkOpen() { const t = $('talk'); return !!t && !t.classList.contains('hidden'); }
 // 대사를 차례로 보여 줍니다. 다 보면 done(). opts.skip — 건너뛰기 단추(이름을 묻는 줄은 건너뛰지 않음), opts.end — 마지막 단추 글
 function playTalk(script, done, opts = {}) {
@@ -4219,10 +4243,14 @@ function playTalk(script, done, opts = {}) {
 function renderTalk() {
   const line = talkScript[talkIndex], last = talkIndex === talkScript.length - 1, ask = line.ask === 'name' || line.ask === 'guild';
   $('talk').dataset.who = line.who;
+  const sys = talkSys(line.who);
+  $('talk').classList.toggle('sys', !!sys);
+  if (sys) $('talk').dataset.sys = sys; else delete $('talk').dataset.sys;
   $('talkWho').textContent = TALK_WHO[line.who]();
   $('talkFace').innerHTML = line.who === 'guide' ? guideEye('bob') : line.who === 'me' ? heroSprite() : line.who === 'stranger' || line.who === 'ally' ? allySprite('hayun') : line.who === 'stranger2' || line.who === 'ally2' ? allySprite('danwoo') : line.who === 'examiner' ? `<span class="ally-sprite">${(examinerNow() || {}).icon || '🧑‍🏫'}</span>` : line.who === 'chief' ? `<span class="ally-sprite">${CLERK_DESKS.chief.icon}</span>` : line.who === 'union' ? '<span class="ally-sprite">🌐</span>' : line.who === 'raidboss' ? `<span class="ally-sprite">${raidFoe().icon}</span>` : line.who === 'gateboss' ? `<span class="ally-sprite">${(gateInNow() && findFoe(gateInNow()).icon) || '👹'}</span>` : line.who === 'proctor' || line.who === 'desk' ? `<span class="ally-sprite">${CLERK_DESKS.assoc.icon}</span>` : /^bg\d$/.test(line.who) ? `<span class="ally-sprite">${BIG_GUILDS[+line.who.slice(2)].icon}</span>` : '';
   $('talkFace').classList.toggle('hidden', line.who === 'nameless' || line.who === 'end');   // end — 엔딩의 「끝」 (얼굴 · 이름 없이)
-  $('talkBody').innerHTML = typeof line.text === 'function' ? line.text() : line.text;
+  const body = typeof line.text === 'function' ? line.text() : line.text;
+  if (sys) typeTalk($('talkBody'), body); else { stopTyping(); $('talkBody').innerHTML = body; }
   $('talkName').classList.toggle('hidden', !ask);
   $('talkNext').classList.toggle('hidden', ask);
   $('talkSkip').classList.toggle('hidden', !talkOpts.skip || ask);
@@ -4237,10 +4265,12 @@ function renderTalk() {
 }
 function nextTalk() {
   if (talkScript[talkIndex] && talkScript[talkIndex].ask) return;
+  if (talkTyping) { stopTyping(true); return; }      // 찍히는 중이면 먼저 한 번에 다 보여 줌
   if (talkIndex < talkScript.length - 1) { talkIndex++; renderTalk(); return; }
   endTalk();
 }
 function endTalk() {
+  stopTyping();
   $('talk').classList.add('hidden');
   const done = talkDone;
   talkDone = null;

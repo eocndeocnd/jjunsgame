@@ -1826,6 +1826,41 @@ body.test-mode::after {
 .guide-eye.bob { animation: eye-bob 1.8s ease-in-out infinite; }
 @keyframes eye-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
 @media (prefers-reduced-motion: reduce) { .guide-eye.bob { animation: none; } }
+/* 말거는 창 — 화신 · 신 · 규격외 존재 (사용자 결정 2026-11-25: 파란 상태창 · 후보 A 틀 + F 격마다 빛깔, design/ui/talk-window.html)
+   반투명 판 · 가는 빛 테두리 · 네 귀퉁이 중 둘만 빛남 · 이름은 가운데. 빛깔만 data-sys 로 — avatar 파랑 · god 흰금 · outer 보라(떨림 · 글자 번짐) */
+#talk.sys { background: rgba(3, 7, 16, 0.74); }
+#talk.sys { --sc: #9fe0ff; --sl: rgba(110, 190, 255, 0.55); --sg: rgba(60, 150, 255, 0.35); --sb1: rgba(12, 32, 66, 0.94); --sb2: rgba(6, 18, 42, 0.96); --sk: #7fd4ff; --st: #eaf5ff; }
+#talk.sys[data-sys="god"]   { --sc: #ffe9a8; --sl: rgba(255, 226, 150, 0.6); --sg: rgba(255, 214, 120, 0.3); --sb1: rgba(48, 42, 30, 0.94); --sb2: rgba(28, 24, 16, 0.96); --sk: #ffe08a; --st: #fff8e8; }
+#talk.sys[data-sys="outer"] { --sc: #d2adff; --sl: rgba(180, 130, 255, 0.6); --sg: rgba(150, 90, 255, 0.4); --sb1: rgba(30, 12, 56, 0.94); --sb2: rgba(16, 6, 32, 0.96); --sk: #ff8ae0; --st: #efe4ff; }
+#talk.sys .talk-card {
+  background: linear-gradient(180deg, var(--sb1), var(--sb2)); background-size: auto;
+  border: 1px solid var(--sl); box-shadow: 0 0 18px var(--sg), inset 0 0 22px var(--sg);
+  padding: 16px 20px 14px; max-width: 420px; animation: sys-pop 0.28s ease-out both;
+}
+#talk.sys .talk-card::before, #talk.sys .talk-card::after {
+  content: ''; position: absolute; inset: auto; width: 14px; height: 14px; background: none; pointer-events: none;
+  border: 2px solid var(--sc); filter: drop-shadow(0 0 4px var(--sc));
+}
+#talk.sys .talk-card::before { left: -2px; top: -2px; border-right: 0; border-bottom: 0; }
+#talk.sys .talk-card::after  { right: -2px; bottom: -2px; border-left: 0; border-top: 0; }
+#talk.sys .talk-head { justify-content: center; padding-bottom: 9px; margin-bottom: 11px; border-bottom: 1px solid var(--sl); }
+#talk.sys .talk-face { display: none; }
+#talk.sys .talk-head .tut-step { font-family: var(--font-t); font-weight: 400; font-size: 15px; letter-spacing: 0.12em; color: var(--sc); text-shadow: 0 0 8px var(--sg); }
+#talk.sys .tut-body { color: var(--st); min-height: 3.5em; margin-bottom: 14px; }
+#talk.sys .tut-body b { color: var(--sk); }
+#talk.sys .sys-caret { display: inline-block; width: 7px; height: 13px; margin-left: 2px; vertical-align: -1px; background: var(--sk); animation: sys-blink 0.9s steps(1) infinite; }
+#talk.sys .tut-actions { align-items: flex-end; }
+#talk.sys .tut-actions .btn { --b: transparent; --b-hi: transparent; --b-lo: transparent; background: transparent; box-shadow: none; border: 1px solid var(--sl);
+  color: var(--sc); font-size: 12px; padding: 5px 14px; text-shadow: 0 0 6px var(--sg); }
+#talk.sys .tut-actions .btn:hover { background: rgba(255, 255, 255, 0.06); }
+#talk.sys .tut-actions .btn kbd { border-color: var(--sl); color: var(--sc); background: transparent; }
+#talk.sys[data-sys="outer"] .talk-card { animation: sys-pop 0.28s ease-out both, sys-shake 2.6s 0.4s infinite; }
+#talk.sys[data-sys="outer"] .talk-head .tut-step { text-shadow: 2px 0 #4ad8ff, -2px 0 #ff3a6a; }
+#talk.sys[data-sys="outer"] .tut-body { text-shadow: 1px 0 rgba(74, 216, 255, 0.45), -1px 0 rgba(255, 58, 106, 0.45); }
+@keyframes sys-pop { from { opacity: 0; transform: scaleY(0.05); } 60% { opacity: 1; transform: scaleY(1.06); } to { transform: scaleY(1); } }
+@keyframes sys-blink { 50% { opacity: 0; } }
+@keyframes sys-shake { 0%, 90%, 100% { transform: none; } 92% { transform: translate(2px, -1px); } 94% { transform: translate(-2px, 1px); } 96% { transform: translate(1px, 0); } }
+@media (prefers-reduced-motion: reduce) { #talk.sys .talk-card, #talk.sys[data-sys="outer"] .talk-card { animation: none; } }
 .talk-name { display: flex; gap: 8px; margin: -8px 0 18px; }
 .talk-card .hidden { display: none; }   /* 대화창 안의 이름 칸 · 단추 · 얼굴 — 줄마다 켜고 끔 */
 .talk-name input { flex: 1; min-width: 0; font: inherit; font-size: 15px; padding: 8px 10px; border: 2px solid var(--line); background: var(--paper-hi); color: var(--text); }

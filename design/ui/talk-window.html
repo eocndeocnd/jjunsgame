@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>말거는 창 후보</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/galmuri@2.40.3/dist/galmuri.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/neodgm/neodgm-webfont@1.601/neodgm/style.css">
+<style>
+  /* 화신 · 신 · 규격외 존재가 말을 걸 때의 창 — 파란 게임 상태창 느낌 후보 (사용자 요청 2026-11-23) */
+  :root { --font: 'Galmuri11', 'Malgun Gothic', sans-serif; --font-t: 'NeoDunggeunmo', 'Galmuri11', sans-serif; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #0b0d12; color: #dfe6f0; font-family: var(--font); padding: 24px 16px 60px; }
+  h1 { font-family: var(--font-t); font-size: 22px; margin: 0 0 6px; color: #f0e6cf; }
+  .note { color: #8b93a3; font-size: 13px; margin: 0 0 26px; line-height: 1.6; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 520px), 1fr)); gap: 26px; max-width: 1140px; }
+  .cand { position: relative; }
+  .tag { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+  .tag b { font-family: var(--font-t); font-size: 17px; color: #f0e6cf; }
+  .tag span { font-size: 12px; color: #8b93a3; }
+  .tag button { font: inherit; font-size: 11px; background: #222836; color: #b8c2d4; border: 1px solid #3a4356; padding: 3px 8px; cursor: pointer; }
+  /* 지도 대신 깔리는 어둑한 바닥 (흐려진 게임 화면) */
+  .stage { position: relative; height: 300px; overflow: hidden; display: grid; place-items: center; padding: 16px;
+           background: radial-gradient(ellipse at 30% 30%, #3a4a2c 0%, transparent 55%), radial-gradient(ellipse at 75% 70%, #4a3a26 0%, transparent 60%), #1c1a14; }
+  .stage::before { content: ''; position: absolute; inset: 0; background: rgba(4, 8, 16, 0.55); }
+  .win { position: relative; width: 100%; max-width: 460px; }
+  .txt { font-size: 14px; line-height: 1.75; min-height: 74px; white-space: pre-wrap; }
+  .txt b { font-weight: 700; }
+  .caret { display: inline-block; width: 7px; height: 13px; margin-left: 2px; vertical-align: -1px; animation: blink 0.9s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+  .open { animation: pop 0.28s ease-out both; }
+  @keyframes pop { from { opacity: 0; transform: scaleY(0.05); } 60% { opacity: 1; transform: scaleY(1.06); } to { transform: scaleY(1); } }
+
+  /* ---------- A. 정석 — 반투명 남색 판 · 가는 하늘빛 테두리 · 네 귀퉁이만 빛남 ---------- */
+  .A { background: linear-gradient(180deg, rgba(12, 32, 66, 0.92), rgba(6, 18, 42, 0.94)); border: 1px solid rgba(110, 190, 255, 0.55);
+       box-shadow: 0 0 18px rgba(60, 150, 255, 0.35), inset 0 0 22px rgba(60, 150, 255, 0.18); padding: 16px 20px 14px; }
+  .A::before, .A::after { content: ''; position: absolute; width: 14px; height: 14px; border: 2px solid #9fe0ff; filter: drop-shadow(0 0 4px #4ab4ff); }
+  .A::before { left: -2px; top: -2px; border-right: 0; border-bottom: 0; }
+  .A::after { right: -2px; bottom: -2px; border-left: 0; border-top: 0; }
+  .A .who { text-align: center; font-family: var(--font-t); font-size: 15px; color: #bfe9ff; letter-spacing: 0.12em; text-shadow: 0 0 8px #3aa8ff;
+            padding-bottom: 9px; margin-bottom: 11px; border-bottom: 1px solid rgba(110, 190, 255, 0.35); }
+  .A .txt { color: #eaf5ff; } .A .txt b { color: #7fd4ff; } .A .caret { background: #7fd4ff; }
+  .A .next { text-align: right; font-size: 11px; color: #7fb8e0; margin-top: 6px; }
+
+  /* ---------- B. 홀로그램 — 비스듬히 잘린 귀퉁이 · 주사선 · 살짝 떨림 ---------- */
+  .B { padding: 2px; background: linear-gradient(135deg, #5fd0ff, #2a6cff 50%, #5fd0ff);
+       clip-path: polygon(16px 0, 100% 0, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0 100%, 0 16px); filter: drop-shadow(0 0 10px rgba(70, 170, 255, 0.6)); }
+  .B .in { position: relative; background: rgba(6, 22, 48, 0.93); padding: 14px 20px 14px;
+           clip-path: polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px); }
+  .B .in::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(0deg, rgba(120, 200, 255, 0.07) 0 1px, transparent 1px 3px); animation: flick 3.2s infinite; }
+  @keyframes flick { 0%, 92%, 100% { opacity: 1; } 94% { opacity: 0.4; } 96% { opacity: 0.9; } }
+  .B .who { display: flex; align-items: center; gap: 8px; font-family: var(--font-t); font-size: 14px; color: #8fe2ff; margin-bottom: 10px; }
+  .B .who::before { content: ''; width: 8px; height: 8px; background: #5fd0ff; box-shadow: 0 0 8px #5fd0ff; transform: rotate(45deg); }
+  .B .who i { flex: 1; height: 1px; background: linear-gradient(90deg, rgba(95, 208, 255, 0.6), transparent); }
+  .B .txt { color: #dff4ff; text-shadow: 0 0 6px rgba(80, 180, 255, 0.45); } .B .txt b { color: #ffffff; } .B .caret { background: #8fe2ff; }
+
+  /* ---------- C. 알림 — 위에 매달린 제목 띠(「!」) + 본문 판, 창이 위에서 내려옴 ---------- */
+  .C .bar { display: inline-flex; align-items: center; gap: 8px; padding: 5px 14px 5px 6px; background: linear-gradient(180deg, #1d5fc0, #123e86);
+            border: 1px solid #6fb6ff; border-bottom: 0; font-family: var(--font-t); font-size: 13px; color: #e6f3ff; }
+  .C .bar .ex { width: 18px; height: 18px; display: grid; place-items: center; background: #e6f3ff; color: #123e86; font-weight: 700; font-size: 13px; }
+  .C .body { background: rgba(8, 24, 56, 0.94); border: 1px solid #6fb6ff; padding: 14px 18px 12px; box-shadow: 0 0 0 3px rgba(20, 60, 130, 0.5), 0 0 20px rgba(60, 140, 255, 0.35); }
+  .C .txt { color: #e9f3ff; } .C .txt b { color: #ffd36a; } .C .caret { background: #6fb6ff; }
+  .C .next { display: flex; justify-content: flex-end; margin-top: 4px; }
+  .C .next span { font-size: 11px; padding: 3px 10px; border: 1px solid #4f8fd8; color: #bcdcff; }
+  .C.open { animation: drop 0.32s ease-out both; }
+  @keyframes drop { from { opacity: 0; transform: translateY(-22px); } to { opacity: 1; transform: none; } }
+
+  /* ---------- D. 픽셀 — 계단 모서리 · 두 겹 파란 테두리, 번짐 없이 딱 떨어지게 (게임의 도트와 맞춤) ---------- */
+  .D { --o: #0a1a3a; --l1: #3d8fe8; --l2: #9fdcff; padding: 14px 18px 12px; background: #0f2a5c; image-rendering: pixelated;
+       box-shadow:
+         0 -4px 0 var(--o), 0 4px 0 var(--o), -4px 0 0 var(--o), 4px 0 0 var(--o),
+         inset 0 0 0 2px var(--l2), inset 0 0 0 4px var(--l1), inset 0 0 0 6px #0a2050,
+         0 -8px 0 -4px var(--o), 0 8px 0 -4px var(--o); }
+  .D::before { content: ''; position: absolute; inset: 6px; background: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.03) 0 2px, transparent 2px 4px); pointer-events: none; }
+  .D .who { display: inline-block; font-family: var(--font-t); font-size: 15px; color: #0f2a5c; background: var(--l2); padding: 2px 10px; margin-bottom: 10px;
+            box-shadow: 2px 2px 0 var(--l1); }
+  .D .txt { color: #f2f8ff; } .D .txt b { color: #ffe27a; } .D .caret { background: #9fdcff; }
+  .D .next { position: absolute; right: 14px; bottom: 8px; width: 0; height: 0; border: 5px solid transparent; border-top: 6px solid #9fdcff; border-bottom: 0; animation: bob 0.7s steps(2) infinite; }
+  @keyframes bob { 50% { transform: translateY(3px); } }
+
+  /* ---------- E. 이중 테두리 — 테두리 위에 걸친 이름표 · 안팎 두 줄, 깔끔하고 단단하게 ---------- */
+  .E { border: 1px solid #7cc4ff; padding: 4px; background: rgba(6, 16, 38, 0.6); box-shadow: 0 0 16px rgba(80, 160, 255, 0.3); }
+  .E .in { position: relative; border: 1px solid rgba(124, 196, 255, 0.45); background: linear-gradient(180deg, rgba(14, 40, 86, 0.92), rgba(8, 22, 52, 0.95)); padding: 20px 18px 12px; }
+  .E .who { position: absolute; top: -13px; left: 50%; transform: translateX(-50%); white-space: nowrap; font-family: var(--font-t); font-size: 13px; color: #dff1ff;
+            background: #0c2450; border: 1px solid #7cc4ff; padding: 3px 16px; letter-spacing: 0.1em; }
+  .E .who::before, .E .who::after { content: '◆'; color: #7cc4ff; font-size: 9px; margin: 0 8px; vertical-align: 1px; }
+  .E .txt { color: #e3f0ff; text-align: center; } .E .txt b { color: #8fd6ff; } .E .caret { background: #7cc4ff; }
+  .E .rule { height: 1px; margin: 8px 30px 0; background: linear-gradient(90deg, transparent, rgba(124, 196, 255, 0.6), transparent); }
+
+  /* ---------- F. 존재의 격마다 빛깔 — 같은 틀(A)에 화신은 파랑 · 신은 흰금 · 규격외는 보라에 글자가 깨짐 ---------- */
+  .F3 { display: grid; gap: 10px; width: 100%; max-width: 460px; position: relative; }
+  .Fw { position: relative; padding: 10px 16px 10px; border: 1px solid var(--c); background: var(--bg); box-shadow: 0 0 14px var(--g), inset 0 0 16px var(--g); }
+  .Fw .who { font-family: var(--font-t); font-size: 13px; color: var(--c); letter-spacing: 0.1em; margin-bottom: 5px; text-shadow: 0 0 6px var(--g); }
+  .Fw .txt { font-size: 13px; min-height: 0; color: #eef4ff; line-height: 1.6; }
+  .Fw.av  { --c: #8fd4ff; --g: rgba(60, 150, 255, 0.35); --bg: rgba(8, 26, 60, 0.92); }
+  .Fw.god { --c: #ffe9a8; --g: rgba(255, 220, 140, 0.32); --bg: rgba(40, 36, 28, 0.9); }
+  .Fw.out { --c: #c9a0ff; --g: rgba(150, 90, 255, 0.4); --bg: rgba(26, 10, 48, 0.93); animation: shake 2.6s infinite; }
+  .Fw.out .txt { color: #e8dcff; }
+  .Fw.out .z { color: #ff6ad5; text-shadow: 2px 0 #4ad8ff, -2px 0 #ff3a6a; }
+  @keyframes shake { 0%, 90%, 100% { transform: none; } 92% { transform: translate(2px, -1px); } 94% { transform: translate(-2px, 1px); } 96% { transform: translate(1px, 0); } }
+</style>
+</head>
+<body>
+<h1>말거는 창 — 파란 상태창 후보</h1>
+<p class="note">화신 · 신 · 규격외 존재가 말을 걸 때만 쓰는 창 (길잡이 · 나 · 사람들은 지금 창 그대로).<br>
+글은 한 자씩 찍히고, 창마다 「다시」로 다시 볼 수 있어요. 대사는 지금 게임의 무명의 화신 말.</p>
+
+<div class="grid">
+  <div class="cand"><div class="tag"><b>A. 정석</b><span>반투명 남색 · 네 귀퉁이만 빛남 · 이름은 가운데</span><button data-re>다시</button></div>
+    <div class="stage"><div class="win A open"><div class="who">무명의 화신</div><div class="txt" data-t="0"></div><div class="next">▼ 다음</div></div></div></div>
+
+  <div class="cand"><div class="tag"><b>B. 홀로그램</b><span>잘린 귀퉁이 · 주사선 · 가끔 깜빡</span><button data-re>다시</button></div>
+    <div class="stage"><div class="win B open"><div class="in"><div class="who">무명의 화신<i></i></div><div class="txt" data-t="1"></div></div></div></div></div>
+
+  <div class="cand"><div class="tag"><b>C. 알림</b><span>위에 매달린 「!」 띠 · 위에서 내려옴</span><button data-re>다시</button></div>
+    <div class="stage"><div class="win C open"><div class="bar"><span class="ex">!</span>무명의 화신이 말을 건넵니다</div><div class="body"><div class="txt" data-t="2"></div><div class="next"><span>확인</span></div></div></div></div></div>
+
+  <div class="cand"><div class="tag"><b>D. 픽셀</b><span>계단 모서리 · 두 겹 테두리 · 번짐 없음 (게임 도트와 맞춤)</span><button data-re>다시</button></div>
+    <div class="stage"><div class="win D open"><div class="who">무명의 화신</div><div class="txt" data-t="3"></div><div class="next"></div></div></div></div>
+
+  <div class="cand"><div class="tag"><b>E. 이중 테두리</b><span>테두리에 걸친 이름표 · 가운데 정렬</span><button data-re>다시</button></div>
+    <div class="stage"><div class="win E open"><div class="in"><div class="who">무명의 화신</div><div class="txt" data-t="4"></div><div class="rule"></div></div></div></div></div>
+
+  <div class="cand"><div class="tag"><b>F. 격마다 빛깔</b><span>같은 틀에 화신 파랑 · 신 흰금 · 규격외 보라(글자가 깨짐)</span><button data-re>다시</button></div>
+    <div class="stage"><div class="F3 open">
+      <div class="Fw av"><div class="who">무명의 화신</div><div class="txt" data-t="5"></div></div>
+      <div class="Fw god"><div class="who">제우스</div><div class="txt" data-t="6"></div></div>
+      <div class="Fw out"><div class="who">▒▒▒ 의 바깥</div><div class="txt" data-t="7"></div></div>
+    </div></div></div>
+</div>
+
+<script>
+  // 글 — 앞의 다섯은 지금 게임의 무명의 화신 대사. F 의 신 · 규격외는 보기용 문장
+  const LINES = [
+    '…들리나. 벽이 깨졌으니 이쪽 말도 닿는 모양이군.',
+    '꺾은 상대가 너를 자기 몫으로 삼는 것. 그걸 <b>화신</b>이라 부른다.',
+    '눈에 드는 놈이 있거든 <b>몇 번이고 다시 꺾어라.</b>',
+    '삼은 화신의 이름이 네 이름 앞에 붙는다. <b>한 번에 하나</b>만 삼을 수 있다.',
+    '아직 아무도 너를 고르지 않았으니, 그때까지는 <b>내가 대신 맡아 주지.</b>',
+    '…들리나. 벽이 깨졌으니 이쪽 말도 닿는 모양이군.',
+    '작은 것이 여기까지 올라왔구나.',
+    '<span class="z">ㅂ̷ㅏ̸ㄲ</span>…에서 너를 <span class="z">보̶고̵</span> 있다.'
+  ];
+  // 한 자씩 — 태그는 통째로 넘김
+  function type(el, html) {
+    clearInterval(el._t);
+    const parts = html.match(/<[^>]+>|&[^;]+;|[\s\S]/g);
+    let i = 0, out = '';
+    el.innerHTML = '<span class="caret"></span>';
+    el._t = setInterval(() => {
+      out += parts[i++];
+      while (i < parts.length && parts[i][0] === '<') out += parts[i++];
+      el.innerHTML = out + '<span class="caret"></span>';
+      if (i >= parts.length) clearInterval(el._t);
+    }, 38);
+  }
+  function play(card) {
+    const win = card.querySelector('.open');
+    win.classList.remove('open'); void win.offsetWidth; win.classList.add('open');
+    card.querySelectorAll('[data-t]').forEach((el, k) => setTimeout(() => type(el, LINES[+el.dataset.t]), 250 + k * 700));
+  }
+  document.querySelectorAll('.cand').forEach(c => { play(c); c.querySelector('[data-re]').addEventListener('click', () => play(c)); });
+</script>
+</body>
+</html>
