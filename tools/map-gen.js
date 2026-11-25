@@ -2500,16 +2500,18 @@ const GUILD = {
 const guildInterior = () => storeInterior(GUILD);
 // ---------- 우리 집 — 빨간 벽돌 빌라의 원룸 (사용자 결정 2026-11-19 — 분위기만, 이사는 나중에) ----------
 // 위 벽에 창 둘(밖으로 옛 동네 지붕 · 하늘). 왼쪽 위 침대 · 오른쪽 위 책상 · 오른쪽 냉장고. 침대 곁에 닿으면 혼잣말 (ui 의 HOME_LINES)
+// 책상 왼쪽 전신 거울 — 앞에 서면 내 생김새를 바꿈 (ui 의 openMirror)
 const HOME = {
   title: '우리 집', w: 9, h: 6, to: 'oldtown.home', theme: 'home',
   wall: [{ x: 0, w: 3, kind: 'window' }, { x: 6, w: 3, kind: 'window' }],
   props: [
     { kind: 'bed', x: 0, y: 0, w: 2, h: 3 },
     { kind: 'desk', x: 7, y: 0, w: 2 },
+    { kind: 'mirror', x: 6, y: 0, w: 1, h: 2 },                 // 전신 거울 — 닿으면 내 생김새를 바꾸는 창 (사용자 결정 2026-11-25)
     { kind: 'fridge', x: 8, y: 3, w: 1, h: 2 },
     { kind: 'plant', x: 0, y: 5, w: 1 }
   ],
-  clerks: [{ x: 2, y: 1, shop: 'bed', label: '침대' }],
+  clerks: [{ x: 2, y: 1, shop: 'bed', label: '침대' }, { x: 6, y: 2, shop: 'mirror', label: '거울' }],
   signs: []
 };
 const homeInterior = () => storeInterior(HOME);
@@ -2522,11 +2524,12 @@ const HOME2 = {
   props: [
     { kind: 'bed', x: 0, y: 0, w: 2, h: 3 },
     { kind: 'desk', x: 8, y: 0, w: 2 },
+    { kind: 'mirror', x: 4, y: 0, w: 1, h: 2 },                 // 전신 거울 — 창 사이 벽 앞
     { kind: 'bench', x: 1, y: 5, w: 2 }, { kind: 'bench', x: 9, y: 5, w: 2 },
     { kind: 'fridge', x: 12, y: 3, w: 1, h: 2 },
     { kind: 'plant', x: 0, y: 7, w: 1 }, { kind: 'plant', x: 12, y: 7, w: 1 }
   ],
-  clerks: [{ x: 2, y: 1, shop: 'bed2', label: '침대' }],
+  clerks: [{ x: 2, y: 1, shop: 'bed2', label: '침대' }, { x: 4, y: 2, shop: 'mirror', label: '거울' }],
   links: [{ name: 'portal', x: 11, y: 0, w: 2, to: 'sewer.city', rift: true, unlock: 'portal' }],
   signs: []
 };

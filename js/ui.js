@@ -2941,7 +2941,7 @@ let shopKind = 'merchant';   // 'merchant' 또는 백화점 매장 이름
 let shopSay = '';            // 점원의 한마디 — 창을 열 때 한 번 고릅니다 (사고 나서 다시 그려도 그대로)
 const isDeptShop = () => shopKind !== 'merchant';
 // 지금 연 상점이 아직 그 자리에 있나 (상인이 떠났거나 도시가 아니면 닫습니다)
-function shopHere() { return shopKind === 'trainer' ? trainOpen() : shopKind === 'gatefind' ? gatesOpen() : shopKind === 'home2' ? home2ForSale() : shopKind === 'ranking' ? rankingOpen() : shopKind === 'bm' ? bmOpen() : shopKind === 'assoc' ? !!State.meta.cityOpen : shopKind === 'hire' || shopKind === 'gate' ? gatesOpen() : shopKind === 'guild' ? guildForSale() || guildOwned() : isDeptShop() ? !!State.meta.cityOpen && !!DEPT_SECTIONS[shopKind] : merchantHere(); }
+function shopHere() { return shopKind === 'mirror' ? true : shopKind === 'trainer' ? trainOpen() : shopKind === 'gatefind' ? gatesOpen() : shopKind === 'home2' ? home2ForSale() : shopKind === 'ranking' ? rankingOpen() : shopKind === 'bm' ? bmOpen() : shopKind === 'assoc' ? !!State.meta.cityOpen : shopKind === 'hire' || shopKind === 'gate' ? gatesOpen() : shopKind === 'guild' ? guildForSale() || guildOwned() : isDeptShop() ? !!State.meta.cityOpen && !!DEPT_SECTIONS[shopKind] : merchantHere(); }
 // 점원은 등록증도 없는 손님을 수상쩍어하지만 묻지 않습니다
 const CLERK_TALK = {
   noLicense: ['「헌터 등록증 먼저 보여 주시겠어요? …없으시면 팔 수가 없어요. 협회는 길 건너 큰 건물이에요.」', '「등록 안 된 분께는 무기를 못 팔아요. 규정이라서요. 협회에서 시험부터 보고 오세요.」'],
@@ -2975,6 +2975,7 @@ function clerkLine(kind) {
 function openShop(kind = 'merchant') {
   shopKind = kind;
   bmLast = null;
+  if (kind === 'mirror') mirrorDraft = null;   // 거울 — 열 때마다 지금 내 모습에서 시작
   if (!shopHere()) return;
   shopSay = isDeptShop() ? clerkLine(kind) : '';
   shopSlot = SLOT_IDS.includes(selectedSlot) ? selectedSlot : SLOT_IDS[0];
@@ -2995,6 +2996,7 @@ function renderShop() {
   if (!shopHere()) { closeShop(); return; }
   if (shopKind === 'assoc') { renderAssoc(); return; }
   if (shopKind === 'hire') { renderHire(); return; }
+  if (shopKind === 'mirror') { renderMirror(); return; }
   if (shopKind === 'gate') { renderGates(); return; }
   if (shopKind === 'guild') { renderGuild(); return; }
   if (shopKind === 'mats') { renderMatShop(); return; }
@@ -3069,7 +3071,7 @@ function renderShop() {
 // 맨 위는 핵 — 모든 몬스터가 남기는 팔 것 (격마다 한 가지). 가진 격만 한 줄씩, 「모두 판다」 한 번으로 다 팝니다. 만드는 데는 쓰지 않습니다.
 // ---------- 헌터 협회 · 등록 창구 (상점 창을 같이 씀 — shopKind 'assoc') ----------
 // 지금의 나(도시의 Lv.1 그대로)로 F 시험관부터 차례로 싸워, 이긴 데까지가 등급. 회차에 한 번 · 내려가지 않음 (game.js 의 takeHunterTest)
-const CLERK_DESKS = { chief: { name: '협회장', icon: '🧓' }, examiner: { name: '시험관', icon: '🧑‍🏫' }, assoc: { name: '등록 창구', icon: '🧑‍💼' }, ally: { name: '???', icon: ALLIES.hayun.icon }, ally2: { name: '???', icon: ALLIES.danwoo.icon }, bm: { name: '???', icon: '🫥' }, ranking: { name: '길드 순위', icon: '📊' }, gatefind: { name: '게이트 찾기', icon: '🧭' }, trainer: { name: '교관', icon: '🏋️' }, hire: { name: '동료 모집', icon: '👩‍💼' }, gate: { name: '게이트 창구', icon: '🧑‍✈️' }, guild: { name: '길드 장부', icon: '📒' }, bed: { name: '침대', icon: '💤' }, bed2: { name: '침대', icon: '💤' } };   // 백화점 매장이 아닌 창구 — 지도 위 이름표
+const CLERK_DESKS = { chief: { name: '협회장', icon: '🧓' }, examiner: { name: '시험관', icon: '🧑‍🏫' }, assoc: { name: '등록 창구', icon: '🧑‍💼' }, ally: { name: '???', icon: ALLIES.hayun.icon }, ally2: { name: '???', icon: ALLIES.danwoo.icon }, bm: { name: '???', icon: '🫥' }, ranking: { name: '길드 순위', icon: '📊' }, gatefind: { name: '게이트 찾기', icon: '🧭' }, trainer: { name: '교관', icon: '🏋️' }, hire: { name: '동료 모집', icon: '👩‍💼' }, gate: { name: '게이트 창구', icon: '🧑‍✈️' }, guild: { name: '길드 장부', icon: '📒' }, bed: { name: '침대', icon: '💤' }, bed2: { name: '침대', icon: '💤' }, mirror: { name: '거울', icon: '🪞' } };   // 백화점 매장이 아닌 창구 — 지도 위 이름표
 const ASSOC_TALK = {
   none: ['「신규 등록이세요? 시험은 간단해요. 시험관과 한 번씩 붙어 보시면 돼요. F급부터요.」', '「등록증 없이 게이트 근처를 돌아다니시면 곤란해요. …시험 보시게요?」'],
   again: ['「재심사요? 좋아요. 지난번보다 나아지셨는지 볼까요.」', '「등급은 한 번 받으면 안 내려가요. 부담 없이 보세요.」'],
@@ -3358,6 +3360,51 @@ function renderHire() {
     else if ((hireList().find(x => x.id === id) || {}).out === 'refused') { shopSay = pick(HIRE_REFUSED); Sound.play('retreat'); }
     render();
   }));
+}
+// ---------- 거울 — 내 생김새 바꾸기 (우리 집 · 새 집, 사용자 결정 2026-11-25) ----------
+// 부위마다 ◀ ▶ (js/allylook.js 의 OPTIONS), 무작위 · 기본 모습 · 처음대로. 「이대로 한다」를 눌러야 저장되고 지도 · 싸움 · 등록증의 내 그림이 바뀜.
+// 그냥 닫으면 바꾼 것은 버림
+let mirrorDraft = null;
+const MIRROR_VIEWS = [['front', '앞'], ['back', '뒤'], ['side', '옆']];
+function lookPng(L, view) {
+  const c = document.createElement('canvas'); c.width = AllyLook.W; c.height = AllyLook.H;
+  const g = c.getContext('2d'), img = g.createImageData(c.width, c.height);
+  img.data.set(AllyLook.drawLook(L, view)); g.putImageData(img, 0, 0);
+  return c.toDataURL();
+}
+function renderMirror() {
+  if (typeof AllyLook === 'undefined') { closeShop(); return; }
+  if (!mirrorDraft) mirrorDraft = AllyLook.cleanLook(State.meta.heroLook);
+  const L = mirrorDraft, same = JSON.stringify(AllyLook.cleanLook(State.meta.heroLook)) === JSON.stringify(AllyLook.cleanLook(L));
+  $('shopTitle').textContent = '거울';
+  $('shopGold').innerHTML = '';
+  const views = MIRROR_VIEWS.map(([v, n]) => `<figure><span class="ally-px" style="background-image:url('${lookPng(L, v)}')"></span><figcaption>${n}</figcaption></figure>`).join('');
+  let group = '';
+  const rows = AllyLook.OPTIONS.map((o, i) => {
+    const j = Math.max(0, o.values.findIndex(v => v === L[o.key]));
+    const head = o.group !== group ? `<div class="mirror-group">${(group = o.group)}</div>` : '';
+    const sw = o.swatch ? `<i class="mirror-sw" style="background:${o.swatch[j]}"></i>` : '';
+    return `${head}<div class="mirror-row"><span class="mirror-name">${o.name}</span><button class="btn tiny" data-opt="${i}" data-d="-1" aria-label="${o.name} 이전">◀</button><span class="mirror-val">${sw}${o.labels[j]}</span><button class="btn tiny" data-opt="${i}" data-d="1" aria-label="${o.name} 다음">▶</button></div>`;
+  }).join('');
+  $('shopBody').innerHTML = `<div class="mirror"><div class="mirror-views">${views}</div>
+      <div class="mirror-opts">${rows}<div class="mirror-row"><span class="mirror-name">머리 결</span><button class="btn tiny mirror-wide" id="mirrorStrand">가닥을 다르게</button></div></div></div>
+    <div class="mirror-act"><button class="btn" id="mirrorRandom">무작위</button><button class="btn" id="mirrorDefault">기본 모습</button><button class="btn" id="mirrorUndo" ${same ? 'disabled' : ''}>처음대로</button><button class="btn primary" id="mirrorSave" ${same ? 'disabled' : ''}>이대로 한다</button></div>`;
+  const body = $('shopBody'), redo = d => { mirrorDraft = d; Sound.play('tick'); renderMirror(); };
+  body.querySelectorAll('[data-opt]').forEach(b => b.addEventListener('click', () => {
+    const o = AllyLook.OPTIONS[+b.dataset.opt], n = o.values.length, k = Math.max(0, o.values.findIndex(v => v === mirrorDraft[o.key]));
+    redo({ ...mirrorDraft, [o.key]: o.values[(k + +b.dataset.d + n) % n] });
+  }));
+  $('mirrorStrand').addEventListener('click', () => { const h = Math.floor(Math.random() * 2147483647); redo({ ...mirrorDraft, hseed: h, seed: h }); });
+  $('mirrorRandom').addEventListener('click', () => redo(AllyLook.cleanLook(AllyLook.rollLook(Math.floor(Math.random() * 2147483647)))));
+  $('mirrorDefault').addEventListener('click', () => redo({ ...AllyLook.HERO_LOOK }));
+  $('mirrorUndo').addEventListener('click', () => redo(AllyLook.cleanLook(State.meta.heroLook)));
+  $('mirrorSave').addEventListener('click', () => {
+    setHeroLook(AllyLook.cleanLook(mirrorDraft));
+    applyHeroLook();
+    Sound.play('equip');
+    pushLog('info', '거울 앞에서 모습을 바꿨다.');
+    render();
+  });
 }
 // 남은 시간 — 「2시간 13분」 · 「40분」 · 「1분 안」
 function timeLeft(ms) {

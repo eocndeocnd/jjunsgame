@@ -810,6 +810,22 @@ kbd {
 .ally-row .ally-ic .ally-px { width: 32px; height: 40px; margin: 0 auto; }
 .ally-row.gone { opacity: 0.55; }
 .ally-row .btn.part { color: #ffd2cc; }
+/* 거울 — 내 생김새 바꾸기 (ui.js 의 renderMirror). 왼쪽 앞 · 뒤 · 옆 미리보기(그림의 2배), 오른쪽 부위마다 ◀ 값 ▶ */
+.mirror { display: flex; gap: 12px; align-items: flex-start; }
+.mirror-views { display: flex; flex-direction: column; gap: 6px; flex: none; }
+.mirror-views figure { margin: 0; padding: 4px 6px 2px; text-align: center; border: 2px solid var(--line); background: var(--paper-hi); }
+.mirror-views .ally-px { width: 64px; height: 80px; }
+.mirror-views figcaption { font-size: 10px; color: var(--text-dim); }
+.mirror-opts { flex: 1; min-width: 0; }
+.mirror-group { margin: 8px 0 3px; padding-bottom: 2px; border-bottom: 2px solid var(--line); font-size: 12px; font-weight: 700; }
+.mirror-group:first-child { margin-top: 0; }
+.mirror-row { display: grid; grid-template-columns: 70px 30px 1fr 30px; align-items: center; gap: 4px; margin: 3px 0; font-size: 12px; }
+.mirror-row .btn.tiny { padding-left: 0; padding-right: 0; }
+.mirror-row .mirror-wide { grid-column: 2 / -1; }
+.mirror-val { overflow: hidden; text-align: center; white-space: nowrap; text-overflow: ellipsis; }
+.mirror-sw { display: inline-block; width: 10px; height: 10px; margin-right: 4px; border: 1px solid var(--line); vertical-align: -1px; }
+.mirror-act { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; margin-top: 10px; }
+@media (max-width: 520px) { .mirror { flex-direction: column; align-items: stretch; } .mirror-views { flex-direction: row; justify-content: center; } }
 /* 협회 — 동료 모집 · 게이트 창구 (ui.js 의 renderHire · renderGates) */
 .ally-row { display: grid; grid-template-columns: 36px 1fr auto; align-items: center; gap: 8px; padding: 6px 8px; margin-bottom: 6px; border: 2px solid var(--line); background: var(--paper-hi); font-size: 12px; }
 .ally-row.own { background: #dff3f7; }

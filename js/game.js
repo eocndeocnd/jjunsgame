@@ -1682,6 +1682,11 @@ function hireAlly(id, rng = Math.random) {
   save();
   return true;
 }
+// 내 생김새 — 집 안 거울에서 (ui.js 의 renderMirror · 값 검사는 그릴 때 AllyLook.cleanLook). null 이면 기본 주인공
+function setHeroLook(L) {
+  State.meta.heroLook = L && typeof L === 'object' && !Array.isArray(L) ? { ...L } : null;
+  save();
+}
 // 함께 갈 동료를 고름 (null — 혼자). 게이트에 간 동료는 못 고름
 function setCompanion(id) {
   if (id !== null && (!allyOwned(id) || gateOf(id) || seatedAlly(id) || trainingOf(id))) return false;

@@ -2583,7 +2583,7 @@
       gold: '#b8b8e0', goldDim: '#6a6a90', wine: '#24234a', red: '#7a6ac0', glow: '#d0c8ff', line: '#08080e', wall: '#33334a', velvet: '#141424', steel: ['#d8d8f0', '#a0a0c4', '#f4f4ff', '#5e5e80'], emblem: 'moon' }
   ];
   let STC = STC_DEPT;                                                              // 덩어리를 그릴 때마다 그 지도의 것으로 (chunk)
-  const STORE_KINDS = { counter: 1, case: 1, rope: 1, plant: 1, bench: 1, pillar: 1, kiosk: 1, desk: 1, bed: 1, fridge: 1, cauldron: 1, books: 1, shroom: 1 };
+  const STORE_KINDS = { counter: 1, case: 1, rope: 1, plant: 1, bench: 1, pillar: 1, kiosk: 1, desk: 1, bed: 1, mirror: 1, fridge: 1, cauldron: 1, books: 1, shroom: 1 };
   const storeZones = (m, A) => A.storeZones || (A.storeZones = JSON.parse((m.props && m.props.wall) || '[]'));
   // 큰 상아색 판 — 서른두 점마다 줄눈, 은은한 결, 군데군데 비스듬한 윤
   function storeTile(X, Y) {
@@ -3039,6 +3039,26 @@
       let c = mix(c3(qu[0]), c3(qu[1]), ((px >> 2) + (py >> 2)) % 2 ? 0.6 : 0.2);   // 이불
       if (py > H - 6) c = mul(c, 0.85);
       return c;
+    }
+    if (k === 'mirror') {                                                           // 전신 거울 (우리 집 · 새 집 — 내 생김새를 바꾸는 곳, 2026-11-25) — 나무 틀 · 위가 둥근 유리 · 비스듬한 빛 두 줄 · 받침 발
+      const H = B.h * P, cx = (W - 1) / 2, top = 1, bot = H - 4, rx = W / 2 - 2, arch = rx;
+      const inside = (x, y, inset) => {
+        if (y < top + inset || y > bot - inset || x < 2 + inset || x > W - 3 - inset) return false;
+        const ay = top + arch;                                                      // 위쪽은 반원
+        return y >= ay || ((x - cx) / (rx - inset)) ** 2 + ((y - ay) / (arch - inset)) ** 2 <= 1;
+      };
+      if (!inside(px, py, 0)) {
+        if (py > bot && py < H - 1 && (px === 3 || px === 4 || px === W - 5 || px === W - 4)) return c3(py === H - 2 ? STC.line : '#6a4a2c');   // 받침 발
+        if (py === H - 1 && px > 1 && px < W - 2) return mul(floor, 0.8);           // 발밑 그림자
+        return floor;
+      }
+      if (!inside(px, py, 1)) return c3(STC.line);
+      if (!inside(px, py, 2)) return c3(px < cx ? '#9a7448' : '#7a5634');          // 나무 틀 — 왼쪽이 빛
+      const d = px + py * 0.55;                                                    // 비스듬한 빛 — 굵은 줄 하나, 가는 줄 하나 (되풀이 아님)
+      const glass = mix(c3('#a9bccb'), c3('#6f8698'), (py - top) / (bot - top));
+      if (d > 9 && d < 11.5) return mix(glass, WHITE, 0.55);
+      if (d > 13.5 && d < 14.5) return mix(glass, WHITE, 0.35);
+      return glass;
     }
     if (k === 'fridge') {                                                           // 냉장고 (우리 집) — 흰 몸 · 위아래 문 · 손잡이 · 자석 메모
       const H = B.h * P;

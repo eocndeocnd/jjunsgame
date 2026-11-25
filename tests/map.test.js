@@ -1144,7 +1144,8 @@ test('도시 — 옛 동네(집 앞에서 시작 · 골목 막다른 곳의 이�
   assert.deepEqual(bm.npcs.filter(n => n.shop).map(n => n.shop), ['bm']);
   const home = loadMap('home');
   assert.equal(home.ports.find(q => q.name === 'out').to, 'oldtown.home');
-  assert.deepEqual(home.npcs.filter(n => n.shop).map(n => n.shop), ['bed']);
+  assert.deepEqual(home.npcs.filter(n => n.shop).map(n => n.shop), ['bed', 'mirror'], '원룸 — 침대 · 거울(내 생김새 바꾸기)');
+  assert.deepEqual(loadMap('home2').npcs.filter(n => n.shop).map(n => n.shop), ['bed2', 'mirror'], '새 집에도 거울');
   const area = b => b.w * b.h, hq = cityBlds.find(b => b.kind === 'hq');
   assert.ok(cityBlds.every(b => b === hq || area(b) < area(hq)), '헌터 협회가 가장 큰 건물');
   assert.equal(cityBlds.filter(b => b.kind === 'guild').length, 4);
@@ -1523,12 +1524,14 @@ test('내 생김새 — 저장 · 불러오기에 그대로, 망가진 값은 nu
     const out = { fresh: State.meta.heroLook };
     State.meta.heroLook = { skin: 2, hc: 5, bangs: 'spiky', top: 'hoodie' }; save();
     State.meta = freshMeta(); load(); out.kept = State.meta.heroLook;
+    setHeroLook({ skin: 1, top: 'robe' }); State.meta = freshMeta(); load(); out.set = State.meta.heroLook;
     State.meta.heroLook = [1, 2]; save();
     State.meta = freshMeta(); load(); out.bad = State.meta.heroLook;
     return out;
   `);
   assert.equal(r.fresh, null);
   assert.deepEqual(r.kept, { skin: 2, hc: 5, bangs: 'spiky', top: 'hoodie' });
+  assert.deepEqual(r.set, { skin: 1, top: 'robe' }, '거울에서 고른 것은 바로 저장');
   assert.equal(r.bad, null);
 });
 

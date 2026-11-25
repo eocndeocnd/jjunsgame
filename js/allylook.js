@@ -597,7 +597,7 @@ function drawLook(L, view = 'front') {
 }
 
 // 주인공 기본 모습 — 예전 주인공 그림(design/hero)과 닮게: 짙은 갈색 덥수룩한 머리 · 갈색 둥근 눈 · 검은 재킷에 흰 속옷 · 검은 바지 · 흰 신발 (사용자 결정 2026-11-25 — 주인공도 조합 그림으로)
-const HERO_LOOK = { v: 1, seed: 1, skin: 0, hc: 1, bangs: 'messy', side: 1, back: 0, tie: 0, vol: 2, flip: false, eye: 'round', ec: 0, mouth: 'small', mark: 'none', top: 'jacket', bottom: 'pants', extra: 'none', c1: 0, c2: 0, c3: 3, shoe: 1, hseed: 20261125 };
+const HERO_LOOK = { v: 1, seed: 20261125, skin: 0, hc: 1, bangs: 'messy', side: 1, back: 0, tie: 0, vol: 2, flip: false, eye: 'round', ec: 0, mouth: 'small', mark: 'none', top: 'jacket', bottom: 'pants', extra: 'none', c1: 0, c2: 0, c3: 3, shoe: 1, hseed: 20261125 };
 
 // 저장에서 읽은 생김새를 검사 — 모르는 값은 기본 주인공(HERO_LOOK)의 값으로 (주인공 꾸미기 · 저장본 손상 대비)
 function cleanLook(o) {
@@ -614,6 +614,30 @@ function cleanLook(o) {
   L.seed = L.hseed;
   return L;
 }
+
+// 거울(주인공 꾸미기)에서 고를 수 있는 항목 — 무리(얼굴 · 머리 · 옷)마다. values 는 저장되는 값, labels 는 보이는 이름, swatch 는 색 견본
+const idxs = n => Array.from({ length: n }, (_, i) => i);
+const OPTIONS = [
+  { group: '얼굴', key: 'skin', name: '피부', values: idxs(SKINS.length), labels: SKINS.map(s => s[0]), swatch: SKINS.map(s => s[1]) },
+  { group: '얼굴', key: 'eye', name: '눈', values: Object.keys(EYES), labels: Object.keys(EYES).map(k => EYES_KO[k]) },
+  { group: '얼굴', key: 'ec', name: '눈동자', values: idxs(EYE_COLORS.length), labels: EYE_COLORS.map(e => e[0]), swatch: EYE_COLORS.map(e => e[1]) },
+  { group: '얼굴', key: 'mouth', name: '입', values: MOUTHS, labels: ['작게', '일자', '벌림', '없음'] },
+  { group: '얼굴', key: 'mark', name: '얼굴 표시', values: MARKS.map(m => m[0]), labels: ['없음', '볼터치', '흉터', '반창고', '점'] },
+  { group: '머리', key: 'bangs', name: '앞머리', values: BANGS, labels: BANGS.map(b => BANGS_KO[b]) },
+  { group: '머리', key: 'flip', name: '가르마', values: [false, true], labels: ['왼쪽', '오른쪽'] },
+  { group: '머리', key: 'side', name: '옆머리', values: idxs(SIDES.length), labels: SIDES.map(s => s[2]) },
+  { group: '머리', key: 'back', name: '뒷머리', values: idxs(BACKS.length), labels: BACKS.map(b => b[2]) },
+  { group: '머리', key: 'tie', name: '묶음', values: idxs(TIES.length), labels: TIES.map(t => t[1]) },
+  { group: '머리', key: 'vol', name: '숱', values: [1, 2], labels: ['적게', '많이'] },
+  { group: '머리', key: 'hc', name: '머리색', values: idxs(HAIR_COLORS.length), labels: HAIR_COLORS.map(h => h[0]), swatch: HAIR_COLORS.map(h => h[1]) },
+  { group: '옷', key: 'top', name: '윗옷', values: TOPS, labels: TOPS.map(t => TOPS_KO[t]) },
+  { group: '옷', key: 'c1', name: '윗옷 색', values: idxs(CLOTH_COLORS.length), labels: CLOTH_COLORS.map(c => c[0]), swatch: CLOTH_COLORS.map(c => c[1]) },
+  { group: '옷', key: 'bottom', name: '아래옷', values: BOTTOMS.map(b => b[0]), labels: ['바지', '반바지', '치마'] },
+  { group: '옷', key: 'c2', name: '아래옷 색', values: idxs(CLOTH_COLORS.length), labels: CLOTH_COLORS.map(c => c[0]), swatch: CLOTH_COLORS.map(c => c[1]) },
+  { group: '옷', key: 'extra', name: '걸칠 것', values: EXTRAS.map(e => e[0]), labels: ['없음', '목도리', '허리띠', '가방끈', '망토'] },
+  { group: '옷', key: 'c3', name: '포인트 색', values: idxs(CLOTH_COLORS.length), labels: CLOTH_COLORS.map(c => c[0]), swatch: CLOTH_COLORS.map(c => c[1]) },
+  { group: '옷', key: 'shoe', name: '신발', values: idxs(SHOES.length), labels: SHOES.map(s => s[0]), swatch: SHOES.map(s => s[1]) }
+];
 
 // ---------- 걷기 시트 — 주인공 지도 걷기 (assets/hero/walk.png 와 같은 틀) ----------
 // 한 줄에 한 방향: 앞 · 뒤 · 오른쪽을 봄 · 왼쪽을 봄. 한 줄 4칸 = 서기 · 걸음 A · 서기 · 걸음 B (한 칸 32×40 → 128×160).
@@ -667,6 +691,6 @@ function describe(L) {
 const COUNT = SKINS.length * HAIR_COLORS.length * BANGS.length * SIDES.length * BACKS.length * TIES.length * 2 * Object.keys(EYES).length * EYE_COLORS.length * MOUTHS.length * MARKS.length
   * TOPS.length * BOTTOMS.length * EXTRAS.length * CLOTH_COLORS.length ** 3 * SHOES.length;
 
-const api = { W, H, HERO_LOOK, cleanLook, rollLook, drawLook, walkSheet, describe, COUNT, SKINS, HAIR_COLORS };
+const api = { W, H, HERO_LOOK, OPTIONS, cleanLook, rollLook, drawLook, walkSheet, describe, COUNT, SKINS, HAIR_COLORS };
 if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.AllyLook = api;
 })(typeof window !== 'undefined' ? window : globalThis);
