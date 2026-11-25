@@ -1016,6 +1016,50 @@ test('7격 알렉산드리아 — 파벌마다 상징 공간에, 파벌 안에�
   assert.ok(secretCells.length && !(walk(m, from, new Set([...bodies, ...secretCells]))[(big.y + 1) * m.w + big.x] >= 0), '샛길 없이는 못 감');
 });
 
+test('8격 카멜롯 — 남쪽 나루 → 바위의 검 광장 · 마상 시합장 → 세 갈래(서쪽 숲 · 가운데 성 · 동쪽 고개와 해안)가 원탁의 홀 앞에서 만나 왕좌의 아서왕 → 호숫가(호수의 여인 · 아발론으로 가는 배) · 로빈 후드 뒤 은신처', () => {
+  const data = loadData();
+  const m = loadMap('camelot');
+  const sec = name => m.areas.find(a => a.section && a.name === name);
+  const post = name => m.posts.find(p => p.name === name);
+  const spot = name => post(name) || (a => ({ x: a.x, y: a.y + a.h / 2, w: 1, h: 1 }))(m.areas.find(a => a.monster === data.ENEMIES.find(e => e.name === name).id));
+  const inside = (p, a) => p.x >= a.x && p.y >= a.y && p.x + p.w <= a.x + a.w && p.y + p.h <= a.y + a.h;
+  const lv = name => data.ENEMIES.find(e => e.name === name).level;
+  const routes = {
+    '서쪽 숲': ['광전사', '녹색 기사', '퍼시벌', '로빈 후드'],
+    '가운데 성': ['템플 기사', '가웨인', '갤러해드'],
+    '동쪽 고개 · 해안': ['용기사', '트리스탄', '롤랑', '엘 시드'],
+    '원탁의 홀로': ['랜슬롯', '베디비어', '모드레드', '아서왕']
+  };
+  for (const [r, list] of Object.entries(routes)) for (let i = 1; i < list.length; i++)
+    assert.ok(lv(list[i]) > lv(list[i - 1]) && spot(list[i]).y < spot(list[i - 1]).y, `${r}: ${list[i - 1]} → ${list[i]} (셀수록 북쪽)`);
+  const where = { '랜슬롯': '마상 시합장', '갤러해드': '성배 예배당', '모드레드': '원탁의 홀', '아서왕': '원탁의 홀', '호수의 여인': '호숫가', '롤랑': '롤랑의 고개', '트리스탄': '동쪽 해안 절벽', '엘 시드': '동문 밖 들판' };
+  for (const [name, a] of Object.entries(where)) assert.ok(inside(post(name), sec(a)), `${name} 은(는) ${a}`);
+  // 이름난 기사는 트인 땅 (로빈 후드 — 숲에 숨은 의적, 아서왕 · 호수의 여인 빼고) · 지나가는 흙길에서 두 칸 넘게
+  for (const p of m.posts.filter(q => !['로빈 후드', '아서왕', '호수의 여인'].includes(q.name))) {
+    let open = 0, all = 0;
+    for (let y = p.y - 3; y < p.y + p.h + 3; y++) for (let x = p.x - 3; x < p.x + p.w + 3; x++) { all++; if (!m.solid[y * m.w + x]) open++; }
+    assert.ok(open / all > 0.75, `${p.name} — 트인 땅 (${Math.round(open / all * 100)}%)`);
+    for (let y = p.y - 2; y < p.y + p.h + 2; y++) for (let x = p.x - 2; x < p.x + p.w + 2; x++) assert.notEqual(m.tile[y * m.w + x], gen.ROAD, `${p.name} — 흙길 2칸 안`);
+  }
+  // 세 갈래 — 둘을 막아도 남은 하나로 원탁의 홀 문(베디비어 앞)까지
+  const bodies = m.posts.flatMap(q => cellsOf(m, q)), from = [m.start.y * m.w + m.start.x];
+  const hall = sec('원탁의 홀'), door = []; for (let x = 67; x < 74; x++) door.push((hall.y + hall.h) * m.w + x);
+  const band = (x0, x1) => { const out = []; for (let y = 62; y < 130; y++) for (let x = x0; x < x1; x++) out.push(y * m.w + x); return out; };
+  const lanes = { 서: band(0, 44), 가운데: band(44, 96), 동: band(96, m.w) };
+  for (const keep of Object.keys(lanes)) {
+    const shut = new Set([...bodies, ...Object.entries(lanes).filter(([k]) => k !== keep).flatMap(([, c]) => c)]);
+    assert.ok(door.some(k => walk(m, from, shut)[k] >= 0), `${keep}쪽 길만으로 원탁의 홀 문까지`);
+  }
+  // 은신처 — 숨은 샛길로만, 큰 상자 (부자에게서 턴 보물)
+  const big = m.chests.find(c => c.big);
+  assert.ok(inside({ x: big.x, y: big.y, w: 1, h: 1 }, sec('로빈 후드의 은신처')), '큰 상자는 은신처');
+  const secretCells = []; for (let k = 0; k < m.w * m.h; k++) if (m.secret[k]) secretCells.push(k);
+  assert.ok(secretCells.length && !(walk(m, from, new Set([...bodies, ...secretCells]))[(big.y + 1) * m.w + big.x] >= 0), '샛길 없이는 못 감');
+  // 9격 아발론으로 — 호수의 배, 장소는 그대로(인간의 땅)
+  const next = m.ports.find(p => p.name === 'next');
+  assert.ok(inside(next, sec('호숫가')) && next.to === `${gen.rankMapId(9)}.in` && !next.place);
+});
+
 test('조이스틱이 향하는 쪽으로 — 비스듬히 밀면 대각선 · 곧은 걸음을 섞어 그 각도대로 곧게, 대각선도 같은 빠르기', () => {
   const rows = ['########################'];
   for (let y = 0; y < 14; y++) rows.push('#' + (y === 0 ? '@' : '.') + '.'.repeat(21) + '#');
