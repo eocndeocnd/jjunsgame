@@ -1711,7 +1711,7 @@ function buildingInterior(data, b) {
   return buildTmj({ w: W, h: H, tiles, posts, ports, npcs: [{ name: 'start', x: out.x + (out.w >> 1), y: out.y - 1 }], look: lk, props: { title: b.title, interior: true } });
 }
 
-// ---------- 아직 손으로 짜지 않은 격의 임시 지도 (11격부터 — 하나씩 컨셉 논리대로 손으로 짠 지도로 바꿀 자리, docs/MAP-7PLUS-PLAN.md) ----------
+// ---------- 아직 손으로 짜지 않은 격의 임시 지도 (12격부터 — 하나씩 컨셉 논리대로 손으로 짠 지도로 바꿀 자리, docs/MAP-7PLUS-PLAN.md) ----------
 // 들머리(남쪽 끝 광장) → 레벨 순으로: 돌아다니는 일반의 방(구역) · 하나뿐인 일반의 벽감(길 벽에 오목하게) · 정예의 곁방(고리 —
 // 길에서 아래 문으로 들어가 위 문으로 다시 길에) → 북쪽 끝 보스가 꼭 맞게 막은 틈 → 그 너머 끝 방(히든 · 다음 격으로 가는 문).
 // 앞 격 보스 뒤 문으로 들어와 이 격 보스 뒤 문으로 나가므로 되돌아 걷지 않습니다 (사용자 결정 2026-11-24 — 문의 광장 없앰).
@@ -1730,7 +1730,8 @@ const RANK_MAPS = [
   { id: 'camelot', rank: 8, custom: data => camelotMap(data) },     // 손으로 짠 지도 (CAMELOT)
   { id: 'avalon', rank: 9, custom: data => avalonMap(data) },       // 손으로 짠 지도 (AVALON)
   { id: 'murim', rank: 10, custom: data => murimMap(data) },        // 손으로 짠 지도 (MURIM)
-  ...Array.from({ length: 10 }, (_, i) => ({ id: `rank${i + 11}`, rank: i + 11, temp: true }))
+  { id: 'tianshan', rank: 11, custom: data => tianshanMap(data) },  // 손으로 짠 지도 (TIANSHAN)
+  ...Array.from({ length: 9 }, (_, i) => ({ id: `rank${i + 12}`, rank: i + 12, temp: true }))
 ];
 const rankMapId = rank => (RANK_MAPS.find(m => m.rank === rank) || {}).id;
 // 장소 — 7~20격을 한 줄로 내리 잇지 않고 장소가 바뀌는 곳에서 나눔 (사용자 결정 2026-11-25). 한 장소 안의 격은 보스 뒤 문으로 바로,
@@ -2219,6 +2220,59 @@ function murimMap(data) {
     // 매화나무 — 화산 매화 숲에 듬성듬성
     const nearRoad = (x, y) => { for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) if (tiles[idx(x + i, y + j)] === ROAD) return true; return false; };
     scatterTrees(c, A.plum, (x, y) => nearFoe(A, x, y, 3) || nearRoad(x, y), 10, 0.12);
+  });
+}
+
+// ---------- 11격 — 만년설 덮인 천산 (손으로 짠 지도, 사용자 결정 2026-11-25) ----------
+// 「무림인이 평생을 걸고 찾는 내단의 주인들이 산다. 대개는 찾는 쪽이 먹힌다.」 — 천 년 묵은 것들이 높이마다 나뉘어 사는 산 하나.
+// 사신수는 방위가 정체성이라(청룡 동 · 백호 서 · 주작 남 · 현무 북) 남 → 북 한 방향으로는 레벨과 방위가 안 맞아서, 산을 빙빙 돌며 오르는 나선 길로 짬.
+//   바깥 고리(산허리)  남쪽 기슭(백년 영사 · 금잠고) → 동쪽(청룡 제단 · 금두꺼비 연못) → 북쪽(산삼 숲 · 여우 고개의 구미호) → 서쪽(빙하 빙잠 · 백호 제단
+//                      · 곰 동굴의 웅녀 — 쑥과 마늘로 백 일, 이야기가 있는 구석 · 산군 — 그 산의 주인) → 남서쪽에서 한 단 올라
+//   안쪽 고리(높은 비탈) 남쪽(주작 제단) → 남동쪽 절벽 둥지(금시조 — 용을 노림) → 동쪽 불 밟는 온천(화린) → 북쪽(현무 제단) → 서쪽 만 년 호수(금강영구) → 정상 어귀
+//   정상 천지          이무기가 하늘로 오르는 둑을 막음 (12격 잊혀진 성역 — 장소가 신화의 땅으로). 꺾어 태평해지면 봉황(히든)이 내려앉음.
+// 갈림길 대신 산 반대편이 안 보이는 맛 — 모퉁이를 돌 때마다 새 방위가 열림. 바깥 · 안쪽 고리는 제 길목 바로 옆을 막아 한 방향으로만 돎.
+//   숨은 곳 — 산을 뚫은 얼음 동굴(바깥 서쪽 ↔ 안쪽 북서쪽, 양쪽 바위 속 숨은 샛길 — 찾으면 한 바퀴 반을 건너뜀, 만년 한철 — 큰 상자). 작은 상자는 산삼 숲 · 금시조 둥지 아래.
+const TIANSHAN = {
+  W: 150, H: 150,
+  outer: [8, 8, 142, 142], divider: [30, 30, 120, 120], inner: [33, 33, 117, 117], summitWall: [52, 52, 98, 98], summit: [55, 55, 95, 95],
+  outerBlock: [44, 120, 48, 142], step: [36, 117, 41, 120], innerBlock: [33, 98, 52, 102], summitGate: [52, 68, 55, 75],
+  lake: [75.5, 72, 12], pier: [73, 65, 78, 85], frog: [131, 56, 3], tarn: [35, 80, 39, 86], springs: [110, 70, 114, 74],
+  bear: [22, 85, 33, 96], ice: [33, 33, 44, 44],
+  in: [74, 146, 3], next: [73, 65, 4], start: [75, 138], merchant: [82, 136],
+  foes: {
+    '청룡': [123, 88], '구미호': [60, 10], '백호': [10, 64], '웅녀': [27, 89], '산군': [10, 108],
+    '주작': [60, 112], '금시조': [111, 112], '현무': [74, 35], '이무기': [73, 80], '봉황': [86, 57]
+  },
+  sections: [['천산 기슭', [8, 120, 142, 148]], ['동쪽 산허리 — 청룡의 제단', [120, 8, 142, 120]], ['북쪽 산허리 — 여우 고개', [30, 8, 120, 30]], ['서쪽 산허리 — 백호의 제단', [8, 8, 30, 120]],
+    ['웅녀의 곰 동굴', 'bear'], ['남쪽 높은 비탈 — 주작의 제단', [33, 98, 117, 117]], ['동쪽 높은 비탈 — 불 밟는 온천', [98, 33, 117, 98]], ['북쪽 높은 비탈 — 현무의 제단', [33, 33, 117, 52]],
+    ['서쪽 높은 비탈 — 만 년 호수', [33, 52, 52, 98]], ['얼음 동굴', 'ice'], ['정상 천지', 'summit']],
+  zones: [['백년 영사', [80, 121, 104, 141]], ['금잠고', [106, 121, 128, 141]], ['세 발 금두꺼비', [121, 30, 141, 74]], ['천년 산삼 동자', [86, 9, 119, 29]],
+    ['빙잠', [9, 9, 30, 46]], ['화린', [99, 54, 116, 96]], ['금강영구', [34, 46, 51, 96]]],
+  chests: [[100, 12], [113, 103], [38, 37, 'big']]
+};
+function tianshanMap(data) {
+  const A = TIANSHAN;
+  return handMap(data, 11, A, c => {
+    const { tiles, idx, box, ring, road, secrets } = c;
+    const disk = (cx, cy, r, t) => { for (let y = Math.floor(cy - r); y <= cy + r; y++) for (let x = Math.floor(cx - r); x <= cx + r; x++) if (Math.hypot(x + 0.5 - cx, y + 0.5 - cy) < r) tiles[idx(x, y)] = t; };
+    // 산 — 바깥 고리 · 바위 띠 · 안쪽 고리 · 바위 띠 · 정상. 남쪽 기슭으로 들어섬
+    box(A.outer, FLOOR); box(A.divider, ROCK); box(A.inner, FLOOR); box(A.summitWall, ROCK); box(A.summit, FLOOR);
+    box([A.in[0], A.outer[3], A.in[0] + A.in[2], A.in[1] + 1], FLOOR);
+    // 한 방향으로만 돌게 — 바깥은 들머리 서쪽, 안쪽은 올라선 곳 북쪽을 막음. 남서쪽 한 단 오르는 비탈 · 정상 서쪽 어귀
+    box(A.outerBlock, ROCK); box(A.step, FLOOR); box(A.innerBlock, ROCK); box(A.summitGate, FLOOR);
+    // 물 — 정상 천지(하늘로 오르는 둑), 금두꺼비 연못, 만 년 호수, 불 밟는 온천
+    disk(A.lake[0], A.lake[1], A.lake[2], WATER); box(A.pier, FLOOR);
+    disk(A.frog[0], A.frog[1], A.frog[2], WATER); box(A.tarn, WATER); box(A.springs, WATER);
+    // 웅녀의 곰 동굴 (바위 테, 서쪽 입구) · 얼음 동굴 (바위 테, 양쪽 숨은 샛길 — 바깥 서쪽 ↔ 안쪽 북서쪽)
+    box(A.bear, FLOOR); ring(A.bear, ROCK); box([A.bear[0], 89, A.bear[0] + 1, 93], FLOOR);
+    box(A.ice, FLOOR); ring(A.ice, ROCK);
+    secrets.push({ name: '숨은 샛길', x: A.divider[0], y: 39, w: A.ice[0] - A.divider[0] + 1, h: 2 }, { name: '숨은 샛길', x: A.ice[2] - 1, y: 39, w: 1, h: 2 });
+    // 흙길 — 바깥 고리(남 → 동 → 북 → 서 → 남서 비탈) · 안쪽 고리(남 → 동 → 북 → 서 → 정상 어귀)
+    road([74, 130, 77, A.in[1] + 1]); road([74, 130, 134, 134]); road([130, 17, 134, 134]); road([17, 17, 134, 21]); road([17, 17, 21, 134]); road([17, 130, 44, 134]);
+    road([37, 106, 40, 134]); road([37, 106, 109, 110]); road([105, 41, 109, 110]); road([45, 41, 109, 45]); road([45, 41, 49, 74]); road([45, 70, 62, 73]);
+    // 나무 — 산삼 숲 (길 · 자리 · 상자 곁은 비움)
+    const nearRoad = (x, y) => { for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) if (tiles[idx(x + i, y + j)] === ROAD) return true; return false; };
+    scatterTrees(c, [86, 9, 119, 29], (x, y) => nearFoe(A, x, y, 3) || nearRoad(x, y) || A.chests.some(([cx, cy]) => Math.abs(x - cx) <= 2 && Math.abs(y - cy) <= 2), 11, 0.16);
   });
 }
 
@@ -2772,4 +2826,4 @@ function allMaps(data) {
   return out;
 }
 
-module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, looksPng, encodePng, generate, sewer, overworld, oldtown, city, deptInterior, dept2Interior, assocInterior, guildInterior, guild2Interior, homeInterior, home2Interior, arenaInterior, bmInterior, gateinInterior, chiefInterior, raidInterior, storeInterior, OLDTOWN, CITY, DEPT, DEPT2, ASSOC, GUILD, GUILD2, HOME, HOME2, ARENA, BM, GATEIN, CHIEF, RAID, W1, W2, W3, SKY, CITY_BIO, secretRoom, buildingInterior, allMaps, layoutFromPlan, RANK_MAPS, rankMapId, hallMap, HALL, PLACES, placeOf, ALEX, alexandriaMap, CAMELOT, camelotMap, AVALON, avalonMap, MURIM, murimMap, handMap, SEWER, SECRET_ROOMS, CAVES, caveMap, BUILDINGS, BUILD, DOORWAY, CARPET, RUIN, UNDERS, ABYSS, DEMON_CASTLE, abyssMap };
+module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, looksPng, encodePng, generate, sewer, overworld, oldtown, city, deptInterior, dept2Interior, assocInterior, guildInterior, guild2Interior, homeInterior, home2Interior, arenaInterior, bmInterior, gateinInterior, chiefInterior, raidInterior, storeInterior, OLDTOWN, CITY, DEPT, DEPT2, ASSOC, GUILD, GUILD2, HOME, HOME2, ARENA, BM, GATEIN, CHIEF, RAID, W1, W2, W3, SKY, CITY_BIO, secretRoom, buildingInterior, allMaps, layoutFromPlan, RANK_MAPS, rankMapId, hallMap, HALL, PLACES, placeOf, ALEX, alexandriaMap, CAMELOT, camelotMap, AVALON, avalonMap, MURIM, murimMap, TIANSHAN, tianshanMap, handMap, SEWER, SECRET_ROOMS, CAVES, caveMap, BUILDINGS, BUILD, DOORWAY, CARPET, RUIN, UNDERS, ABYSS, DEMON_CASTLE, abyssMap };

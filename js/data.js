@@ -1892,12 +1892,12 @@ const ENEMY_SIZE = {
 // 컨셉상 세상에 하나뿐인 존재(이름 있는 개인 · 그 하나뿐인 신 …)는 일반이어도 구역에서 여럿이 돌아다니지 않고,
 // 정예 · 보스처럼 정해진 자리에 한 마리만 가만히 섭니다 (사용자 결정 2026-11-24). 일반 규칙은 그대로 — 꺾어도 그 자리에 다시 서고
 // (몇 번이든 · 전리품 ×1 · 맞설 때 에너지 1), 기운은 다시 설 때마다 새로 굴립니다. 크기는 최소 2칸 (사용자 결정).
-// 아직 정하지 않은 다섯(녹색 기사 · 산군 · 페가수스 · 피닉스 · 공허의 군주)은 넣지 않았습니다 — docs/MAP-7PLUS-PLAN.md 3번.
+// 녹색 기사는 여럿(사용자 결정). 아직 정하지 않은 셋(페가수스 · 피닉스 · 공허의 군주)은 넣지 않았습니다 — docs/MAP-7PLUS-PLAN.md 3번.
 const SOLO_NORMALS = new Set([
   'archimedes', 'hypatia', 'davinci', 'herodotos', 'joan', 'genghis', 'alexander',          // 7 설화
   'roland', 'elcid', 'robinhood',                                                             // 8 기사
   'babayaga', 'circe',                                                                        // 9 마도
-  'ungnyeo',                                                                                  // 11 영물
+  'ungnyeo', 'sangun',                                                                        // 11 영물 (산군 — 그 산의 주인, 사용자 결정 2026-11-25)
   'theseus', 'perseus', 'odysseus', 'atalanta', 'enkidu', 'hector', 'achilles', 'cuchulainn', 'arjuna', 'siegfried',   // 13 영웅
   'moloch', 'baphomet', 'azazel', 'mephisto', 'astaroth', 'lilith',                           // 15 악마
   'bastet', 'anubis', 'susanoo', 'thor', 'amaterasu', 'isis',                                 // 16 신격

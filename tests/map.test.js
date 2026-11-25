@@ -1145,6 +1145,46 @@ test('10격 천하제일 비무대 — 객잔 마을 → 바위 등성이로 갈
   assert.ok(!next.place && next.to === `${gen.rankMapId(11)}.in`, '천산으로 — 장소는 그대로 동방');
 });
 
+test('11격 천산 — 나선 길: 바깥 고리(기슭 → 동 청룡 → 북 구미호 → 서 백호 · 웅녀 · 산군)에서 한 단 올라 안쪽 고리(남 주작 → 금시조 → 화린 → 북 현무 → 금강영구) → 정상 천지의 이무기 · 사신수는 제 방위 · 얼음 동굴 지름길', () => {
+  const data = loadData();
+  const m = loadMap('tianshan');
+  const sec = name => m.areas.find(a => a.section && a.name === name);
+  const post = name => m.posts.find(p => p.name === name);
+  const inside = (p, a) => p.x >= a.x && p.y >= a.y && p.x + p.w <= a.x + a.w && p.y + p.h <= a.y + a.h;
+  const foe = name => data.ENEMIES.find(e => e.name === name);
+  // 사신수는 제 방위 — 정상 한가운데에서 본 쪽
+  const cx = m.w / 2, cy = m.h / 2, mid = p => ({ x: p.x + p.w / 2 - cx, y: p.y + p.h / 2 - cy });
+  assert.ok(mid(post('청룡')).x > 0 && Math.abs(mid(post('청룡')).x) > Math.abs(mid(post('청룡')).y), '청룡은 동쪽');
+  assert.ok(mid(post('백호')).x < 0 && Math.abs(mid(post('백호')).x) > Math.abs(mid(post('백호')).y), '백호는 서쪽');
+  assert.ok(mid(post('주작')).y > 0 && Math.abs(mid(post('주작')).y) > Math.abs(mid(post('주작')).x), '주작은 남쪽');
+  assert.ok(mid(post('현무')).y < 0 && Math.abs(mid(post('현무')).y) > Math.abs(mid(post('현무')).x), '현무는 북쪽');
+  // 나선 — 숨은 샛길 없이 걸으면, 일반 · 정예를 레벨 순서대로 만남 (걸어서 닿는 거리가 레벨 순)
+  const secretCells = []; for (let k = 0; k < m.w * m.h; k++) if (m.secret[k]) secretCells.push(k);
+  const from = [m.start.y * m.w + m.start.x], bodies = new Set(m.posts.flatMap(q => cellsOf(m, q)));
+  const d = walk(m, from, new Set([...secretCells]));
+  const reach = name => {
+    const p = post(name);
+    if (p) { let best = Infinity; for (let y = p.y - 1; y <= p.y + p.h; y++) for (let x = p.x - 1; x <= p.x + p.w; x++) { const k = y * m.w + x; if (!bodies.has(k) && d[k] >= 0) best = Math.min(best, d[k]); } return best; }
+    const a = m.areas.find(q => q.monster === foe(name).id); return d[a.mid.y * m.w + a.mid.x];
+  };
+  const order = data.ENEMIES.filter(e => e.rank.n === 11 && (e.kind === 'normal' || e.kind === 'elite')).sort((p, q) => p.level - q.level).map(e => e.name);
+  for (let i = 1; i < order.length; i++) assert.ok(reach(order[i]) > reach(order[i - 1]), `${order[i - 1]}(${reach(order[i - 1])}칸) → ${order[i]}(${reach(order[i])}칸)`);
+  const where = { '웅녀': '웅녀의 곰 동굴', '이무기': '정상 천지', '봉황': '정상 천지', '구미호': '북쪽 산허리 — 여우 고개' };
+  for (const [name, a] of Object.entries(where)) assert.ok(inside(post(name), sec(a)), `${name} 은(는) ${a}`);
+  for (const p of m.posts.filter(q => !['웅녀', '금시조', '이무기'].includes(q.name))) {   // 곰 동굴의 웅녀 · 절벽 둥지의 금시조 · 보스 빼고 트인 땅
+    let open = 0, all = 0;
+    for (let y = p.y - 3; y < p.y + p.h + 3; y++) for (let x = p.x - 3; x < p.x + p.w + 3; x++) { all++; if (!m.solid[y * m.w + x]) open++; }
+    assert.ok(open / all > 0.75, `${p.name} — 트인 땅 (${Math.round(open / all * 100)}%)`);
+  }
+  // 얼음 동굴 — 숨은 샛길로만, 큰 상자. 샛길로 바깥 서쪽에서 안쪽 북서쪽으로 건너뜀
+  const big = m.chests.find(c => c.big), ice = sec('얼음 동굴');
+  assert.ok(inside({ x: big.x, y: big.y, w: 1, h: 1 }, ice), '큰 상자는 얼음 동굴');
+  assert.ok(!(d[(big.y + 1) * m.w + big.x] >= 0), '샛길 없이는 못 감');
+  const all = walk(m, from, new Set());
+  assert.ok(all[(ice.y + 6) * m.w + ice.x + ice.w + 1] < d[(ice.y + 6) * m.w + ice.x + ice.w + 1], '얼음 동굴로 지름길');
+  assert.equal(m.ports.find(p => p.name === 'next').place, '신화의 땅', '이무기 뒤 — 장소가 신화의 땅으로');
+});
+
 test('조이스틱이 향하는 쪽으로 — 비스듬히 밀면 대각선 · 곧은 걸음을 섞어 그 각도대로 곧게, 대각선도 같은 빠르기', () => {
   const rows = ['########################'];
   for (let y = 0; y < 14; y++) rows.push('#' + (y === 0 ? '@' : '.') + '.'.repeat(21) + '#');
