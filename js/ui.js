@@ -1916,6 +1916,7 @@ function goThroughPort(port) {
     mapShown = null;
     return;
   }
+  if (port.place) pushLog('rank', `━ ${port.place} ━`);   // 장소가 바뀜 (7격부터 — 인간의 땅 · 동방 …)
   const target = data.ports.find(p => p.name === door);
   const at = target ? doorStep(data, target) : data.start;
   // 닿는 칸이 어느 지역의 구역이면(그 장의 어귀) 곧바로 그 지역 — 한 발짝 걷기 전에도 지역 머리가 맞게
@@ -1929,16 +1930,19 @@ function goThroughPort(port) {
 // 지도를 옮길 때 — 화면을 까맣게 덮고(FADE_MS) 그동안 옮긴 뒤 다시 밝힘. 덮여 있는 동안 지도는 멈춥니다 (mapPaused)
 const FADE_MS = 260;
 let fading = false;
-function fadeThrough(fn) {
+// place — 장소가 바뀌는 문(7격부터, map-gen 의 PLACES)이면 까만 화면에 그 장소 이름을 PLACE_MS 동안 띄움
+const PLACE_MS = 1300;
+function fadeThrough(fn, place) {
   const el = $('fade');
   if (!el || fading) { fn(); return; }
   fading = true;
+  el.textContent = place || '';
   el.classList.add('on');
   setTimeout(() => {
     fn();
     render();
     requestAnimationFrame(() => { el.classList.remove('on'); fading = false; });
-  }, FADE_MS);
+  }, place ? PLACE_MS : FADE_MS);
 }
 
 // 문 바로 앞의 걸을 수 있는 칸 (아래 · 위 · 오른쪽 · 왼쪽 순) — 들어서자마자 도로 나가지 않게 문 위가 아니라 그 앞.
@@ -2049,7 +2053,7 @@ function onMapEvents(evs) {
       changed = true;
       break;
     } else if (e.type === 'port' && e.port.to) {
-      fadeThrough(() => goThroughPort(e.port));   // 화면이 까매졌다가 다음 지도의 문(구멍) 앞에서 밝아짐
+      fadeThrough(() => goThroughPort(e.port), e.port.place);   // 화면이 까매졌다가 다음 지도의 문(구멍) 앞에서 밝아짐 · 장소가 바뀌면 그 이름을 띄움
       changed = true;
       break;                             // 남은 일은 떠나온 지도의 것
     } else if (e.type === 'closed' && e.port.unlock === 'guild') {

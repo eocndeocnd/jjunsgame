@@ -925,6 +925,19 @@ test('7격부터 — 격 하나에 한 장, 마왕성 왕좌 뒤 문에서 20격
   }
 });
 
+test('7격부터 — 장소로 나눔: 장소가 바뀌는 문(마왕성 왕좌 뒤 · 그 장소 마지막 격의 보스 뒤)에만 다음 장소 이름, 한 장소 안은 이름 없이 바로', () => {
+  const ranks = gen.PLACES.flatMap(p => p.ranks);
+  assert.deepEqual(ranks, Array.from({ length: 14 }, (_, i) => i + 7), '7~20격이 차례대로 한 번씩');
+  assert.equal(loadMap('demoncastle').ports.find(p => p.name === 'next').place, '인간의 땅');
+  for (const spec of gen.RANK_MAPS) {
+    const m = loadMap(spec.id), next = m.ports.find(p => p.name === 'next');
+    assert.equal(m.props.place, gen.placeOf(spec.rank).name, `${spec.id} 장소`);
+    if (!next) continue;
+    const changes = gen.placeOf(spec.rank) !== gen.placeOf(spec.rank + 1);
+    assert.equal(next.place, changes ? gen.placeOf(spec.rank + 1).name : undefined, `${spec.rank}격 → ${spec.rank + 1}격`);
+  }
+});
+
 test('7격부터 — 하나뿐인 일반은 2칸 넘게 · 회랑 가운데 길에서 2칸 넘게 떨어진 벽감 · 정예의 곁방은 문 둘(고리)', () => {
   const data = loadData();
   const foe = id => data.ENEMIES.find(e => e.id === id);

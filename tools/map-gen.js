@@ -1516,7 +1516,7 @@ const ABYSS = {                                                // 처음 시안(
   mound: [62, 231],                                            // 지하 묘실로 내려가는 바위 둔덕의 문 (아래 가운데)
   merchant: [73, 234], chests: [[13, 164], [113, 113], [16, 63, 'big']]
 };
-const DEMON_CASTLE = { id: 'demoncastle', title: '마왕성', boss: '마왕', map: 'abyss', hidden: '관측자', next: { label: '알렉산드리아 대도서관', to: 'library.in' },
+const DEMON_CASTLE = { id: 'demoncastle', title: '마왕성', boss: '마왕', map: 'abyss', hidden: '관측자', next: { label: '알렉산드리아 대도서관', to: 'library.in', place: '인간의 땅' },
   hall: { w: 26, h: 34, aisle: 4, bossY: 5, pillarX: 4, pillarRows: [12, 19, 26], pillar: 2 } };
 function abyssMap(data) {
   const A = ABYSS, W = A.W, H = A.H, idx = (x, y) => y * W + x, inside = (x, y) => x >= 0 && y >= 0 && x < W && y < H;
@@ -1707,7 +1707,7 @@ function buildingInterior(data, b) {
     posts.push(hp);
   }
   // 다음 격으로 가는 문 (b.next — 마왕성: 왕좌 뒤 맨 위 줄 가운데, 보스를 꺾어야 열림 · 7격 대도서관 들머리로)
-  if (b.next) ports.push({ name: 'next', label: b.next.label, x: cx - 1, y: TOP, w: 2, h: 1, to: b.next.to, opensAfter: foe.id });
+  if (b.next) ports.push({ name: 'next', label: b.next.label, x: cx - 1, y: TOP, w: 2, h: 1, to: b.next.to, opensAfter: foe.id, ...(b.next.place ? { place: b.next.place } : {}) });
   return buildTmj({ w: W, h: H, tiles, posts, ports, npcs: [{ name: 'start', x: out.x + (out.w >> 1), y: out.y - 1 }], look: lk, props: { title: b.title, interior: true } });
 }
 
@@ -1737,6 +1737,18 @@ const RANK_MAPS = [
   ...Array.from({ length: 13 }, (_, i) => ({ id: `rank${i + 8}`, rank: i + 8, temp: true }))
 ];
 const rankMapId = rank => (RANK_MAPS.find(m => m.rank === rank) || {}).id;
+// 장소 — 7~20격을 한 줄로 내리 잇지 않고 장소가 바뀌는 곳에서 나눔 (사용자 결정 2026-11-25). 한 장소 안의 격은 보스 뒤 문으로 바로,
+// 장소가 바뀌는 문(마지막 격 보스 뒤 문 · 마왕성 왕좌 뒤 문)도 그대로 한 회차에 이어 가되 넘어갈 때 장소 이름이 뜸 (port.place, ui 의 fadeThrough)
+const PLACES = [
+  { name: '인간의 땅', ranks: [7, 8, 9] },
+  { name: '동방', ranks: [10, 11] },
+  { name: '신화의 땅', ranks: [12, 13] },
+  { name: '하늘과 지옥', ranks: [14, 15] },
+  { name: '신들의 시대', ranks: [16, 17, 18] },
+  { name: '르뤼에', ranks: [19] },
+  { name: '바깥', ranks: [20] }
+];
+const placeOf = rank => PLACES.find(p => p.ranks.includes(rank)) || null;
 
 function hallMap(data, spec) {
   const H0 = HALL, W = H0.W, CX = W >> 1, hx0 = CX - (H0.hall >> 1), hx1 = hx0 + H0.hall;
@@ -1833,7 +1845,9 @@ function hallMap(data, spec) {
   const zoneOf = r => data.ZONES.find(z => z.rank === r);
   const prevId = spec.rank === 7 ? DEMON_CASTLE.id : rankMapId(spec.rank - 1);
   const ports = [{ name: 'in', label: spec.rank === 7 ? DEMON_CASTLE.title : zoneOf(spec.rank - 1).name, x: CX - 1, y: H - H0.margin, w: 3, h: 1, to: `${prevId}.next` }];
-  if (nextZone) ports.push({ name: 'next', label: nextZone.name, x: CX - 2, y: Y(end.u + E.h, 1), w: 4, h: 1, to: `${rankMapId(spec.rank + 1)}.in`, opensAfter: boss.id });
+  const place = placeOf(spec.rank), nextPlace = placeOf(spec.rank + 1);
+  if (nextZone) ports.push({ name: 'next', label: nextZone.name, x: CX - 2, y: Y(end.u + E.h, 1), w: 4, h: 1, to: `${rankMapId(spec.rank + 1)}.in`, opensAfter: boss.id,
+    ...(nextPlace !== place ? { place: nextPlace.name } : {}) });   // 장소가 바뀌는 문
   const py = Y(plaza.u, plaza.h);
   const npcs = [{ name: 'start', x: CX, y: py + plaza.h - 3 }, { name: 'entry', x: CX, y: py + plaza.h - 3, zone: zone.id },
     { name: 'merchant', x: plaza.x + 2, y: py + plaza.h - 3, zone: zone.id }];
@@ -1849,7 +1863,7 @@ function hallMap(data, spec) {
     const t = tiles[idx(q.x + i, q.y + j)];
     if (t !== FLOOR && t !== ROAD) throw new Error(`${spec.rank}격 — ${q.name} (${q.x}, ${q.y}) 둘레가 빈 땅이 아님`);
   }
-  return buildTmj({ w: W, h: H, tiles, areas, posts, ports, npcs, chests, props: { title: zone.name } });
+  return buildTmj({ w: W, h: H, tiles, areas, posts, ports, npcs, chests, props: { title: zone.name, place: place.name } });
 }
 const getFoe = (data, id) => data.ENEMIES.find(e => e.id === id);
 
@@ -2401,4 +2415,4 @@ function allMaps(data) {
   return out;
 }
 
-module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, looksPng, encodePng, generate, sewer, overworld, oldtown, city, deptInterior, dept2Interior, assocInterior, guildInterior, guild2Interior, homeInterior, home2Interior, arenaInterior, bmInterior, gateinInterior, chiefInterior, raidInterior, storeInterior, OLDTOWN, CITY, DEPT, DEPT2, ASSOC, GUILD, GUILD2, HOME, HOME2, ARENA, BM, GATEIN, CHIEF, RAID, W1, W2, W3, SKY, CITY_BIO, secretRoom, buildingInterior, allMaps, layoutFromPlan, RANK_MAPS, rankMapId, hallMap, HALL, SEWER, SECRET_ROOMS, CAVES, caveMap, BUILDINGS, BUILD, DOORWAY, CARPET, RUIN, UNDERS, ABYSS, DEMON_CASTLE, abyssMap };
+module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, looksPng, encodePng, generate, sewer, overworld, oldtown, city, deptInterior, dept2Interior, assocInterior, guildInterior, guild2Interior, homeInterior, home2Interior, arenaInterior, bmInterior, gateinInterior, chiefInterior, raidInterior, storeInterior, OLDTOWN, CITY, DEPT, DEPT2, ASSOC, GUILD, GUILD2, HOME, HOME2, ARENA, BM, GATEIN, CHIEF, RAID, W1, W2, W3, SKY, CITY_BIO, secretRoom, buildingInterior, allMaps, layoutFromPlan, RANK_MAPS, rankMapId, hallMap, HALL, PLACES, placeOf, SEWER, SECRET_ROOMS, CAVES, caveMap, BUILDINGS, BUILD, DOORWAY, CARPET, RUIN, UNDERS, ABYSS, DEMON_CASTLE, abyssMap };
