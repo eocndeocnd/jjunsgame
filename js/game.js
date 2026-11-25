@@ -1122,7 +1122,7 @@ function freshRun() {
     metOnMap: false,     // 지도에서 닿은 일반인가 — 그러면 에너지는 맞설 때 씁니다 (물러서면 공짜)
     noRetreat: false,    // 몬스터가 먼저 덤벼든 조우 — 물러설 수 없음 (선공 · 화난 후공이 쫓아와 닿음, 사용자 결정)
     zonesVisited: [0],   // 이 여정에 들어선 지역 — 지도에서 「…에 들어섰다」는 처음 한 번만
-    mapId: null,         // 지금 걷는 지도 (null 이면 지금 지역이 있는 지도 — 지역이 없는 문의 광장에 있을 때만 따로 적힘)
+    mapId: null,         // 지금 걷는 지도 (null 이면 지금 지역이 있는 지도 — 지역이 없는 건물 안 · 도시에 있을 때만 따로 적힘)
     mapAt: null,         // 그 지도 위에 서 있던 칸 { x, y } — 불러오면 여기서 이어 걷습니다
     mapMobs: null,       // 지도마다 서 있는 몬스터 { 지도 id: [{ m, a, x, y, au }] } — 아래 packMobs. 없으면 그 지도에 처음 들어설 때 새로 섭니다
     merchant: null,      // 이번 회차의 떠돌이 상인 — { zone, wares, bought } (없으면 null)
@@ -1371,6 +1371,8 @@ function meetOnMap(foeId, aura, first) {
   if (foe.once) { approachPost(foe.id); return !!run.encounter; }
   if (run.energy < RULES.TRAVEL_COST) { endRun('에너지 고갈'); save(); return false; }
   beginEncounter(foe, false);
+  // 하나뿐인 일반(자리에 선 것)은 지도에서 빛나 보이던 그 기운 그대로 — 물러섰다 다시 닿아도 같음 (꺾으면 engage 가 지워 다시 굴림)
+  if (foe.solo) aura = (run.postAura && run.postAura[foe.id] && AURAS.find(a => a.id === run.postAura[foe.id])) || null;
   run.aura = aura || null;
   run.metOnMap = true;
   run.noRetreat = first === 'foe';
@@ -2203,6 +2205,8 @@ function engage() {
 
   // 정예·히든·보스는 이 여정에서 다시 만날 수 없습니다 — 그래서 그 전리품이 귀합니다
   if (enemy.once) run.downed.push(enemy.id);
+  // 하나뿐인 일반은 그 자리에 다시 섭니다 — 기운은 다시 설 때 새로 굴리게 지움 (지도가 다음에 볼 때 굴림, mapview 의 postAura)
+  if (enemy.solo && run.postAura) delete run.postAura[enemy.id];
 
   // 『격을 삼키는 검』을 들고 있으면 그 격을 삼켜 에너지로 바꿉니다.
   // 한 번 삼킨 격은 영구히 적립되어, 다음 회차부터 시작 에너지에 얹힙니다.

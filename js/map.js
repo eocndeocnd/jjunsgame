@@ -10,7 +10,7 @@
 //    look     타일 층(있으면) — 겉모습: 칸마다 땅의 종류 · 격 (타일셋 looks 의 번호). 그림(js/mapart.js)만 씀 — 막히는지와는 상관없음
 //    areas    사각형 또는 다각형 — 구역. 속성 rank · monster(적 id) · zone(지역 id). monster 가 없으면 이름뿐인 곳(첫 공간)
 //             다각형이면 땅 모양을 따라 그린 구역 — 칸 가운데가 다각형 안에 드는 칸이 그 구역입니다
-//    posts    점 또는 사각형 — 정예 · 보스 · 히든 자리. 속성 enemy · blocks(길을 막는가)
+//    posts    점 또는 사각형 — 정예 · 보스 · 히든 · 하나뿐인 일반(7격부터, 꺾어도 그 자리에 다시 섬) 자리. 속성 enemy · blocks(길을 막는가)
 //    ports    사각형 — 드나드는 문. 이름 = 그 지도 안의 문 이름. 속성 to(「지도.문」 행선지) · opensAfter(꺾어야 열리는 보스 id)
 //             · label(문 위에 쓰는 글) · zone(행선지 지도가 아직 없을 때 나설 지역) · hole(구멍으로 그림)
 //             · appears(열리기 전엔 문이 없음 — 보이지도 막히지도 않는 그냥 땅. 보스를 꺾으면 그 곁에 나타나는 숨은 굴의 구멍)
@@ -546,6 +546,8 @@
         w.mobs = w.mobs.filter(m => m !== enc.mob);
         const a = w.map.areas[enc.mob.area], c = a && freeSpot(w, a, null);
         if (c) w.mobs.push(newMob(w, a, c.x, c.y, w.hooks.rollAura(a.monster) || null));
+      } else if (enc.post && w.hooks.postAlive(enc.post.enemy)) {
+        pushBack(w, enc.post);             // 하나뿐인 일반 — 그 자리에 다시 서므로 한 칸 물러나 곧바로 또 닿지 않게
       }
       return;
     }

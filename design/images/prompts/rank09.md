@@ -166,7 +166,7 @@ If a name describes a different kind of object than its type, draw the object fr
 | 5 | 탑에 갇힌 수정 | 목걸이 | 멀린 | `assets/items/merlin_2.png` ✅ |
 | 6 | 룬 뼈 목걸이 | 목걸이 | 룬 마법사 | `assets/items/runemage_1.png` ✅ |
 | 7 | 불과 얼음의 팔찌 | 팔찌 | 원소술사 | `assets/items/elementalist_1.png` ✅ |
-| 8 | 되찾은 젊음의 팔찌 | 팔찌 | 파우스트 | `assets/items/faust_1.png` |
+| 8 | 되찾은 젊음의 팔찌 | 팔찌 | 파우스트 | `assets/items/faust_1.png` ✅ |
 
 ## 하나씩 뽑기 (시트가 잘 안 될 때)
 

@@ -128,7 +128,7 @@ function encodePng(W, H, px) {
 // 들판 하나는 20×14칸, 들판 사이 틈은 4칸. 아래 그림에서 들판은 두 글자, 그 사이의 한 글자가 잇는 방법입니다.
 //   들판    S. 어귀 · .. 지나가는 곳 · Nn N격 구역 · NE N격 정예의 홀 · NB N격 보스의 자리 · NH N격 숨은 곳
 //           (N 은 그 지도가 품은 격 목록에서 몇 번째인가)
-// 7~20격 일곱 장이 씁니다 — 1~6격(overworld)은 시안 배치를 그대로 옮긴 것이라 아래 overworld() 가 따로 짭니다.
+// 지하수로(sewer)가 씁니다 — 2~6격(overworld · abyss)과 7격부터(hallMap)는 따로 짭니다.
 //   잇기    - | 트인 길(8~10칸) · ~ 강(건너편이 보이기만) · ? 숨은 샛길 · b 보스가 막은 고갯길 · e 정예가 막은 고갯길 · = 들판을 터서 하나로
 // 좁은 곳은 고갯길뿐입니다 — 막고 선 보스(또는 길막 정예)의 크기(n × n, data.js ENEMY_SIZE)만큼 넓고, 그 몸이 꼭 맞게 막습니다.
 const FIELD_W = 20, FIELD_H = 14, GAP = 4, PITCH_X = FIELD_W + GAP, PITCH_Y = FIELD_H + GAP;
@@ -174,12 +174,11 @@ function valueNoise(seed) {
 }
 
 // data: js/data.js 에서 꺼낸 { ENEMIES, ZONES }
-// ranks: 그림의 N 번째 = 몇 격인가 · opts: { seed, plaza(어귀 이름), obstacle(rank) → 그 격 들판에 흩어질 장애물 타일, entry(어귀) → 문의 광장으로 가는 문,
+// ranks: 그림의 N 번째 = 몇 격인가 · opts: { seed, plaza(어귀 이름), obstacle(rank) → 그 격 들판에 흩어질 장애물 타일, entry(어귀) → 어귀 가장자리의 문,
 //   square(모든 방을 반듯하게) · open(트인 길의 폭 — 주면 맞닿은 변 가운데에) · order({ 격: ['칸,줄', …] } — 그 격 일반을 약한 것부터 세울 들판 차례),
 //   exit({ name, label, to } — 마지막 격 보스 방 위쪽 막다른 틈 안의 구멍. 보스가 그 앞을 꼭 맞게 막고 섬),
 //   look((그 칸의 방 | null, 바닥 타일) → 겉모습 번호 — 주면 겉모습 층을 적음, 그림 js/mapart.js),
-//   chests([{ id, room: '칸,줄', corner: nw | ne | sw | se, big }] — 그 방 구석(가장자리에서 두 칸 안)의 보물상자),
-//   autoChests(격마다 큰 상자 하나 · 작은 상자 둘을 알아서 — 큰 것은 숨은 방 → 보스 방 → 가장 먼 들판, 작은 것은 남은 가장 먼 들판과 가운데쯤 들판) }
+//   chests([{ id, room: '칸,줄', corner: nw | ne | sw | se, big }] — 그 방 구석(가장자리에서 두 칸 안)의 보물상자) }
 function generate(plan, ranks, data, opts) {
   const { rooms, links, cols, rows } = layoutFromPlan(plan);
   const rng = mulberry(opts.seed);
@@ -274,7 +273,7 @@ function generate(plan, ranks, data, opts) {
   areas.push({ name: opts.plaza || '첫 공간', x: so.x, y: so.y, w: FIELD_W, h: FIELD_H, zone: firstZone.id });
   npcs.push({ name: 'start', x: sc.x, y: sc.y }, { name: 'avatarDoor', x: sc.x + 5, y: sc.y - 4 });
   fill(sc.x - 2, sc.y - 2, 5, 5, null, true);
-  if (opts.entry) {                                          // 문의 광장으로 돌아가는 문 — 어귀 서쪽 가장자리
+  if (opts.entry) {                                          // 어귀 가장자리의 문 (지하수로 — 도시로 나가는 이상한 게이트)
     const e = opts.entry(so);
     ports.push(e);
     fill(e.x - 2, e.y - 2, e.w + 4, e.h + 4, null, true);
@@ -321,16 +320,7 @@ function generate(plan, ranks, data, opts) {
       post(e, ...at(e, center(fields[k])), false);
     });
     const halls = mine('E');
-    if (sets.length && opts.spreadSets) {
-      // 임시 — 홀에 몰려 있으면 한 화면에 큰 정예가 열 마리쯤 겹쳐 무거워서(사용자 지적), 그 격의 들판 곳곳에 흩어 둡니다.
-      // 자리는 들판마다 가운데 줄의 왼쪽 · 오른쪽 둘(한가운데는 들머리 · 묶음 밖 정예 자리), 홀은 왼쪽 · 가운데 · 오른쪽 셋.
-      // 가까운 들판부터 그 자리들을 고르게 골라 원래 차례대로 세웁니다 (나중에 지도를 자세히 만들 때 다시 놓을 것)
-      const spots = [];
-      for (const room of fields) { const o = origin(room), y = o.y + (FIELD_H >> 1); spots.push({ x: o.x + 5, y }, { x: o.x + 14, y }); }
-      for (const room of halls) { const o = origin(room), y = o.y + (FIELD_H >> 1); spots.push({ x: o.x + 4, y }, { x: o.x + (FIELD_W >> 1), y }, { x: o.x + 15, y }); }
-      if (spots.length < sets.length) throw new Error(`${rank}격 — 묶음 정예 ${sets.length}마리를 흩어 둘 자리가 ${spots.length}곳뿐`);
-      sets.forEach((e, i) => post(e, ...at(e, spots[Math.floor((i + 0.5) * spots.length / sets.length)]), false));
-    } else if (sets.length) {
+    if (sets.length) {
       // 홀 위 · 아래 벽을 따라 한 줄씩 — 두 줄 중 긴 쪽이 가장 짧아지게 나누고, 줄 안에서는 원래 차례대로 고르게 띄움.
       // 가운데 두 줄(6 · 7번째 줄)은 비워 지나가는 길, 둘레 한 칸과 서로의 사이 한 칸도 비움 (들판 둘을 튼 큰 홀이면 그 너비 전부)
       const o = origin(halls.reduce((a, b) => (b.c < a.c ? b : a))), W = halls.length > 1 ? FIELD_W * 2 + GAP : FIELD_W;
@@ -396,16 +386,6 @@ function generate(plan, ranks, data, opts) {
     const room = rooms.find(o => `${o.c},${o.r}` === c.room);
     if (!room) throw new Error(`보물상자 ${c.id} — 방 ${c.room} 이(가) 그림에 없음`);
     placeChest(room, c.corner, c.id, room.rank || ranks[0], !!c.big);
-  }
-  if (opts.autoChests) for (const rank of ranks) {
-    const of = kind => byDist(rooms.filter(o => o.rank === rank && o.kind === kind));
-    const far = of('n').reverse();                           // 첫 공간에서 걸어서 먼 들판부터
-    const first = of('n')[0];                                // 그 격 첫 들판 — 북서쪽 구석은 상인 자리
-    const bigRoom = of('H')[0] || of('B')[0] || far[0];
-    placeChest(bigRoom, quietCorner(bigRoom, bigRoom === first ? 'nw' : null), `r${rank}-big`, rank, true);
-    // 작은 상자 — 가장 먼 들판 하나, 그 격 가운데쯤 들판 하나 (곳곳에 — 끝에 몰리지 않게)
-    const rest = far.filter(o => o !== bigRoom), smalls = [rest[0], rest[Math.floor(rest.length / 2)]].filter((o, i, all) => o && all.indexOf(o) === i);
-    smalls.forEach((room, i) => placeChest(room, quietCorner(room, room === first ? 'nw' : null), `r${rank}-${i + 1}`, rank, false));
   }
 
   // 4) 장애물 — 지나가는 곳과 구역 들판에만, 작은 덤불처럼 몇 무더기
@@ -1039,7 +1019,7 @@ function overworld(data) {
     const [ex, ey] = L.spot1(...OVERWORLD_ENTRY[rank]);
     npcs.push({ name: 'entry', x: ex, y: ey, zone: zone.id });
   }
-  // 문의 광장으로 가는 문은 마왕성 안 왕좌 뒤 (DEMON_CASTLE — abyss 지도)
+  // 7격(대도서관)으로 가는 문은 마왕성 안 왕좌 뒤 (DEMON_CASTLE — abyss 지도)
 
   // 3) 나무 · 바위 무더기 — 시안의 숲덩이 잡음이 짙은 자리에만 (덩어리 숲 — 사이는 넓게 트임)
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
@@ -1524,7 +1504,7 @@ function cryptMap(data, u) {
 // 처음 시안(가로는 예전 6격 땅 폭 141칸 · 세로 280칸)을 88% 로 줄임 — 124 × 240. 남쪽 끝의 바위 둔덕 문(지하 묘실 출구가 닿는 곳)에서 북쪽으로 갈수록 센 상대:
 // 일반 구역은 가운데 길을 품고 좌우로 번갈아 치우침 · 칠죄종은 길 옆 높은 턱(꾸밈은 나중에 — 턱 윗면은 그 꾸밈을 위해 비워 둠)에서
 // 곁길로 찾아가야 만남 (길을 막지 않음) · 세기 층 사이를 용암 강이 가르고 건널 곳은 강마다 둘 · 북쪽 끝 마왕성 문을 세계수를 먹는 벌레가 막음,
-// 마왕성 안(DEMON_CASTLE — 3격 성처럼 들어가는 큰 방)에 마왕 · 관측자 · 문의 광장으로 가는 문
+// 마왕성 안(DEMON_CASTLE — 3격 성처럼 들어가는 큰 방)에 마왕 · 관측자 · 7격 대도서관으로 가는 문
 const ABYSS = {                                                // 처음 시안(141 × 280)을 88% 로 줄이고 빈 가장자리를 좁힘 (사용자 결정 2026-11-23 — 웅장하되 쓰지 않는 땅이 많았음)
   W: 124, H: 240, cx: 62, half: [50, 57],                      // half — 땅의 반폭 (마왕성 줄 · 그 아래), 잡음으로 ±5
   road: [[62, 234], [58, 222], [51, 209], [67, 195], [57, 180], [71, 164], [55, 148], [69, 132], [55, 116], [71, 100], [57, 84], [67, 69], [62, 51], [62, 44]],
@@ -1536,7 +1516,7 @@ const ABYSS = {                                                // 처음 시안(
   mound: [62, 231],                                            // 지하 묘실로 내려가는 바위 둔덕의 문 (아래 가운데)
   merchant: [73, 234], chests: [[13, 164], [113, 113], [16, 63, 'big']]
 };
-const DEMON_CASTLE = { id: 'demoncastle', title: '마왕성', boss: '마왕', map: 'abyss', hidden: '관측자', hub: { label: '문의 광장', to: 'hub.overworld' },
+const DEMON_CASTLE = { id: 'demoncastle', title: '마왕성', boss: '마왕', map: 'abyss', hidden: '관측자', next: { label: '알렉산드리아 대도서관', to: 'library.in' },
   hall: { w: 26, h: 34, aisle: 4, bossY: 5, pillarX: 4, pillarRows: [12, 19, 26], pillar: 2 } };
 function abyssMap(data) {
   const A = ABYSS, W = A.W, H = A.H, idx = (x, y) => y * W + x, inside = (x, y) => x >= 0 && y >= 0 && x < W && y < H;
@@ -1726,116 +1706,152 @@ function buildingInterior(data, b) {
     for (let j = 0; j < h.size; j++) for (let i = 0; i < h.size; i++) if (tiles[(hp.y + j) * W + hp.x + i] !== FLOOR) throw new Error(`건물 ${b.id} — ${b.hidden} 자리가 바닥이 아님`);
     posts.push(hp);
   }
-  // 다른 지도로 가는 문 (b.hub — 마왕성: 왕좌 뒤 맨 위 줄 가운데, 보스를 꺾어야 열림 · 문의 광장으로)
-  if (b.hub) ports.push({ name: 'hub', label: b.hub.label, x: cx - 1, y: TOP, w: 2, h: 1, to: b.hub.to, opensAfter: foe.id });
+  // 다음 격으로 가는 문 (b.next — 마왕성: 왕좌 뒤 맨 위 줄 가운데, 보스를 꺾어야 열림 · 7격 대도서관 들머리로)
+  if (b.next) ports.push({ name: 'next', label: b.next.label, x: cx - 1, y: TOP, w: 2, h: 1, to: b.next.to, opensAfter: foe.id });
   return buildTmj({ w: W, h: H, tiles, posts, ports, npcs: [{ name: 'start', x: out.x + (out.w >> 1), y: out.y - 1 }], look: lk, props: { title: b.title, interior: true } });
 }
 
-// ---------- 7~20격 — 비슷한 것끼리 일곱 장 (docs/MAP-REFERENCE-PLAN.md 2-2) ----------
-// 어귀(S.)에 문의 광장으로 돌아가는 문이 있고, 광장의 그 장 문으로 들어오면 그 앞에 섭니다.
-// 바로 앞 격이 같은 장에 있으면 그 보스가 고갯길(b)을 막고, 앞 격이 다른 장에 있는 먼 격(①의 13격 · ②의 12격)은
-// 어귀 아래 지나가는 곳(..)으로 처음부터 들어갈 수 있되, 지금 격의 들판과는 강(~)으로 갈려 보이기만 합니다.
-const REALMS = [
-  { name: 'legends', title: '인간의 전설', ranks: [7, 13], obstacle: ROCK, plan: [
-    '         1E          1H',
-    '         |           ?',
-    'S.-1n-1n-1n-1n-1n-1n-1n-1n-1n-1B',
-    '|  ~  ~  ~  ~  ~  ~  ~  ~  ~',
-    '..-2n-2n-2n-2n-2n-2n-2n-2n-2n',
-    '                           |',
-    '                           2n-2B'
+// ---------- 7격부터 — 격 하나에 지도 한 장, 남쪽에서 북쪽으로 흐르는 회랑 (docs/MAP-7PLUS-PLAN.md) ----------
+// 들머리(남쪽 끝 광장) → 구간마다 레벨 순으로: 돌아다니는 일반의 방(구역) · 하나뿐인 일반의 벽감(회랑 벽에 오목하게) · 정예의 곁방(고리 —
+// 회랑에서 아래 문으로 들어가 위 문으로 다시 회랑에) → 북쪽 끝 보스가 꼭 맞게 막은 틈 → 그 너머 끝 방(히든 · 다음 격으로 가는 문).
+// 앞 격 보스 뒤 문으로 들어와 이 격 보스 뒤 문으로 나가므로 되돌아 걷지 않습니다 (사용자 결정 2026-11-24 — 문의 광장 없앰).
+//   구간 사이는 회랑이 좁아지는 문턱. 구간에 들어서면 그 이름이 뜹니다 (구간 구역 — section, 몬스터 없음).
+//   하나뿐인 일반은 몸 가장자리에서 회랑 가운데 길까지 2칸 넘게 떨어져 지나가며 닿지 않습니다 (시험이 지킴).
+// 7격은 손으로 정한 구간(RANK_MAPS 의 library), 8~20격은 임시 — 구간 하나에 레벨 순 그대로 (하나씩 손으로 짠 배치로 바꿀 자리).
+const HALL = {
+  W: 56, margin: 3,
+  hall: 12, sill: 6, road: 3,                                  // 회랑 폭 · 문턱 폭 · 가운데 길 폭
+  plaza: { w: 22, h: 12 },                                     // 들머리 광장
+  zone: { w: 40, h: 18, gap: 4 },                              // 돌아다니는 일반의 방 — 방 사이 회랑 4줄은 몬스터 없는 쉴 땅
+  room: { w: 16, h: 12, wall: 2, door: 3 },                    // 정예의 곁방 · 회랑과의 벽 두께 · 문 폭
+  end: { w: 28, h: 14 },                                       // 보스 너머 끝 방
+  step: 3                                                      // 앞 상대보다 적어도 이만큼 북쪽에 (레벨 순서가 길을 따라 이어지게)
+};
+const RANK_MAPS = [
+  { id: 'library', rank: 7, end: '항구', sections: [
+    { name: '앞뜰 · 필사실', foes: ['이름 없는 이야기꾼', '필경사', '관우'] },
+    { name: '학자의 회랑', foes: ['아르키메데스', '히파티아', '손자', '레오나르도 다 빈치', '장비'] },
+    { name: '역사의 회랑', foes: ['헤로도토스', '잔 다르크', '조운', '스파르타쿠스'] },
+    { name: '정복자의 회랑', foes: ['칭기즈 칸', '마초', '알렉산드로스', '황충'] }
   ] },
-  { name: 'arthurian', title: '원탁과 마법', ranks: [8, 9, 12], obstacle: TREE, plan: [
-    '         1E       1H                   2E',
-    '         |        ?                    |',
-    'S.-1n-1n-1n-1n-1n-1n-1n-1n-1nb2n-2n-2n-2n-2n-2n-2n-2n-2n-2B',
-    '|  ~  ~  ~  ~  ~  ~',
-    '..-3n-3n-3n-3n-3E-3B'
-  ] },
-  { name: 'east', title: '동방', ranks: [10, 11], obstacle: TREE, plan: [
-    '      1E                         2E       2H',
-    '      |                          |        ?',
-    'S.-1n-1n-1n-1n-1n-1n-1nb2n-2n-2n-2n-2n-2n-2n-2n-2n-2B'
-  ] },
-  { name: 'heavenhell', title: '천국과 지옥', ranks: [14, 15], obstacle: ROCK, plan: [
-    '            1E',
-    '            |',
-    'S.-1n-1n-1n-1n-1n-1n-1n-1n-1n',
-    '         ~  ~  ~  ~  ~  ~  b',
-    '   2B-2E-2n-2n-2n-2n-2n-2n-2n'
-  ] },
-  { name: 'gods', title: '신들의 시대', ranks: [16, 17, 18], obstacle: ROCK, plan: [
-    '      1E=1E                2E                   3E',
-    '      |                    |                    |',
-    'S.-1n-1n-1n-1n-1n-1nb2n-2n-2n-2n-2n-2nb3n-3n-3n-3n-3n-3n-3n-3B'
-  ] },
-  { name: 'oldones', title: '르뤼에', ranks: [19], obstacle: ROCK, plan: [
-    '            1E',
-    '            |',
-    'S.-1n-1n-1n-1n-1n-1n-1n-1B'
-  ] },
-  { name: 'outer', title: '바깥', ranks: [20], obstacle: ROCK, plan: [
-    'S.-1n-1n-1n-1n-1n-1n-1n-1n-1n-1B'
-  ] }
+  ...Array.from({ length: 13 }, (_, i) => ({ id: `rank${i + 8}`, rank: i + 8, temp: true }))
 ];
-function realm(data, r, i) {
-  return generate(r.plan, r.ranks, data, {
-    seed: 11 + i * 7,
-    plaza: `${r.title} 어귀`,
-    obstacle: () => r.obstacle,
-    entry: o => ({ name: 'in', label: '문의 광장', x: o.x + 2, y: o.y + (FIELD_H >> 1) - 1, w: 1, h: 2, to: `hub.${r.name}` }),
-    autoChests: true,
-    spreadSets: true                                         // 묶음 정예는 홀 대신 들판 곳곳에 (임시 — 위 generate 의 3))
-  });
-}
+const rankMapId = rank => (RANK_MAPS.find(m => m.rank === rank) || {}).id;
 
-// ---------- 문의 광장 (hub) ----------
-// 지도끼리 오가는 넓은 광장. 북쪽 가장자리에 7~20격 일곱 장의 문, 남쪽에 마왕의 성(overworld)으로 돌아가는 문.
-// 장마다 문은 그 앞 격의 보스를 꺾으면 열립니다 (docs/MAP-REFERENCE-PLAN.md 2-2 표).
-// first — 그 장이 시작하는 격 (그 지도가 아직 없으면 그 격의 지역으로 지도 밖에 나섭니다) · after — 그 격의 보스를 꺾어야 열림
-const HUB_DOORS = [
-  { name: 'legends',    label: '① 인간의 전설', first: 7,  after: 6 },
-  { name: 'arthurian',  label: '② 원탁과 마법', first: 8,  after: 7 },
-  { name: 'east',       label: '③ 동방',        first: 10, after: 9 },
-  { name: 'heavenhell', label: '④ 천국과 지옥', first: 14, after: 13 },
-  { name: 'gods',       label: '⑤ 신들의 시대', first: 16, after: 15 },
-  { name: 'oldones',    label: '⑥ 르뤼에',      first: 19, after: 18 },
-  { name: 'outer',      label: '⑦ 바깥',        first: 20, after: 19 }
-];
-function hub(data) {
-  const W = 84, H = 44, cx = W >> 1, cy = (H >> 1) + 2, rx = 38, ry = 17;
-  const noise = valueNoise(7);
-  const tiles = new Uint8Array(W * H).fill(WALL);
-  const set = (x, y, t) => { tiles[y * W + x] = t; };
-  // 둥근 광장 — 가장자리만 살짝 들쭉날쭉
-  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-    const d = ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2;
-    if (d < 1 - noise(x * 0.25, y * 0.25) * 0.12) set(x, y, FLOOR);
-  }
-  // 가운데 샘과 그 둘레 길, 남쪽 문에서 샘까지 길
-  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-    const r = Math.hypot((x - cx) / 1.6, y - cy);
-    if (r < 3) set(x, y, WATER);
-    else if (r < 5) set(x, y, ROAD);
-  }
-  for (let y = cy + 5; y < cy + ry; y++) for (let x = cx - 1; x <= cx + 1; x++) if (tiles[y * W + x] === FLOOR) set(x, y, ROAD);
+function hallMap(data, spec) {
+  const H0 = HALL, W = H0.W, CX = W >> 1, hx0 = CX - (H0.hall >> 1), hx1 = hx0 + H0.hall;
+  const zi = data.ZONES.findIndex(z => z.rank === spec.rank), zone = data.ZONES[zi];
+  const foes = data.ENEMIES.filter(e => e.zoneIndex === zi);
+  const named = name => { const e = foes.find(q => q.name === name); if (!e) throw new Error(`${spec.rank}격 — ${name} 이(가) 없음`); return e; };
+  const boss = foes.find(e => e.kind === 'boss'), hidden = foes.find(e => e.kind === 'hidden');
+  const sections = spec.sections
+    ? spec.sections.map(s => ({ name: s.name, foes: s.foes.map(named) }))
+    : [{ name: zone.name, foes: foes.filter(e => e.kind === 'normal' || e.kind === 'elite') }];
+  const placed = sections.flatMap(s => s.foes);
+  for (const e of foes) if ((e.kind === 'normal' || e.kind === 'elite') && !placed.includes(e)) throw new Error(`${spec.rank}격 — ${e.name} 이(가) 어느 구간에도 없음`);
 
-  const boss = rank => data.ENEMIES.find(e => e.rank.n === rank && e.kind === 'boss');
-  const zoneOf = rank => data.ZONES.find(z => z.rank === rank);
-  const ports = HUB_DOORS.map((d, i) => {
-    const x = Math.round(cx - rx * 0.78 + (rx * 1.56) * i / (HUB_DOORS.length - 1)) - 1;
-    let y = 0;
-    while (tiles[y * W + x] !== FLOOR || tiles[y * W + x + 1] !== FLOOR) y++;   // 북쪽 가장자리의 첫 바닥 칸
-    for (let j = y; j < y + 4; j++) { set(x, j, ROAD); set(x + 1, j, ROAD); }   // 문 앞 짧은 길
-    return { name: d.name, label: d.label, x, y, w: 2, h: 1, to: `${d.name}.in`, opensAfter: boss(d.after).id, zone: zoneOf(d.first).id };
+  // 1) 칸 짜기 — u 는 아래(남쪽)에서 위로 센 줄. 다 짠 뒤 y 로 뒤집습니다
+  const rects = [], areasU = [], postsU = [], loopRooms = [], sills = [];
+  const floor = (x, u, w, h, t = FLOOR) => rects.push({ x, u, w, h, t });
+  let u = H0.margin;
+  const plaza = { x: CX - (H0.plaza.w >> 1), u, w: H0.plaza.w, h: H0.plaza.h };
+  floor(plaza.x, plaza.u, plaza.w, plaza.h);
+  floor(CX - 1, u - 1, 3, 1);                                  // 남쪽 문 자리
+  u += H0.plaza.h;
+  const hallFrom = u - 2;
+  const side = { solo: 1, loop: 0 };                         // 벽감 · 곁방은 저마다 좌우 번갈아 (벽감은 오른쪽부터 — 곁방과 엇갈리게)
+  sections.forEach((s, si) => {
+    if (si > 0) { sills.push(u); u += 3; }                     // 문턱 — 회랑이 좁아짐 (아래 2) 에서 칠함)
+    const from = si === 0 ? H0.margin : u;
+    const cur = [u, u];                                        // 왼쪽 · 오른쪽 벽이 다음에 쓸 수 있는 줄
+    let last = u - H0.step;
+    for (const e of s.foes.slice().sort((a, b) => a.level - b.level)) {
+      if (e.kind === 'normal' && !e.solo) {                    // 돌아다니는 일반의 방 — 회랑이 가운데로 지나감
+        const u0 = Math.max(cur[0], cur[1], last + H0.step), Z = H0.zone;
+        floor(CX - (Z.w >> 1), u0, Z.w, Z.h);
+        areasU.push({ name: e.name, x: CX - (Z.w >> 1) + 1, u: u0 + 1, w: Z.w - 2, h: Z.h - 2, rank: spec.rank, monster: e.id, zone: zone.id });
+        cur[0] = cur[1] = u0 + Z.h + Z.gap; last = u0;
+        continue;
+      }
+      const L = side[e.kind === 'normal' ? 'solo' : 'loop']++ % 2 === 0, n = e.size;
+      if (e.kind === 'normal') {                               // 하나뿐인 일반 — 회랑 벽의 벽감 (깊이 n + 2, 몸은 회랑에서 한 칸 들어가)
+        const u0 = Math.max(cur[L ? 0 : 1], last + H0.step), d = n + 2;
+        floor(L ? hx0 - d : hx1, u0, d, n + 2);
+        postsU.push({ name: e.name, x: L ? hx0 - n - 1 : hx1 + 1, u: u0 + 1, w: n, h: n, enemy: e.id, blocks: false });
+        cur[L ? 0 : 1] = u0 + n + 4; last = u0;
+      } else {                                                 // 정예 — 곁방 (아래 문으로 들어가 위 문으로 나옴)
+        const R = H0.room, u0 = Math.max(cur[L ? 0 : 1], last + H0.step);
+        const rx = L ? hx0 - R.wall - R.w : hx1 + R.wall;
+        floor(rx, u0, R.w, R.h);
+        floor(L ? hx0 - R.wall : hx1, u0 + 1, R.wall, R.door);                 // 아래 문
+        floor(L ? hx0 - R.wall : hx1, u0 + R.h - 1 - R.door, R.wall, R.door);  // 위 문
+        const px = L ? rx + 3 : rx + R.w - 3 - n;              // 바깥쪽에 — 두 문 사이로 지나가는 길은 비움
+        postsU.push({ name: e.name, x: px, u: u0 + ((R.h - n) >> 1), w: n, h: n, enemy: e.id, blocks: false });
+        loopRooms.push({ x: rx, u: u0, L });
+        cur[L ? 0 : 1] = u0 + R.h + 2; last = u0;
+      }
+    }
+    u = Math.max(cur[0], cur[1], last + H0.step + 2);
+    areasU.unshift({ name: s.name, x: 0, u: from, w: W, h: u - from, zone: zone.id, section: true });   // 구간 — 구역(돌아다니는 방)보다 먼저 적어 그 안은 구역이 덮음
   });
-  // 남쪽 — 마왕의 성으로 돌아가는 문 (늘 열림)
-  let sy = H - 1;
-  while (tiles[sy * W + cx] !== ROAD && tiles[sy * W + cx] !== FLOOR) sy--;
-  ports.push({ name: 'overworld', label: '마왕의 성으로', x: cx - 1, y: sy, w: 3, h: 1, to: 'demoncastle.hub' });   // 마왕성 안 왕좌 뒤 (DEMON_CASTLE)
-  const npcs = [{ name: 'start', x: cx, y: sy - 2 }];
-  return buildTmj({ w: W, h: H, tiles, ports, npcs, props: { title: '문의 광장' } });
+  floor(hx0, hallFrom, H0.hall, u - hallFrom);                 // 회랑
+  // 보스가 막은 틈 — 보스 몸 폭 그대로
+  const bn = boss.size;
+  floor(CX - (bn >> 1), u, bn, bn, ROAD);
+  postsU.push({ name: boss.name, x: CX - (bn >> 1), u, w: bn, h: bn, enemy: boss.id, blocks: true });
+  u += bn;
+  const E = H0.end, end = { x: CX - (E.w >> 1), u, w: E.w, h: E.h };
+  floor(end.x, end.u, end.w, end.h);
+  areasU.push({ name: spec.end || `${boss.name}의 뒤`, x: end.x, u: end.u, w: end.w, h: end.h, zone: zone.id, section: true });
+  if (hidden) postsU.push({ name: hidden.name, x: end.x + 3, u: end.u + E.h - 3 - hidden.size, w: hidden.size, h: hidden.size, enemy: hidden.id, blocks: false });   // 보스를 꺾어야 나타남 (게임의 히든 규칙)
+  const nextZone = data.ZONES.find(z => z.rank === spec.rank + 1);
+  if (nextZone) floor(CX - 2, end.u + E.h, 4, 1);              // 북쪽 문 자리
+  u += E.h + 1;
+  const H = u + H0.margin;
+
+  // 2) 뒤집어 칸에 칠함
+  const Y = (uu, h) => H - uu - h;
+  const tiles = new Uint8Array(W * H).fill(WALL), idx = (x, y) => y * W + x;
+  for (const r of rects) for (let j = 0; j < r.h; j++) for (let i = 0; i < r.w; i++) {
+    const k = idx(r.x + i, Y(r.u, r.h) + j);
+    if (r.t === ROAD || tiles[k] !== ROAD) tiles[k] = r.t;
+  }
+  for (const s of sills) for (let j = 0; j < 3; j++) for (let x = hx0; x < hx1; x++)
+    tiles[idx(x, Y(s + j, 1))] = Math.abs(x + 0.5 - CX) < H0.sill / 2 ? FLOOR : WALL;
+  for (let y = Y(u - E.h - 1 - bn, 0); y < Y(H0.margin + H0.plaza.h - 2, 0); y++)   // 가운데 길 — 회랑을 따라 (문턱 · 방 안도)
+    for (let x = CX - (H0.road >> 1); x < CX - (H0.road >> 1) + H0.road; x++) if (tiles[idx(x, y)] === FLOOR) tiles[idx(x, y)] = ROAD;
+  const flip = o => { const { u: uu, ...rest } = o; return { ...rest, y: Y(uu, o.h || 1) }; };
+  const areas = areasU.map(flip), posts = postsU.map(flip);
+  const roadX0 = CX - (H0.road >> 1), roadX1 = roadX0 + H0.road;
+  for (const p of posts) {
+    for (let j = 0; j < p.h; j++) for (let i = 0; i < p.w; i++) if (tiles[idx(p.x + i, p.y + j)] === WALL) throw new Error(`${spec.rank}격 — ${p.name} 몸이 벽에 걸림`);
+    const f = getFoe(data, p.enemy);
+    if (f.solo && !(p.x + p.w + 2 <= roadX0 || p.x - 2 >= roadX1)) throw new Error(`${spec.rank}격 — ${p.name} 이(가) 가운데 길에서 2칸 안`);
+  }
+
+  // 3) 문 · 사람 · 보물상자
+  const zoneOf = r => data.ZONES.find(z => z.rank === r);
+  const prevId = spec.rank === 7 ? DEMON_CASTLE.id : rankMapId(spec.rank - 1);
+  const ports = [{ name: 'in', label: spec.rank === 7 ? DEMON_CASTLE.title : zoneOf(spec.rank - 1).name, x: CX - 1, y: H - H0.margin, w: 3, h: 1, to: `${prevId}.next` }];
+  if (nextZone) ports.push({ name: 'next', label: nextZone.name, x: CX - 2, y: Y(end.u + E.h, 1), w: 4, h: 1, to: `${rankMapId(spec.rank + 1)}.in`, opensAfter: boss.id });
+  const py = Y(plaza.u, plaza.h);
+  const npcs = [{ name: 'start', x: CX, y: py + plaza.h - 3 }, { name: 'entry', x: CX, y: py + plaza.h - 3, zone: zone.id },
+    { name: 'merchant', x: plaza.x + 2, y: py + plaza.h - 3, zone: zone.id }];
+  // 작은 상자 둘 · 큰 상자 하나 — 곁방 안 바깥 위 구석 (곁방이 모자라면 끝 방 구석)
+  const corners = loopRooms.map(r => ({ x: r.L ? r.x + 1 : r.x + H0.room.w - 2, y: Y(r.u, H0.room.h) + 1 }));
+  const endY = Y(end.u, end.h);
+  const spare = [{ x: end.x + end.w - 3, y: endY + end.h - 3 }, { x: end.x + end.w - 3, y: endY + 2 }, { x: end.x + 2, y: endY + end.h - 2 }];
+  const pick = corners.length >= 3 ? [corners[Math.floor(corners.length / 3) - 1] || corners[0], corners[Math.floor(corners.length * 2 / 3) - 1] || corners[1], corners[corners.length - 1]] : [...corners, ...spare].slice(0, 3);
+  const item = (data.ITEMS.find(i => i.chest && i.rank.n === spec.rank) || {}).id;
+  if (!item) throw new Error(`${spec.rank}격 큰 상자 — 상자 전용 장비(CHEST_ITEMS)가 없음`);
+  const chests = pick.map((c, i) => ({ name: '보물상자', x: c.x, y: c.y, chest: i === 2 ? `r${spec.rank}-big` : `r${spec.rank}-${i + 1}`, rank: spec.rank, ...(i === 2 ? { big: true, item } : {}) }));
+  for (const q of [...npcs, ...chests]) for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) {
+    const t = tiles[idx(q.x + i, q.y + j)];
+    if (t !== FLOOR && t !== ROAD) throw new Error(`${spec.rank}격 — ${q.name} (${q.x}, ${q.y}) 둘레가 빈 땅이 아님`);
+  }
+  return buildTmj({ w: W, h: H, tiles, areas, posts, ports, npcs, chests, props: { title: zone.name } });
 }
+const getFoe = (data, id) => data.ENEMIES.find(e => e.id === id);
 
 // ---------- 도시 — 옛 동네(oldtown) · 헌터들의 도시(city), 회차와 회차 사이에 머무는 곳 (docs/CITY-PLAN.md 1-가) ----------
 // 두 장 (사용자 결정): 옛 동네에서 오른쪽으로 쭉 가면 미래 도시. 옛 동네 오른쪽 끝의 통로에 닿으면 도시 왼쪽 끝에서 나옵니다
@@ -2373,7 +2389,7 @@ const ROOMS = { WITCH_ROOM };
 
 // 뽑을 지도 전부 — { 파일 이름: 만드는 함수 }
 function allMaps(data) {
-  const out = { sewer: sewer(data), overworld: overworld(data), hub: hub(data), oldtown: oldtown(), city: city(), dept: deptInterior(), dept2: dept2Interior(), assoc: assocInterior(), guild: guildInterior(), guild2: guild2Interior(), home: homeInterior(), arena: arenaInterior(), bm: bmInterior(), home2: home2Interior(), gatein: gateinInterior(), chief: chiefInterior(), raid: raidInterior(), w1: storeInterior(W1), w2: storeInterior(W2), w3: storeInterior(W3), sky: storeInterior(SKY) };
+  const out = { sewer: sewer(data), overworld: overworld(data), oldtown: oldtown(), city: city(), dept: deptInterior(), dept2: dept2Interior(), assoc: assocInterior(), guild: guildInterior(), guild2: guild2Interior(), home: homeInterior(), arena: arenaInterior(), bm: bmInterior(), home2: home2Interior(), gatein: gateinInterior(), chief: chiefInterior(), raid: raidInterior(), w1: storeInterior(W1), w2: storeInterior(W2), w3: storeInterior(W3), sky: storeInterior(SKY) };
   for (const s of SECRET_ROOMS) out[s.id] = secretRoom(data, s);
   for (const c of CAVES) out[c.id] = caveMap(data, c);
   for (const u of UNDERS) out[u.id] = cryptMap(data, u);
@@ -2381,8 +2397,8 @@ function allMaps(data) {
   out.abyss = abyssMap(data);
   out[DEMON_CASTLE.id] = buildingInterior(data, DEMON_CASTLE);
   for (const b of BUILDINGS) out[b.id] = b.room ? storeInterior(ROOMS[b.room], data) : buildingInterior(data, b);
-  REALMS.forEach((r, i) => { out[r.name] = realm(data, r, i); });
+  for (const m of RANK_MAPS) out[m.id] = hallMap(data, m);
   return out;
 }
 
-module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, looksPng, encodePng, generate, sewer, overworld, hub, oldtown, city, deptInterior, dept2Interior, assocInterior, guildInterior, guild2Interior, homeInterior, home2Interior, arenaInterior, bmInterior, gateinInterior, chiefInterior, raidInterior, storeInterior, OLDTOWN, CITY, DEPT, DEPT2, ASSOC, GUILD, GUILD2, HOME, HOME2, ARENA, BM, GATEIN, CHIEF, RAID, W1, W2, W3, SKY, CITY_BIO, secretRoom, buildingInterior, allMaps, layoutFromPlan, HUB_DOORS, REALMS, SEWER, SECRET_ROOMS, CAVES, caveMap, BUILDINGS, BUILD, DOORWAY, CARPET, RUIN, UNDERS, ABYSS, DEMON_CASTLE, abyssMap };
+module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, looksPng, encodePng, generate, sewer, overworld, oldtown, city, deptInterior, dept2Interior, assocInterior, guildInterior, guild2Interior, homeInterior, home2Interior, arenaInterior, bmInterior, gateinInterior, chiefInterior, raidInterior, storeInterior, OLDTOWN, CITY, DEPT, DEPT2, ASSOC, GUILD, GUILD2, HOME, HOME2, ARENA, BM, GATEIN, CHIEF, RAID, W1, W2, W3, SKY, CITY_BIO, secretRoom, buildingInterior, allMaps, layoutFromPlan, RANK_MAPS, rankMapId, hallMap, HALL, SEWER, SECRET_ROOMS, CAVES, caveMap, BUILDINGS, BUILD, DOORWAY, CARPET, RUIN, UNDERS, ABYSS, DEMON_CASTLE, abyssMap };

@@ -829,7 +829,7 @@ function renderHud(zone) {
     save();
     setTimeout(() => { if (!isTalkOpen()) playTalk(ALLOC_TALK, openAlloc, { end: '찍으러 간다' }); }, 400);
   }
-  // 지역 이름 — 게임에 들어선 뒤 처음 그릴 때와, 다른 지역이나 지역이 없는 지도(문의 광장)에 들어설 때
+  // 지역 이름 — 게임에 들어선 뒤 처음 그릴 때와, 다른 지역이나 지역이 없는 지도(건물 안 · 도시)에 들어설 때
   const name = placeName(zone), key = `${currentSlot}|${State.meta.runCount}|${name}`;
   if (key !== bannerShown && !fightLocked() && $('title').classList.contains('hidden')) {
     bannerShown = key;
@@ -1781,11 +1781,12 @@ const TP_TALK = [
 //  월드맵 — 걷다가 닿으면 조우 · 싸움 · 결과 창이 지도 위에 뜹니다
 // ============================================================
 // 지도 캔버스는 index.html 의 #mapStage 에 화면 가득 늘 붙어 있고(다시 그릴 때 지워지지 않게), 창만 #mapOverlay 에 그립니다.
-// 지도는 여러 장(maps/*.tmj) — 1~6격의 overworld, 문의 광장(hub), 7격부터의 일곱 장. 장 사이는 문(ports)으로 오갑니다.
+// 지도는 여러 장(maps/*.tmj) — 지하수로(1격) · overworld(2~5격) · 마계(6격) · 7격부터는 격 하나에 한 장(대도서관 library · rank8 ~ rank20). 장 사이는 문(ports)으로 오갑니다.
 // 스무 지역이 모두 어느 한 장 위에 있습니다 (tests/map.test.js 가 지킵니다).
 let mapView = null, maps = null, zoneMap = null;   // 읽은 지도들(id → 지도), 지역 id → 그 지역이 있는 지도 id
 let mapKey = '', mapZone = -1, mapShown = null;    // 지금 걷는 세계가 어느 칸 · 여정 · 지역 · 지도 것인가
 let closedSaidAt = 0;
+let lastSection = '';                              // 마지막으로 이름을 띄운 구간 (onMapEvents)
 
 function initMap() {
   if (mapView || typeof MAP_FILES === 'undefined' || !$('mapCanvas')) return;
@@ -1814,7 +1815,7 @@ function currentMapId() {
   const run = State.run;
   if (!run || !maps) return null;
   const same = mapKey === `${currentSlot}|${State.meta.runCount}`;
-  // 불러온 회차의 지도에 지금 지역이 없으면 그 지역이 있는 지도로 (지역이 없는 문의 광장은 그대로) —
+  // 불러온 회차의 지도에 지금 지역이 없으면 그 지역이 있는 지도로 (지역이 없는 건물 안 · 도시는 그대로) —
   // 1격이 지하수로(sewer) 지도로 옮겨 가기 전, overworld 의 1격에서 저장한 회차
   const zoneId = ZONES[run.zoneIndex].id, saved = maps[run.mapId];
   const stale = !same && saved && saved.areas.some(a => a.zone) && !saved.areas.some(a => a.zone === zoneId);
@@ -1828,7 +1829,7 @@ function inTown() {
   return !!p && !!(p.city || (p.store && !p.wild));   // wild — 마녀의 오두막처럼 바깥 세계의 건물 안
 }
 
-// 지역 머리의 이름 — 지역이 없는 지도(문의 광장)에서는 그 지도의 이름
+// 지역 머리의 이름 — 지역이 없는 지도(건물 안 · 도시)에서는 그 지도의 이름
 function placeName(zone) {
   const id = currentMapId();
   return (id && maps[id].props.title) || zone.name;
@@ -1843,7 +1844,7 @@ function mapPaused() {
     || isAnyModalOpen() || up('title') || up('talk');
 }
 
-// 그 지도에서 그 지역의 들머리 — 가장 약한 일반의 구역 들머리(구역 한가운데, map.js 의 areaMid). 첫 지역이거나 지역이 없는 지도(문의 광장)면 그 지도의 시작점.
+// 그 지도에서 그 지역의 들머리 — 가장 약한 일반의 구역 들머리(구역 한가운데, map.js 의 areaMid). 첫 지역이거나 지역이 없는 지도(건물 안 · 도시)면 그 지도의 시작점.
 function mapEntrance(data, zi) {
   // 그 격에 처음 들어서는 자리(지도의 entry)가 있으면 그 곁의 빈 칸 — 길잡이가 데려다 줄 때 · 화신이 데려다 줄 때
   const ent = data.npcs.find(n => n.name === 'entry' && ZONES[zi] && n.zone === ZONES[zi].id);
@@ -1898,7 +1899,7 @@ liveMapMobs = () => {
   return { id: w.map.id, mobs: w.mobs, fighting: w.encounter && w.encounter.mob };
 };
 
-// 문으로 다른 지도에 — 닿는 곳은 그 지도의 같은 이름 문 바로 앞 (예: hub.overworld = 문의 광장의 「마왕의 성으로」 문 앞).
+// 문으로 다른 지도에 — 닿는 곳은 그 지도의 같은 이름 문 바로 앞 (예: library.in = 대도서관 남쪽 끝 「마왕성」 문 앞).
 // 그 지도가 없으면(손으로 지운 경우 등) 문에 적힌 지역(zone)으로 건너가 그 지역이 있는 지도의 들머리에 섭니다.
 function goThroughPort(port) {
   const run = State.run;
@@ -1991,6 +1992,8 @@ function onMapEvents(evs) {
       const moved = zi >= 0 && zi !== run.zoneIndex;
       rememberMapAt(p.x, p.y, !moved);   // 지역이 바뀌면 walkIntoZone 이 같이 저장합니다
       if (moved) { walkIntoZone(zi); changed = true; }
+      // 구간(7격부터 — 대도서관의 「학자의 회랑」 같은)에 들어서면 그 이름을 한 번 (같은 구간을 드나들 때는 다시 안 띄움)
+      if (e.area.section && e.area.name !== lastSection) { lastSection = e.area.name; pushLog('info', `— ${e.area.name} —`); changed = true; }
     } else if (e.type === 'contact') {
       rememberMapAt(p.x, p.y, false);    // meetOnMap 이 같이 저장합니다
       const id = e.mob ? e.mob.monster : e.post.enemy;

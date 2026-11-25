@@ -1888,8 +1888,29 @@ const ENEMY_SIZE = {
   trollking: 4, giantking: 5, lichking: 4, demonking: 4,
   imugi: 5, sanctdragon: 5, michael: 4, lucifer: 4, hades: 4, tiamat: 5, zeus: 4, cthulhu: 5, azathoth: 5
 };
+// ---------- 하나뿐인 일반 (7격부터) ----------
+// 컨셉상 세상에 하나뿐인 존재(이름 있는 개인 · 그 하나뿐인 신 …)는 일반이어도 구역에서 여럿이 돌아다니지 않고,
+// 정예 · 보스처럼 정해진 자리에 한 마리만 가만히 섭니다 (사용자 결정 2026-11-24). 일반 규칙은 그대로 — 꺾어도 그 자리에 다시 서고
+// (몇 번이든 · 전리품 ×1 · 맞설 때 에너지 1), 기운은 다시 설 때마다 새로 굴립니다. 크기는 최소 2칸 (사용자 결정).
+// 아직 정하지 않은 다섯(녹색 기사 · 산군 · 페가수스 · 피닉스 · 공허의 군주)은 넣지 않았습니다 — docs/MAP-7PLUS-PLAN.md 3번.
+const SOLO_NORMALS = new Set([
+  'archimedes', 'hypatia', 'davinci', 'herodotos', 'joan', 'genghis', 'alexander',          // 7 설화
+  'roland', 'elcid', 'robinhood',                                                             // 8 기사
+  'babayaga', 'circe',                                                                        // 9 마도
+  'ungnyeo',                                                                                  // 11 영물
+  'theseus', 'perseus', 'odysseus', 'atalanta', 'enkidu', 'hector', 'achilles', 'cuchulainn', 'arjuna', 'siegfried',   // 13 영웅
+  'moloch', 'baphomet', 'azazel', 'mephisto', 'astaroth', 'lilith',                           // 15 악마
+  'bastet', 'anubis', 'susanoo', 'thor', 'amaterasu', 'isis',                                 // 16 신격
+  'jormungandr', 'fenrir', 'apophis', 'vritra', 'orochi',                                     // 17 태초
+  'osiris', 'izanagi', 'ra', 'hwanin', 'jadeemperor', 'quetzalcoatl', 'ahuramazda',           // 18 주신
+  'yig', 'ithaqua', 'chaugnar', 'glaaki', 'atlachnacha',                                      // 19 고신
+  'shubniggurath', 'ubbosathla', 'abhoth', 'daoloth', 'tulzscha', 'yibbtstll', 'ghroth'       // 20 외신
+]);
+const SOLO_MIN_SIZE = 2;
+
 function enemySize(id, kind) {
-  const [lo, hi] = SIZE_RANGE[kind], n = ENEMY_SIZE[id] || lo;
+  const [lo, hi] = SIZE_RANGE[kind], solo = kind === 'normal' && SOLO_NORMALS.has(id);
+  const n = Math.max(ENEMY_SIZE[id] || lo, solo ? SOLO_MIN_SIZE : 1);   // 하나뿐인 일반은 적어 두지 않았으면 2칸
   if (n < lo || n > hi) throw new Error(`크기 — ${id} 는 ${kind}(${lo}~${hi}) 인데 ${n}`);
   return n;
 }
@@ -1929,6 +1950,7 @@ ZONES.forEach((zone, zi) => {
       arch,                       // 이 적이 남기는 전리품의 성격
       boss: kind === 'boss',
       once: K.once,               // 한 회차에 한 번만 만날 수 있는가
+      solo: kind === 'normal' && SOLO_NORMALS.has(e.id),   // 하나뿐인 일반 — 구역 대신 정해진 자리에 한 마리 (SOLO_NORMALS)
       opens: !!e.opens,           // 처음 꺾으면 특수장비 칸이 하나 열리는가
       final: !!e.final,
       set: e.set || null,         // 묶음 정예라면 그 묶음 (ELITE_SETS)
