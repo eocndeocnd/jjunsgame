@@ -3,7 +3,7 @@ const fs = require('fs'), path = require('path'), zlib = require('zlib');
 const S = require(path.resolve(process.argv[2])), out = process.argv[3];
 const ids = process.argv[4] ? process.argv[4].split(',') : Object.keys(S);
 for (const id of ids) for (const f of ['a', 'b']) {
-  const g = S[id][f]; if (![16, 32, 48, 64, 80].includes(g.length)) throw new Error(`${id}.${f} 줄 ${g.length}`);
+  const g = S[id][f]; if (![16, 24, 32, 48, 64, 80].includes(g.length)) throw new Error(`${id}.${f} 줄 ${g.length}`);
   g.forEach((r, y) => { if (r.length !== g.length) throw new Error(`${id}.${f} ${y}줄 길이 ${r.length} «${r}»`); for (const ch of r) if (ch !== '.' && !S[id].pal[ch]) throw new Error(`${id}.${f} ${y}줄 모르는 색 ${ch}`); });
 }
 const hex = h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];

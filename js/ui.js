@@ -2106,7 +2106,7 @@ function mapMarks() {
   const m = State.run && State.run.merchant;
   const z = m && ZONES[m.zone];
   const spot = z && npcs.find(n => n.name === 'merchant' && n.zone === z.id);
-  if (spot) out.push({ x: spot.x, y: spot.y, icon: '🎒', label: '상인' });
+  if (spot) out.push({ x: spot.x, y: spot.y, icon: '🎒', sprite: 'merchant', front: 'merchantwares', label: '상인' });   // sprite — 지도 도트 (js/mobsprites.js 의 merchant, 없으면 icon) · front — 앞(아래 줄)에 펼쳐 둔 팔 물건
   for (const n of npcs) {
     if (n.name === 'seat') {                       // 내 길드의 사무 자리 — 앉은 동료만
       const id = State.meta.guild && State.meta.guild.seats[n.seat];

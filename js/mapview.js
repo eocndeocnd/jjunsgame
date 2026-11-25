@@ -498,14 +498,19 @@ const MapView = (function () {
       if (o.hideActors && o.hideActors()) return;
       for (const mk of (o.marks ? o.marks() : [])) {   // 상인 같은 표시 — 그림, 이름이 있으면 그 위에 작게
         if (!seen(mk.x, mk.y)) continue;
-        glyph(mk.x + 0.5, mk.y + 0.5, mk.icon);
+        const mArt = mk.sprite && mobSprite(mk.sprite);   // 도트가 있는 표시(떠돌이 상인) — 몬스터처럼 발밑 그림자 · A · B (서 있어도 sway 면 바뀜)
+        let mTop = oy + mk.y * T + 1;
+        if (mArt) mTop = Math.min(mTop, sprite(mArt, mk.x, mk.y, 1, 1, Math.floor(clock * 1.6 * mArt.pace) % 2) + 1);
+        const fArt = mArt && mk.front && mobSprite(mk.front);     // 앞에 펼쳐 둔 것(상인의 팔 물건) — 바로 아래 줄 가로 세 칸, 상인보다 나중에 · 그림자 없이 바닥에 붙여
+        if (fArt) { const size = fArt.n * kpx; ctx.imageSmoothingEnabled = false; ctx.drawImage(Math.floor(clock * 1.6 * fArt.pace) % 2 ? fArt.b : fArt.a, footX(mk.x, 1) - size / 2, footY(mk.y + 1, 1) - size, size, size); }
+        else glyph(mk.x + 0.5, mk.y + 0.5, mk.icon);
         if (mk.label) {
           ctx.font = `bold ${Math.max(9, Math.round(T * 0.36))}px system-ui, sans-serif`;
           ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
           ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(28,16,7,0.85)';
-          ctx.strokeText(mk.label, ox + (mk.x + 0.5) * T, oy + mk.y * T + 1);
+          ctx.strokeText(mk.label, ox + (mk.x + 0.5) * T, mTop);
           ctx.fillStyle = '#f6e7c3';
-          ctx.fillText(mk.label, ox + (mk.x + 0.5) * T, oy + mk.y * T + 1);
+          ctx.fillText(mk.label, ox + (mk.x + 0.5) * T, mTop);
         }
       }
       for (const post of m.posts) {

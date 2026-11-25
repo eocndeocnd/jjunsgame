@@ -15,11 +15,11 @@ const path = require('path');
 const { execFileSync } = require('child_process');
 
 const ROOT = path.join(__dirname, '..', '..');
-const RANKS = { 1: ['./rank01-small.js', './rank01-big.js'], 2: ['./rank02-small.js', './rank02-big.js'], 3: ['./rank03-small.js', './rank03-mid.js', './rank03-big.js'], 4: ['./rank04-mid.js', './rank04-big.js'], 5: ['./rank05-small.js', './rank05-mid.js', './rank05-big.js'], 6: ['./rank06-mid.js', './rank06-big.js', './rank06-sins.js', './rank06-last.js'] };
+const RANKS = { 0: ['./npc.js'], 1: ['./rank01-small.js', './rank01-big.js'], 2: ['./rank02-small.js', './rank02-big.js'], 3: ['./rank03-small.js', './rank03-mid.js', './rank03-big.js'], 4: ['./rank04-mid.js', './rank04-big.js'], 5: ['./rank05-small.js', './rank05-mid.js', './rank05-big.js'], 6: ['./rank06-mid.js', './rank06-big.js', './rank06-sins.js', './rank06-last.js'] };
 // 걸음 박자 — 둔한 몬스터일수록 프레임이 천천히 바뀜 (1 = 반 칸마다 A · B, 0.5 = 한 칸마다). 서 있는 정예 · 보스의 숨도 같은 박자
 // (사용자 결정 2026-11-20). 없으면 1
 // 흔들림 — 서 있을 때도 A · B 가 바뀌는 몬스터 (트렌트 잎이 바람에 흔들림, 사용자 요청 2026-11-20). 걸음 박자로 천천히
-const SWAY = { treant: 1, abysstentacle: 1 };
+const SWAY = { treant: 1, abysstentacle: 1, merchant: 1, merchantwares: 1 };   // merchant · merchantwares (상인 앞 깔개) — 0 묶음(npc.js)의 떠돌이 상인: 서 있어도 등불이 흔들림
 const PACE = {
   slime: 0.7, giantrat: 1.3, goblin: 1, kobold: 1.1, goblinchief: 0.8, skeleton: 0.9, zombie: 0.6, cavespider: 1.2, mimic: 0.7, imp: 1.2, darkwolf: 1.4, dungeonguardian: 0.5,
   orc: 0.9, hobgoblin: 1, lizardman: 1, harpy: 1.3, orcgeneral: 0.8, ogre: 0.5, darkelf: 1.3, treant: 0.5, forestwitch: 0.7, gargoyle: 0.7, basilisk: 0.8, trollking: 0.5,
@@ -30,7 +30,8 @@ const PACE = {
   whitehorse: 1.1, redhorse: 1.4, blackhorse: 0.7, palehorse: 0.6, bonedragon: 0.6, balrog: 0.5, lichking: 0.4,
   archdemon: 0.8, demongeneral: 0.9, abysstentacle: 0.5, elderdragon: 0.5, apocalypsebeast: 0.6,
   sinenvy: 1.2, sinlust: 0.8, sinsloth: 0.3, sinpride: 0.6, sinwrath: 1, singreed: 0.8, singluttony: 0.4,
-  worldworm: 0.5, observer: 0.4, demonking: 0.5
+  worldworm: 0.5, observer: 0.4, demonking: 0.5,
+  merchant: 0.6, merchantwares: 0.6
 };
 
 const all = {}, byRank = {};

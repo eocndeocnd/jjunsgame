@@ -17080,6 +17080,166 @@ const MAP_FILES = {"abyss":{"compressionlevel":-1,"type":"map","version":"1.10",
 //  몬스터 id → 걸음 박자(pace — 클수록 프레임이 빨리 바뀜) · sway(서 있을 때도 흔들림) + 팔레트(글자 → 색, '.' 은 투명) + 프레임 A · B (글자 격자, 한 칸 = 16픽셀). 오른쪽을 봄
 // ============================================================
 const MOB_SPRITES = {
+  merchant: {
+    pace: 0.6, sway: 1,
+    pal: {"K":"#35263f","a":"#2a2b26","b":"#3c3f33","c":"#535843","d":"#6b7253","e":"#868c66","s":"#8c6a52","S":"#b08868","l":"#3e2a1e","m":"#5a3e28","n":"#78563a","o":"#96704a","r":"#5a2a2e","R":"#7e3c3e","p":"#6a3e22","P":"#9a6232","w":"#4a3524","W":"#6a4c32","i":"#2a2930","y":"#e8b850","Y":"#fff0a0","k":"#2a1f1a"},
+    a: [
+      '........................',
+      '........................',
+      '..KKKKKKKKKK.......K....',
+      '.KRRRpRRRRcRK.....KWK...',
+      '.KrRrpRrRbrrKKKK..KWwK..',
+      '.KrRrpRrRbrbeeeeK.KWKiK.',
+      '.KRrrprrrrrbdcccK.KWiiiK',
+      '..KoonmnnlbbdsSSSKKWiyiK',
+      '..KoonnnnlbbdsSKSKKWiYiK',
+      '..KoonnnnlbbdsSSSSKWiyiK',
+      '..KoonnnnllbdsssSKKwiiiK',
+      '.KKoonmnnlbbdcccbKKwKKK.',
+      'KiilllPPllbcdccdddKwK...',
+      'KPpoonnnnlbcdcccccSwK...',
+      'PppponnnnlbcdccbbKswK...',
+      'ppppmmmmmlbcdccbbKKwK...',
+      'ppppllllllbcdccoobKwK...',
+      'KppoonnnnbccdccnnbKwK...',
+      '.KKoonnnnbccdcccbbKwK...',
+      '...KKKKKKbccdcccbbKwK...',
+      '........KbccdcccbbKwK...',
+      '.........KKaaKaaKKKwK...',
+      '..........KkkkkkkKKwK...',
+      '...........KKKKKK..K....'
+    ],
+    b: [
+      '........................',
+      '........................',
+      '..KKKKKKKKKK.......K....',
+      '.KRRRpRRRRcRK.....KWK...',
+      '.KrRrpRrRbrrKKKK..KWwKK.',
+      '.KrRrpRrRbrbeeeeK.KWKKiK',
+      '.KRrrprrrrrbdcccK.KWKiii',
+      '..KoonmnnlbbdsSSSKKWKiyi',
+      '..KoonnnnlbbdsSKSKKWKiyi',
+      '..KoonnnnlbbdsSSSSKWKiyi',
+      '..KoonnnnllbdsssSKKwKiii',
+      '.KKoonmnnlbbdcccbKKwKKKK',
+      'KiilllPPllbcdccdddKwK...',
+      'KPpoonnnnlbcdcccccSwK...',
+      'PppponnnnlbcdccbbKswK...',
+      'ppppmmmmmlbcdccbbKKwK...',
+      'ppppllllllbcdccoobKwK...',
+      'KppoonnnnbccdccnnbKwK...',
+      '.KKoonnnnbccdcccbbKwK...',
+      '...KKKKKKbccdcccbbKwK...',
+      '........KbccdcccbbKwK...',
+      '.........KKaaKaaKKKwK...',
+      '..........KkkkkkkKKwK...',
+      '...........KKKKKK..K....'
+    ]
+  },
+  merchantwares: {
+    pace: 0.6, sway: 1,
+    pal: {"1":"#8a2030","2":"#c84050","3":"#22407a","4":"#4a74c0","5":"#2a6a3a","6":"#4aa060","7":"#e8f0ff","K":"#35263f","a":"#2a2b26","b":"#3c3f33","c":"#535843","d":"#6b7253","e":"#868c66","s":"#8c6a52","S":"#b08868","l":"#3e2a1e","m":"#5a3e28","n":"#78563a","o":"#96704a","r":"#5a2a2e","R":"#7e3c3e","p":"#6a3e22","P":"#9a6232","w":"#4a3524","W":"#6a4c32","i":"#2a2930","y":"#e8b850","Y":"#fff0a0","k":"#2a1f1a","g":"#a88232","G":"#d8b456","t":"#2e1218","T":"#4a1c26","u":"#62283a","q":"#8e8674","Q":"#b4ab94","v":"#5a5a66","V":"#9a9aa8","j":"#3a2a1a","J":"#5a4028","h":"#6e5a2a"},
+    a: [
+      '................................................',
+      '................................................',
+      '................................................',
+      '................................................',
+      '................................................',
+      '................................................',
+      '................................................',
+      '................................................',
+      '................................................',
+      '................................................',
+      '................................................',
+      '................................................',
+      '................................................',
+      '................................................',
+      '................................................',
+      '................................................',
+      '................................................',
+      '................................................',
+      '................................................',
+      '................................................',
+      '................................................',
+      '................................................',
+      '................................................',
+      '................................................',
+      '................................................',
+      '................................................',
+      '................................................',
+      '................................................',
+      '................................................',
+      '................................................',
+      '................................................',
+      '................................................',
+      '...KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK...',
+      '..KTgTTTTTuTTTTTTTTTTTTuTTTTTTTTTTTTuTTTTTTgTK..',
+      '..KggggggggggggggggggggggggggggggggggggggggggK..',
+      '.KgTgTTTmTTuTmTTTTTTTTTTuTTTTJJJJJJTTuTTTTTgTgK.',
+      '..KTguTTQTTTTQTTTTuTTTTTTTTTTJJJJJJTTVnmmVTguK..',
+      '..KTgTT711TT733TTTQQQ1QQQuTTTJjjjjJTVnnmmmVgTK..',
+      '.KgTgT2211144333TTqqq1qqqTTTTJJJJJJTnnnGmmmgTgK.',
+      '..Ktgt2211m44333ttttttttttuttJJJJJJtnnnGmmmgtK..',
+      '..Ktgtt211Qt433GttttuQQQ3QQQtttttuttlnnmmmVgtK..',
+      '.Kgtgtttt755ttuttttttqqq3qqqttGttttGnnnmmVtgtgK.',
+      '..Ktgttt66555ttttttGtuttttttttttttoonnnttttgtK..',
+      '..Ktgttt66555ttuhhhGVVVVVVVVVVVvttoonnnttutgtK..',
+      '.Kgtgtttt655tttttttGttutttttGtttttoonnntGttgtgK.',
+      '..KggggggggggggggggggggggggggggggggonngggggggK..',
+      '.KgtgtttttuttttttttttttuttttttttttttuttttttgtgK.',
+      '..KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK..'
+    ],
+    b: [
+      '................................................',
+      '................................................',
+      '................................................',
+      '................................................',
+      '................................................',
+      '................................................',
+      '................................................',
+      '................................................',
+      '................................................',
+      '................................................',
+      '................................................',
+      '................................................',
+      '................................................',
+      '................................................',
+      '................................................',
+      '................................................',
+      '................................................',
+      '................................................',
+      '................................................',
+      '................................................',
+      '................................................',
+      '................................................',
+      '................................................',
+      '................................................',
+      '................................................',
+      '................................................',
+      '................................................',
+      '................................................',
+      '................................................',
+      '................................................',
+      '................................................',
+      '................................................',
+      '...KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK...',
+      '..KTgTTTTTuTTTTTTTTTTTTuTTTTTTTTTTTTuTTTTTTgTK..',
+      '..KggggggggggggggggggggggggggggggggggggggggggK..',
+      '.KgTgTTTmTTuTmTTTTTTTTTTuTTTTJJJJJJTTuTTTTTgTgK.',
+      '..KTguTTQTTTTQTTTTuTTTTTTTTTTJJJJJJTTVnmmVTguK..',
+      '..KTgTT211TT473TTTQQQ1QQQuTTTJjjjjJTVnnmmmVgTK..',
+      '.KgTgT2711144333TTqqq1qqqTTTTJJJJJJTnnnGmmmgTgK.',
+      '..Ktgt2211m44333ttttttttttuttJJJJJJtnnnGmmmgtK..',
+      '..Ktgtt211Qt433GttttuQQQ3QQQtttttuttlnnmmmVgtK..',
+      '.Kgtgtttt755ttuttttttqqq3qqqttGttttGnnnmmVtgtgK.',
+      '..Ktgttt66555ttttttGtuttttttttttttoonnnttttgtK..',
+      '..Ktgttt66555ttuhhhGVVVVVVVVVVVvttoonnnttutgtK..',
+      '.Kgtgtttt655tttttttGttutttttGtttttoonnntGttgtgK.',
+      '..KggggggggggggggggggggggggggggggggonngggggggK..',
+      '.KgtgtttttuttttttttttttuttttttttttttuttttttgtgK.',
+      '..KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK..'
+    ]
+  },
   slime: {
     pace: 0.7,
     pal: {"K":"#35263f","a":"#10241a","b":"#254d2e","c":"#3b753b","d":"#5a944e","e":"#81ac68"},
@@ -24185,14 +24345,19 @@ const MapView = (function () {
       if (o.hideActors && o.hideActors()) return;
       for (const mk of (o.marks ? o.marks() : [])) {   // 상인 같은 표시 — 그림, 이름이 있으면 그 위에 작게
         if (!seen(mk.x, mk.y)) continue;
-        glyph(mk.x + 0.5, mk.y + 0.5, mk.icon);
+        const mArt = mk.sprite && mobSprite(mk.sprite);   // 도트가 있는 표시(떠돌이 상인) — 몬스터처럼 발밑 그림자 · A · B (서 있어도 sway 면 바뀜)
+        let mTop = oy + mk.y * T + 1;
+        if (mArt) mTop = Math.min(mTop, sprite(mArt, mk.x, mk.y, 1, 1, Math.floor(clock * 1.6 * mArt.pace) % 2) + 1);
+        const fArt = mArt && mk.front && mobSprite(mk.front);     // 앞에 펼쳐 둔 것(상인의 팔 물건) — 바로 아래 줄 가로 세 칸, 상인보다 나중에 · 그림자 없이 바닥에 붙여
+        if (fArt) { const size = fArt.n * kpx; ctx.imageSmoothingEnabled = false; ctx.drawImage(Math.floor(clock * 1.6 * fArt.pace) % 2 ? fArt.b : fArt.a, footX(mk.x, 1) - size / 2, footY(mk.y + 1, 1) - size, size, size); }
+        else glyph(mk.x + 0.5, mk.y + 0.5, mk.icon);
         if (mk.label) {
           ctx.font = `bold ${Math.max(9, Math.round(T * 0.36))}px system-ui, sans-serif`;
           ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
           ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(28,16,7,0.85)';
-          ctx.strokeText(mk.label, ox + (mk.x + 0.5) * T, oy + mk.y * T + 1);
+          ctx.strokeText(mk.label, ox + (mk.x + 0.5) * T, mTop);
           ctx.fillStyle = '#f6e7c3';
-          ctx.fillText(mk.label, ox + (mk.x + 0.5) * T, oy + mk.y * T + 1);
+          ctx.fillText(mk.label, ox + (mk.x + 0.5) * T, mTop);
         }
       }
       for (const post of m.posts) {
@@ -26795,7 +26960,7 @@ function mapMarks() {
   const m = State.run && State.run.merchant;
   const z = m && ZONES[m.zone];
   const spot = z && npcs.find(n => n.name === 'merchant' && n.zone === z.id);
-  if (spot) out.push({ x: spot.x, y: spot.y, icon: '🎒', label: '상인' });
+  if (spot) out.push({ x: spot.x, y: spot.y, icon: '🎒', sprite: 'merchant', front: 'merchantwares', label: '상인' });   // sprite — 지도 도트 (js/mobsprites.js 의 merchant, 없으면 icon) · front — 앞(아래 줄)에 펼쳐 둔 팔 물건
   for (const n of npcs) {
     if (n.name === 'seat') {                       // 내 길드의 사무 자리 — 앉은 동료만
       const id = State.meta.guild && State.meta.guild.seats[n.seat];
