@@ -1417,39 +1417,41 @@ test('동료 여럿 · 게이트 — 제5격 보스 뒤 모집 · 함께 갈 한
     currentSlot = 0; State.meta = freshMeta(); State.meta.cityOpen = true; startRun();
     const beat = n => State.meta.bossesBeaten.push(zoneBoss(ZONES.findIndex(z => z.rank === n)).id);
     beat(4); joinAlly('hayun');
-    const out = { closed: [gatesOpen(), deskHere('hire'), hireAlly('seojin')] };
+    const out = { closed: [gatesOpen(), deskHere('hire'), hireAlly('r1')] };
     beat(5); State.meta.hunterGrade = 2;
-    out.list = hireList().map(a => a.id);
-    out.poor = hireAlly('minjae');
+    out.list = hireList().length;
+    // 이 시험은 사람을 정해 둠 — 회차마다 무작위로 오는 창구 명단을 바꿔 끼움 (받아들일 확률은 rng 0 으로 늘 받아들임)
+    State.meta.hireBoard = { run: State.meta.runCount, list: [{ id: 'r1', name: '서진', grade: 'F', kind: 'guard', look: 1 }, { id: 'r2', name: '민재', grade: 'E', kind: 'heal', look: 2 }, { id: 'r3', name: '지우', grade: 'D', kind: 'strike', look: 3 }] };
+    out.poor = hireAlly('r2', () => 0);
     State.meta.won = 1e12;
-    out.hire = [hireAlly('minjae'), hireAlly('minjae'), hireAlly('jiu'), State.meta.allies.slice(), State.meta.ally];
+    out.hire = [hireAlly('r2', () => 0), hireAlly('r2', () => 0), hireAlly('r3', () => 0), State.meta.allies.slice(), State.meta.ally];
     // 내가 깬 등급만 (게이트 찾기 — 2026-11-19) · 함께 가는 동료는 게이트에 못 감 · E급 동료는 D급 게이트에 못 감
-    out.locked = sendToGate('minjae', 'E', 0);
+    out.locked = sendToGate('r2', 'E', 0);
     State.meta.gateClear = ['F', 'E', 'D'];
-    out.send = [sendToGate('hayun', 'F', 0), sendToGate('minjae', 'D', 0), sendToGate('minjae', 'E', 0), sendToGate('minjae', 'F', 0)];
-    out.comp = [setCompanion('minjae'), setCompanion('hayun'), State.meta.ally];
+    out.send = [sendToGate('hayun', 'F', 0), sendToGate('r2', 'D', 0), sendToGate('r2', 'E', 0), sendToGate('r2', 'F', 0)];
+    out.comp = [setCompanion('r2'), setCompanion('hayun'), State.meta.ally];
     out.stats = [heroStats().ally, heroStats().allyHeal];
     setCompanion(null); out.alone = [heroStats().ally, heroStats().allyHeal, setCompanion('hayun'), heroStats().ally];
     const h = 3600e3, c0 = matsOf('core2'), s0 = SLOT_IDS.reduce((t, s) => t + stonesOf(s), 0);
-    out.early = [gateDone('minjae', 2 * h - 1), claimGate('minjae', 2 * h - 1), gatesDoneCount(2 * h)];
-    const got = claimGate('minjae', 50 * h);
-    out.got = [got.cores, matsOf('core2') - c0, SLOT_IDS.reduce((t, s) => t + stonesOf(s), 0) - s0, gateOf('minjae'), claimGate('minjae', 99 * h)];
+    out.early = [gateDone('r2', 2 * h - 1), claimGate('r2', 2 * h - 1), gatesDoneCount(2 * h)];
+    const got = claimGate('r2', 50 * h);
+    out.got = [got.cores, matsOf('core2') - c0, SLOT_IDS.reduce((t, s) => t + stonesOf(s), 0) - s0, gateOf('r2'), claimGate('r2', 99 * h)];
     // 막기 · 회복이 싸움에 듦
     const hero = { ...heroStats(), life: 1000, damage: 1, defense: 0, dex: 50, luck: 0, ally: 0 }, foe = { life: 1e9, damage: 100, defense: 0, dex: 50, luck: 0 };
     out.guard = expectedTurnDamage(foe, { ...hero, allyGuard: 0.2 }) < expectedTurnDamage(foe, hero);
     const log = []; simulateBattle({ ...hero, allyHeal: 0.05 }, foe, Math.random, log);
     out.heal = log.some(e => e.who === 'ally' && e.k === 'heal');
     // 저장 · 불러오기 — 동료 · 게이트가 남음
-    sendToGate('minjae', 'E', 123);
+    sendToGate('r2', 'E', 123);
     currentSlot = 3; save();
     State.meta = freshMeta(); load();
-    out.load = [State.meta.allies.length, State.meta.ally, State.meta.gates.minjae && State.meta.gates.minjae.end === 123 + 2 * h];
+    out.load = [State.meta.allies.length, State.meta.ally, State.meta.gates.r2 && State.meta.gates.r2.end === 123 + 2 * h];
     return out;
   `);
   assert.deepEqual(r.closed, [false, false, false]);
-  assert.deepEqual(r.list, ['seojin', 'minjae']);
+  assert.equal(r.list, 3, '창구에는 세 명');
   assert.equal(r.poor, false);
-  assert.deepEqual(r.hire, [true, false, false, ['hayun', 'minjae'], 'hayun']);
+  assert.deepEqual(r.hire, [true, false, false, ['hayun', 'r2'], 'hayun']);
   assert.equal(r.locked, false, '안 깬 등급엔 못 보냄');
   assert.deepEqual(r.send, [false, false, true, false]);
   assert.deepEqual(r.comp, [false, true, 'hayun']);
@@ -1462,12 +1464,64 @@ test('동료 여럿 · 게이트 — 제5격 보스 뒤 모집 · 함께 갈 한
   assert.deepEqual(r.load, [2, 'hayun', true]);
 });
 
+test('동료 모집 창구 — 회차마다 새 얼굴 셋 · 내 등급에 가까울수록 거절 · 거절하면 돈 그대로 · 8명까지 · 작별 · 저장', () => {
+  const run = loadGame();
+  const r = run(`
+    currentSlot = 0; State.meta = freshMeta(); syncRecruits(); State.meta.cityOpen = true; startRun();
+    const beat = n => State.meta.bossesBeaten.push(zoneBoss(ZONES.findIndex(z => z.rank === n)).id);
+    beat(4); beat(5); joinAlly('hayun'); State.meta.hunterGrade = 4; State.meta.won = 1e15;
+    const out = {};
+    const b = hireList();
+    out.board = [b.length, b.filter(a => a.grade === 'C').length >= 1, b.every(a => gradeIndex(a.grade) <= 4), new Set(b.map(a => a.id)).size, hireList() === b];
+    out.odds = [hireOdds({ id: 'x', grade: 'C' }), hireOdds({ id: 'x', grade: 'D' }), hireOdds({ id: 'x', grade: 'E' }), hireOdds({ id: 'x', grade: 'F' })];
+    // 거절 — 돈은 그대로, 그 사람은 떠남 (다시 못 부름)
+    const top = b.find(a => a.grade === 'C'), w0 = State.meta.won;
+    out.refuse = [hireAlly(top.id, () => 0.99), top.out, State.meta.won === w0, hireAlly(top.id, () => 0), allyOwned(top.id)];
+    // 받아들임 — 돈을 내고 ALLIES 에 들어감
+    const low = b.find(a => !a.out);
+    out.hire = [hireAlly(low.id, () => 0), low.out, allyOwned(low.id), !!ALLIES[low.id] && ALLIES[low.id].name === low.name, State.meta.won < w0];
+    // 다음 회차 — 새 얼굴
+    endRun('시험'); startRun();
+    const b2 = hireList();
+    out.next = [b2.length, b2.some(a => b.some(x => x.id === a.id))];
+    // 상한 8명 — 꽉 차면 못 맞음
+    State.meta.allies = State.meta.allies.concat(['seojin', 'minjae', 'jiu', 'taeo', 'hangyeol', 'eunho']);
+    out.full = [State.meta.allies.length, alliesFull(), hireAlly(b2[0].id, () => 0)];
+    // 작별 — 이야기 동료는 못 함 · 무작위 동료는 ALLIES 에서도 빠짐
+    State.meta.train[low.id] = 3;
+    out.part = [canPart('hayun'), partAlly('hayun'), partAlly(low.id), allyOwned(low.id), !!ALLIES[low.id], State.meta.train[low.id], alliesFull()];
+    // 저장 · 불러오기 — 맞은 무작위 동료 · 창구 명단이 그대로
+    State.meta.allies = ['hayun']; State.meta.ally = 'hayun';
+    const pick = b2.find(a => !a.out);
+    hireAlly(pick.id, () => 0);
+    State.meta.ally = pick.id;
+    currentSlot = 3; save();
+    State.meta = freshMeta(); syncRecruits(); load();
+    out.load = [State.meta.allies.slice(), State.meta.ally, ALLIES[pick.id] && ALLIES[pick.id].name === pick.name, allyNow() && allyNow().id, hireList().map(a => a.id).join() === b2.map(a => a.id).join(), hireList().find(a => a.id === pick.id).out];
+    // 다른 저장 칸을 열면 앞 칸의 무작위 동료가 ALLIES 에 남지 않음
+    openSlot(4, true);
+    out.clean = Object.values(ALLIES).some(a => a.recruit);
+    return out;
+  `);
+  assert.deepEqual(r.board, [3, true, true, 3, true], '세 명 · 한 명은 내 등급(C) · 내 등급 넘는 사람 없음 · 같은 회차엔 같은 명단');
+  assert.deepEqual(r.odds, [0.35, 0.65, 1, 1]);
+  assert.deepEqual(r.refuse, [false, 'refused', true, false, false]);
+  assert.deepEqual(r.hire, [true, 'hired', true, true, true]);
+  assert.deepEqual(r.next, [3, false], '다음 회차엔 새 사람');
+  assert.deepEqual(r.full, [8, true, false]);
+  assert.deepEqual(r.part, [false, false, true, false, false, null, false]);
+  assert.equal(r.load[1], r.load[3]);
+  assert.equal(r.load[0].length, 2);
+  assert.deepEqual(r.load.slice(2), [true, r.load[1], true, 'hired']);
+  assert.equal(r.clean, false);
+});
+
 test('길드 — 제7격 보스 뒤 빈 건물이 매물 · 사서 이름 · 사무 자리(단계만큼)에 앉힌 동료가 시간마다 돈(8시간까지) · 단계 올리기', () => {
   const run = loadGame();
   const r = run(`
     currentSlot = 0; State.meta = freshMeta(); State.meta.cityOpen = true; startRun();
     const beat = n => State.meta.bossesBeaten.push(zoneBoss(ZONES.findIndex(z => z.rank === n)).id);
-    beat(4); beat(5); joinAlly('hayun'); State.meta.hunterGrade = 3; State.meta.won = 1e15; hireAlly('seojin'); hireAlly('minjae'); State.meta.gateClear = ['F', 'E', 'D'];
+    beat(4); beat(5); joinAlly('hayun'); State.meta.hunterGrade = 3; State.meta.won = 1e15; addAlly('seojin'); addAlly('minjae'); State.meta.gateClear = ['F', 'E', 'D'];
     const out = { before: [guildForSale(), buyGuild(), deskHere('guild')] };
     beat(7);
     out.sale = guildForSale();

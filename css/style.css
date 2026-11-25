@@ -798,12 +798,18 @@ kbd {
 .bt-speed.on { opacity: 1; }
 .bt-foe .portrait-ic { font-size: clamp(56px, 19vw, 100px); }
 .bt-hero { width: min(21%, 78px); --pf-in: #5f8f3e; position: relative; }
-/* 함께 가는 동료 — 내 왼쪽에 조금 작게 (ui.js 의 allySprite) */
-.bt-hero .bt-ally, .enc-hero .bt-ally { position: absolute; right: 100%; bottom: 0; width: 88%; height: 88%; margin-right: 4px; }
+/* 함께 가는 동료 — 내 왼쪽에 나와 같은 크기 (그림이 주인공과 같은 32×40 비율 — ui.js 의 allySprite) */
+.bt-hero .bt-ally, .enc-hero .bt-ally { position: absolute; right: 100%; bottom: 0; width: 100%; height: 100%; margin-right: 2px; }
 .enc-hero { position: relative; }
 .ally-sprite { display: flex; align-items: flex-end; justify-content: center; width: 100%; height: 100%; line-height: 1; user-select: none; -webkit-user-select: none; }
 .bt-ally .ally-sprite { font-size: clamp(24px, 7.5vw, 36px); }
 .talk-face .ally-sprite { font-size: 30px; }
+/* 동료 도트 — 부위를 조합한 32×40 (js/allylook.js). 뭉개지지 않게 */
+.ally-px { display: block; width: 100%; height: 100%; background-repeat: no-repeat; background-position: center bottom; background-size: contain; image-rendering: pixelated; }
+.talk-face .ally-sprite .ally-px { width: 36px; height: 45px; flex: none; }
+.ally-row .ally-ic .ally-px { width: 32px; height: 40px; margin: 0 auto; }
+.ally-row.gone { opacity: 0.55; }
+.ally-row .btn.part { color: #ffd2cc; }
 /* 협회 — 동료 모집 · 게이트 창구 (ui.js 의 renderHire · renderGates) */
 .ally-row { display: grid; grid-template-columns: 36px 1fr auto; align-items: center; gap: 8px; padding: 6px 8px; margin-bottom: 6px; border: 2px solid var(--line); background: var(--paper-hi); font-size: 12px; }
 .ally-row.own { background: #dff3f7; }

@@ -1259,8 +1259,23 @@ function hpPct(hp, max) { return `${Math.max(0, Math.min(100, (hp / Math.max(1, 
 
 // 내 모습 — 지도에서 걷는 그 그림(assets/hero/walk.png)의 뒷모습 서기 칸. 위에 선 상대를 마주 봅니다 (사용자 결정)
 const heroSprite = () => `<span class="portrait-ic hero-sprite" style="background-image:url('${MapView.heroSheet()}')"></span>`;
-// 함께 가는 동료 — 그림이 생기기 전까지 이모지 (data.js 의 ALLIES 의 icon)
-const allySprite = (id = State.meta.ally || 'hayun') => `<span class="ally-sprite">${(ALLIES[id] || {}).icon || '🧑'}</span>`;
+// 동료 그림 — 부위를 조합한 도트 (js/allylook.js · 사용자 결정 2026-11-25). 앞모습은 목록 · 대화, 뒷모습은 싸움(주인공처럼 위의 상대를 봄).
+// look 은 생김새 객체(이야기 동료) 또는 씨앗 수(무작위 동료). 한 번 그린 것은 기억. allylook.js 가 없으면 이모지
+const allyPngCache = {};
+function allyPng(a, view) {
+  const k = `${a.id}:${view}:${typeof a.look === 'object' ? 'o' : a.look}`;
+  if (!allyPngCache[k]) {
+    const c = document.createElement('canvas'); c.width = AllyLook.W; c.height = AllyLook.H;
+    const g = c.getContext('2d'), img = g.createImageData(c.width, c.height);
+    img.data.set(AllyLook.drawLook(typeof a.look === 'object' ? a.look : AllyLook.rollLook(a.look | 0), view));
+    g.putImageData(img, 0, 0);
+    allyPngCache[k] = c.toDataURL();
+  }
+  return allyPngCache[k];
+}
+const allyPic = (a, view = 'front') => a && a.look != null && typeof AllyLook !== 'undefined'
+  ? `<span class="ally-px" style="background-image:url('${allyPng(a, view)}')"></span>` : `<span>${(a && a.icon) || '🧑'}</span>`;
+const allySprite = (id = State.meta.ally || 'hayun', view = 'back') => `<span class="ally-sprite">${allyPic(ALLIES[id], view)}</span>`;
 
 // 전투 카드 — 처음 그릴 때. 그다음부터는 paintBattle 이 바 · 숫자 · 줄만 바꿉니다.
 // 위에서부터 상대 체력 · 상대 초상(크게) · 내 초상(작게) · 내 체력 · 기록.
@@ -3295,31 +3310,38 @@ function examinerResultCard(r) {
 }
 
 // ---------- 헌터 협회 · 동료 모집 · 게이트 창구 (도시 계획 5번 — 제5격 보스 뒤. 상점 창을 같이 씀) ----------
-const HIRE_TALK = ['「동료 찾으세요? 등급에 맞는 분들만 소개해 드려요. 계약금은 한 번이고요.」', '「요즘 혼자 다니는 헌터 드물어요. …혼자서 그만큼 오르신 것도 드물고요.」'];
+const HIRE_TALK = ['「동료 찾으세요? 등급에 맞는 분들만 소개해 드려요. 계약금은 한 번이고요.」', '「요즘 혼자 다니는 헌터 드물어요. …혼자서 그만큼 오르신 것도 드물고요.」', '「오늘 오신 분들이에요. 다음에 오시면 또 다른 분들이 계실 거예요.」'];
+const HIRE_REFUSED = ['「…거절하셨네요. 등급이 비슷하면 다들 자기 길드를 차리고 싶어 하거든요.」', '「아쉽네요. 다음에 오시면 다른 분들이 와 계실 거예요.」'];   // 대사는 제안
 const GATE_TALK = {
   idle: ['「게이트 공략 대행 접수예요. 동료분을 보내 두시면 시간 맞춰 돌아와요.」', '「등급보다 높은 게이트는 접수 못 해 드려요. 규정이에요.」'],
   back: ['「돌아온 분이 계세요. 전리품 정산해 뒀어요.」']
 };
 const allyName = a => `<b>${a.name}</b> <small>${allyGradeId(a)}급${allyTrain(a) ? ` · 단련 ${allyTrain(a)}` : ''}</small>`;
 function renderHire() {
-  const won = num(State.meta.won);
+  const won = num(State.meta.won), full = alliesFull(), have = (State.meta.allies || []).length;
   $('shopTitle').textContent = '헌터 협회 · 동료 모집';
   $('shopGold').innerHTML = `${pxIcon('won')}돈 ${fmtWon(won)}`;
   const list = hireList();
+  // 회차마다 새 얼굴 — 맞자고 하면 받아들일 확률(내 등급에 가까울수록 낮음), 거절하면 돈은 그대로 · 이번 회차엔 떠남
   const rows = list.map(a => {
-    const own = allyOwned(a.id), price = hirePrice(a);
-    return `<div class="ally-row${own ? ' own' : ''}">
-      <span class="ally-ic">${a.icon}</span>
-      <div class="ally-body"><div>${allyName(a)}</div><div class="ally-what">${allyWhat(a)}</div></div>
-      ${own ? '<span class="ally-state">동료</span>' : `<button class="btn primary" data-hire="${a.id}" ${won >= price ? '' : 'disabled'}><b>맞는다</b><span>${fmtWon(price)}</span></button>`}
+    const price = hirePrice(a), odds = Math.round(hireOdds(a) * 100);
+    const state = a.out === 'hired' ? '<span class="ally-state on">동료가 됐다</span>' : a.out === 'refused' ? '<span class="ally-state">거절하고 떠났다</span>' : '';
+    return `<div class="ally-row${a.out === 'hired' ? ' own' : ''}${a.out === 'refused' ? ' gone' : ''}">
+      <span class="ally-ic">${allyPic(a)}</span>
+      <div class="ally-body"><div>${allyName(a)}</div><div class="ally-what">${allyWhat(a)}</div>${a.out ? '' : `<div class="ally-what">받아들일 확률 <b>${odds}%</b></div>`}</div>
+      ${state || `<button class="btn primary" data-hire="${a.id}" ${won >= price && !full ? '' : 'disabled'}><b>맞는다</b><span>${fmtWon(price)}</span></button>`}
     </div>`;
   }).join('');
-  const next = Object.values(ALLIES).find(a => a.hire && allyGradeN(a) === hunterGrade() + 1);
+  const oddsText = RULES.HIRE_ODDS.map((p, i) => `${i ? `${i}등급 아래` : '같은 등급'} ${Math.round(p * 100)}%`).join(' · ');
   $('shopBody').innerHTML = `<div class="shop-say">${CLERK_DESKS.hire.icon} ${shopSay}</div>
     ${rows || '<p class="hint">아직 소개해 줄 사람이 없다 — 헌터 등록부터.</p>'}
-    <p class="hint">내 등급(${hunterGrade() ? `${gradeName()}급` : '미등록'})까지의 헌터만 와 있다.${next ? ` 재심사로 등급이 오르면 ${next.grade}급 헌터도.` : ''}<br>함께 갈 동료 · 게이트에 보내기는 오른쪽 <b>게이트 창구</b>에서.</p>`;
+    <p class="hint">올 때마다(회차마다) 새 얼굴 ${RULES.HIRE_BOARD}명 — 한 명은 내 등급(${hunterGrade() ? `${gradeName()}급` : '미등록'}), 나머지는 그 아래.<br>
+      내 등급에 가까울수록 잘 안 온다 (${oddsText} · 더 아래는 늘). 거절당하면 돈은 그대로, 그 사람은 이번 회차엔 떠난다.<br>
+      동료는 ${RULES.ALLY_MAX}명까지 — 지금 ${have}명${full ? ' · <b>꽉 찼다</b> (게이트 창구에서 작별해야 새로 맞을 수 있다)' : ''}. 함께 갈 동료 · 게이트에 보내기는 오른쪽 <b>게이트 창구</b>에서.</p>`;
   $('shopBody').querySelectorAll('[data-hire]').forEach(b => b.addEventListener('click', () => {
-    if (hireAlly(b.dataset.hire)) Sound.play('rankUp');
+    const id = b.dataset.hire;
+    if (hireAlly(id)) Sound.play('rankUp');
+    else if ((hireList().find(x => x.id === id) || {}).out === 'refused') { shopSay = pick(HIRE_REFUSED); Sound.play('retreat'); }
     render();
   }));
 }
@@ -3341,13 +3363,13 @@ function renderGates() {
     else if (seatedAlly(id)) act = `<span class="ally-state">길드 사무 중 — 길드 장부에서 일으킬 수 있음</span>`;
     else if (trainingOf(id)) act = `<span class="ally-state">단련 중 — 길드 교관</span>`;
     else if (m.ally === id) act = `<span class="ally-state on">함께 가는 중</span><button class="btn tiny" data-comp="">빼기</button>`;
-    else act = `<button class="btn tiny" data-comp="${id}">함께 간다</button>
+    else act = `<button class="btn tiny" data-comp="${id}">함께 간다</button>${canPart(id) ? `<button class="btn tiny part" data-part="${id}">작별</button>` : ''}
       <span class="gate-btns"><span class="gate-lbl">게이트에 보낸다 →</span>${GATE_IDS.map(id => ({ id })).filter((x, i) => i + 1 <= allyGradeN(a)).map(x => {
         const info = gateInfo(x.id), open = gateUnlocked(x.id);
         return `<button class="btn tiny" data-gate="${id}:${x.id}" ${open ? '' : 'disabled'} title="${open ? `${info.hours}시간 · 제${info.rank}격의 핵 ${info.cores}개 · 강화석 ${fmt(info.stones)}개` : '내가 이 등급 게이트를 한 번 깨야 보낼 수 있다 (게이트 찾기)'}">${x.id}급 · ${open ? `${info.hours}시간` : '🔒'}</button>`;
       }).join('')}</span>`;
     return `<div class="ally-row${m.ally === id ? ' own' : ''}">
-      <span class="ally-ic">${a.icon}</span>
+      <span class="ally-ic">${allyPic(a)}</span>
       <div class="ally-body"><div>${allyName(a)}</div><div class="ally-what">${allyWhat(a)}</div><div class="ally-act">${act}</div></div>
     </div>`;
   }).join('');
@@ -3364,6 +3386,12 @@ function renderGates() {
     render();
   }));
   body.querySelectorAll('[data-claim]').forEach(b => b.addEventListener('click', () => { if (claimGate(b.dataset.claim)) Sound.play('drop'); render(); }));
+  // 작별 — 되돌릴 수 없어 한 번 묻습니다 (이야기 동료는 버튼이 없음)
+  body.querySelectorAll('[data-part]').forEach(b => b.addEventListener('click', () => {
+    const a = ALLIES[b.dataset.part];
+    if (a && confirm(`${a.name}${josa(a.name, '과', '와')} 작별합니다. 단련한 것도 함께 사라지고 다시 만날 수 없습니다. 계속할까요?`) && partAlly(b.dataset.part)) Sound.play('retreat');
+    render();
+  }));
   startShopTicker();
 }
 // ---------- 훈련소 — 길드 안 교관 (도시 계획 7번 · 12격, 사용자 결정 2026-11-19 · game.js 의 startTraining · settleTraining) ----------
@@ -3387,7 +3415,7 @@ function renderTrainer() {
     const bar = Array.from({ length: RULES.TRAIN_MAX }, (_, i) => `<i class="${i < lv ? 'on' : t && i === lv ? 'now' : ''}"></i>`).join('');
     const upNote = !m.allyUp[id] && allyGradeN(a) < RULES.ALLY_TOP ? ` · 10단계면 ${gradeAt(allyGradeN(a) + 1).id}급으로` : m.allyUp[id] ? ' · 등급이 올랐다' : '';
     return `<div class="ally-row">
-      <span class="ally-ic">${a.icon}</span>
+      <span class="ally-ic">${allyPic(a)}</span>
       <div class="ally-body"><div>${allyName(a)}</div><div class="ally-what">${allyWhat(a)}</div>
         <div class="train-bar">${bar}</div><div class="hint">능력 +${Math.round(lv * RULES.TRAIN_STEP * 100)}%${upNote}</div>
         <div class="ally-act">${act}</div></div>
@@ -3536,7 +3564,7 @@ function renderGuild() {
     if (id) {
       const a = ALLIES[id], p = guildSeatPending(id, now), full = now - num(g.since[id]) >= RULES.GUILD_CAP_HOURS * 3600e3;
       return `<div class="ally-row own">
-        <span class="ally-ic">${a.icon}</span>
+        <span class="ally-ic">${allyPic(a)}</span>
         <div class="ally-body"><div>${allyName(a)} <small>사무 자리 ${i + 1}</small></div>
           <div class="ally-what">한 시간에 +${fmtWon(rate)} · 쌓인 것 ${fmtWon(p)}${full ? ' <b>(가득 — 받아야 다시 쌓임)</b>' : ''}</div>
           <div class="ally-act"><button class="btn tiny" data-unseat="${id}">일으킨다</button></div></div>
@@ -3545,7 +3573,7 @@ function renderGuild() {
     return `<div class="ally-row">
       <span class="ally-ic">🪑</span>
       <div class="ally-body"><div><b>빈 자리</b> <small>사무 자리 ${i + 1}</small></div>
-        <div class="ally-act">${idle.length ? idle.map(x => `<button class="btn tiny" data-seat="${x}">${ALLIES[x].icon} ${ALLIES[x].name} 앉힌다</button>`).join('') : '<span class="ally-state">앉힐 동료가 없다 — 함께 가거나 게이트에 간 동료는 못 앉힘</span>'}</div></div>
+        <div class="ally-act">${idle.length ? idle.map(x => `<button class="btn tiny" data-seat="${x}">${ALLIES[x].name} 앉힌다</button>`).join('') : '<span class="ally-state">앉힐 동료가 없다 — 함께 가거나 게이트에 간 동료는 못 앉힘</span>'}</div></div>
     </div>`;
   }).join('');
   const up = guildPrice();
@@ -4247,7 +4275,7 @@ function renderTalk() {
   $('talk').classList.toggle('sys', !!sys);
   if (sys) $('talk').dataset.sys = sys; else delete $('talk').dataset.sys;
   $('talkWho').textContent = TALK_WHO[line.who]();
-  $('talkFace').innerHTML = line.who === 'guide' ? guideEye('bob') : line.who === 'me' ? heroSprite() : line.who === 'stranger' || line.who === 'ally' ? allySprite('hayun') : line.who === 'stranger2' || line.who === 'ally2' ? allySprite('danwoo') : line.who === 'examiner' ? `<span class="ally-sprite">${(examinerNow() || {}).icon || '🧑‍🏫'}</span>` : line.who === 'chief' ? `<span class="ally-sprite">${CLERK_DESKS.chief.icon}</span>` : line.who === 'union' ? '<span class="ally-sprite">🌐</span>' : line.who === 'raidboss' ? `<span class="ally-sprite">${raidFoe().icon}</span>` : line.who === 'gateboss' ? `<span class="ally-sprite">${(gateInNow() && findFoe(gateInNow()).icon) || '👹'}</span>` : line.who === 'proctor' || line.who === 'desk' ? `<span class="ally-sprite">${CLERK_DESKS.assoc.icon}</span>` : /^bg\d$/.test(line.who) ? `<span class="ally-sprite">${BIG_GUILDS[+line.who.slice(2)].icon}</span>` : '';
+  $('talkFace').innerHTML = line.who === 'guide' ? guideEye('bob') : line.who === 'me' ? heroSprite() : line.who === 'stranger' || line.who === 'ally' ? allySprite('hayun', 'front') : line.who === 'stranger2' || line.who === 'ally2' ? allySprite('danwoo', 'front') : line.who === 'examiner' ? `<span class="ally-sprite">${(examinerNow() || {}).icon || '🧑‍🏫'}</span>` : line.who === 'chief' ? `<span class="ally-sprite">${CLERK_DESKS.chief.icon}</span>` : line.who === 'union' ? '<span class="ally-sprite">🌐</span>' : line.who === 'raidboss' ? `<span class="ally-sprite">${raidFoe().icon}</span>` : line.who === 'gateboss' ? `<span class="ally-sprite">${(gateInNow() && findFoe(gateInNow()).icon) || '👹'}</span>` : line.who === 'proctor' || line.who === 'desk' ? `<span class="ally-sprite">${CLERK_DESKS.assoc.icon}</span>` : /^bg\d$/.test(line.who) ? `<span class="ally-sprite">${BIG_GUILDS[+line.who.slice(2)].icon}</span>` : '';
   $('talkFace').classList.toggle('hidden', line.who === 'nameless' || line.who === 'end');   // end — 엔딩의 「끝」 (얼굴 · 이름 없이)
   const body = typeof line.text === 'function' ? line.text() : line.text;
   if (sys) typeTalk($('talkBody'), body); else { stopTyping(); $('talkBody').innerHTML = body; }

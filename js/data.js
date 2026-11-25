@@ -76,6 +76,9 @@ const RULES = {
   ARMOR_PRICE: 24,        // 방어구 매장(백화점 2층) — 그 격의 핵 12개어치, 무기의 절반 (부위가 넷이라 — 사용자 결정 2026-11-18)
   // 동료 · 게이트 (도시 계획 5번). 시뮬로 한 회차에 그 격의 핵이 30~80개(가운데 50쯤) 모입니다 (2026-11-19).
   HIRE_CORES: 40,         // 동료 모집 — 이번 회차를 시작할 때 내 격의 핵 40개어치(직접 한 회차 몫쯤) × 등급마다 +25% (F 1배 … S 2.5배 — game.js 의 hirePrice)
+  HIRE_BOARD: 3,          // 동료 모집 창구에 서 있는 사람 — 회차마다 새 얼굴 (한 명은 내 등급, 나머지는 그 아래에서 무작위 — 사용자 결정 2026-11-25)
+  HIRE_ODDS: [0.35, 0.65], // 맞자고 했을 때 받아들일 확률 — 내 등급과 같으면 35% · 한 등급 아래 65% · 두 등급 넘게 아래면 늘 (가까울수록 잘 안 옴 — 사용자 결정). 거절하면 돈은 안 나가고 이번 회차엔 떠남
+  ALLY_MAX: 8,            // 동료는 이야기 동료까지 8명까지 — 꽉 차면 누구와 작별할지 고름 (사용자 결정 2026-11-25)
   GATE_CORES: 4,          // 게이트 — 한 시간에 그 게이트 격의 핵 4개 (가장 긴 S급 8시간 = 32개 — 직접 한 회차의 0.6쯤. 게이트 격은 내 격보다 늘 뒤처짐)
   GATE_STONES: 10,        // 게이트 — 한 시간에 강화석 10 × 격 (가장 덜 강화된 부위로 — 보물상자처럼)
   // 길드 (도시 계획 6번 — 사용자 결정 2026-11-19). 값 · 벌이는 모두 「이번 회차를 시작할 때 내 격의 핵」 몇 개어치 (돈)
@@ -2378,7 +2381,10 @@ const PASSIVE_BY_ID = Object.fromEntries(PASSIVES.map(p => [p.id, p]));
 // ---------- 동료 (도시 계획 4 · 5번 — 사용자 결정 2026-11-18 · 11-19) ----------
 // 이야기로 만나는 동료(story — 하윤: 제4격 보스 뒤 협회 로비에서 말을 걸어옴)와, 제5격 보스 뒤 협회 「동료 모집」 창구에서 돈으로 고용하는 동료(hire — 내 등급까지).
 // 그 공간에 함께 가는 동료는 늘 한 명 — 게이트 창구에서 고름. 함께 가는 동안에는 게이트에 못 감.
-// 능력은 동료마다 셋 중 하나(ALLY_KINDS), 세기는 등급으로. 이름 · 그림(이모지 — 그림이 생기기 전까지) · 대사는 가칭.
+// 능력은 동료마다 셋 중 하나(ALLY_KINDS), 세기는 등급으로. 이름 · 대사는 가칭.
+// 그림은 부위를 조합한 도트 (js/allylook.js) — look 은 생김새 객체 또는 무작위 씨앗 수. icon(이모지)은 지도 위 표시에만 남음.
+// 고용 동료는 회차마다 창구에 새로 오는 무작위 사람 (game.js 의 hireBoard — 사용자 결정 2026-11-25). 그 전의 고정 고용 동료 7명은
+// legacy — 이미 맞은 저장본에는 그대로 남고 창구에는 더 안 나옴.
 const ALLY_KINDS = {
   strike: { name: '추가타', stat: 'ally',      base: 0.2,  step: 0.05,  desc: v => `내가 움직인 뒤 한 번 더 — 내 한 방의 ${Math.round(v * 1000) / 10}%` },   // 크리 없음 · 빗나갈 수 있음
   heal:   { name: '회복',   stat: 'allyHeal',  base: 0.02, step: 0.005, desc: v => `내 턴마다 내 생명의 ${Math.round(v * 1000) / 10}% 회복` },
@@ -2386,16 +2392,21 @@ const ALLY_KINDS = {
   endure: { name: '버티기', stat: 'allyEndure', base: 0.05, step: 0.05, desc: v => `싸움마다 한 번, 쓰러질 때 생명 ${Math.round(v * 1000) / 10}%로 버팀` }   // 이야기 동료 단우만 (2026-11-19)
 };
 const ALLIES = {
-  hayun:    { id: 'hayun',    name: '하윤', grade: 'D', kind: 'strike', icon: '🥷', story: true },
-  danwoo:   { id: 'danwoo',   name: '단우', grade: 'A', kind: 'endure', icon: '🥋', story: true },   // 둘째 이야기 동료 — 청해 길드를 떠난 무인 (제8격 보스 뒤 · 내 길드에 찾아옴 — 사용자 결정 2026-11-19)
-  seojin:   { id: 'seojin',   name: '서진', grade: 'F', kind: 'guard',  icon: '💂', hire: true },
-  minjae:   { id: 'minjae',   name: '민재', grade: 'E', kind: 'heal',   icon: '🧑‍⚕️', hire: true },
-  jiu:      { id: 'jiu',      name: '지우', grade: 'D', kind: 'strike', icon: '🧝', hire: true },
-  taeo:     { id: 'taeo',     name: '태오', grade: 'C', kind: 'guard',  icon: '🧔', hire: true },
-  hangyeol: { id: 'hangyeol', name: '한결', grade: 'B', kind: 'heal',   icon: '🧙', hire: true },
-  eunho:    { id: 'eunho',    name: '은호', grade: 'A', kind: 'strike', icon: '🦹', hire: true },
-  rua:      { id: 'rua',      name: '루아', grade: 'S', kind: 'guard',  icon: '🦸', hire: true }
+  hayun:    { id: 'hayun',    name: '하윤', grade: 'D', kind: 'strike', icon: '🥷', story: true,   // 검은 후드 · 붉은 목도리 · 묶은 머리
+    look: { v: 1, seed: 4242, skin: 1, hc: 0, bangs: 'side', side: 1, back: 0, tie: 1, vol: 1, flip: false, eye: 'sharp', ec: 1, mouth: 'small', mark: 'none', top: 'hoodie', bottom: 'pants', extra: 'scarf', c1: 0, c2: 1, c3: 4, shoe: 0, hseed: 4242 } },
+  danwoo:   { id: 'danwoo',   name: '단우', grade: 'A', kind: 'endure', icon: '🥋', story: true,   // 둘째 이야기 동료 — 청해 길드를 떠난 무인 (제8격 보스 뒤 · 내 길드에 찾아옴 — 사용자 결정 2026-11-19)
+    look: { v: 1, seed: 8080, skin: 2, hc: 0, bangs: 'parted', side: 2, back: 1, tie: 3, vol: 2, flip: false, eye: 'sharp', ec: 0, mouth: 'line', mark: 'scar', top: 'dobok', bottom: 'pants', extra: 'none', c1: 9, c2: 0, c3: 0, shoe: 0, hseed: 8080 } },   // 청록 도복 · 검은 띠 · 올림머리 · 볼의 흉터
+  seojin:   { id: 'seojin',   name: '서진', grade: 'F', kind: 'guard',  icon: '💂', legacy: true, look: 7001 },
+  minjae:   { id: 'minjae',   name: '민재', grade: 'E', kind: 'heal',   icon: '🧑‍⚕️', legacy: true, look: 7002 },
+  jiu:      { id: 'jiu',      name: '지우', grade: 'D', kind: 'strike', icon: '🧝', legacy: true, look: 7003 },
+  taeo:     { id: 'taeo',     name: '태오', grade: 'C', kind: 'guard',  icon: '🧔', legacy: true, look: 7004 },
+  hangyeol: { id: 'hangyeol', name: '한결', grade: 'B', kind: 'heal',   icon: '🧙', legacy: true, look: 7005 },
+  eunho:    { id: 'eunho',    name: '은호', grade: 'A', kind: 'strike', icon: '🦹', legacy: true, look: 7006 },
+  rua:      { id: 'rua',      name: '루아', grade: 'S', kind: 'guard',  icon: '🦸', legacy: true, look: 7007 }
 };
+// 창구에 오는 사람의 이름 — 성 + 두 글자 이름 (이야기 동료 이름과 겹치면 다시 뽑음)
+const RECRUIT_SURNAMES = ['김', '이', '박', '최', '정', '강', '조', '윤', '장', '임', '한', '오', '서', '신', '권', '황', '안', '송', '류', '홍', '전', '고', '문', '양', '손', '배', '백', '허', '남', '심', '노', '하', '곽', '성', '차', '주', '우', '구', '민', '진', '나', '지', '엄', '채', '원', '천', '방', '공', '현', '함', '변', '염', '여', '추', '도', '석', '선', '설', '마', '길'];
+const RECRUIT_NAMES = ['서준', '도윤', '하준', '시우', '은우', '지호', '예준', '유준', '주원', '민준', '건우', '현우', '우진', '선우', '연우', '지환', '승현', '태윤', '재윤', '한결', '이준', '시윤', '정우', '윤호', '지훈', '민재', '로운', '이안', '도현', '수호', '서윤', '서연', '지우', '하은', '민서', '지유', '윤서', '채원', '수아', '지아', '다은', '예은', '소율', '지민', '수빈', '예린', '유나', '아린', '하린', '시아', '나은', '서아', '가윤', '채은', '다인', '세아', '이서', '윤아', '소이', '라희', '태오', '루아', '은호', '이든', '온유', '해솔', '가람', '다솜', '나래', '보람', '한별', '초롱', '새벽', '여름', '겨울', '바다', '하늘', '마루', '두리', '누리', '단비', '이슬'];
 // 단련 (훈련소 — game.js 의 startTraining) — 단계 · 10단계를 채워 오른 등급. 저장(State.meta)에서 읽음 (없으면 0)
 const allyTrain = a => (typeof State !== 'undefined' && State.meta && State.meta.train && State.meta.train[a.id]) || 0;
 const allyUp = a => typeof State !== 'undefined' && State.meta && State.meta.allyUp && State.meta.allyUp[a.id] ? 1 : 0;

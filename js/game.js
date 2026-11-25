@@ -168,6 +168,7 @@ function importSave(n, meta) {
 function openSlot(n, fresh) {
   currentSlot = n;
   State.meta = freshMeta();
+  syncRecruits();
   if (fresh) wipeSlot(n);
   else load();
   if (fresh || !loadRun()) startRun();
@@ -256,6 +257,9 @@ const State = {
     passives: {},                // 골드로 산 패시브 — id → 단계 (data.js 의 PASSIVES). 영구
     ally: null,                  // 그 공간에 함께 가는 동료 id (data.js 의 ALLIES) — 늘 한 명 · 없을 수 있음
     allies: [],                  // 내 동료 id 들 (이야기로 만난 동료 · 고용한 동료)
+    recruits: {},                // 창구에서 맞은 무작위 동료 — id('r번호') → { name, grade, kind, look } (불러올 때 ALLIES 에 끼워 넣음)
+    recruitNo: 0,                // 무작위 동료 번호를 매긴 수 — id 가 겹치지 않게
+    hireBoard: null,             // 동료 모집 창구 명단 — { run: 회차, list: [{ id, name, grade, kind, look, out: 'hired' | 'refused' }] }
     gates: {},                   // 게이트에 간 동료 — id → { gate: 등급 id, start, end } (ms · 실제 시각)
     guild: null,                 // 내 길드 — { name, level 1~5, seats: [동료 id], since: { id: ms } } (제7격 보스 뒤 옛 동네의 빈 건물을 사들임)
     sets: [null, null, null],    // 세 벌의 차림. equipped 는 늘 sets[activeSet] 과 같습니다
@@ -700,6 +704,14 @@ function load() {
     State.meta.portalMoved = !!data.home2 && !!data.portalMoved;
     State.meta.rankPassed = (Array.isArray(data.rankPassed) ? data.rankPassed : []).filter(id => BIG_GUILDS.some(B => B.id === id));
     State.meta.gateClear = (Array.isArray(data.gateClear) ? data.gateClear : []).filter(id => gateInfo(id));
+    State.meta.recruits = {};
+    for (const [id, r] of Object.entries(data.recruits && typeof data.recruits === 'object' ? data.recruits : {})) { const c = cleanRecruit(id, r); if (c) State.meta.recruits[id] = c; }
+    State.meta.recruitNo = Math.max(0, Math.floor(num(data.recruitNo)));
+    const hb = data.hireBoard;
+    State.meta.hireBoard = hb && Array.isArray(hb.list) && isFinite(hb.run)
+      ? { run: +hb.run, list: hb.list.map(r => { const c = r && cleanRecruit(r.id, r); return c && { id: r.id, ...c, ...(r.out === 'hired' || r.out === 'refused' ? { out: r.out } : {}) }; }).filter(Boolean) }
+      : null;
+    syncRecruits();
     State.meta.train = {}; State.meta.training = {}; State.meta.allyUp = {};
     for (const id of (Array.isArray(data.allies) ? data.allies : []).concat(data.ally ? [data.ally] : []).filter(id => ALLIES[id])) {
       const lv = Math.floor(num(data.train && data.train[id]));
@@ -809,6 +821,9 @@ function freshMeta() {
     passives: {},
     ally: null,
     allies: [],
+    recruits: {},
+    recruitNo: 0,
+    hireBoard: null,
     gates: {},
     guild: null,
     sets: [null, null, null],
@@ -1588,18 +1603,76 @@ function deskHere(shop) { return shop === 'chief' ? chiefCalls() : /^chiefS\d$/.
   : /^raidD\d$/.test(shop) ? !!State.run.raid && State.run.raid.tier === 0 && (State.run.raid.done || State.run.raid.knocked > +shop.slice(5)) : shop === 'raidboss' ? !!raidNow() : shop === 'ally' ? allyWaiting() : shop === 'ally2' ? ally2Waiting() : shop === 'bm' ? bmOpen() && !State.run.bmDone : shop === 'ranking' ? rankingOpen() : shop === 'gatefind' ? gatesOpen() : shop === 'trainer' ? trainOpen() : shop === 'gateboss' ? !!gateInNow() : shop === 'hire' || shop === 'gate' ? gatesOpen() : shop === 'guild' ? guildOwned() : shop === 'examiner' ? !!examinerNow() : true; }
 // 제5격 보스를 한 번이라도 꺾으면 협회의 「동료 모집」 · 「게이트 창구」가 열림
 function gatesOpen() { return !!State.meta.cityOpen && rankBossBeaten(5); }
-// 동료 모집 창구에 서 있는 사람 — 내 등급까지 (고용한 사람도 「함께하는 중」으로 남김)
+// ---------- 동료 모집 — 회차마다 창구에 새 얼굴 (사용자 결정 2026-11-25) ----------
+// 맞은 사람은 State.meta.recruits 에 남고 ALLIES 에 끼워 넣음 — 게이트 · 단련 · 길드는 모두 ALLIES[id] 로 찾음
+function syncRecruits() {
+  for (const id of Object.keys(ALLIES)) if (ALLIES[id].recruit) delete ALLIES[id];
+  for (const [id, r] of Object.entries(State.meta.recruits || {})) ALLIES[id] = { id, name: r.name, grade: r.grade, kind: r.kind, look: r.look, icon: '🧑', recruit: true };
+}
+const RECRUIT_KINDS = ['strike', 'heal', 'guard'];
+function cleanRecruit(id, r) {
+  if (typeof id !== 'string' || !/^r\d+$/.test(id) || !r || typeof r !== 'object') return null;
+  const name = typeof r.name === 'string' ? r.name.replace(/[<>&"'`\\]/g, '').trim().slice(0, 8) : '';
+  if (!name || !HUNTER_GRADES.some(g => g.id === r.grade) || !RECRUIT_KINDS.includes(r.kind) || !isFinite(r.look)) return null;
+  return { name, grade: r.grade, kind: r.kind, look: Math.floor(Math.abs(+r.look)) };
+}
+function rollRecruit(grade, rng, also = []) {
+  const used = new Set(Object.values(ALLIES).map(a => a.name).concat(also.map(a => a.name)));
+  let name = '';
+  for (let i = 0; i < 30 && (!name || used.has(name)); i++) name = RECRUIT_SURNAMES[Math.floor(rng() * RECRUIT_SURNAMES.length)] + RECRUIT_NAMES[Math.floor(rng() * RECRUIT_NAMES.length)];
+  State.meta.recruitNo = num(State.meta.recruitNo) + 1;
+  return { id: 'r' + State.meta.recruitNo, name, grade, kind: RECRUIT_KINDS[Math.floor(rng() * RECRUIT_KINDS.length)], look: Math.floor(rng() * 2147483647) };
+}
+// 이번 회차의 창구 명단 — 처음 볼 때 뽑아 저장 (다시 열어도 같은 사람). 한 명은 내 등급(S 까지), 나머지는 그 아래에서 무작위
+function hireBoard(rng = Math.random) {
+  if (!gatesOpen() || !hunterGrade()) return [];
+  const b = State.meta.hireBoard;
+  if (b && b.run === State.meta.runCount) return b.list;
+  const top = Math.min(HUNTER_GRADES.length, hunterGrade()), list = [];
+  for (let i = 0; i < RULES.HIRE_BOARD; i++) list.push(rollRecruit(gradeAt(i === 0 || top === 1 ? top : 1 + Math.floor(rng() * (top - 1))).id, rng, list));
+  list.sort((p, q) => gradeIndex(q.grade) - gradeIndex(p.grade));
+  State.meta.hireBoard = { run: State.meta.runCount, list };
+  save();
+  return list;
+}
+// 맞자고 했을 때 받아들일 확률 — 내 등급에 가까울수록 낮음 (RULES.HIRE_ODDS)
+function hireOdds(a) { const d = hunterGrade() - allyGradeN(a); return d >= RULES.HIRE_ODDS.length ? 1 : RULES.HIRE_ODDS[Math.max(0, d)]; }
+function alliesFull() { return (State.meta.allies || []).length >= RULES.ALLY_MAX; }
+// 작별 — 이야기 동료는 못 함. 게이트 · 단련 · 길드 자리에 있는 동료도 돌아온 뒤에
+function canPart(id) { const a = ALLIES[id]; return !!a && !a.story && allyOwned(id) && !gateOf(id) && !seatedAlly(id) && !trainingOf(id); }
+function partAlly(id) {
+  if (!canPart(id)) return false;
+  const a = ALLIES[id];
+  State.meta.allies = State.meta.allies.filter(x => x !== id);
+  if (State.meta.ally === id) State.meta.ally = null;
+  delete State.meta.train[id]; delete State.meta.allyUp[id];
+  if (State.meta.recruits) delete State.meta.recruits[id];
+  syncRecruits();
+  pushLog('info', `${a.name}${josa(a.name, '과', '와')} 작별했다.`);
+  save();
+  return true;
+}
 // 고용 값 — 이번 회차를 시작할 때의 내 격(동료 등급보다 낮으면 그 격)의 핵 HIRE_CORES 개어치 × 등급마다 +25%.
 // 내 격을 따르는 까닭: 동료 등급의 격으로 매기면 그 무렵엔 이미 훨씬 큰 돈을 벌어 한꺼번에 다 맞음 (시뮬 2026-11-19). 「한 판 벌어 살까 말까」(패시브 · 상인과 같은 원칙)
 function hirePrice(a) {
   const g = allyGradeN(a), r = Math.min(RANKS.length, Math.max(g, passiveRank()));
   return Math.round(CORES[`core${r}`].sell * RULES.HIRE_CORES * (1 + 0.25 * (g - 1)));
 }
-function hireList() { return Object.values(ALLIES).filter(a => a.hire && allyGradeN(a) <= hunterGrade()); }
-function hireAlly(id) {
-  const a = ALLIES[id];
-  if (!gatesOpen() || !a || !a.hire || allyOwned(id) || allyGradeN(a) > hunterGrade() || num(State.meta.won) < hirePrice(a)) return false;
+function hireList() { return hireBoard(); }
+// 맞는다 — 받아들이면 돈을 내고 동료로, 거절하면 돈은 그대로 · 그 사람은 이번 회차엔 떠남 (out: 'refused')
+function hireAlly(id, rng = Math.random) {
+  const a = hireBoard().find(x => x.id === id);
+  if (!gatesOpen() || !a || a.out || allyOwned(id) || allyGradeN(a) > hunterGrade() || alliesFull() || num(State.meta.won) < hirePrice(a)) return false;
+  if (rng() >= hireOdds(a)) {
+    a.out = 'refused';
+    pushLog('info', `${allyGradeId(a)}급 헌터 ${a.name}${josa(a.name, '은', '는')} 고개를 저었다 — 이번엔 같이 가지 않겠다고.`);
+    save();
+    return false;
+  }
   State.meta.won -= hirePrice(a);
+  a.out = 'hired';
+  State.meta.recruits = { ...(State.meta.recruits || {}), [id]: { name: a.name, grade: a.grade, kind: a.kind, look: a.look } };
+  syncRecruits();
   addAlly(id);
   pushLog('drop', `${allyGradeId(a)}급 헌터 ${a.name}${josa(a.name, '을', '를')} 동료로 맞았다 — ${fmtWon(hirePrice(a))} (${ALLY_KINDS[a.kind].name}).`);
   save();
