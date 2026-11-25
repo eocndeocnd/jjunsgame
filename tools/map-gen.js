@@ -1720,7 +1720,7 @@ function buildingInterior(data, b) {
 //     두 갈래 사이에 숨은 방(vault) — 양쪽 갈래 벽 속 숨은 샛길(secrets)로 드나들고, 큰 보물상자가 있습니다.
 //   구간 사이는 길이 좁아지는 문턱. 구간에 들어서면 그 이름이 뜹니다 (구간 구역 — section, 몬스터 없음).
 //   하나뿐인 일반은 몸 가장자리에서 가운데 길까지 2칸 넘게 떨어져 지나가며 닿지 않습니다 (시험이 지킴).
-// 7격은 손으로 정한 구간(RANK_MAPS 의 library), 8~20격은 임시 — 구간 하나에 레벨 순 그대로 (하나씩 손으로 짠 배치로 바꿀 자리).
+// 7격은 손으로 짠 지도(아래 ALEX), 8~20격은 임시 — 구간 하나에 레벨 순 그대로 (하나씩 컨셉 논리대로 손으로 짠 지도로 바꿀 자리).
 const HALL = {
   W: 56, margin: 3,
   hall: 12, sill: 6, road: 3,                                  // 길 폭 · 문턱 폭 · 가운데 흙길 폭
@@ -1732,14 +1732,7 @@ const HALL = {
   step: 3                                                      // 앞 상대보다 적어도 이만큼 북쪽에 (레벨 순서가 길을 따라 이어지게)
 };
 const RANK_MAPS = [
-  { id: 'library', rank: 7, end: '항구', stages: [
-    { name: '성문 밖 시장', foes: ['이름 없는 이야기꾼', '필경사', '관우'] },
-    { fork: [
-      { side: 'W', name: '무세이온 · 학자의 정원', foes: ['아르키메데스', '히파티아', '손자', '레오나르도 다 빈치'] },
-      { side: 'E', name: '왕실 기록 보관소', foes: ['장비', '헤로도토스', '잔 다르크', '조운', '스파르타쿠스'] }
-    ], vault: '지하 서고' },
-    { name: '정복자의 대로', foes: ['칭기즈 칸', '마초', '알렉산드로스', '황충'] }
-  ] },
+  { id: 'library', rank: 7, custom: data => alexandriaMap(data) },   // 손으로 짠 지도 (ALEX)
   ...Array.from({ length: 13 }, (_, i) => ({ id: `rank${i + 8}`, rank: i + 8, temp: true }))
 ];
 const rankMapId = rank => (RANK_MAPS.find(m => m.rank === rank) || {}).id;
@@ -1919,6 +1912,128 @@ function hallMap(data, spec) {
   const loops = doorsU.map(l => `${l.enemy}:${l.doors.map(d => { const f = flip(d); return [f.x, f.y, f.w, f.h].join(','); }).join(';')}`).join('|');
   return buildTmj({ w: W, h: H, tiles, areas, posts, ports, npcs, chests, secrets, props: { title: zone.name, place: place.name, loops } });
 }
+// ---------- 7격 — 알렉산드리아 (손으로 짠 지도, 사용자 결정 2026-11-25 「맵도 컨셉에 관련된 논리가 있어야」) ----------
+// 대도서관 두루마리 속 위인들이 살아난 바둑판 계획도시. 남쪽 성문에서 북쪽 대항구로 — 세 갈래 큰길을 따라 파벌마다 제 상징 공간에 모여 있고,
+// 이름난 사람은 구석이 아니라 트인 광장 · 뜰에 섭니다. 파벌 안에서는 센 사람이 가운데나 뒤(북쪽)에 — 어느 파벌을 따라가도 북쪽으로 갈수록 셈.
+//   서쪽 (반란자 → 정복자)  세라페움 언덕(손자 — 싸우지 않고 이기는 은둔한 병법가라 구석, 이야기가 있는 예외) · 원형극장(앞 광장의 화형대에 잔 다르크, 검투장 한가운데 스파르타쿠스)
+//                           · 소마 — 알렉산드로스의 무덤 (앞뜰 게르 진영에 칭기즈 칸, 한가운데 알렉산드로스 — 이 도시를 세운 자)
+//   가운데 (학자)           필사실(필경사) · 무세이온 뜰(아르키메데스 → 대도서관 정문 앞 히파티아 — 마지막 도서관장) · 대도서관 본관(작업실의 다 빈치 → 맨 안 기록 서고의 헤로도토스)
+//                           · 본관 안 숨은 비밀 서고 (벽 속 숨은 샛길, 큰 보물상자)
+//   동쪽 (촉한의 오호대장군) 목책 두른 군영이 남북으로 길게 — 영채 정문 관우 → 운하의 다리(장판교) 장비 → 한가운데 조운 → 본진의 마초 · 가운데 황충
+//   남쪽 성문 안 시장(이야기꾼, 돌아다님 · 상인) · 북쪽 대항구 부두에서 세 갈래가 만나고, 파로스 등대 섬으로 가는 둑길을 이순신(수군)이 막음.
+//   등대 섬에 헤르메스 트리스메기스투스(히든 — 보스를 꺾으면) · 8격으로 가는 배.
+// 가로 거리 둘(시장 북쪽 · 가운데)로 갈래끼리 오갑니다. 좌표는 칸 (x 오른쪽 · y 아래쪽), [x0, y0, x1, y1) 반열린 네모.
+const ALEX = {
+  W: 140, H: 150,
+  island: [58, 3, 82, 14], water: [6, 14, 134, 22], causeway: 69, quay: [6, 22, 134, 30],
+  streets: [[24, 30, 33, 120], [6, 114, 134, 121], [6, 58, 134, 67]],   // 서쪽 큰길 · 시장 북쪽 거리 · 가운데 거리
+  market: [36, 121, 104, 143], gate: 69,
+  serapeum: [8, 92, 23, 113], serapeumRamp: [23, 100, 24, 105],
+  theater: { cx: 45, cy: 84, r: 12, seat: [9, 10.6] }, theaterSquare: [34, 98, 57, 114],
+  soma: [34, 30, 60, 57],
+  scriptorium: [54, 98, 87, 114], museion: [54, 68, 87, 96],
+  library: [54, 30, 87, 58], vault: [77, 31, 86, 38],
+  camp: [90, 30, 133, 115], canal: [91, 84, 132, 88], bridge: [103, 118], campRoad: [109, 112, 30],
+  foes: {                                                      // 이름 → 몸 왼쪽 위 칸
+    '손자': [13, 99], '잔 다르크': [39, 105], '스파르타쿠스': [49, 82], '칭기즈 칸': [41, 50], '알렉산드로스': [51, 37],
+    '아르키메데스': [61, 87], '히파티아': [75, 71], '레오나르도 다 빈치': [59, 47], '헤로도토스': [62, 33],
+    '관우': [97, 106], '장비': [103, 85], '조운': [98, 70], '마초': [122, 46], '황충': [114, 37],
+    '이순신': [69, 19], '헤르메스 트리스메기스투스': [61, 5]
+  },
+  sections: [['세라페움 언덕', 'serapeum'], ['원형극장', [32, 71, 59, 114]], ['소마 — 알렉산드로스의 무덤', 'soma'], ['무세이온', 'museion'],
+    ['대도서관', 'library'], ['비밀 서고', 'vault'], ['촉한 진영', 'camp'], ['대항구', 'quay'], ['파로스 등대 섬', 'island']],
+  zones: [['이름 없는 이야기꾼', 'market'], ['필경사', 'scriptorium']],
+  merchant: [40, 124], chests: [[10, 94], [129, 90], [81, 34, 'big']]
+};
+function alexandriaMap(data) {
+  const A = ALEX, W = A.W, H = A.H, idx = (x, y) => y * W + x;
+  const zi = data.ZONES.findIndex(z => z.rank === 7), zone = data.ZONES[zi];
+  const foes = data.ENEMIES.filter(e => e.zoneIndex === zi);
+  const named = name => { const e = foes.find(q => q.name === name); if (!e) throw new Error(`7격 — ${name} 이(가) 없음`); return e; };
+  const tiles = new Uint8Array(W * H).fill(WALL);
+  const box = (r, t) => { for (let y = r[1]; y < r[3]; y++) for (let x = r[0]; x < r[2]; x++) tiles[idx(x, y)] = t; };
+  const ring = (r, t) => { for (let y = r[1]; y < r[3]; y++) for (let x = r[0]; x < r[2]; x++) if (x === r[0] || y === r[1] || x === r[2] - 1 || y === r[3] - 1) tiles[idx(x, y)] = t; };
+  const rectOf = k => (Array.isArray(k) ? k : A[k]);
+
+  // 땅 — 바다 · 등대 섬 · 둑길 · 부두 · 거리 · 시장 · 성문
+  box(A.water, WATER);
+  box(A.island, FLOOR);
+  box([A.causeway, A.water[1], A.causeway + 3, A.water[3]], ROAD);
+  box([A.island[0] + 10, A.island[1] - 1, A.island[0] + 14, A.island[1]], FLOOR);          // 북쪽 부두 — 8격으로 가는 배
+  box(A.quay, FLOOR);
+  for (const s of A.streets) box(s, FLOOR);
+  box(A.market, FLOOR);
+  box([A.gate, A.market[3], A.gate + 3, A.market[3] + 2], FLOOR);                            // 남쪽 성문
+  // 서쪽 — 세라페움 언덕(바위 테, 동쪽 비탈길) · 원형극장(돌 관람석 고리, 남북으로 트임) · 극장 앞 광장 · 소마(담, 남 · 서 · 북 문)
+  box(A.serapeum, FLOOR); ring(A.serapeum, ROCK); box([A.serapeum[2] - 1, A.serapeumRamp[1], A.streets[0][0], A.serapeumRamp[3]], FLOOR);
+  const T = A.theater;
+  for (let y = T.cy - T.r; y <= T.cy + T.r; y++) for (let x = T.cx - T.r; x <= T.cx + T.r; x++) {
+    const d = Math.hypot(x + 0.5 - (T.cx + 0.5), y + 0.5 - (T.cy + 0.5));
+    if (d < T.r) tiles[idx(x, y)] = d >= T.seat[0] && d < T.seat[1] && Math.abs(x - T.cx) > 2 ? ROCK : FLOOR;
+  }
+  box([T.cx - 2, T.cy - T.r - 1, T.cx + 3, T.cy - T.r + 1], FLOOR);                          // 극장 북쪽 길 → 가운데 거리
+  box(A.theaterSquare, FLOOR); box([A.streets[0][2], A.theaterSquare[1] + 4, A.theaterSquare[0], A.theaterSquare[3] - 4], FLOOR);
+  box(A.soma, FLOOR); ring(A.soma, WALL);
+  const S = A.soma, sx = (S[0] + S[2]) >> 1;
+  box([sx - 2, S[3] - 1, sx + 3, S[3] + 1], FLOOR); box([S[0] - 1, 40, S[0] + 1, 45], FLOOR); box([sx - 2, S[1] - 1, sx + 3, S[1] + 1], FLOOR);
+  // 가운데 — 필사실 · 무세이온 뜰 · 대도서관 본관(담, 남 · 북 문, 기둥 줄) · 비밀 서고(본관 안 막힌 방)
+  box(A.scriptorium, FLOOR); box(A.museion, FLOOR);
+  box([64, A.museion[3], 77, A.scriptorium[1]], FLOOR);                                      // 필사실 ↔ 무세이온
+  box([64, A.streets[2][3], 77, A.museion[1]], FLOOR);                                       // 무세이온 ↔ 가운데 거리
+  const L = A.library;
+  box(L, FLOOR); ring(L, WALL);
+  box([66, L[3] - 1, 75, L[3]], FLOOR); box([66, L[1], 75, L[1] + 1], FLOOR);
+  for (const px of [58, 64, 76, 82]) for (const py of [41, 52]) box([px, py, px + 2, py + 2], ROCK);
+  const V = A.vault;
+  for (let y = V[1]; y <= V[3]; y++) tiles[idx(V[0] - 1, y)] = WALL;
+  for (let x = V[0] - 1; x < V[2]; x++) tiles[idx(x, V[3])] = WALL;
+  const secrets = [{ name: '숨은 샛길', x: V[0] + 3, y: V[3], w: 2, h: 1 }];
+  // 동쪽 — 목책 두른 촉한 진영 (남 · 북 · 서 문), 운하와 다리, 진영 안 흙길
+  const C = A.camp, mid = 110;
+  box(C, FLOOR); ring(C, ROCK);
+  box([mid - 4, C[3] - 1, mid + 5, C[3]], FLOOR); box([mid - 4, C[1], mid + 5, C[1] + 1], FLOOR); box([C[0], A.streets[2][1], C[0] + 1, A.streets[2][3]], FLOOR);
+  box(A.canal, WATER); box([A.bridge[0], A.canal[1], A.bridge[1], A.canal[3]], FLOOR);
+  // 흙길 — 서쪽 큰길 · 가로 거리 둘 · 부두 · 진영 안 · 구역마다 지나가는 길(극장 · 소마 · 가운데 학자의 길). 이름난 사람은 이 길에서 두 칸 넘게 비켜 섬 — 지나가며 닿지 않게
+  const road = (r) => { for (let y = r[1]; y < r[3]; y++) for (let x = r[0]; x < r[2]; x++) if (tiles[idx(x, y)] === FLOOR) tiles[idx(x, y)] = ROAD; };
+  road([27, 30, 30, 121]); road([6, 116, 134, 119]); road([6, 61, 134, 64]); road([6, 25, 134, 28]);
+  road([A.campRoad[0], A.campRoad[2], A.campRoad[1], C[3]]); road([A.gate, 119, A.gate + 3, A.market[3] + 2]);
+  road([A.gate, A.quay[3], A.gate + 3, A.streets[1][1]]); road([T.cx - 1, T.cy - T.r - 1, T.cx + 2, A.theaterSquare[3]]); road([sx - 1, S[1], sx + 2, S[3]]);
+
+  // 자리 — 모두 트인 땅에, 보스 말고는 흙길에서 2칸 넘게
+  const posts = Object.entries(A.foes).map(([name, [x, y]]) => {
+    const e = named(name), n = e.size;
+    for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) { const t = tiles[idx(x + i, y + j)]; if (t !== FLOOR && t !== ROAD) throw new Error(`7격 — ${name} (${x + i}, ${y + j}) 이(가) 빈 땅이 아님`); }
+    if (e.kind !== 'boss') for (let j = -2; j < n + 2; j++) for (let i = -2; i < n + 2; i++) if (tiles[idx(x + i, y + j)] === ROAD) throw new Error(`7격 — ${name} 이(가) 흙길에서 2칸 안`);
+    return { name: e.name, x, y, w: n, h: n, enemy: e.id, blocks: e.kind === 'boss' };
+  });
+  const boss = foes.find(e => e.kind === 'boss');
+  const bp = posts.find(p => p.enemy === boss.id);
+  if (bp.x !== A.causeway || bp.w !== 3) throw new Error('7격 — 이순신이 둑길을 꼭 맞게 막지 않음');
+  for (const e of foes) if (e.kind !== 'normal' || e.solo) { if (!posts.some(p => p.enemy === e.id)) throw new Error(`7격 — ${e.name} 자리가 없음`); }
+
+  // 구역 — 구간(상징 공간, 이름이 뜸)을 먼저, 돌아다니는 일반의 구역을 뒤에 (겹치면 뒤의 것)
+  const areas = A.sections.map(([name, k]) => { const r = rectOf(k); return { name, x: r[0], y: r[1], w: r[2] - r[0], h: r[3] - r[1], zone: zone.id, section: true }; });
+  for (const [name, k] of A.zones) { const e = named(name), r = rectOf(k); areas.push({ name, x: r[0] + 1, y: r[1] + 1, w: r[2] - r[0] - 2, h: r[3] - r[1] - 2, rank: 7, monster: e.id, zone: zone.id }); }
+  const roam = foes.filter(e => e.kind === 'normal' && !e.solo);
+  if (roam.length !== A.zones.length) throw new Error(`7격 — 돌아다니는 일반 ${roam.length}종, 구역 ${A.zones.length}개`);
+
+  // 문 · 사람 · 보물상자
+  const nextZone = data.ZONES.find(z => z.rank === 8), place = placeOf(7), nextPlace = placeOf(8);
+  const ports = [
+    { name: 'in', label: DEMON_CASTLE.title, x: A.gate, y: A.market[3] + 1, w: 3, h: 1, to: `${DEMON_CASTLE.id}.next` },
+    { name: 'next', label: nextZone.name, x: A.island[0] + 10, y: A.island[1] - 1, w: 4, h: 1, to: `${rankMapId(8)}.in`, opensAfter: boss.id, ...(nextPlace !== place ? { place: nextPlace.name } : {}) }
+  ];
+  const gy = A.market[3] - 3;
+  const npcs = [{ name: 'start', x: A.gate + 1, y: gy }, { name: 'entry', x: A.gate + 1, y: gy, zone: zone.id }, { name: 'merchant', x: A.merchant[0], y: A.merchant[1], zone: zone.id }];
+  const item = (data.ITEMS.find(i => i.chest && i.rank.n === 7) || {}).id;
+  const chests = A.chests.map(([x, y, big], i) => ({ name: '보물상자', x, y, chest: big ? 'r7-big' : `r7-${i + 1}`, rank: 7, ...(big ? { big: true, item } : {}) }));
+  for (const q of [...npcs, ...chests]) for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) {
+    const t = tiles[idx(q.x + i, q.y + j)];
+    if (t !== FLOOR && t !== ROAD) throw new Error(`7격 — ${q.name} (${q.x}, ${q.y}) 둘레가 빈 땅이 아님`);
+  }
+  return buildTmj({ w: W, h: H, tiles, areas, posts, ports, npcs, chests, secrets, props: { title: zone.name, place: place.name } });
+}
+
 const getFoe = (data, id) => data.ENEMIES.find(e => e.id === id);
 
 // ---------- 도시 — 옛 동네(oldtown) · 헌터들의 도시(city), 회차와 회차 사이에 머무는 곳 (docs/CITY-PLAN.md 1-가) ----------
@@ -2465,8 +2580,8 @@ function allMaps(data) {
   out.abyss = abyssMap(data);
   out[DEMON_CASTLE.id] = buildingInterior(data, DEMON_CASTLE);
   for (const b of BUILDINGS) out[b.id] = b.room ? storeInterior(ROOMS[b.room], data) : buildingInterior(data, b);
-  for (const m of RANK_MAPS) out[m.id] = hallMap(data, m);
+  for (const m of RANK_MAPS) out[m.id] = m.custom ? m.custom(data) : hallMap(data, m);
   return out;
 }
 
-module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, looksPng, encodePng, generate, sewer, overworld, oldtown, city, deptInterior, dept2Interior, assocInterior, guildInterior, guild2Interior, homeInterior, home2Interior, arenaInterior, bmInterior, gateinInterior, chiefInterior, raidInterior, storeInterior, OLDTOWN, CITY, DEPT, DEPT2, ASSOC, GUILD, GUILD2, HOME, HOME2, ARENA, BM, GATEIN, CHIEF, RAID, W1, W2, W3, SKY, CITY_BIO, secretRoom, buildingInterior, allMaps, layoutFromPlan, RANK_MAPS, rankMapId, hallMap, HALL, PLACES, placeOf, SEWER, SECRET_ROOMS, CAVES, caveMap, BUILDINGS, BUILD, DOORWAY, CARPET, RUIN, UNDERS, ABYSS, DEMON_CASTLE, abyssMap };
+module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, looksPng, encodePng, generate, sewer, overworld, oldtown, city, deptInterior, dept2Interior, assocInterior, guildInterior, guild2Interior, homeInterior, home2Interior, arenaInterior, bmInterior, gateinInterior, chiefInterior, raidInterior, storeInterior, OLDTOWN, CITY, DEPT, DEPT2, ASSOC, GUILD, GUILD2, HOME, HOME2, ARENA, BM, GATEIN, CHIEF, RAID, W1, W2, W3, SKY, CITY_BIO, secretRoom, buildingInterior, allMaps, layoutFromPlan, RANK_MAPS, rankMapId, hallMap, HALL, PLACES, placeOf, ALEX, alexandriaMap, SEWER, SECRET_ROOMS, CAVES, caveMap, BUILDINGS, BUILD, DOORWAY, CARPET, RUIN, UNDERS, ABYSS, DEMON_CASTLE, abyssMap };

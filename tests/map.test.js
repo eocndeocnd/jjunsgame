@@ -949,6 +949,7 @@ test('7격부터 — 하나뿐인 일반은 2칸 넘게 · 가운데 흙길에�
       for (let y = p.y - 2; y < p.y + p.h + 2; y++) for (let x = p.x - 2; x < p.x + p.w + 2; x++)
         assert.notEqual(m.tile[y * m.w + x], gen.ROAD, `${spec.id} ${p.name} — 흙길 (${x}, ${y}) 이(가) 2칸 안`);
     }
+    if (m.props.loops === undefined) continue;                 // 손으로 짠 지도(7격 알렉산드리아)는 곁방 대신 트인 땅에
     const loops = String(m.props.loops || '').split('|').filter(Boolean).map(t => { const [id, ds] = t.split(':'); return { id, doors: ds.split(';').map(d => { const [x, y, w, h] = d.split(',').map(Number); return { x, y, w, h }; }) }; });
     assert.deepEqual(loops.map(l => l.id).sort(), m.posts.filter(q => foe(q.enemy).kind === 'elite').map(q => q.enemy).sort(), `${spec.id} — 정예마다 곁방`);
     const from = [m.start.y * m.w + m.start.x], bodies = m.posts.flatMap(q => cellsOf(m, q));
@@ -964,46 +965,55 @@ test('7격부터 — 하나뿐인 일반은 2칸 넘게 · 가운데 흙길에�
   }
 });
 
-test('7격 대도서관 — 시장 → 갈림길(서쪽 학자의 정원 · 동쪽 기록 보관소, 어느 쪽으로도 보스까지) → 정복자의 대로 → 항구의 이순신 · 두 갈래 사이 숨은 지하 서고에 큰 상자', () => {
+test('7격 알렉산드리아 — 파벌마다 상징 공간에, 파벌 안에서는 북쪽(뒤)으로 갈수록 셈 · 세 갈래 큰길이 대항구에서 만나 둑길의 이순신 · 이름난 사람은 트인 땅(손자만 언덕 구석)', () => {
   const data = loadData();
   const m = loadMap('library');
   const sec = name => m.areas.find(a => a.section && a.name === name);
-  assert.deepEqual(m.areas.filter(a => a.section).map(a => a.name).sort(), ['성문 밖 시장', '무세이온 · 학자의 정원', '왕실 기록 보관소', '정복자의 대로', '항구', '지하 서고'].sort());
-  const spot = name => { const e = data.ENEMIES.find(x => x.name === name); return m.posts.find(q => q.enemy === e.id) || m.areas.find(a => a.monster === e.id); };
+  const post = name => m.posts.find(p => p.name === name);
   const inside = (p, a) => p.x >= a.x && p.y >= a.y && p.x + p.w <= a.x + a.w && p.y + p.h <= a.y + a.h;
-  const stages = [['성문 밖 시장'], ['무세이온 · 학자의 정원', '왕실 기록 보관소'], ['정복자의 대로']];
-  let southOf = Infinity;
-  for (const names of stages) {
-    let top = Infinity;
-    for (const name of names) {
-      const a = sec(name), mine = data.ENEMIES.filter(e => e.rank.n === 7 && (e.kind === 'normal' || e.kind === 'elite') && inside(spot(e.name), a)).sort((p, q) => p.level - q.level);
-      assert.ok(mine.length >= 3, `${name} — ${mine.length}`);
-      for (let i = 1; i < mine.length; i++) assert.ok(spot(mine[i].name).y < spot(mine[i - 1].name).y, `${name}: ${mine[i - 1].name} → ${mine[i].name} (북쪽으로 갈수록 셈)`);
-      assert.ok(a.y + a.h <= southOf, `${name} 은 앞 구간보다 북쪽`);
-      top = Math.min(top, a.y);
-    }
-    southOf = top;
+  const lv = name => data.ENEMIES.find(e => e.name === name).level;
+  const factions = {
+    '서쪽 반란자 → 정복자': [['잔 다르크', '원형극장'], ['스파르타쿠스', '원형극장'], ['칭기즈 칸', '소마 — 알렉산드로스의 무덤'], ['알렉산드로스', '소마 — 알렉산드로스의 무덤']],
+    '가운데 학자': [['아르키메데스', '무세이온'], ['히파티아', '무세이온'], ['레오나르도 다 빈치', '대도서관'], ['헤로도토스', '대도서관']],
+    '동쪽 촉한': [['관우', '촉한 진영'], ['장비', '촉한 진영'], ['조운', '촉한 진영'], ['마초', '촉한 진영'], ['황충', '촉한 진영']]
+  };
+  for (const [f, list] of Object.entries(factions)) {
+    list.forEach(([name, where], i) => {
+      assert.ok(inside(post(name), sec(where)), `${name} 은(는) ${where}`);
+      if (i) {
+        const [prev] = list[i - 1];
+        assert.ok(lv(name) > lv(prev) && post(name).y < post(prev).y, `${f}: ${prev} → ${name} (셀수록 북쪽)`);
+      }
+    });
   }
-  // 갈림길 — 한쪽 갈래를 통째로 막아도 다른 쪽으로 이순신 앞까지
-  const boss = m.posts.find(p => p.name === '이순신');
-  const bodies = m.posts.flatMap(q => cellsOf(m, q)), front = []; for (let x = boss.x; x < boss.x + boss.w; x++) front.push((boss.y + boss.h) * m.w + x);
-  const from = [m.start.y * m.w + m.start.x];
-  for (const name of stages[1]) {
-    const a = sec(name), shut = new Set(bodies);
-    for (let y = a.y + 2; y < a.y + a.h - 2; y++) for (let x = a.x; x < a.x + a.w; x++) shut.add(y * m.w + x);
-    assert.ok(front.some(k => walk(m, from, shut)[k] >= 0), `${name} 을(를) 막아도 다른 갈래로 이순신 앞까지`);
+  assert.ok(inside(post('손자'), sec('세라페움 언덕')), '손자는 세라페움 언덕');
+  assert.ok(inside(post('헤르메스 트리스메기스투스'), sec('파로스 등대 섬')), '헤르메스는 등대 섬 — 보스 곁');
+  // 장비는 운하 다리 위 — 다리 양옆이 물
+  const z = post('장비');
+  assert.ok(m.solid[(z.y) * m.w + z.x - 1] && m.tile[(z.y) * m.w + z.x - 1] === gen.WATER, '장비 — 장판교 위');
+  // 이름난 사람은 구석이 아님 — 몸 둘레 세 칸 안 벽이 한쪽 면에만 몰려 있지 않음 (손자 · 보스 · 히든 빼고)
+  for (const p of m.posts.filter(q => !['손자', '이순신', '헤르메스 트리스메기스투스'].includes(q.name))) {
+    let open = 0, all = 0;
+    for (let y = p.y - 3; y < p.y + p.h + 3; y++) for (let x = p.x - 3; x < p.x + p.w + 3; x++) { all++; if (!m.solid[y * m.w + x]) open++; }
+    assert.ok(open / all > 0.75, `${p.name} — 트인 땅 (${Math.round(open / all * 100)}%)`);
   }
-  // 두 갈래 가운데끼리는 시야(나를 중심으로 반경 ${R.SIGHT}칸) 두 배보다 멀리 — 한쪽에서 다른 쪽이 안 보임
-  const mid = a => a.x + a.w / 2;
-  assert.ok(Math.abs(mid(sec(stages[1][0])) - mid(sec(stages[1][1]))) > R.SIGHT * 2 + gen.HALL.hall, '두 갈래가 서로 안 보임');
-  // 지하 서고 — 숨은 샛길로만 (샛길을 벽으로 두면 못 감), 큰 상자
-  const vault = sec('지하 서고'), big = m.chests.find(c => c.big);
-  assert.ok(inside({ x: big.x, y: big.y, w: 1, h: 1 }, vault), '큰 상자는 지하 서고 안');
+  // 지나가며 닿지 않게 — 보스 말고는 몸 둘레 두 칸 안에 흙길 없음
+  for (const p of m.posts.filter(q => q.name !== '이순신')) for (let y = p.y - 2; y < p.y + p.h + 2; y++) for (let x = p.x - 2; x < p.x + p.w + 2; x++)
+    assert.notEqual(m.tile[y * m.w + x], gen.ROAD, `${p.name} — 흙길 (${x}, ${y}) 이(가) 2칸 안`);
+  // 세 갈래 — 서 · 가운데 · 동 큰길 가운데 둘을 막아도 남은 하나로 이순신 앞 부두까지
+  const boss = post('이순신'), front = []; for (let x = boss.x; x < boss.x + boss.w; x++) front.push((boss.y + boss.h) * m.w + x);
+  const bodies = m.posts.flatMap(q => cellsOf(m, q)), from = [m.start.y * m.w + m.start.x];
+  const band = (x0, x1) => { const out = []; for (let y = 32; y < 112; y++) for (let x = x0; x < x1; x++) out.push(y * m.w + x); return out; };
+  const lanes = { 서: band(0, 60), 가운데: band(60, 88), 동: band(88, m.w) };
+  for (const [keep] of Object.entries(lanes)) {
+    const shut = new Set([...bodies, ...Object.entries(lanes).filter(([k]) => k !== keep).flatMap(([, c]) => c)]);
+    assert.ok(front.some(k => walk(m, from, shut)[k] >= 0), `${keep}쪽 길만으로 이순신 앞까지`);
+  }
+  // 비밀 서고 — 숨은 샛길로만, 큰 상자
+  const vault = sec('비밀 서고'), big = m.chests.find(c => c.big);
+  assert.ok(inside({ x: big.x, y: big.y, w: 1, h: 1 }, vault), '큰 상자는 비밀 서고');
   const secretCells = []; for (let k = 0; k < m.w * m.h; k++) if (m.secret[k]) secretCells.push(k);
-  assert.ok(secretCells.length > 0, '숨은 샛길');
-  assert.ok(!(walk(m, from, new Set([...bodies, ...secretCells]))[big.y * m.w + big.x + 1] >= 0), '샛길 없이는 못 감');
-  // 헤르메스(히든)는 항구 안 — 보스 곁이라 되돌아 걷지 않음
-  assert.ok(inside(m.posts.find(p => p.name === '헤르메스 트리스메기스투스'), sec('항구')), '헤르메스는 항구 안');
+  assert.ok(secretCells.length && !(walk(m, from, new Set([...bodies, ...secretCells]))[(big.y + 1) * m.w + big.x] >= 0), '샛길 없이는 못 감');
 });
 
 test('조이스틱이 향하는 쪽으로 — 비스듬히 밀면 대각선 · 곧은 걸음을 섞어 그 각도대로 곧게, 대각선도 같은 빠르기', () => {
