@@ -174,7 +174,7 @@ Same rules: no text, one flat magenta (#FF00FF) background, nothing else in the 
 
 ## 홍염 에이스 — 4대 길드 1위 홍염의 S급 · 시험관 · 광장 위기 게이트
 
-「불 좀 붙여 봐. 미지근하면 바로 끝낸다.」 — 거칠고 뜨거운 싸움꾼. (생김새는 제안: 남성 · 붉은 뻗친 머리 · 빨간 재킷)
+「불 좀 붙여 봐. 미지근하면 바로 끝낸다.」 — 거칠고 뜨거운 싸움꾼. (생김새는 제안: 여성 · 붉은 뻗친 머리 · 빨간 재킷 — 성별은 사용자 결정 2026-11-25)
 
 길드: 홍염 — 붉은 불꽃 문장, 뜨겁고 거친 쪽
 
@@ -221,7 +221,7 @@ COLOR LOCK — the colors MUST match the pixel sprite. Use these as the main col
 - Shoes: #2a2730  (shadows #131317)
 Small details (buttons, buckles, metal) may be silver or gold.
 
-CHARACTER: a man in his late twenties, the S-rank ace of the top hunter guild "Hongyeom" (red flame); rough, hot-blooded, fearless.
+CHARACTER: a woman in her late twenties, the S-rank ace of the top hunter guild "Hongyeom" (red flame); rough, hot-blooded, fearless.
 HAIR: spiky, pointed bangs, short sides with the ears showing, short at the back of the neck, spiking up on top, thick and voluminous.
 FACE: sharp, narrow eyes, a small diagonal scar on the left cheek; a cocky, fierce grin, eyes narrowed like a challenge.
 OUTFIT: an open jacket worn over an inner shirt (the inner shirt is the ACCENT color), long trousers, a brown leather belt with a small gold buckle, shoes in the Shoes color. A small red flame emblem pin on the jacket chest.
@@ -250,7 +250,7 @@ Same rules: no text, one flat magenta (#FF00FF) background, nothing else in the 
 
 ## 청해 에이스 — 4대 길드 2위 청해의 S급 · 시험관 · 광장 위기 게이트
 
-「예를 갖추고 — 한 수 겨뤄 봅시다.」 포권을 하는 정중한 무인. (생김새는 제안: 여성 · 긴 검은 머리를 높이 묶음 · 흰 도복에 남색 띠)
+「예를 갖추고 — 한 수 겨뤄 봅시다.」 포권을 하는 정중한 무인. (생김새는 제안: 남성 · 긴 검은 머리를 높이 묶음 · 흰 도복에 남색 띠 — 성별은 사용자 결정 2026-11-25)
 
 길드: 청해 — 푸른 파도 문장, 옛 문파의 무공을 잇는 무협 길드
 
@@ -297,7 +297,7 @@ COLOR LOCK — the colors MUST match the pixel sprite. Use these as the main col
 - Shoes: #2a2730  (shadows #131317)
 Small details (buttons, buckles, metal) may be silver or gold.
 
-CHARACTER: a woman in her mid twenties, the S-rank ace of the martial-arts guild "Cheonghae" (blue wave), heir of an old martial school; poised, polite, precise.
+CHARACTER: a man in his mid twenties, the S-rank ace of the martial-arts guild "Cheonghae" (blue wave), heir of an old martial school; poised, polite, precise.
 HAIR: blunt straight-cut bangs, side locks down to the jaw, long hair falling down the back, gathered into a high ponytail at the back, neat and close to the head.
 FACE: sharp, narrow eyes; composed and polite, a calm level gaze.
 OUTFIT: a martial-arts uniform with a crossed collar, tied with a belt (the belt is the ACCENT color), long trousers, shoes in the Shoes color. A thin pattern of blue waves embroidered along the sleeve hems of the uniform.
