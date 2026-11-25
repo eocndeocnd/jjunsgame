@@ -1781,7 +1781,7 @@ const TP_TALK = [
 //  월드맵 — 걷다가 닿으면 조우 · 싸움 · 결과 창이 지도 위에 뜹니다
 // ============================================================
 // 지도 캔버스는 index.html 의 #mapStage 에 화면 가득 늘 붙어 있고(다시 그릴 때 지워지지 않게), 창만 #mapOverlay 에 그립니다.
-// 지도는 여러 장(maps/*.tmj) — 지하수로(1격) · overworld(2~5격) · 마계(6격) · 7격부터는 격 하나에 한 장(알렉산드리아 library · 카멜롯 camelot · 아발론 avalon · 무림 murim · 천산 tianshan · 성역 sanctuary · 임시 rank13 ~ rank20). 장 사이는 문(ports)으로 오갑니다.
+// 지도는 여러 장(maps/*.tmj) — 지하수로(1격) · overworld(2~5격) · 마계(6격) · 7격부터는 격 하나에 한 장(알렉산드리아 library · 카멜롯 camelot · 아발론 avalon · 무림 murim · 천산 tianshan · 성역 sanctuary · 엘리시온 elysium · 임시 rank14 ~ rank20). 장 사이는 문(ports)으로 오갑니다.
 // 스무 지역이 모두 어느 한 장 위에 있습니다 (tests/map.test.js 가 지킵니다).
 let mapView = null, maps = null, zoneMap = null;   // 읽은 지도들(id → 지도), 지역 id → 그 지역이 있는 지도 id
 let mapKey = '', mapZone = -1, mapShown = null;    // 지금 걷는 세계가 어느 칸 · 여정 · 지역 · 지도 것인가

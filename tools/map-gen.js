@@ -1711,7 +1711,7 @@ function buildingInterior(data, b) {
   return buildTmj({ w: W, h: H, tiles, posts, ports, npcs: [{ name: 'start', x: out.x + (out.w >> 1), y: out.y - 1 }], look: lk, props: { title: b.title, interior: true } });
 }
 
-// ---------- 아직 손으로 짜지 않은 격의 임시 지도 (13격부터 — 하나씩 컨셉 논리대로 손으로 짠 지도로 바꿀 자리, docs/MAP-7PLUS-PLAN.md) ----------
+// ---------- 아직 손으로 짜지 않은 격의 임시 지도 (14격부터 — 하나씩 컨셉 논리대로 손으로 짠 지도로 바꿀 자리, docs/MAP-7PLUS-PLAN.md) ----------
 // 들머리(남쪽 끝 광장) → 레벨 순으로: 돌아다니는 일반의 방(구역) · 하나뿐인 일반의 벽감(길 벽에 오목하게) · 정예의 곁방(고리 —
 // 길에서 아래 문으로 들어가 위 문으로 다시 길에) → 북쪽 끝 보스가 꼭 맞게 막은 틈 → 그 너머 끝 방(히든 · 다음 격으로 가는 문).
 // 앞 격 보스 뒤 문으로 들어와 이 격 보스 뒤 문으로 나가므로 되돌아 걷지 않습니다 (사용자 결정 2026-11-24 — 문의 광장 없앰).
@@ -1732,7 +1732,8 @@ const RANK_MAPS = [
   { id: 'murim', rank: 10, custom: data => murimMap(data) },        // 손으로 짠 지도 (MURIM)
   { id: 'tianshan', rank: 11, custom: data => tianshanMap(data) },  // 손으로 짠 지도 (TIANSHAN)
   { id: 'sanctuary', rank: 12, custom: data => sanctuaryMap(data) }, // 손으로 짠 지도 (SANCTUARY)
-  ...Array.from({ length: 8 }, (_, i) => ({ id: `rank${i + 13}`, rank: i + 13, temp: true }))
+  { id: 'elysium', rank: 13, custom: data => elysiumMap(data) },     // 손으로 짠 지도 (ELYSIUM)
+  ...Array.from({ length: 7 }, (_, i) => ({ id: `rank${i + 14}`, rank: i + 14, temp: true }))
 ];
 const rankMapId = rank => (RANK_MAPS.find(m => m.rank === rank) || {}).id;
 // 장소 — 7~20격을 한 줄로 내리 잇지 않고 장소가 바뀌는 곳에서 나눔 (사용자 결정 2026-11-25). 한 장소 안의 격은 보스 뒤 문으로 바로,
@@ -2345,6 +2346,73 @@ function sanctuaryMap(data) {
   });
 }
 
+// ---------- 13격 — 엘리시온 평원 (손으로 짠 지도, 사용자 결정 2026-11-25) ----------
+// 「죽어서도 영웅인 자들만 이 들판을 걷는다.」 — 여러 신화의 영웅들이 저마다 제 이야기의 무대를 들판에 다시 세워 놓고 지냄. 돌아다니는 일반이 없는 격 (영웅 열 모두 하나뿐).
+// 성역 신전 뒷문을 나와 남쪽 레테 강을 건너 북쪽 하늘로 오르는 계단으로 — 언덕 둘로 갈린 세 갈래가 켈트의 여울(냇물)을 건너 북쪽 먼 땅에서 만남.
+//   서쪽 그리스 영웅  실타래가 걸린 돌 미로 어귀 테세우스 → 메두사 석상 정원 페르세우스 → 바닷가 배 오디세우스 → 경주로 아탈란테
+//   동쪽 우루크        삼나무 숲 엔키두(흙으로 빚어진 벗) → 우루크 성벽 안 영생의 풀 웅덩이 곁 길가메시 — 벗이 앞, 왕이 뒤
+//   가운데 트로이 평원 트로이 성문 앞 헥토르 ↔ 들판 건너 그리스 진영 깊숙이 아킬레우스 (두 적수가 마주 봄)
+//   북쪽 먼 땅의 영웅  켈트의 여울 쿠 훌린(여울을 홀로 지킨) → 헤오로트 연회장 베오울프 → 쿠루크셰트라 전장 아르주나(전차) → 용의 둥지 지그프리트
+//   보스 헤라클레스 — 북쪽 끝 하늘로 오르는 계단을 막음 (열두 과업 끝에 신이 되어 올림포스로 오른 영웅). 14격 일곱 번째 하늘 — 장소가 하늘과 지옥으로.
+//   숨은 곳 — 트로이 평원의 트로이 목마 (숨은 샛길로 목마 속, 큰 상자). 작은 상자는 경주로(황금 사과) · 용의 둥지(니벨룽의 보물).
+const ELYSIUM = {
+  W: 146, H: 176,
+  river: [8, 150, 140, 156], bridge: [72, 78], bank: [40, 156, 108, 172], plain: [8, 20, 140, 150], ridges: [[46, 68, 50, 146], [96, 68, 100, 146]],
+  stream: [8, 64, 140, 68], fords: [[34, 42], [70, 81], [110, 119]],
+  maze: [12, 128, 30, 146], statues: [[14, 110], [32, 110], [16, 120], [30, 120], [12, 116]], sea: [4, 88, 10, 106], ship: [5, 93, 10, 99], track: [22, 79, 9, 6],
+  cedars: [100, 108, 140, 146], uruk: [104, 80, 136, 104], pool: [124, 84, 130, 88],
+  troyWall: [52, 128, 94, 131], troyGate: [66, 84], camp: [52, 70, 94, 98], tents: [[80, 74], [86, 80], [80, 88], [56, 92], [90, 92]], horse: [80, 104, 92, 114],
+  hall: [10, 34, 32, 54], chariot: [126, 38], lair: [52, 21, 68, 29], stairs: [73, 4, 76, 20],
+  in: [73, 171, 3], next: [73, 3, 3], start: [75, 164], merchant: [82, 162],
+  foes: {
+    '테세우스': [32, 136], '페르세우스': [22, 114], '오디세우스': [16, 96], '아탈란테': [21, 78],
+    '엔키두': [118, 126], '길가메시': [106, 86], '헥토르': [64, 122], '아킬레우스': [60, 84],
+    '쿠 훌린': [84, 56], '베오울프': [16, 44], '아르주나': [122, 36], '지그프리트': [58, 23], '헤라클레스': [73, 17]
+  },
+  sections: [['레테 강가', [40, 150, 108, 174]], ['북쪽 먼 땅', [8, 20, 140, 64]], ['우루크 들판', [100, 68, 140, 106]],
+    ['미로 어귀', [8, 126, 46, 150]], ['메두사 석상 정원', [8, 106, 46, 126]], ['오디세우스의 바닷가', [8, 90, 46, 106]], ['경주로', [8, 68, 46, 90]],
+    ['삼나무 숲', [100, 106, 140, 150]], ['우루크', 'uruk'], ['트로이 성', [50, 131, 96, 150]], ['트로이 평원', [50, 98, 96, 131]], ['트로이 목마', 'horse'], ['그리스 진영', [50, 68, 96, 98]],
+    ['켈트의 여울', [8, 54, 140, 68]], ['헤오로트 연회장', 'hall'], ['쿠루크셰트라 전장', [98, 30, 140, 54]], ['용의 둥지', 'lair'], ['하늘로 오르는 계단', [66, 2, 84, 20]]],
+  zones: [],
+  chests: [[25, 80], [64, 24], [86, 108, 'big']]
+};
+function elysiumMap(data) {
+  const A = ELYSIUM;
+  return handMap(data, 13, A, c => {
+    const { tiles, idx, box, ring, road, secrets } = c;
+    // 들판 — 남쪽 레테 강과 다리 · 강가, 세 갈래를 가르는 언덕 둘, 북쪽 먼 땅과 가르는 켈트의 여울(냇물 — 갈래마다 건너는 곳)
+    box(A.plain, FLOOR); box(A.river, WATER); box([A.bridge[0], A.river[1], A.bridge[1], A.river[3]], FLOOR); box(A.bank, FLOOR);
+    box([A.in[0], A.bank[3], A.in[0] + A.in[2], A.in[1] + 1], FLOOR);
+    for (const r of A.ridges) box(r, ROCK);
+    box(A.stream, WATER); for (const [x0, x1] of A.fords) box([x0, A.stream[1], x1, A.stream[3]], FLOOR);
+    // 서쪽 그리스 — 돌 미로(동쪽 어귀) · 메두사의 석상들 · 바닷가와 배 · 타원 경주로(동서로 트임)
+    ring(A.maze, ROCK); box([A.maze[2] - 1, 135, A.maze[2], 140], FLOOR);
+    for (const [x, y] of A.statues) tiles[idx(x, y)] = ROCK;
+    box(A.sea, WATER); box(A.ship, ROCK);
+    const [tx, ty, trx, tryy] = A.track;
+    for (let y = ty - tryy - 1; y <= ty + tryy + 1; y++) for (let x = tx - trx - 1; x <= tx + trx + 1; x++) {
+      const d = Math.hypot((x + 0.5 - tx) / trx, (y + 0.5 - ty) / tryy);
+      if (d >= 0.9 && d < 1.1 && Math.abs(y + 0.5 - ty) > 1.5) tiles[idx(x, y)] = ROCK;
+    }
+    // 동쪽 우루크 — 삼나무 숲 · 성벽(남북 문)과 영생의 풀 웅덩이
+    ring(A.uruk, WALL); box([110, A.uruk[3] - 1, 119, A.uruk[3]], FLOOR); box([110, A.uruk[1], 119, A.uruk[1] + 1], FLOOR); box(A.pool, WATER);
+    // 가운데 트로이 — 성벽과 성문(남쪽은 트로이 성, 북쪽은 평원) · 그리스 진영 막사 · 트로이 목마(나무 몸통, 남쪽 숨은 샛길)
+    box(A.troyWall, WALL); box([A.troyGate[0], A.troyWall[1], A.troyGate[1], A.troyWall[3]], FLOOR);
+    for (const [x, y] of A.tents) box([x, y, x + 2, y + 2], ROCK);
+    ring(A.horse, ROCK); secrets.push({ name: '숨은 샛길', x: 85, y: A.horse[3] - 1, w: 2, h: 1 });
+    // 북쪽 먼 땅 — 헤오로트 연회장(담, 동문) · 전차 · 용의 둥지(바위, 남쪽 어귀) · 하늘로 오르는 계단
+    ring(A.hall, WALL); box([A.hall[2] - 1, 42, A.hall[2], 47], FLOOR);
+    box([A.chariot[0], A.chariot[1], A.chariot[0] + 2, A.chariot[1] + 2], ROCK);
+    ring(A.lair, ROCK); box([58, A.lair[3] - 1, 63, A.lair[3]], FLOOR);
+    box(A.stairs, FLOOR); box([A.next[0], A.next[1], A.next[0] + A.next[2], A.next[1] + 1], FLOOR);
+    // 흙길 — 가운데(다리 → 하늘 계단) · 서쪽 · 동쪽 · 강가 가로 길 · 북쪽 가로 길
+    road([73, A.stairs[3] - 3, 77, A.in[1] + 1]); road([36, 30, 40, 150]); road([112, 30, 116, 150]); road([36, 146, 116, 150]); road([36, 30, 116, 34]);
+    // 삼나무 — 엔키두의 숲 (길 · 자리 곁은 비움)
+    const nearRoad = (x, y) => { for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) if (tiles[idx(x + i, y + j)] === ROAD) return true; return false; };
+    scatterTrees(c, A.cedars, (x, y) => nearFoe(A, x, y, 3) || nearRoad(x, y), 14, 0.15);
+  });
+}
+
 const getFoe = (data, id) => data.ENEMIES.find(e => e.id === id);
 
 // ---------- 도시 — 옛 동네(oldtown) · 헌터들의 도시(city), 회차와 회차 사이에 머무는 곳 (docs/CITY-PLAN.md 1-가) ----------
@@ -2895,4 +2963,4 @@ function allMaps(data) {
   return out;
 }
 
-module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, looksPng, encodePng, generate, sewer, overworld, oldtown, city, deptInterior, dept2Interior, assocInterior, guildInterior, guild2Interior, homeInterior, home2Interior, arenaInterior, bmInterior, gateinInterior, chiefInterior, raidInterior, storeInterior, OLDTOWN, CITY, DEPT, DEPT2, ASSOC, GUILD, GUILD2, HOME, HOME2, ARENA, BM, GATEIN, CHIEF, RAID, W1, W2, W3, SKY, CITY_BIO, secretRoom, buildingInterior, allMaps, layoutFromPlan, RANK_MAPS, rankMapId, hallMap, HALL, PLACES, placeOf, ALEX, alexandriaMap, CAMELOT, camelotMap, AVALON, avalonMap, MURIM, murimMap, TIANSHAN, tianshanMap, SANCTUARY, sanctuaryMap, handMap, SEWER, SECRET_ROOMS, CAVES, caveMap, BUILDINGS, BUILD, DOORWAY, CARPET, RUIN, UNDERS, ABYSS, DEMON_CASTLE, abyssMap };
+module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, looksPng, encodePng, generate, sewer, overworld, oldtown, city, deptInterior, dept2Interior, assocInterior, guildInterior, guild2Interior, homeInterior, home2Interior, arenaInterior, bmInterior, gateinInterior, chiefInterior, raidInterior, storeInterior, OLDTOWN, CITY, DEPT, DEPT2, ASSOC, GUILD, GUILD2, HOME, HOME2, ARENA, BM, GATEIN, CHIEF, RAID, W1, W2, W3, SKY, CITY_BIO, secretRoom, buildingInterior, allMaps, layoutFromPlan, RANK_MAPS, rankMapId, hallMap, HALL, PLACES, placeOf, ALEX, alexandriaMap, CAMELOT, camelotMap, AVALON, avalonMap, MURIM, murimMap, TIANSHAN, tianshanMap, SANCTUARY, sanctuaryMap, ELYSIUM, elysiumMap, handMap, SEWER, SECRET_ROOMS, CAVES, caveMap, BUILDINGS, BUILD, DOORWAY, CARPET, RUIN, UNDERS, ABYSS, DEMON_CASTLE, abyssMap };
