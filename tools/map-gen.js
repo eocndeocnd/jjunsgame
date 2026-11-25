@@ -1711,7 +1711,7 @@ function buildingInterior(data, b) {
   return buildTmj({ w: W, h: H, tiles, posts, ports, npcs: [{ name: 'start', x: out.x + (out.w >> 1), y: out.y - 1 }], look: lk, props: { title: b.title, interior: true } });
 }
 
-// ---------- 아직 손으로 짜지 않은 격의 임시 지도 (9격부터 — 하나씩 컨셉 논리대로 손으로 짠 지도로 바꿀 자리, docs/MAP-7PLUS-PLAN.md) ----------
+// ---------- 아직 손으로 짜지 않은 격의 임시 지도 (10격부터 — 하나씩 컨셉 논리대로 손으로 짠 지도로 바꿀 자리, docs/MAP-7PLUS-PLAN.md) ----------
 // 들머리(남쪽 끝 광장) → 레벨 순으로: 돌아다니는 일반의 방(구역) · 하나뿐인 일반의 벽감(길 벽에 오목하게) · 정예의 곁방(고리 —
 // 길에서 아래 문으로 들어가 위 문으로 다시 길에) → 북쪽 끝 보스가 꼭 맞게 막은 틈 → 그 너머 끝 방(히든 · 다음 격으로 가는 문).
 // 앞 격 보스 뒤 문으로 들어와 이 격 보스 뒤 문으로 나가므로 되돌아 걷지 않습니다 (사용자 결정 2026-11-24 — 문의 광장 없앰).
@@ -1728,7 +1728,8 @@ const HALL = {
 const RANK_MAPS = [
   { id: 'library', rank: 7, custom: data => alexandriaMap(data) },   // 손으로 짠 지도 (ALEX)
   { id: 'camelot', rank: 8, custom: data => camelotMap(data) },     // 손으로 짠 지도 (CAMELOT)
-  ...Array.from({ length: 12 }, (_, i) => ({ id: `rank${i + 9}`, rank: i + 9, temp: true }))
+  { id: 'avalon', rank: 9, custom: data => avalonMap(data) },       // 손으로 짠 지도 (AVALON)
+  ...Array.from({ length: 11 }, (_, i) => ({ id: `rank${i + 10}`, rank: i + 10, temp: true }))
 ];
 const rankMapId = rank => (RANK_MAPS.find(m => m.rank === rank) || {}).id;
 // 장소 — 7~20격을 한 줄로 내리 잇지 않고 장소가 바뀌는 곳에서 나눔 (사용자 결정 2026-11-25). 한 장소 안의 격은 보스 뒤 문으로 바로,
@@ -2069,6 +2070,85 @@ function camelotMap(data) {
     // 나무 — 숲에 듬성듬성 (길 · 자리 · 상자 · 은신처 둘레는 비움)
     const keep = (x, y) => nearFoe(A, x, y, 3) || (x >= 22 && x < 29) || (y >= 55 && y < 62) || (x < Hd[2] + 2 && y < Hd[3] + 2) || A.chests.some(([cx, cy]) => Math.abs(x - cx) <= 2 && Math.abs(y - cy) <= 2);
     scatterTrees(c, A.forest, keep, 8, 0.14);
+  });
+}
+
+// ---------- 9격 — 안개 너머의 아발론 (손으로 짠 지도, 사용자 결정 2026-11-25) ----------
+// 「안개 너머의 사과 섬. 마나가 짙어 숨만 쉬어도 주문이 된다.」 — 마법을 쫓는 자들 · 원소의 정령 · 마녀들이 모여 사는 섬.
+// 카멜롯 호수에서 배로 남쪽 안개 나루에 닿아 북쪽 수정 동굴로 — 마탑 마을에서 세 갈래가 시내 둘로 갈려 오르다 사과 과수원에서 만남.
+//   마법사 학파(돌아다님) 마탑 마을 대마법사(서) · 원소술사(동) · 환상열석 소환술사 · 룬 언덕 룬 마법사 · 떡갈나무 숲 드루이드
+//   4대 정령(묶음 정예)   서쪽 원소의 길 — 불의 제단 샐러맨더 → 물의 샘 운디네 → 바람 절벽 실프 → 땅굴 노움 (땅속 보물을 지킴 — 뒤에 숨은 보물방)
+//   금지된 지식          가운데 — 연금 공방 거리 연금술사(돌아다님) → 파우스트의 서재 파우스트 → 금서의 탑 흑마법사(돌아다님)
+//   마녀들               동쪽 — 숲 속 닭다리 오두막 바바 야가(숲의 마녀 — 이야기가 있는 구석) → 호수 위 작은 섬 키르케(여울로 건넘) → 사과 과수원 너머 궁의 모르간 르 페이
+//   보스 멀린 — 궁 뒤 수정 동굴(전설에서 멀린이 갇힌 곳) 안쪽 길을 막음. 그 너머 멀린이 열어 둔 「다른 세계로 가는 문」 — 장소가 동방으로 바뀜.
+//   숨은 곳 — 노움의 땅굴 안 보물방(바위 속 숨은 샛길, 큰 상자). 작은 상자는 환상열석 한가운데 · 파우스트의 서재.
+const AVALON = {
+  W: 142, H: 174,
+  sea: [6, 0, 136, 172], land: [10, 28, 132, 166], dock: [68, 164, 72, 171],
+  town: [20, 132, 121, 164], tower: [56, 140],
+  westStream: [46, 64, 48, 132], eastStream: [96, 64, 98, 132],
+  altarPool: [36, 114, 40, 118], circle: [35, 94, 6], spring: [38.5, 72.5, 3], crags: [[11, 46], [11, 56], [12, 47]],
+  cave: [11, 29, 41, 42], hoard: [11, 29, 21, 38],
+  study: [50, 74, 66, 90], tomes: [74, 64, 94, 82],
+  orchard: [44, 40, 106, 64], palace: [52, 24, 88, 40], crystal: [54, 9, 86, 25], portal: [62, 2, 80, 7],
+  lake: [106, 40, 132, 64], islet: [114, 44, 128, 56], ford: [119, 56, 123, 64], wood: [98, 64, 132, 134],
+  in: [69, 170, 3], next: [68, 1, 4], start: [70, 160], merchant: [75, 156],
+  foes: {
+    '샐러맨더': [30, 118], '운디네': [30, 68], '실프': [14, 50], '노움': [32, 33],
+    '파우스트': [56, 80], '바바 야가': [122, 84], '키르케': [119, 48], '모르간 르 페이': [58, 30], '멀린': [69, 7]
+  },
+  sections: [['안개 나루 · 마탑 마을', [20, 132, 121, 174]], ['불의 제단', [10, 106, 46, 132]], ['환상열석', [10, 82, 46, 106]], ['물의 샘', [10, 62, 46, 82]],
+    ['바람 절벽', [10, 42, 44, 62]], ['노움의 땅굴', 'cave'], ['노움의 보물방', 'hoard'], ['룬 언덕', [48, 106, 96, 132]], ['연금 공방 거리', [48, 90, 96, 106]],
+    ['파우스트의 서재', 'study'], ['금서의 탑', 'tomes'], ['떡갈나무 숲', [98, 104, 132, 134]], ['바바 야가의 숲', [98, 64, 132, 104]], ['키르케의 섬', 'lake'],
+    ['사과 과수원', 'orchard'], ['모르간의 궁', 'palace'], ['멀린의 수정 동굴', [54, 2, 86, 25]]],
+  zones: [['대마법사', [22, 136, 62, 162]], ['원소술사', [78, 136, 120, 162]], ['소환술사', [10, 84, 44, 104]], ['룬 마법사', [50, 108, 94, 130]],
+    ['연금술사', [50, 92, 94, 104]], ['드루이드', [104, 104, 132, 132]], ['흑마법사', [75, 65, 93, 81]]],
+  chests: [[35, 94], [53, 77], [15, 32, 'big']]
+};
+function avalonMap(data) {
+  const A = AVALON;
+  return handMap(data, 9, A, c => {
+    const { tiles, idx, box, ring, road, secrets } = c;
+    const disk = (cx, cy, r, t) => { for (let y = Math.floor(cy - r); y <= cy + r; y++) for (let x = Math.floor(cx - r); x <= cx + r; x++) if (Math.hypot(x + 0.5 - cx, y + 0.5 - cy) < r) tiles[idx(x, y)] = t; };
+    // 바다로 둘러싼 섬 · 남쪽 안개 나루 · 마탑 마을(가운데 서쪽에 마탑)
+    box(A.sea, WATER); box(A.land, FLOOR); box(A.dock, FLOOR);
+    box([A.cave[2], A.land[1], A.palace[0], 38], WATER); box([A.palace[2], A.land[1], A.land[2], A.orchard[1]], WATER);   // 궁 양옆 북쪽 물가
+    box([A.tower[0], A.tower[1], A.tower[0] + 4, A.tower[1] + 4], ROCK);
+    // 세 갈래를 가르는 시내 둘 (마을 · 과수원에서만 이어짐)
+    box(A.westStream, WATER); box(A.eastStream, WATER);
+    // 서쪽 원소의 길 — 불의 제단(용암 웅덩이) · 환상열석(선돌 여덟) · 물의 샘 · 바람 절벽(바위) · 땅굴(바위 테, 남문 · 동문, 안쪽 보물방)
+    box(A.altarPool, WATER);
+    const [ccx, ccy, cr] = A.circle;
+    for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4; tiles[idx(Math.round(ccx + Math.cos(a) * cr), Math.round(ccy + Math.sin(a) * cr))] = ROCK; }
+    disk(A.spring[0], A.spring[1], A.spring[2], WATER);
+    for (const [x, y] of A.crags) tiles[idx(x, y)] = ROCK;
+    const Cv = A.cave;
+    box([Cv[0], Cv[1] - 1, Cv[2] + 4, Cv[1]], WATER);
+    ring(Cv, ROCK); box([24, Cv[3] - 1, 28, Cv[3]], FLOOR); box([Cv[2] - 1, 38, A.orchard[0] + 2, 42], FLOOR);
+    const Hd = A.hoard;
+    for (let y = Hd[1]; y < Hd[3]; y++) tiles[idx(Hd[2] - 1, y)] = ROCK;
+    for (let x = Hd[0]; x < Hd[2]; x++) tiles[idx(x, Hd[3] - 1)] = ROCK;
+    secrets.push({ name: '숨은 샛길', x: 15, y: Hd[3] - 1, w: 2, h: 1 });
+    // 가운데 금지된 지식 — 룬 언덕(룬 돌) · 연금 공방 거리 · 파우스트의 서재(담, 동문) · 금서의 탑(담, 서문)
+    for (let y = 112; y < 130; y += 8) for (let x = 54; x < 94; x += 8) if (x < 64 || x > 76) tiles[idx(x, y)] = ROCK;
+    ring(A.study, WALL); box([A.study[2] - 1, 80, A.study[2], 85], FLOOR);
+    ring(A.tomes, WALL); box([A.tomes[0], 70, A.tomes[0] + 1, 75], FLOOR);
+    // 동쪽 마녀의 숲 — 호수와 작은 섬(여울로 건넘)
+    box(A.lake, WATER); box(A.islet, FLOOR); box(A.ford, FLOOR);
+    // 북쪽 — 사과 과수원 · 모르간의 궁(담, 남 · 북 문) · 멀린의 수정 동굴(바위 테, 수정 기둥) · 다른 세계로 가는 문의 방
+    box(A.crystal, FLOOR); ring(A.crystal, ROCK);
+    for (const [x, y] of [[59, 13], [80, 13], [61, 20], [78, 19], [64, 16], [75, 16]]) box([x, y, x + 2, y + 2], ROCK);
+    box(A.palace, FLOOR); ring(A.palace, WALL);
+    box([66, A.palace[3] - 1, 75, A.palace[3]], FLOOR); box([69, A.palace[1], 72, A.palace[1] + 1], FLOOR);
+    box(A.portal, FLOOR); box([69, A.portal[3], 72, A.crystal[1] + 1], FLOOR); box([A.next[0], A.next[1], A.next[0] + A.next[2], A.next[1] + 1], FLOOR);
+    // 흙길 — 가운데 큰길(나루 → 수정 동굴) · 서쪽 원소의 길(→ 땅굴 남문) · 동쪽 숲길 · 마을 가로 길 · 과수원 가로 길
+    road([69, A.crystal[1] + 1, 72, A.in[1] + 1]); road([24, 41, 28, 152]); road([24, 148, 104, 152]); road([100, 52, 104, 152]); road([24, 51, 104, 55]);
+    // 나무 — 과수원은 줄 맞춘 사과나무, 동쪽 숲은 듬성듬성 (길 · 자리 · 상자 곁은 비움)
+    const nearRoad = (x, y) => { for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) if (tiles[idx(x + i, y + j)] === ROAD) return true; return false; };
+    const keep = (x, y) => nearFoe(A, x, y, 3) || nearRoad(x, y) || A.chests.some(([cx, cy]) => Math.abs(x - cx) <= 2 && Math.abs(y - cy) <= 2);
+    const O = A.orchard;
+    for (let y = O[1] + 2; y < O[3] - 1; y++) for (let x = O[0] + 2; x < O[2] - 1; x++) if (x % 4 === 1 && y % 4 === 2 && tiles[idx(x, y)] === FLOOR && !keep(x, y)) tiles[idx(x, y)] = TREE;
+    scatterTrees(c, A.wood, keep, 9, 0.14);
   });
 }
 
@@ -2622,4 +2702,4 @@ function allMaps(data) {
   return out;
 }
 
-module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, looksPng, encodePng, generate, sewer, overworld, oldtown, city, deptInterior, dept2Interior, assocInterior, guildInterior, guild2Interior, homeInterior, home2Interior, arenaInterior, bmInterior, gateinInterior, chiefInterior, raidInterior, storeInterior, OLDTOWN, CITY, DEPT, DEPT2, ASSOC, GUILD, GUILD2, HOME, HOME2, ARENA, BM, GATEIN, CHIEF, RAID, W1, W2, W3, SKY, CITY_BIO, secretRoom, buildingInterior, allMaps, layoutFromPlan, RANK_MAPS, rankMapId, hallMap, HALL, PLACES, placeOf, ALEX, alexandriaMap, CAMELOT, camelotMap, handMap, SEWER, SECRET_ROOMS, CAVES, caveMap, BUILDINGS, BUILD, DOORWAY, CARPET, RUIN, UNDERS, ABYSS, DEMON_CASTLE, abyssMap };
+module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, looksPng, encodePng, generate, sewer, overworld, oldtown, city, deptInterior, dept2Interior, assocInterior, guildInterior, guild2Interior, homeInterior, home2Interior, arenaInterior, bmInterior, gateinInterior, chiefInterior, raidInterior, storeInterior, OLDTOWN, CITY, DEPT, DEPT2, ASSOC, GUILD, GUILD2, HOME, HOME2, ARENA, BM, GATEIN, CHIEF, RAID, W1, W2, W3, SKY, CITY_BIO, secretRoom, buildingInterior, allMaps, layoutFromPlan, RANK_MAPS, rankMapId, hallMap, HALL, PLACES, placeOf, ALEX, alexandriaMap, CAMELOT, camelotMap, AVALON, avalonMap, handMap, SEWER, SECRET_ROOMS, CAVES, caveMap, BUILDINGS, BUILD, DOORWAY, CARPET, RUIN, UNDERS, ABYSS, DEMON_CASTLE, abyssMap };

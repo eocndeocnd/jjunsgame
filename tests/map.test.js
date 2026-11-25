@@ -1060,6 +1060,46 @@ test('8격 카멜롯 — 남쪽 나루 → 바위의 검 광장 · 마상 시합
   assert.ok(inside(next, sec('호숫가')) && next.to === `${gen.rankMapId(9)}.in` && !next.place);
 });
 
+test('9격 아발론 — 안개 나루 · 마탑 마을 → 시내로 갈린 세 갈래(서쪽 원소의 길 · 가운데 금지된 지식 · 동쪽 마녀의 숲)가 사과 과수원에서 만나 모르간의 궁 → 수정 동굴의 멀린 → 동방으로 가는 문 · 노움 뒤 보물방', () => {
+  const data = loadData();
+  const m = loadMap('avalon');
+  const sec = name => m.areas.find(a => a.section && a.name === name);
+  const post = name => m.posts.find(p => p.name === name);
+  const spot = name => post(name) || (a => ({ x: a.x, y: a.y + a.h / 2, w: 1, h: 1 }))(m.areas.find(a => a.monster === data.ENEMIES.find(e => e.name === name).id));
+  const inside = (p, a) => p.x >= a.x && p.y >= a.y && p.x + p.w <= a.x + a.w && p.y + p.h <= a.y + a.h;
+  const lv = name => data.ENEMIES.find(e => e.name === name).level;
+  const routes = {
+    '서쪽 원소의 길': ['샐러맨더', '소환술사', '운디네', '실프', '노움'],
+    '가운데 금지된 지식': ['룬 마법사', '연금술사', '파우스트', '흑마법사'],
+    '동쪽 마녀의 숲': ['드루이드', '바바 야가', '키르케'],
+    '과수원 너머': ['모르간 르 페이', '멀린']
+  };
+  for (const [r, list] of Object.entries(routes)) for (let i = 1; i < list.length; i++)
+    assert.ok(lv(list[i]) > lv(list[i - 1]) && spot(list[i]).y < spot(list[i - 1]).y, `${r}: ${list[i - 1]} → ${list[i]} (셀수록 북쪽)`);
+  const where = { '샐러맨더': '불의 제단', '운디네': '물의 샘', '실프': '바람 절벽', '노움': '노움의 땅굴', '파우스트': '파우스트의 서재', '바바 야가': '바바 야가의 숲', '키르케': '키르케의 섬', '모르간 르 페이': '모르간의 궁', '멀린': '멀린의 수정 동굴' };
+  for (const [name, a] of Object.entries(where)) assert.ok(inside(post(name), sec(a)), `${name} 은(는) ${a}`);
+  for (const p of m.posts.filter(q => !['바바 야가', '노움', '멀린'].includes(q.name))) {   // 숲의 마녀 · 땅속 정령 · 갇힌 멀린 빼고 트인 땅
+    let open = 0, all = 0;
+    for (let y = p.y - 3; y < p.y + p.h + 3; y++) for (let x = p.x - 3; x < p.x + p.w + 3; x++) { all++; if (!m.solid[y * m.w + x]) open++; }
+    assert.ok(open / all > 0.75, `${p.name} — 트인 땅 (${Math.round(open / all * 100)}%)`);
+  }
+  // 세 갈래 — 둘을 막아도 남은 하나로 궁 남문까지
+  const bodies = m.posts.flatMap(q => cellsOf(m, q)), from = [m.start.y * m.w + m.start.x];
+  const pal = sec('모르간의 궁'), gate = []; for (let x = 66; x < 75; x++) gate.push((pal.y + pal.h) * m.w + x);
+  const band = (x0, x1) => { const out = []; for (let y = 66; y < 130; y++) for (let x = x0; x < x1; x++) out.push(y * m.w + x); return out; };
+  const lanes = { 서: band(0, 47), 가운데: band(47, 97), 동: band(97, m.w) };
+  for (const keep of Object.keys(lanes)) {
+    const shut = new Set([...bodies, ...Object.entries(lanes).filter(([k]) => k !== keep).flatMap(([, c]) => c)]);
+    assert.ok(gate.some(k => walk(m, from, shut)[k] >= 0), `${keep}쪽 길만으로 궁 남문까지`);
+  }
+  const big = m.chests.find(c => c.big);
+  assert.ok(inside({ x: big.x, y: big.y, w: 1, h: 1 }, sec('노움의 보물방')), '큰 상자는 노움의 보물방');
+  const secretCells = []; for (let k = 0; k < m.w * m.h; k++) if (m.secret[k]) secretCells.push(k);
+  assert.ok(secretCells.length && !(walk(m, from, new Set([...bodies, ...secretCells]))[(big.y + 1) * m.w + big.x] >= 0), '샛길 없이는 못 감');
+  const next = m.ports.find(p => p.name === 'next');
+  assert.equal(next.place, '동방', '멀린 뒤 문 — 장소가 동방으로');
+});
+
 test('조이스틱이 향하는 쪽으로 — 비스듬히 밀면 대각선 · 곧은 걸음을 섞어 그 각도대로 곧게, 대각선도 같은 빠르기', () => {
   const rows = ['########################'];
   for (let y = 0; y < 14; y++) rows.push('#' + (y === 0 ? '@' : '.') + '.'.repeat(21) + '#');
