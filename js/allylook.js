@@ -691,6 +691,8 @@ function describe(L) {
 const COUNT = SKINS.length * HAIR_COLORS.length * BANGS.length * SIDES.length * BACKS.length * TIES.length * 2 * Object.keys(EYES).length * EYE_COLORS.length * MOUTHS.length * MARKS.length
   * TOPS.length * BOTTOMS.length * EXTRAS.length * CLOTH_COLORS.length ** 3 * SHOES.length;
 
-const api = { W, H, HERO_LOOK, OPTIONS, cleanLook, rollLook, drawLook, walkSheet, describe, COUNT, SKINS, HAIR_COLORS };
+// 색 목록 · 명암 — 캐릭터 일러스트 프롬프트(design/characters/make.js)가 픽셀과 같은 색 코드를 쓰도록
+const PALETTE = { SKINS, HAIR_COLORS, EYE_COLORS, CLOTH_COLORS, SHOES, BANGS, SIDES, BACKS, TIES, ramp };
+const api = { W, H, PALETTE, HERO_LOOK, OPTIONS, cleanLook, rollLook, drawLook, walkSheet, describe, COUNT, SKINS, HAIR_COLORS };
 if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.AllyLook = api;
 })(typeof window !== 'undefined' ? window : globalThis);
