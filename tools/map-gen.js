@@ -1711,7 +1711,7 @@ function buildingInterior(data, b) {
   return buildTmj({ w: W, h: H, tiles, posts, ports, npcs: [{ name: 'start', x: out.x + (out.w >> 1), y: out.y - 1 }], look: lk, props: { title: b.title, interior: true } });
 }
 
-// ---------- 아직 손으로 짜지 않은 격의 임시 지도 (10격부터 — 하나씩 컨셉 논리대로 손으로 짠 지도로 바꿀 자리, docs/MAP-7PLUS-PLAN.md) ----------
+// ---------- 아직 손으로 짜지 않은 격의 임시 지도 (11격부터 — 하나씩 컨셉 논리대로 손으로 짠 지도로 바꿀 자리, docs/MAP-7PLUS-PLAN.md) ----------
 // 들머리(남쪽 끝 광장) → 레벨 순으로: 돌아다니는 일반의 방(구역) · 하나뿐인 일반의 벽감(길 벽에 오목하게) · 정예의 곁방(고리 —
 // 길에서 아래 문으로 들어가 위 문으로 다시 길에) → 북쪽 끝 보스가 꼭 맞게 막은 틈 → 그 너머 끝 방(히든 · 다음 격으로 가는 문).
 // 앞 격 보스 뒤 문으로 들어와 이 격 보스 뒤 문으로 나가므로 되돌아 걷지 않습니다 (사용자 결정 2026-11-24 — 문의 광장 없앰).
@@ -1729,7 +1729,8 @@ const RANK_MAPS = [
   { id: 'library', rank: 7, custom: data => alexandriaMap(data) },   // 손으로 짠 지도 (ALEX)
   { id: 'camelot', rank: 8, custom: data => camelotMap(data) },     // 손으로 짠 지도 (CAMELOT)
   { id: 'avalon', rank: 9, custom: data => avalonMap(data) },       // 손으로 짠 지도 (AVALON)
-  ...Array.from({ length: 11 }, (_, i) => ({ id: `rank${i + 10}`, rank: i + 10, temp: true }))
+  { id: 'murim', rank: 10, custom: data => murimMap(data) },        // 손으로 짠 지도 (MURIM)
+  ...Array.from({ length: 10 }, (_, i) => ({ id: `rank${i + 11}`, rank: i + 11, temp: true }))
 ];
 const rankMapId = rank => (RANK_MAPS.find(m => m.rank === rank) || {}).id;
 // 장소 — 7~20격을 한 줄로 내리 잇지 않고 장소가 바뀌는 곳에서 나눔 (사용자 결정 2026-11-25). 한 장소 안의 격은 보스 뒤 문으로 바로,
@@ -2149,6 +2150,75 @@ function avalonMap(data) {
     const O = A.orchard;
     for (let y = O[1] + 2; y < O[3] - 1; y++) for (let x = O[0] + 2; x < O[2] - 1; x++) if (x % 4 === 1 && y % 4 === 2 && tiles[idx(x, y)] === FLOOR && !keep(x, y)) tiles[idx(x, y)] = TREE;
     scatterTrees(c, A.wood, keep, 9, 0.14);
+  });
+}
+
+// ---------- 10격 — 천하제일 비무대 (손으로 짠 지도, 사용자 결정 2026-11-25) ----------
+// 「강호에 이름 석 자를 남기려는 자들이 오른다. 걸어서 내려간 자는 손에 꼽는다.」 — 산꼭대기 비무대의 무림대회, 문파 · 세가가 오르는 길목마다 자리를 잡음.
+// 멀린의 문으로 산 아래 객잔 마을에 닿아 북쪽 산꼭대기로 — 바위 등성이 둘로 갈린 세 갈래가 비무대 앞 관전석에서 만남.
+//   강호의 밑바닥(돌아다님) 객잔 마을 — 뒷골목 흑도 낭인 · 장터 개방 장로
+//   불가(서쪽)              아미산 암자 아미파 사태 → 소림사 소림 나한(돌아다님) → 뒷산 면벽 동굴 달마(벽을 보고 아홉 해 — 이야기가 있는 구석)
+//   오대세가(가운데)         세가 거리의 장원들 — 남궁세가 가주 → 독 연못의 사천당가 독수 → 모용세가 공자 → 진법 정원의 제갈세가 군사(기관 미로 속) → 비무대 바로 아래 하북팽가 도객
+//   도가(동쪽)              무당산 도관 무당 도사 → 화산 매화 숲 매화검수(돌아다님) → 태극 마당 장삼봉 → 눈 덮인 능선 북해빙궁 무사(돌아다님)
+//   보스 천마 — 비무대 위, 천산으로 가는 북쪽 눈길을 막음 (11격 만년설 덮인 천산 — 장소는 그대로 동방).
+//   숨은 곳 — 능선 절벽의 숨은 동굴(기연 — 옛 고수가 남긴 비급, 큰 상자). 작은 상자는 객잔 · 당가 독 연못가.
+const MURIM = {
+  W: 142, H: 174,
+  low: [10, 46, 134, 166], plaza: [32, 28, 100, 46], ridgeTop: [98, 28, 134, 46],
+  ridges: [[46, 60, 50, 134], [94, 56, 98, 134]],
+  inn: [48, 136, 64, 148], hermitage: [16, 110, 28, 120], shaolin: [14, 74, 34, 100], dharma: [12, 40, 32, 58],
+  manors: { namgung: [50, 112, 66, 128], tang: [74, 96, 92, 112], murong: [50, 80, 66, 96], zhuge: [74, 62, 92, 80], peng: [50, 46, 66, 62] },
+  pond: [86, 98, 90, 102], wudang: [108, 108, 126, 126], plum: [98, 76, 134, 104], cave: [123, 35, 135, 49],
+  stage: [58, 10, 82, 28], snow: [62, 2, 80, 7],
+  in: [69, 166, 3], next: [68, 1, 4], start: [70, 160], merchant: [74, 156],
+  foes: {
+    '남궁세가 가주': [55, 119], '사천당가 독수': [80, 104], '모용세가 공자': [56, 87], '제갈세가 군사': [81, 63], '하북팽가 도객': [56, 52],
+    '달마': [14, 44], '장삼봉': [114, 64], '천마': [69, 11]
+  },
+  sections: [['객잔 마을', [20, 134, 121, 168]], ['객잔', 'inn'], ['아미산 암자', [10, 102, 46, 134]], ['소림사', [10, 70, 46, 102]], ['달마의 면벽 동굴', 'dharma'],
+    ['세가 거리', [50, 46, 94, 134]], ['남궁세가', [50, 112, 66, 128]], ['사천당가', [74, 96, 92, 112]], ['모용세가', [50, 80, 66, 96]], ['제갈세가 진법 정원', [74, 62, 92, 80]], ['하북팽가', [50, 46, 66, 62]],
+    ['무당산 도관', [98, 104, 134, 134]], ['화산 매화 숲', 'plum'], ['태극 마당', [98, 56, 134, 76]], ['눈 덮인 능선', [98, 28, 134, 56]], ['기연의 동굴', 'cave'],
+    ['비무대 앞 관전석', 'plaza'], ['천하제일 비무대', [58, 2, 82, 28]]],
+  zones: [['흑도 낭인', [22, 150, 66, 164]], ['개방 장로', [76, 136, 120, 162]], ['아미파 사태', [12, 104, 44, 132]], ['소림 나한', [12, 72, 44, 102]],
+    ['무당 도사', [100, 104, 130, 132]], ['화산파 매화검수', [100, 78, 130, 102]], ['북해빙궁 무사', [100, 30, 122, 54]]],
+  chests: [[52, 140], [87, 108], [129, 41, 'big']]
+};
+function murimMap(data) {
+  const A = MURIM;
+  return handMap(data, 10, A, c => {
+    const { tiles, idx, box, ring, road, secrets } = c;
+    // 산 — 아래 땅 · 비무대 앞 관전석 · 동쪽 능선 꼭대기, 세 갈래를 가르는 바위 등성이 둘
+    box(A.low, FLOOR); box(A.plaza, FLOOR); box(A.ridgeTop, FLOOR);
+    for (const r of A.ridges) box(r, ROCK);
+    box([A.in[0], A.low[3], A.in[0] + 3, A.in[1] + 1], FLOOR);                               // 멀린의 문으로 들어서는 곳
+    // 객잔 마을 — 객잔(담, 동문)
+    ring(A.inn, WALL); box([A.inn[2] - 1, 141, A.inn[2], 145], FLOOR);
+    // 서쪽 불가 — 아미산 암자(작은 담) · 소림사(담, 남북 문) · 면벽 동굴(바위, 동쪽 입구)
+    ring(A.hermitage, WALL); box([A.hermitage[2] - 1, 113, A.hermitage[2], 117], FLOOR);
+    ring(A.shaolin, WALL); box([22, A.shaolin[3] - 1, 27, A.shaolin[3]], FLOOR); box([22, A.shaolin[1], 27, A.shaolin[1] + 1], FLOOR);
+    box(A.dharma, FLOOR); ring(A.dharma, ROCK); box([A.dharma[2] - 1, 50, A.dharma[2], 55], FLOOR);
+    // 가운데 세가 거리 — 장원마다 담, 큰길 쪽 문 · 당가 독 연못 · 제갈 진법 정원(바위 미로, 맨 안쪽에 군사)
+    for (const [k, m] of Object.entries(A.manors)) {
+      ring(m, WALL);
+      const west = m[0] < 69, dy = k === 'zhuge' ? m[3] - 4 : ((m[1] + m[3]) >> 1) - 2;
+      box(west ? [m[2] - 1, dy, m[2], dy + 4] : [m[0], dy, m[0] + 1, dy + 4], FLOOR);
+    }
+    box(A.pond, WATER);
+    const Z = A.manors.zhuge;
+    box([Z[0] + 1, 67, Z[2] - 5, 68], ROCK); box([Z[0] + 5, 71, Z[2] - 1, 72], ROCK); box([Z[0] + 1, 75, Z[2] - 5, 76], ROCK);
+    // 동쪽 도가 — 무당산 도관(담, 남북 문) · 매화 숲 · 기연의 동굴(바위 테, 서쪽 벽 속 숨은 샛길)
+    ring(A.wudang, WALL); box([115, A.wudang[3] - 1, 120, A.wudang[3]], FLOOR); box([115, A.wudang[1], 120, A.wudang[1] + 1], FLOOR);
+    box(A.cave, FLOOR); ring(A.cave, ROCK);
+    secrets.push({ name: '숨은 샛길', x: A.cave[0], y: 41, w: 1, h: 2 });
+    // 산꼭대기 비무대 — 돌 테두리, 남쪽 오르는 계단 · 북쪽 천산으로 가는 눈길
+    box(A.stage, FLOOR); ring(A.stage, ROCK);
+    box([66, A.stage[3] - 1, 75, A.stage[3]], FLOOR); box([69, A.snow[3], 72, A.stage[1] + 1], FLOOR);
+    box(A.snow, FLOOR); box([A.next[0], A.next[1], A.next[0] + A.next[2], A.next[1] + 1], FLOOR);
+    // 흙길 — 가운데 세가 거리(마을 → 비무대) · 서쪽 불가의 길 · 동쪽 도가의 길 · 마을 가로 길 · 관전석 가로 길
+    road([69, A.stage[3] - 1, 72, A.in[1] + 1]); road([36, 44, 40, 152]); road([102, 30, 106, 152]); road([24, 148, 106, 152]); road([36, 43, 106, 46]);
+    // 매화나무 — 화산 매화 숲에 듬성듬성
+    const nearRoad = (x, y) => { for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) if (tiles[idx(x + i, y + j)] === ROAD) return true; return false; };
+    scatterTrees(c, A.plum, (x, y) => nearFoe(A, x, y, 3) || nearRoad(x, y), 10, 0.12);
   });
 }
 
@@ -2702,4 +2772,4 @@ function allMaps(data) {
   return out;
 }
 
-module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, looksPng, encodePng, generate, sewer, overworld, oldtown, city, deptInterior, dept2Interior, assocInterior, guildInterior, guild2Interior, homeInterior, home2Interior, arenaInterior, bmInterior, gateinInterior, chiefInterior, raidInterior, storeInterior, OLDTOWN, CITY, DEPT, DEPT2, ASSOC, GUILD, GUILD2, HOME, HOME2, ARENA, BM, GATEIN, CHIEF, RAID, W1, W2, W3, SKY, CITY_BIO, secretRoom, buildingInterior, allMaps, layoutFromPlan, RANK_MAPS, rankMapId, hallMap, HALL, PLACES, placeOf, ALEX, alexandriaMap, CAMELOT, camelotMap, AVALON, avalonMap, handMap, SEWER, SECRET_ROOMS, CAVES, caveMap, BUILDINGS, BUILD, DOORWAY, CARPET, RUIN, UNDERS, ABYSS, DEMON_CASTLE, abyssMap };
+module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, looksPng, encodePng, generate, sewer, overworld, oldtown, city, deptInterior, dept2Interior, assocInterior, guildInterior, guild2Interior, homeInterior, home2Interior, arenaInterior, bmInterior, gateinInterior, chiefInterior, raidInterior, storeInterior, OLDTOWN, CITY, DEPT, DEPT2, ASSOC, GUILD, GUILD2, HOME, HOME2, ARENA, BM, GATEIN, CHIEF, RAID, W1, W2, W3, SKY, CITY_BIO, secretRoom, buildingInterior, allMaps, layoutFromPlan, RANK_MAPS, rankMapId, hallMap, HALL, PLACES, placeOf, ALEX, alexandriaMap, CAMELOT, camelotMap, AVALON, avalonMap, MURIM, murimMap, handMap, SEWER, SECRET_ROOMS, CAVES, caveMap, BUILDINGS, BUILD, DOORWAY, CARPET, RUIN, UNDERS, ABYSS, DEMON_CASTLE, abyssMap };
