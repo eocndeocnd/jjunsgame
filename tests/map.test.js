@@ -1185,6 +1185,50 @@ test('11격 천산 — 나선 길: 바깥 고리(기슭 → 동 청룡 → 북 �
   assert.equal(m.ports.find(p => p.name === 'next').place, '신화의 땅', '이무기 뒤 — 장소가 신화의 땅으로');
 });
 
+test('12격 잊혀진 성역 — 구름 계단 끝 성스러운 숲 → 세 갈래(서쪽 바다의 과업 · 가운데 신성한 짐승 · 동쪽 땅의 과업)가 세상 끝 광장에서 만나 하데스의 문 · 헤스페리데스 정원 → 잊혀진 신전의 수호룡 · 크레타 섬의 다이달로스의 미궁', () => {
+  const data = loadData();
+  const m = loadMap('sanctuary');
+  const sec = name => m.areas.find(a => a.section && a.name === name);
+  const post = name => m.posts.find(p => p.name === name);
+  const spot = name => post(name) || (a => ({ x: a.x, y: a.y + a.h / 2, w: 1, h: 1 }))(m.areas.find(a => a.monster === data.ENEMIES.find(e => e.name === name).id));
+  const inside = (p, a) => p.x >= a.x && p.y >= a.y && p.x + p.w <= a.x + a.w && p.y + p.h <= a.y + a.h;
+  const lv = name => data.ENEMIES.find(e => e.name === name).level;
+  const routes = {
+    '서쪽 바다의 과업': ['크레타의 황소', '크라켄', '게리온'],
+    '가운데 신성한 짐승': ['유니콘', '페가수스', '스핑크스', '피닉스', '히포그리프'],
+    '동쪽 땅의 과업': ['네메아의 사자', '케리네이아의 사슴', '에리만토스의 멧돼지', '스팀팔로스의 새', '디오메데스의 말'],
+    '세상 끝': ['케르베로스', '라돈', '성역의 수호룡']
+  };
+  for (const [r, list] of Object.entries(routes)) for (let i = 1; i < list.length; i++)
+    assert.ok(lv(list[i]) > lv(list[i - 1]) && spot(list[i]).y < spot(list[i - 1]).y, `${r}: ${list[i - 1]} → ${list[i]} (셀수록 북쪽)`);
+  const where = { '크레타의 황소': '크레타 섬', '크라켄': '해협', '게리온': '에리테이아 — 세상 서쪽 끝 섬', '페가수스': '히포크레네 샘', '스핑크스': '테베 성문', '피닉스': '재의 제단',
+    '네메아의 사자': '네메아의 사자 굴', '케리네이아의 사슴': '케리네이아 숲', '에리만토스의 멧돼지': '에리만토스 설산', '스팀팔로스의 새': '스팀팔로스 늪', '디오메데스의 말': '트라키아 마구간',
+    '케르베로스': '하데스의 문', '라돈': '헤스페리데스의 정원', '성역의 수호룡': '잊혀진 신전' };
+  for (const [name, a] of Object.entries(where)) assert.ok(inside(post(name), sec(a)), `${name} 은(는) ${a}`);
+  // 게리온 · 라돈은 전설대로 세상 서쪽 끝 — 지도 서쪽 반에
+  for (const name of ['게리온', '라돈']) assert.ok(post(name).x < m.w / 2, `${name} — 서쪽`);
+  for (const p of m.posts.filter(q => !['네메아의 사자', '디오메데스의 말', '크라켄', '성역의 수호룡'].includes(q.name))) {   // 굴 · 마구간 · 모래톱 · 보스 빼고 트인 땅
+    let open = 0, all = 0;
+    for (let y = p.y - 3; y < p.y + p.h + 3; y++) for (let x = p.x - 3; x < p.x + p.w + 3; x++) { all++; if (!m.solid[y * m.w + x]) open++; }
+    assert.ok(open / all > 0.75, `${p.name} — 트인 땅 (${Math.round(open / all * 100)}%)`);
+  }
+  const bodies = m.posts.flatMap(q => cellsOf(m, q)), from = [m.start.y * m.w + m.start.x];
+  const temple = sec('잊혀진 신전'), door = []; for (let x = 70; x < 81; x++) door.push((temple.y + temple.h) * m.w + x);
+  const band = (x0, x1) => { const out = []; for (let y = 56; y < 130; y++) for (let x = x0; x < x1; x++) out.push(y * m.w + x); return out; };
+  const lanes = { 서: band(0, 48), 가운데: band(48, 100), 동: band(100, m.w) };
+  for (const keep of Object.keys(lanes)) {
+    const shut = new Set([...bodies, ...Object.entries(lanes).filter(([k]) => k !== keep).flatMap(([, c]) => c)]);
+    assert.ok(door.some(k => walk(m, from, shut)[k] >= 0), `${keep}쪽 길만으로 신전 남문까지`);
+  }
+  const big = m.chests.find(c => c.big);
+  assert.ok(inside({ x: big.x, y: big.y, w: 1, h: 1 }, sec('다이달로스의 미궁')), '큰 상자는 미궁 한가운데');
+  const secretCells = []; for (let k = 0; k < m.w * m.h; k++) if (m.secret[k]) secretCells.push(k);
+  assert.ok(secretCells.length && !(walk(m, from, new Set([...bodies, ...secretCells]))[(big.y + 1) * m.w + big.x] >= 0), '샛길 없이는 못 감');
+  assert.ok(walk(m, from, new Set(bodies))[(big.y + 1) * m.w + big.x] >= 0, '샛길로 미로를 지나 닿음');
+  const next = m.ports.find(p => p.name === 'next');
+  assert.ok(!next.place && next.to === `${gen.rankMapId(13)}.in`, '엘리시온으로 — 장소는 그대로 신화의 땅');
+});
+
 test('조이스틱이 향하는 쪽으로 — 비스듬히 밀면 대각선 · 곧은 걸음을 섞어 그 각도대로 곧게, 대각선도 같은 빠르기', () => {
   const rows = ['########################'];
   for (let y = 0; y < 14; y++) rows.push('#' + (y === 0 ? '@' : '.') + '.'.repeat(21) + '#');

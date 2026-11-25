@@ -1711,7 +1711,7 @@ function buildingInterior(data, b) {
   return buildTmj({ w: W, h: H, tiles, posts, ports, npcs: [{ name: 'start', x: out.x + (out.w >> 1), y: out.y - 1 }], look: lk, props: { title: b.title, interior: true } });
 }
 
-// ---------- 아직 손으로 짜지 않은 격의 임시 지도 (12격부터 — 하나씩 컨셉 논리대로 손으로 짠 지도로 바꿀 자리, docs/MAP-7PLUS-PLAN.md) ----------
+// ---------- 아직 손으로 짜지 않은 격의 임시 지도 (13격부터 — 하나씩 컨셉 논리대로 손으로 짠 지도로 바꿀 자리, docs/MAP-7PLUS-PLAN.md) ----------
 // 들머리(남쪽 끝 광장) → 레벨 순으로: 돌아다니는 일반의 방(구역) · 하나뿐인 일반의 벽감(길 벽에 오목하게) · 정예의 곁방(고리 —
 // 길에서 아래 문으로 들어가 위 문으로 다시 길에) → 북쪽 끝 보스가 꼭 맞게 막은 틈 → 그 너머 끝 방(히든 · 다음 격으로 가는 문).
 // 앞 격 보스 뒤 문으로 들어와 이 격 보스 뒤 문으로 나가므로 되돌아 걷지 않습니다 (사용자 결정 2026-11-24 — 문의 광장 없앰).
@@ -1731,7 +1731,8 @@ const RANK_MAPS = [
   { id: 'avalon', rank: 9, custom: data => avalonMap(data) },       // 손으로 짠 지도 (AVALON)
   { id: 'murim', rank: 10, custom: data => murimMap(data) },        // 손으로 짠 지도 (MURIM)
   { id: 'tianshan', rank: 11, custom: data => tianshanMap(data) },  // 손으로 짠 지도 (TIANSHAN)
-  ...Array.from({ length: 9 }, (_, i) => ({ id: `rank${i + 12}`, rank: i + 12, temp: true }))
+  { id: 'sanctuary', rank: 12, custom: data => sanctuaryMap(data) }, // 손으로 짠 지도 (SANCTUARY)
+  ...Array.from({ length: 8 }, (_, i) => ({ id: `rank${i + 13}`, rank: i + 13, temp: true }))
 ];
 const rankMapId = rank => (RANK_MAPS.find(m => m.rank === rank) || {}).id;
 // 장소 — 7~20격을 한 줄로 내리 잇지 않고 장소가 바뀌는 곳에서 나눔 (사용자 결정 2026-11-25). 한 장소 안의 격은 보스 뒤 문으로 바로,
@@ -2273,6 +2274,74 @@ function tianshanMap(data) {
     // 나무 — 산삼 숲 (길 · 자리 · 상자 곁은 비움)
     const nearRoad = (x, y) => { for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) if (tiles[idx(x + i, y + j)] === ROAD) return true; return false; };
     scatterTrees(c, [86, 9, 119, 29], (x, y) => nearFoe(A, x, y, 3) || nearRoad(x, y) || A.chests.some(([cx, cy]) => Math.abs(x - cx) <= 2 && Math.abs(y - cy) <= 2), 11, 0.16);
+  });
+}
+
+// ---------- 12격 — 잊혀진 성역 (손으로 짠 지도, 사용자 결정 2026-11-25) ----------
+// 「신화에 이름이 실린 짐승들이 여기 숨어 있다.」 — 13격 보스가 헤라클레스라, 그가 아직 오지 않은 열두 과업의 짐승들이 기다리는 땅.
+// 이무기가 오르려던 하늘길 끝 구름 계단을 내려와 남쪽 성스러운 숲에 닿아 북쪽 잊혀진 신전으로 — 바위 등성이 둘로 갈린 세 갈래가 세상 끝 광장에서 만남.
+//   서쪽 바다의 과업   크레타 섬(여울로 건넘)의 황소 → 해협 모래톱에 도사린 크라켄 → 세상 서쪽 끝 섬 에리테이아의 게리온 (게리온 · 헤스페리데스는 전설에서 서쪽 끝)
+//   가운데 신성한 짐승 성스러운 숲 유니콘(돌아다님) → 히포크레네 샘의 페가수스(하나뿐) → 테베 성문 옆 수수께끼의 스핑크스 → 재의 제단 피닉스(하나뿐) → 바람 절벽 히포그리프(돌아다님)
+//   동쪽 땅의 과업     네메아의 사자 굴 → 케리네이아 숲의 사슴 → 에리만토스 설산의 멧돼지 → 스팀팔로스 늪의 새 → 북동쪽 트라키아 마구간의 디오메데스의 말
+//   세상 끝 광장       북동쪽 하데스의 문 앞 케르베로스 → 북서쪽 헤스페리데스 정원의 황금 사과나무를 감은 라돈 → 가운데 잊혀진 신전의 성역의 수호룡(천 년을 한 자리에서 — 뒷문을 막음)
+//   보스 뒤 엘리시온으로 가는 문 (13격 — 장소는 그대로 신화의 땅). 열두 과업의 짐승은 실제 과업 차례와 거의 같게 — 헤라클레스를 만나기 전에 그가 꺾을 짐승들을 먼저 봄.
+//   숨은 곳 — 크레타 섬의 다이달로스의 미궁 (바위 벽 속 숨은 샛길, 두 겹 미로 한가운데 큰 상자). 작은 상자는 네메아의 사자 굴 · 헤스페리데스 정원.
+const SANCTUARY = {
+  W: 150, H: 176,
+  south: [8, 136, 142, 166], plaza: [8, 20, 142, 50], ridges: [[48, 50, 52, 136], [98, 50, 102, 136]],
+  westSea: [4, 50, 48, 136], crete: [8, 96, 46, 128], labyrinth: [10, 100, 28, 126], maze: [13, 103, 25, 123], creteFord: [34, 128, 38, 136],
+  strait: [34, 80, 38, 96], shoal: [38, 80, 46, 92], erytheia: [8, 52, 46, 80], westShore: [8, 50, 46, 52],
+  center: [52, 50, 98, 136], spring: [88, 120, 3], thebes: [52, 100, 98, 103], thebesGate: [66, 100, 85, 103], altar: [64, 82], crags: [[58, 58], [90, 56], [80, 66]],
+  east: [102, 50, 142, 136], lionDen: [120, 112, 140, 130], marsh: [[104, 54, 110, 60], [128, 62, 134, 67], [104, 64, 108, 68]],
+  stable: [118, 36, 140, 50], hades: [104, 18, 124, 28], apple: [30, 26], temple: [58, 8, 92, 34], elysion: [64, 2, 86, 8],
+  in: [74, 170, 3], next: [73, 1, 4], start: [75, 160], merchant: [80, 156],
+  foes: {
+    '크레타의 황소': [40, 104], '크라켄': [41, 84], '게리온': [14, 60],
+    '페가수스': [60, 118], '스핑크스': [88, 105], '피닉스': [60, 82],
+    '네메아의 사자': [130, 120], '케리네이아의 사슴': [120, 98], '에리만토스의 멧돼지': [130, 76], '스팀팔로스의 새': [120, 58], '디오메데스의 말': [128, 42],
+    '케르베로스': [112, 29], '라돈': [24, 24], '성역의 수호룡': [73, 9]
+  },
+  sections: [['구름 계단 끝 · 성스러운 숲', [8, 136, 142, 172]], ['크레타 섬', [8, 96, 48, 130]], ['다이달로스의 미궁', 'labyrinth'], ['해협', [8, 80, 48, 96]], ['에리테이아 — 세상 서쪽 끝 섬', [8, 50, 48, 80]],
+    ['히포크레네 샘', [52, 110, 98, 136]], ['테베 성문', [52, 90, 98, 110]], ['재의 제단', [52, 72, 98, 90]], ['바람 절벽', [52, 50, 98, 72]],
+    ['네메아 골짜기', [102, 110, 142, 136]], ['네메아의 사자 굴', 'lionDen'], ['케리네이아 숲', [102, 90, 142, 110]], ['에리만토스 설산', [102, 70, 142, 90]], ['스팀팔로스 늪', [102, 50, 142, 70]],
+    ['세상 끝 광장', 'plaza'], ['헤스페리데스의 정원', [8, 20, 48, 50]], ['트라키아 마구간', 'stable'], ['하데스의 문', [102, 18, 126, 36]], ['잊혀진 신전', [58, 1, 92, 34]]],
+  zones: [['유니콘', [54, 138, 96, 162]], ['히포그리프', [54, 52, 96, 72]]],
+  chests: [[135, 115], [36, 30], [18, 112, 'big']]
+};
+function sanctuaryMap(data) {
+  const A = SANCTUARY;
+  return handMap(data, 12, A, c => {
+    const { tiles, idx, box, ring, road, secrets } = c;
+    const disk = (cx, cy, r, t) => { for (let y = Math.floor(cy - r); y <= cy + r; y++) for (let x = Math.floor(cx - r); x <= cx + r; x++) if (Math.hypot(x + 0.5 - cx, y + 0.5 - cy) < r) tiles[idx(x, y)] = t; };
+    // 땅 — 남쪽 성스러운 숲 · 북쪽 세상 끝 광장, 세 갈래를 가르는 바위 등성이 둘. 구름 계단으로 들어섬
+    box(A.south, FLOOR); box(A.plaza, FLOOR); box(A.center, FLOOR); box(A.east, FLOOR);
+    for (const r of A.ridges) box(r, ROCK);
+    box([A.in[0], A.south[3], A.in[0] + A.in[2], A.in[1] + 1], FLOOR);
+    // 서쪽 바다의 과업 — 바다 위 섬들을 여울 · 모래톱으로 건넘. 크레타 섬 서쪽에 다이달로스의 미궁 (바깥 벽 동쪽 숨은 샛길, 안쪽 고리는 북쪽만 트임)
+    box(A.westSea, WATER); box(A.crete, FLOOR); box(A.creteFord, FLOOR); box(A.strait, FLOOR); box(A.shoal, FLOOR); box(A.erytheia, FLOOR); box(A.westShore, FLOOR);
+    ring(A.labyrinth, ROCK); ring(A.maze, ROCK); box([18, A.maze[1], 20, A.maze[1] + 1], FLOOR);
+    secrets.push({ name: '숨은 샛길', x: A.labyrinth[2] - 1, y: 112, w: 1, h: 2 });
+    // 가운데 신성한 짐승 — 히포크레네 샘 · 테베 성벽과 성문 · 재의 제단 · 바람 절벽 바위
+    disk(A.spring[0], A.spring[1], A.spring[2], WATER);
+    box(A.thebes, WALL); box(A.thebesGate, FLOOR);
+    box([A.altar[0], A.altar[1], A.altar[0] + 2, A.altar[1] + 2], ROCK);
+    for (const [x, y] of A.crags) box([x, y, x + 2, y + 2], ROCK);
+    // 동쪽 땅의 과업 — 네메아의 사자 굴(바위 테, 서쪽 입구) · 스팀팔로스 늪 웅덩이 · 트라키아 마구간(담, 서문)
+    ring(A.lionDen, ROCK); box([A.lionDen[0], 119, A.lionDen[0] + 1, 124], FLOOR);
+    for (const r of A.marsh) box(r, WATER);
+    ring(A.stable, WALL); box([A.stable[0], 41, A.stable[0] + 1, 46], FLOOR);
+    // 세상 끝 — 하데스의 문(바위 절벽) · 황금 사과나무 · 잊혀진 신전(담, 남문 · 뒷문, 기둥) · 엘리시온으로 가는 문의 방
+    box(A.hades, ROCK); tiles[idx(A.apple[0], A.apple[1])] = TREE;
+    box(A.temple, FLOOR); ring(A.temple, WALL);
+    box([70, A.temple[3] - 1, 81, A.temple[3]], FLOOR); box([73, A.temple[1], 78, A.temple[1] + 1], FLOOR);
+    for (const [x, y] of [[62, 14], [86, 14], [62, 24], [86, 24]]) box([x, y, x + 2, y + 2], ROCK);
+    box(A.elysion, FLOOR); box([A.next[0], A.next[1], A.next[0] + A.next[2], A.next[1] + 1], FLOOR);
+    // 흙길 — 가운데(구름 계단 → 신전) · 서쪽 바다의 길(여울 · 모래톱) · 동쪽 땅의 길 · 숲 가로 길 · 광장 가로 길
+    road([73, A.temple[1] + 1, 77, A.in[1] + 1]); road([34, 40, 38, 152]); road([112, 40, 116, 152]); road([34, 148, 116, 152]); road([34, 40, 116, 44]);
+    // 나무 — 성스러운 숲 · 케리네이아 숲 (길 · 자리 · 상자 곁은 비움)
+    const nearRoad = (x, y) => { for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) if (tiles[idx(x + i, y + j)] === ROAD) return true; return false; };
+    const keep = (x, y) => nearFoe(A, x, y, 3) || nearRoad(x, y) || A.chests.some(([cx, cy]) => Math.abs(x - cx) <= 2 && Math.abs(y - cy) <= 2) || Math.abs(y - A.in[1]) < 12 && Math.abs(x - 75) < 8;
+    scatterTrees(c, [54, 138, 96, 162], keep, 12, 0.1); scatterTrees(c, [102, 90, 142, 110], keep, 13, 0.16);
   });
 }
 
@@ -2826,4 +2895,4 @@ function allMaps(data) {
   return out;
 }
 
-module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, looksPng, encodePng, generate, sewer, overworld, oldtown, city, deptInterior, dept2Interior, assocInterior, guildInterior, guild2Interior, homeInterior, home2Interior, arenaInterior, bmInterior, gateinInterior, chiefInterior, raidInterior, storeInterior, OLDTOWN, CITY, DEPT, DEPT2, ASSOC, GUILD, GUILD2, HOME, HOME2, ARENA, BM, GATEIN, CHIEF, RAID, W1, W2, W3, SKY, CITY_BIO, secretRoom, buildingInterior, allMaps, layoutFromPlan, RANK_MAPS, rankMapId, hallMap, HALL, PLACES, placeOf, ALEX, alexandriaMap, CAMELOT, camelotMap, AVALON, avalonMap, MURIM, murimMap, TIANSHAN, tianshanMap, handMap, SEWER, SECRET_ROOMS, CAVES, caveMap, BUILDINGS, BUILD, DOORWAY, CARPET, RUIN, UNDERS, ABYSS, DEMON_CASTLE, abyssMap };
+module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, looksPng, encodePng, generate, sewer, overworld, oldtown, city, deptInterior, dept2Interior, assocInterior, guildInterior, guild2Interior, homeInterior, home2Interior, arenaInterior, bmInterior, gateinInterior, chiefInterior, raidInterior, storeInterior, OLDTOWN, CITY, DEPT, DEPT2, ASSOC, GUILD, GUILD2, HOME, HOME2, ARENA, BM, GATEIN, CHIEF, RAID, W1, W2, W3, SKY, CITY_BIO, secretRoom, buildingInterior, allMaps, layoutFromPlan, RANK_MAPS, rankMapId, hallMap, HALL, PLACES, placeOf, ALEX, alexandriaMap, CAMELOT, camelotMap, AVALON, avalonMap, MURIM, murimMap, TIANSHAN, tianshanMap, SANCTUARY, sanctuaryMap, handMap, SEWER, SECRET_ROOMS, CAVES, caveMap, BUILDINGS, BUILD, DOORWAY, CARPET, RUIN, UNDERS, ABYSS, DEMON_CASTLE, abyssMap };
