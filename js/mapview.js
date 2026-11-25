@@ -17,7 +17,7 @@ const MapView = (function () {
   const TEMPER_COLOR = { aggro: '#d0473f', passive: '#4a80b8', shy: '#5aa04f' };
   const KEYS = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right',
                  w: 'up', s: 'down', a: 'left', d: 'right', W: 'up', S: 'down', A: 'left', D: 'right' };
-  // 나 — 걷기 그림 (design/hero/walk.js 가 만듦). 한 줄에 한 방향, 한 줄 4칸(서기 · 걸음 A · 서기 · 걸음 B), 한 칸 32×40, 발끝은 38줄.
+  // 나 — 걷기 그림. 게임에서는 내 생김새로 그린 시트(js/allylook.js 의 walkSheet — ui.js 가 setHeroSheet 로 끼움), 맵 초안에서는 예전 그림 (design/hero/walk.js 가 만듦). 한 줄에 한 방향, 한 줄 4칸(서기 · 걸음 A · 서기 · 걸음 B), 한 칸 32×40, 발끝은 38줄.
   // 줄 순서는 앞 · 뒤 · 왼옆 · 오른옆 — 왼옆이 보이는 모습이 화면 오른쪽을 봅니다. 못 불러오면(맵 초안) 예전 동그라미로.
   const HERO = { w: 32, h: 40, foot: 38, body: 34, row: { down: 0, up: 1, right: 2, left: 3 } };
   const heroImg = new Image();
@@ -692,6 +692,8 @@ const MapView = (function () {
 
   // 걷기 그림의 주소 — 싸움 화면의 나도 같은 그림을 씁니다 (한 파일 빌드에서는 그림 자체가 든 data: 주소)
   const heroSheet = () => heroImg.src;
+  // 내 생김새로 그린 걷기 시트(같은 틀 128×160)로 바꿔 끼움 — ui.js 의 applyHeroLook (주인공 꾸미기, 2026-11-25)
+  const setHeroSheet = url => { if (url && heroImg.src !== url) heroImg.src = url; };
 
-  return { create, gameHooks, gameTag, heroSheet, VIEW, KIND_COLOR, TEMPER_COLOR };
+  return { create, gameHooks, gameTag, heroSheet, setHeroSheet, VIEW, KIND_COLOR, TEMPER_COLOR };
 })();

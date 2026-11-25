@@ -44,4 +44,17 @@ const pixels = (W, H, px) => { const raw = Buffer.alloc((W * 4 + 1) * H); for (l
 const ihdr = (W, H) => Buffer.concat([u32(W, H), Buffer.from([8, 6, 0, 0, 0])]);
 const SIG = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
 const png = (W, H, px) => Buffer.concat([SIG, chunk('IHDR', ihdr(W, H)), chunk('IDAT', pixels(W, H, px)), chunk('IEND', Buffer.alloc(0))]);
-module.exports = { decodePng, png };
+function apng(W, H, frames, delayMs) {
+  const parts = [SIG, chunk('IHDR', ihdr(W, H)), chunk('acTL', u32(frames.length, 0))];
+  let seq = 0;
+  frames.forEach((px, i) => {
+    const fc = Buffer.concat([u32(seq++, W, H, 0, 0), Buffer.from([delayMs >> 8, delayMs & 255, 3, 232, 0, 0])]);   // 지연 = delayMs/1000 초
+    parts.push(chunk('fcTL', fc));
+    const data = pixels(W, H, px);
+    parts.push(i === 0 ? chunk('IDAT', data) : chunk('fdAT', Buffer.concat([u32(seq++), data])));
+  });
+  parts.push(chunk('IEND', Buffer.alloc(0)));
+  return Buffer.concat(parts);
+}
+
+module.exports = { decodePng, png, apng };

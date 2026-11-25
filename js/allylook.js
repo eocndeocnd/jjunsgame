@@ -181,6 +181,7 @@ function bangsLine(L) {
 }
 // 머리카락이 있는 칸 → 단계(0~4)
 function hairMask(L, view) {
+  if (view === 'side') return hairMaskSide(L);
   const vol = L.vol, rx = 9.2 + vol * 0.9, ry = 9 + vol * 0.9;
   const sideY = SIDES[L.side][1], backY = BACKS[L.back][1], sw = 1 + vol;   // 옆머리 폭 (얼굴 밖)
   const { line, clumps: cl } = bangsLine(L);
@@ -239,8 +240,8 @@ function hairMask(L, view) {
 // 각 칸을 「기준 줄에서의 x(xr)」로 옮겨, xr 을 가닥 경계로 나눔 → 가닥마다 빛 받는 쪽 · 가운데 · 그늘 쪽 + 가닥 사이 갈라짐 선.
 // 머리 전체의 빛(왼쪽 위)은 가닥의 바탕 밝기에만 조금 섞음.
 function lockField(L, info, view) {
-  const r = rng(L.hseed ^ (view === 'front' ? 0x1f : 0x2e));
-  const P = view === 'front' ? { x: CX, y: 2, ref: 16 } : { x: CX, y: 4, ref: 18 };
+  const r = rng(L.hseed ^ (view === 'front' ? 0x1f : view === 'side' ? 0x4d : 0x2e));
+  const P = view === 'front' ? { x: CX, y: 2, ref: 16 } : view === 'side' ? { x: 14, y: 3, ref: 16 } : { x: CX, y: 4, ref: 18 };
   let bounds;
   if (view === 'front') {   // 얼굴 위 가닥은 앞머리 덩어리 그대로, 그 바깥은 폭 2~3 으로 이어 붙임
     bounds = [8, ...info.clumps.map(c => c[1] + 1)];
@@ -281,9 +282,9 @@ function drawHair(cv, L, HC, view, layer) {
       if (part === 'tail' && w >= 3 && x === a + 1 && (y * 7 + L.hseed) % 5 === 0) t--;   // 꼬리 가운데 가닥 선 (드문드문)
       if (!has(x, y + 1)) t--;
     } else if (part === 'bun') {                                       // 올림머리 — 둥근 덩어리
-      const by = info.top - 1.5, dd = -0.55 * (x - CX) / 3.2 - 0.8 * (y - by) / 2.7;
+      const bx = info.bunX || CX, by = info.top - 1.5, dd = -0.55 * (x - bx) / 3.2 - 0.8 * (y - by) / 2.7;
       t = dd > 0.35 ? 3 : dd > -0.3 ? 2 : 1;
-      if (y === Math.round(by) + 1 && x >= 14 && x <= 17) t = Math.min(t, 1);   // 감은 자국
+      if (y === Math.round(by) + 1 && Math.abs(x + 0.5 - bx) <= 2) t = Math.min(t, 1);   // 감은 자국
     } else if (part === 'ahoge') {
       t = 3;
     } else {                                                           // 정수리 · 앞머리 · 옆머리 · 뒷머리 — 가닥마다
@@ -309,6 +310,10 @@ function drawHair(cv, L, HC, view, layer) {
   if (layer !== 'behind' && view === 'front') {
     // 앞머리 끝 — 덩어리 끝 칸은 어둡게 (왼쪽 덩어리는 덜)
     for (const [a, b] of info.clumps) for (let x = a; x <= b; x++) { const k = (info.line[x] - 1) * W + x; if (tones.has(k)) tones.set(k, Math.min(tones.get(k), x <= 11 ? 2 : 1)); }
+  }
+  if (layer !== 'behind' && view === 'side') {
+    // 옆모습 앞머리 끝 — 이마 앞 덩어리 끝은 어둡게
+    for (const x in info.line) { const k = (info.line[x] - 1) * W + +x; if (tones.has(k)) tones.set(k, Math.min(tones.get(k), 1)); }
   }
   if (layer !== 'behind' && TIES[L.tie][0] === 'ponytail' && view === 'back') for (let x2 = 14; x2 <= 17; x2++) { tones.delete(12 * W + x2); cv.put(x2, 12, x2 === 14 ? '#b4504c' : '#8a3434', 'hair'); }
   for (const [k, t] of tones) cv.put(k % W, (k / W) | 0, HC[t], 'hair');
@@ -405,12 +410,167 @@ function drawCapeBehind(cv, L) {
   for (let y = 26; y <= 35; y++) { const w = y >= 32 ? 2 : 1; for (let i = 1; i <= w; i++) { cv.put(7 - i, y, C[i === 1 ? 2 : 3], 'cloth'); cv.put(24 + i, y, C[i === 1 ? 1 : 0], 'cloth'); } }
 }
 
+// ============================================================
+//  옆모습 — 오른쪽(화면 오른쪽)을 봄. 왼쪽을 보는 모습은 좌우로 뒤집음 (주인공 지도 걷기에 씀 — 2026-11-25)
+//  비율은 주인공 옆모습(assets/hero/walk.png 의 셋째 줄)을 따름: 머리 x 5~25, 얼굴은 오른쪽, 몸통은 좁게, 다리는 겹쳐서
+// ============================================================
+const SKULL_SIDE = { 7: [11, 20], 8: [9, 22], 9: [8, 23], 20: [8, 24], 21: [10, 24], 22: [11, 23], 23: [13, 23], 24: [15, 21] };   // 그 밖(10~19)은 7~24 — 뒤통수 아래는 깎여 목으로, 턱은 앞으로
+const skullRowSide = y => SKULL_SIDE[y] || (y >= 10 && y <= 19 ? [7, 24] : null);
+function drawSkinSide(cv, S, hideEar) {
+  for (let y = 7; y <= 24; y++) {
+    const [a, b] = skullRowSide(y);
+    for (let x = a; x <= b; x++) {
+      let t = 2;
+      if (x >= 19 && x <= 21 && y >= 19 && y <= 22) t = 3;           // 볼 — 작게만 빛
+      if (y >= 22 && x <= 17) t = 1;                                 // 턱 밑 · 목 쪽 그늘
+      if (y === 24) t = x >= 19 ? 2 : 1;
+      cv.put(x, y, S[t], 'skin');
+    }
+  }
+  for (let y = 24; y <= 25; y++) for (let x = 14; x <= 17; x++) cv.put(x, y, S[1], 'skin');   // 목
+  if (!hideEar) for (let y = 17; y <= 19; y++) { cv.put(13, y, S[2], 'skin'); cv.put(14, y, S[y === 18 ? 1 : 3], 'skin'); }
+  for (let y = 31; y <= 32; y++) { cv.put(14, y, S[3], 'skin'); cv.put(15, y, S[2], 'skin'); }   // 앞 손
+}
+function drawFaceSide(cv, L, S, HC, E) {
+  for (let i = 0; i < 3; i++) cv.put(20 + i, 16, HC[0], 'face');   // 눈썹
+  const rows = EYES[L.eye], col = { k: LASH, i: E[1], j: E[3], h: SHINE };
+  rows.forEach((row, j) => [...row.slice(0, 2)].forEach((ch, i) => { if (col[ch]) cv.put(20 + i, 17 + j, col[ch], 'face'); }));   // 눈 하나 — 앞모습 눈의 앞 두 칸
+  const m = L.mouth;
+  if (m === 'small') cv.put(23, 22, MOUTH, 'face');
+  else if (m === 'line') { cv.put(22, 22, MOUTH, 'face'); cv.put(23, 22, MOUTH, 'face'); }
+  else if (m === 'open') { cv.put(22, 22, MOUTH, 'face'); cv.put(23, 22, MOUTH, 'face'); cv.put(23, 23, TONGUE, 'face'); }
+  const k = L.mark;
+  if (k === 'blush') { const p = mix(S[2], '#d05a58', 0.38); cv.put(20, 21, p, 'face'); cv.put(21, 21, p, 'face'); }
+  else if (k === 'scar') { cv.put(19, 21, S[0], 'face'); cv.put(20, 22, S[0], 'face'); cv.put(18, 21, S[4], 'face'); }
+  else if (k === 'bandage') { [[19, 21], [20, 21], [21, 21], [19, 22], [20, 22], [21, 22]].forEach(([x, y]) => cv.put(x, y, x === 20 ? WHITE[2] : y === 22 ? WHITE[1] : WHITE[3], 'face')); }
+  else if (k === 'mole') cv.put(21, 23, S[0], 'face');
+}
+// 옆모습 머리 — 앞(x ≥ 17)은 앞머리 줄 위만, 뒤는 뒤통수 · 귀 둘레 옆머리 · 등 뒤로 긴 머리
+function hairMaskSide(L) {
+  const vol = L.vol, cx = 15, rx = 9.2 + vol * 0.9, ry = 9 + vol * 0.9;
+  const sideY = SIDES[L.side][1], backY = BACKS[L.back][1], tie = TIES[L.tie][0];
+  const r = rng(L.hseed ^ 0x5d);
+  const base = { straight: 16, parted: 14, side: L.flip ? 13 : 16, spiky: 15, short: 11, messy: 15 }[L.bangs];
+  // 이마 앞 앞머리 — 폭 2~3 덩어리, 가운데가 조금 더 내려옴
+  const line = {};
+  for (let x = 17; x <= 26;) {
+    const w = 2 + pickI(r, 2), drop = L.bangs === 'spiky' ? 2 : L.bangs === 'straight' || L.bangs === 'short' ? 0 : 1;
+    for (let i = 0; i < w && x + i <= 26; i++) line[x + i] = Math.min(18, base + (i > 0 && i < w - 1 || w === 2 && i === 1 ? drop : 0) + (L.bangs === 'messy' ? pickI(r, 2) - 0 : 0) - (x + i >= 24 ? 1 : 0));
+    x += w;
+  }
+  const m = new Map(), behind = new Map(), key = (x, y) => y * W + x;
+  const add = (x, y, p) => { if (x >= 0 && y >= 0 && x < W && y < H && !m.has(key(x, y))) m.set(key(x, y), p); };
+  const addB = (x, y, p) => { if (x >= 0 && y >= 0 && x < W && y < H && !behind.has(key(x, y))) behind.set(key(x, y), p); };
+  const inEll = (x, y) => ((x + 0.5 - cx - 0.5) / rx) ** 2 + ((y - CY) / ry) ** 2 <= 1;
+  const nape = Math.max(20, Math.min(sideY, 22));
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    if (!inEll(x, y)) continue;
+    if (x >= 17) { if (y < line[x]) add(x, y, 'cap'); }
+    else if (x <= 10) { if (y <= nape) add(x, y, 'cap'); }
+    else if (y <= 15 || (x <= 12 && y <= nape)) add(x, y, 'cap');                    // 귀 위 · 뒤통수 (귀 앞 얼굴은 비워 둠)
+  }
+  // 귀 둘레 옆머리 — 타원 아래로 내려오는 부분 (턱까지면 목 앞으로)
+  if (sideY >= 19) for (let y = 16; y <= sideY; y++) for (let x = 10; x <= 14 - (y >= sideY - 1 ? 1 : 0); x++) add(x, y, 'side');
+  // 등 뒤 긴 머리 — 몸 뒤에 그림
+  if (backY) for (let x = 5 - (vol - 1); x <= 12; x++) { const end = backY - (x <= 6 - (vol - 1) ? 2 : 0) - pickI(r, 2); for (let y = 14; y <= end; y++) addB(x, y, 'back'); }
+  const top = Math.ceil(CY - ry);
+  let bunX;
+  if (tie === 'ponytail' || tie === 'twin') {   // 뒤로 묶은 꼬리 — 뒤통수에서 등 쪽으로 (양갈래는 가까운 쪽 하나만 보임)
+    const y0 = tie === 'ponytail' ? 10 : 13;
+    for (let y = y0; y <= 27; y++) { const w = y < y0 + 4 ? 2 : y > 23 ? 0 : 1, x0 = 5 - (vol - 1) - Math.floor((y - y0) / 5); for (let i = 0; i <= w; i++) addB(x0 - i, y, 'tail'); }
+  } else if (tie === 'bun') {
+    bunX = 11.5;
+    for (let y = top - 4; y <= top + 2; y++) for (let x = 7; x <= 16; x++) if (((x + 0.5 - bunX) / 3.2) ** 2 + ((y - (top - 1)) / 2.7) ** 2 <= 1) add(x, y, 'bun');
+  } else if (tie === 'ahoge') {
+    [[16, top - 1], [17, top - 2], [17, top - 3], [16, top - 4]].forEach(([x, y]) => add(x, y, 'ahoge'));
+  } else if (tie === 'spikes') {
+    for (const sx of [7, 11, 16]) {   // 뒤쪽으로 뻗침
+      const h = 2 + pickI(r, 2), base2 = top + 2 + Math.round(Math.abs(sx - 13) / 4);
+      for (let k = 0; k < h; k++) for (let x = sx - 1 + (k ? 1 : 0); x <= sx + 1 - (k ? 1 : 0); x++) add(x - (k >= 1 ? 1 : 0), base2 - 1 - k, 'spike');
+    }
+  }
+  return { m, behind, line, clumps: [], rx, ry, top, bunX };
+}
+function drawClothesSide(cv, L, S) {
+  const A = ramp(CLOTH_COLORS[L.c1][1]), B = ramp(CLOTH_COLORS[L.c2][1]), C = ramp(CLOTH_COLORS[L.c3][1]), SH = ramp(SHOES[L.shoe][1], 0.08);
+  const top = L.top, robe = top === 'robe';
+  const put = (x, y, R, t, g = 'cloth') => cv.put(x, y, R[clampT(t)], g);
+  const bodyT = x => x <= 11 ? 3 : x >= 18 ? 1 : 2;
+  // 다리 · 아래옷 (두 다리가 겹침 — 걸을 때 걷기 단계가 벌림)
+  if (!robe) for (let y = 33; y <= 35; y++) for (let x = 12; x <= 17; x++) {
+    const t = x === 12 ? 3 : x >= 16 ? 1 : 2;
+    if (L.bottom === 'shorts' && y === 35 || L.bottom === 'skirt' && y === 35) cv.put(x, y, S[t], 'skin');
+    else put(x, y, B, t - (L.bottom === 'shorts' && y === 34 ? 1 : 0));
+  }
+  if (!robe && L.bottom === 'skirt') for (let y = 33; y <= 34; y++) for (let x = y === 34 ? 9 : 10; x <= (y === 34 ? 20 : 19); x++) put(x, y, B, bodyT(x) - (y === 34 && x === 14 ? 1 : 0));
+  for (let x = 12; x <= 18; x++) put(x, 36, SH, x <= 13 ? 3 : x === 18 ? 2 : x >= 16 ? 1 : 2);   // 신발 — 앞코가 오른쪽
+  // 몸통
+  for (let y = 25; y <= 32; y++) for (let x = y === 25 ? 11 : 10; x <= (y === 25 ? 18 : 19); x++) put(x, y, A, bodyT(x) - (y === 32 ? 1 : 0) - (x === 12 && y >= 27 && y <= 30 ? 1 : 0));
+  if (robe) {
+    for (let y = 33; y <= 35; y++) for (let x = y === 35 ? 9 : 10; x <= (y === 35 ? 20 : 19); x++) put(x, y, A, bodyT(x) - (y === 35 ? 1 : 0));
+    for (let x = 10; x <= 19; x++) for (const y of [29, 30]) put(x, y, C, bodyT(x) - (y === 30 ? 1 : 0));
+  }
+  // 앞 팔 — x 13~16, 소매 끝은 윗옷마다
+  const sleeve = top === 'tee' ? 27 : top === 'sleeveless' ? 24 : 30;
+  for (let y = 25; y <= 30; y++) for (const [x, t] of [[13, 3], [14, 2], [15, 2], [16, 1]]) {
+    if (y === 25 && (x === 13 || x === 16)) continue;
+    if (y <= sleeve) put(x, y, A, t - (y === sleeve && top === 'tee' ? 1 : 0) - (y === 30 && sleeve === 30 ? 1 : 0));
+    else cv.put(x, y, S[t], 'skin');
+  }
+  if (top === 'tee' || top === 'sleeveless') { cv.put(18, 25, S[1], 'skin'); }
+  if (top === 'hoodie') {
+    for (let y = 23; y <= 27; y++) for (let x = 8; x <= 12; x++) { if ((y === 23 || y === 27) && (x === 8 || x === 12)) continue; put(x, y, A, x === 8 || y === 27 ? 1 : x <= 10 ? 3 : 2); }   // 등 뒤 모자
+    cv.put(18, 26, WHITE[3], 'cloth'); cv.put(18, 27, WHITE[2], 'cloth');
+    for (let x = 17; x <= 19; x++) put(x, 30, A, 0);
+  }
+  if (top === 'jacket' || top === 'suit') {
+    const inner = top === 'suit' ? WHITE : C;
+    for (let y = 25; y <= 32; y++) { cv.put(19, y, inner[2], 'cloth'); put(18, y, A, 0); }
+    if (top === 'suit') for (let y = 26; y <= 30; y++) put(19, y, C, y === 26 ? 0 : 2);
+  }
+  if (top === 'armor') {
+    for (let y = 26; y <= 31; y++) for (let x = 10; x <= 19; x++) if (x <= 11 || x >= 17) cv.put(x, y, METAL[(x <= 11 ? 3 : x === 19 ? 1 : 2) - (y === 31 ? 1 : 0)], 'cloth');
+    for (let y = 24; y <= 26; y++) for (let x = 12; x <= 17; x++) cv.put(x, y, METAL[(x <= 13 ? 3 : x >= 16 ? 1 : 2) + (y === 24 ? 1 : 0)], 'cloth');   // 어깨받이
+  }
+  if (top === 'dobok') {
+    [[19, 25], [18, 26], [17, 27]].forEach(([x, y]) => put(x, y, A, 0));
+    for (let x = 10; x <= 19; x++) for (const y of [30, 31]) put(x, y, C, bodyT(x) - (y === 31 ? 1 : 0));
+    put(19, 32, C, 1); put(19, 33, C, 0);
+  }
+  const ex = L.extra;
+  if (ex === 'belt' && !robe && top !== 'dobok') { for (let x = 10; x <= 19; x++) cv.put(x, 32, LEATHER[x <= 11 ? 3 : x >= 18 ? 1 : 2], 'cloth'); cv.put(19, 32, GOLD[3], 'cloth'); }
+  if (ex === 'strap') for (let i = 0; i <= 7; i++) cv.put(11 + Math.round(i * 7 / 7), 25 + i, LEATHER[2], 'cloth');
+  if (ex === 'scarf') {
+    for (let x = 12; x <= 19; x++) for (const y of [24, 25]) put(x, y, C, bodyT(x) + (y === 24 ? 1 : 0));
+    for (let y = 25; y <= 28; y++) { put(10 - (y - 25 >> 1), y, C, 2); put(11 - (y - 25 >> 1), y, C, 3); }   // 뒤로 날리는 끝
+  }
+  if (ex === 'cape') { for (let x = 11; x <= 18; x++) put(x, 25, C, bodyT(x)); cv.put(18, 26, GOLD[3], 'cloth'); }
+}
+function drawCapeBehindSide(cv, L) {
+  const C = ramp(CLOTH_COLORS[L.c3][1]);
+  for (let y = 25; y <= 35; y++) { const x0 = 9 - Math.floor((y - 25) / 3); for (let x = x0; x <= 11; x++) cv.put(x, y, C[x === x0 ? 3 : 2], 'cloth'); }
+}
+
 // ---------- 합치기 ----------
+// view: 'front' 앞 · 'back' 뒤 · 'side' 오른쪽을 봄 · 'sideL' 왼쪽을 봄 (옆모습을 뒤집음)
 function drawLook(L, view = 'front') {
+  if (view === 'sideL') {
+    const src = drawLook(L, 'side'), out = new Uint8ClampedArray(W * H * 4);
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) for (let k = 0; k < 4; k++) out[(y * W + x) * 4 + k] = src[(y * W + (W - 1 - x)) * 4 + k];
+    return out;
+  }
   const cv = Canvas();
   const S = ramp(SKINS[L.skin][1], 0.085), HC = ramp(HAIR_COLORS[L.hc][1], 0.1), E = ramp(EYE_COLORS[L.ec][1], 0.12);
   const sideY = SIDES[L.side][1];
-  if (view === 'front') {
+  if (view === 'side') {
+    if (L.extra === 'cape') drawCapeBehindSide(cv, L);
+    drawHair(cv, L, HC, 'side', 'behind');
+    drawSkinSide(cv, S, sideY >= 18);
+    drawClothesSide(cv, L, S);
+    drawFaceSide(cv, L, S, HC, E);
+    drawHair(cv, L, HC, 'side', 'front');
+    for (let y = 1; y < 26; y++) for (let x = 0; x < W; x++) { const p = cv.at(x, y), up = cv.at(x, y - 1); if (p && p.g === 'skin' && up && up.g === 'hair') cv.put(x, y, S[1], 'skin'); }
+  } else if (view === 'front') {
     if (L.extra === 'cape') drawCapeBehind(cv, L);
     drawHair(cv, L, HC, 'front', 'behind');
     drawSkin(cv, S, 'front', sideY >= 18);
@@ -436,6 +596,70 @@ function drawLook(L, view = 'front') {
   return out;
 }
 
+// 주인공 기본 모습 — 예전 주인공 그림(design/hero)과 닮게: 짙은 갈색 덥수룩한 머리 · 갈색 둥근 눈 · 검은 재킷에 흰 속옷 · 검은 바지 · 흰 신발 (사용자 결정 2026-11-25 — 주인공도 조합 그림으로)
+const HERO_LOOK = { v: 1, seed: 1, skin: 0, hc: 1, bangs: 'messy', side: 1, back: 0, tie: 0, vol: 2, flip: false, eye: 'round', ec: 0, mouth: 'small', mark: 'none', top: 'jacket', bottom: 'pants', extra: 'none', c1: 0, c2: 0, c3: 3, shoe: 1, hseed: 20261125 };
+
+// 저장에서 읽은 생김새를 검사 — 모르는 값은 기본 주인공(HERO_LOOK)의 값으로 (주인공 꾸미기 · 저장본 손상 대비)
+function cleanLook(o) {
+  const L = { ...HERO_LOOK };
+  if (!o || typeof o !== 'object') return L;
+  const idx = (k, n) => { if (Number.isInteger(o[k]) && o[k] >= 0 && o[k] < n) L[k] = o[k]; };
+  const one = (k, list) => { if (list.includes(o[k])) L[k] = o[k]; };
+  idx('skin', SKINS.length); idx('hc', HAIR_COLORS.length); idx('side', SIDES.length); idx('back', BACKS.length); idx('tie', TIES.length); idx('ec', EYE_COLORS.length);
+  idx('c1', CLOTH_COLORS.length); idx('c2', CLOTH_COLORS.length); idx('c3', CLOTH_COLORS.length); idx('shoe', SHOES.length);
+  one('bangs', BANGS); one('eye', Object.keys(EYES)); one('mouth', MOUTHS); one('mark', MARKS.map(m => m[0])); one('top', TOPS); one('bottom', BOTTOMS.map(b => b[0])); one('extra', EXTRAS.map(e => e[0]));
+  if (o.vol === 1 || o.vol === 2) L.vol = o.vol;
+  if (typeof o.flip === 'boolean') L.flip = o.flip;
+  if (Number.isInteger(o.hseed) && o.hseed >= 0 && o.hseed < 2 ** 31) L.hseed = o.hseed;
+  L.seed = L.hseed;
+  return L;
+}
+
+// ---------- 걷기 시트 — 주인공 지도 걷기 (assets/hero/walk.png 와 같은 틀) ----------
+// 한 줄에 한 방향: 앞 · 뒤 · 오른쪽을 봄 · 왼쪽을 봄. 한 줄 4칸 = 서기 · 걸음 A · 서기 · 걸음 B (한 칸 32×40 → 128×160).
+// design/hero/walk.js 와 같은 방법 — 새 픽셀 없이 옮기기만: 앞 · 뒤는 한 다리가 들리고 몸이 1칸 위로, 옆은 두 다리가 벌어지고(먼 다리는 어둡게) 몸이 1칸 아래로
+const WALK_FB = { split: 16, dup: 34, lift: 1 }, WALK_SIDE = { top: 33, rows: [33, 35, 36, 37], spread: [0, 1, 2, 2], far: 0.72 };
+function walkSheet(L) {
+  const SW = W * 4, out = new Uint8ClampedArray(SW * H * 4 * 4);
+  ['front', 'back', 'side', 'sideL'].forEach((v, row) => {
+    const src = drawLook(L, v);
+    const get = (x, y) => { if (x < 0 || y < 0 || x >= W || y >= H) return null; const i = (y * W + x) * 4; return src[i + 3] ? [src[i], src[i + 1], src[i + 2]] : null; };
+    const blank = () => new Array(W * H).fill(null);
+    const stand = blank(); for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) stand[y * W + x] = get(x, y);
+    const stepFB = liftLeft => {
+      const f = blank();
+      for (let x = 0; x < W; x++) {
+        const planted = liftLeft ? x >= WALK_FB.split : x < WALK_FB.split;
+        for (let y = 0; y < H; y++) {
+          let sy = y + 1;
+          if (planted && y >= WALK_FB.dup) sy = y;
+          if (!planted && y >= WALK_FB.dup - 1) sy = y + 1 + WALK_FB.lift;
+          f[y * W + x] = get(x, sy);
+        }
+      }
+      return f;
+    };
+    const stepSide = (face, nearForward) => {
+      const f = blank(), R = WALK_SIDE.rows;
+      for (let y = 0; y < WALK_SIDE.top; y++) for (let x = 0; x < W; x++) f[(y + 1) * W + x] = get(x, y);
+      const leg = (dir, shade) => R.forEach((sy, k) => {
+        const ty = H - R.length + k - (H - 1 - R[R.length - 1]), dx = dir * WALK_SIDE.spread[k];
+        for (let x = 0; x < W; x++) {
+          const c = get(x, sy); if (!c) continue;
+          const tx = x + dx; if (tx < 0 || tx >= W) continue;
+          f[ty * W + tx] = shade && Math.max(...c) > 30 ? c.map(q => Math.round(q * WALK_SIDE.far)) : c;
+        }
+      });
+      const fwd = face * (nearForward ? 1 : -1);
+      leg(-fwd, true); leg(fwd, false);
+      return f;
+    };
+    const frames = row < 2 ? [stand, stepFB(true), stand, stepFB(false)] : [stand, stepSide(row === 2 ? 1 : -1, true), stand, stepSide(row === 2 ? 1 : -1, false)];
+    frames.forEach((f, n) => { for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const c = f[y * W + x]; if (!c) continue; const i = ((row * H + y) * SW + n * W + x) * 4; out[i] = c[0]; out[i + 1] = c[1]; out[i + 2] = c[2]; out[i + 3] = 255; } });
+  });
+  return { width: SW, height: H * 4, data: out };
+}
+
 function describe(L) {
   return `피부 ${SKINS[L.skin][0]} · 머리 ${HAIR_COLORS[L.hc][0]} ${BANGS_KO[L.bangs]} / ${SIDES[L.side][2]} / 뒤 ${BACKS[L.back][2]} / ${TIES[L.tie][1]} · 눈 ${EYES_KO[L.eye]} ${EYE_COLORS[L.ec][0]} · ${TOPS_KO[L.top]} ${CLOTH_COLORS[L.c1][0]}`;
 }
@@ -443,6 +667,6 @@ function describe(L) {
 const COUNT = SKINS.length * HAIR_COLORS.length * BANGS.length * SIDES.length * BACKS.length * TIES.length * 2 * Object.keys(EYES).length * EYE_COLORS.length * MOUTHS.length * MARKS.length
   * TOPS.length * BOTTOMS.length * EXTRAS.length * CLOTH_COLORS.length ** 3 * SHOES.length;
 
-const api = { W, H, rollLook, drawLook, describe, COUNT, SKINS, HAIR_COLORS };
+const api = { W, H, HERO_LOOK, cleanLook, rollLook, drawLook, walkSheet, describe, COUNT, SKINS, HAIR_COLORS };
 if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.AllyLook = api;
 })(typeof window !== 'undefined' ? window : globalThis);

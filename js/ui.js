@@ -1257,8 +1257,22 @@ function battleLine(e, foeName) {
 
 function hpPct(hp, max) { return `${Math.max(0, Math.min(100, (hp / Math.max(1, max)) * 100))}%`; }
 
-// 내 모습 — 지도에서 걷는 그 그림(assets/hero/walk.png)의 뒷모습 서기 칸. 위에 선 상대를 마주 봅니다 (사용자 결정)
+// 내 모습 — 지도에서 걷는 그 그림의 뒷모습 서기 칸. 위에 선 상대를 마주 봅니다 (사용자 결정)
 const heroSprite = () => `<span class="portrait-ic hero-sprite" style="background-image:url('${MapView.heroSheet()}')"></span>`;
+// 내 생김새(State.meta.heroLook — 없으면 기본 주인공)로 걷기 시트를 그려 지도 · 싸움 · 등록증 · 대화창의 내 그림을 한꺼번에 바꿈.
+// 시트 틀은 예전 assets/hero/walk.png 와 같음 (js/allylook.js 의 walkSheet). 같은 생김새면 다시 그리지 않음
+let heroSheetKey = '';
+function applyHeroLook() {
+  if (typeof AllyLook === 'undefined') return;
+  const L = AllyLook.cleanLook(State.meta.heroLook), key = JSON.stringify(L);
+  if (key === heroSheetKey) return;
+  const s = AllyLook.walkSheet(L), c = document.createElement('canvas');
+  c.width = s.width; c.height = s.height;
+  const g = c.getContext('2d'), img = g.createImageData(s.width, s.height);
+  img.data.set(s.data); g.putImageData(img, 0, 0);
+  MapView.setHeroSheet(c.toDataURL());
+  heroSheetKey = key;
+}
 // 동료 그림 — 부위를 조합한 도트 (js/allylook.js · 사용자 결정 2026-11-25). 앞모습은 목록 · 대화, 뒷모습은 싸움(주인공처럼 위의 상대를 봄).
 // look 은 생김새 객체(이야기 동료) 또는 씨앗 수(무작위 동료). 한 번 그린 것은 기억. allylook.js 가 없으면 이모지
 const allyPngCache = {};
@@ -4141,6 +4155,7 @@ function armTwice(b, label) {
 
 function enterGame(slot, fresh) {
   openSlot(slot, fresh);
+  applyHeroLook();
   $('title').classList.add('hidden');
   showTab('journey');
   render();

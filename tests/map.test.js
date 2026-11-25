@@ -1516,6 +1516,22 @@ test('동료 모집 창구 — 회차마다 새 얼굴 셋 · 내 등급에 가�
   assert.equal(r.clean, false);
 });
 
+test('내 생김새 — 저장 · 불러오기에 그대로, 망가진 값은 null (그릴 때 기본 주인공)', () => {
+  const run = loadGame();
+  const r = run(`
+    currentSlot = 3; State.meta = freshMeta(); syncRecruits(); startRun();
+    const out = { fresh: State.meta.heroLook };
+    State.meta.heroLook = { skin: 2, hc: 5, bangs: 'spiky', top: 'hoodie' }; save();
+    State.meta = freshMeta(); load(); out.kept = State.meta.heroLook;
+    State.meta.heroLook = [1, 2]; save();
+    State.meta = freshMeta(); load(); out.bad = State.meta.heroLook;
+    return out;
+  `);
+  assert.equal(r.fresh, null);
+  assert.deepEqual(r.kept, { skin: 2, hc: 5, bangs: 'spiky', top: 'hoodie' });
+  assert.equal(r.bad, null);
+});
+
 test('길드 — 제7격 보스 뒤 빈 건물이 매물 · 사서 이름 · 사무 자리(단계만큼)에 앉힌 동료가 시간마다 돈(8시간까지) · 단계 올리기', () => {
   const run = loadGame();
   const r = run(`

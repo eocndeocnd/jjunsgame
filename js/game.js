@@ -259,6 +259,7 @@ const State = {
     allies: [],                  // 내 동료 id 들 (이야기로 만난 동료 · 고용한 동료)
     recruits: {},                // 창구에서 맞은 무작위 동료 — id('r번호') → { name, grade, kind, look } (불러올 때 ALLIES 에 끼워 넣음)
     recruitNo: 0,                // 무작위 동료 번호를 매긴 수 — id 가 겹치지 않게
+    heroLook: null,              // 내 생김새 — 부위 조합 (js/allylook.js 의 생김새 객체 · 집 안 거울에서 바꿈). null 이면 기본 주인공(HERO_LOOK)
     hireBoard: null,             // 동료 모집 창구 명단 — { run: 회차, list: [{ id, name, grade, kind, look, out: 'hired' | 'refused' }] }
     gates: {},                   // 게이트에 간 동료 — id → { gate: 등급 id, start, end } (ms · 실제 시각)
     guild: null,                 // 내 길드 — { name, level 1~5, seats: [동료 id], since: { id: ms } } (제7격 보스 뒤 옛 동네의 빈 건물을 사들임)
@@ -704,6 +705,8 @@ function load() {
     State.meta.portalMoved = !!data.home2 && !!data.portalMoved;
     State.meta.rankPassed = (Array.isArray(data.rankPassed) ? data.rankPassed : []).filter(id => BIG_GUILDS.some(B => B.id === id));
     State.meta.gateClear = (Array.isArray(data.gateClear) ? data.gateClear : []).filter(id => gateInfo(id));
+    // 내 생김새 — 값 검사는 그릴 때 (ui.js 가 AllyLook.cleanLook 으로)
+    State.meta.heroLook = data.heroLook && typeof data.heroLook === 'object' && !Array.isArray(data.heroLook) ? data.heroLook : null;
     State.meta.recruits = {};
     for (const [id, r] of Object.entries(data.recruits && typeof data.recruits === 'object' ? data.recruits : {})) { const c = cleanRecruit(id, r); if (c) State.meta.recruits[id] = c; }
     State.meta.recruitNo = Math.max(0, Math.floor(num(data.recruitNo)));
@@ -824,6 +827,7 @@ function freshMeta() {
     recruits: {},
     recruitNo: 0,
     hireBoard: null,
+    heroLook: null,
     gates: {},
     guild: null,
     sets: [null, null, null],
