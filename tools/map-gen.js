@@ -2227,47 +2227,90 @@ function murimMap(data) {
 //   정상 천지          이무기가 하늘로 오르는 둑을 막음 (12격 잊혀진 성역 — 장소가 신화의 땅으로). 꺾어 태평해지면 봉황(히든)이 내려앉음.
 // 갈림길 대신 산 반대편이 안 보이는 맛 — 모퉁이를 돌 때마다 새 방위가 열림. 바깥 · 안쪽 고리는 제 길목 바로 옆을 막아 한 방향으로만 돎.
 //   숨은 곳 — 산을 뚫은 얼음 동굴(바깥 서쪽 ↔ 안쪽 북서쪽, 양쪽 바위 속 숨은 샛길 — 찾으면 한 바퀴 반을 건너뜀, 만년 한철 — 큰 상자). 작은 상자는 산삼 숲 · 금시조 둥지 아래.
+// 둥근 산 — 가운데(C)에서 잰 거리(ρ, 방위마다 조금씩 출렁임)로 고리를 나눔. 각도는 동 0° · 남 90° · 서 180° · 북 -90°(화면 아래가 남).
+// 바깥 고리는 남 → 동 → 북 → 서로 돌고(시계 반대), 남서쪽 비탈(step)로 한 단 올라 안쪽 고리도 같은 쪽으로 돌아 서쪽 정상 어귀(gate)로.
 const TIANSHAN = {
-  W: 150, H: 150,
-  outer: [8, 8, 142, 142], divider: [30, 30, 120, 120], inner: [33, 33, 117, 117], summitWall: [52, 52, 98, 98], summit: [55, 55, 95, 95],
-  outerBlock: [44, 120, 48, 142], step: [36, 117, 41, 120], innerBlock: [33, 98, 52, 102], summitGate: [52, 68, 55, 75],
-  lake: [75.5, 72, 12], pier: [73, 65, 78, 85], frog: [131, 56, 3], tarn: [35, 80, 39, 86], springs: [110, 70, 114, 74],
-  bear: [22, 85, 33, 96], ice: [33, 33, 44, 44],
-  in: [74, 146, 3], next: [73, 65, 4], start: [75, 138], merchant: [82, 136],
-  foes: {
-    '청룡': [123, 88], '구미호': [60, 10], '백호': [10, 64], '웅녀': [27, 89], '산군': [10, 108],
-    '주작': [60, 112], '금시조': [111, 112], '현무': [74, 35], '이무기': [73, 80], '봉황': [86, 57]
-  },
-  sections: [['천산 기슭', [8, 120, 142, 148]], ['동쪽 산허리 — 청룡의 제단', [120, 8, 142, 120]], ['북쪽 산허리 — 여우 고개', [30, 8, 120, 30]], ['서쪽 산허리 — 백호의 제단', [8, 8, 30, 120]],
-    ['웅녀의 곰 동굴', 'bear'], ['남쪽 높은 비탈 — 주작의 제단', [33, 98, 117, 117]], ['동쪽 높은 비탈 — 불 밟는 온천', [98, 33, 117, 98]], ['북쪽 높은 비탈 — 현무의 제단', [33, 33, 117, 52]],
-    ['서쪽 높은 비탈 — 만 년 호수', [33, 52, 52, 98]], ['얼음 동굴', 'ice'], ['정상 천지', 'summit']],
-  zones: [['백년 영사', [80, 121, 104, 141]], ['금잠고', [106, 121, 128, 141]], ['세 발 금두꺼비', [121, 30, 141, 74]], ['천년 산삼 동자', [86, 9, 119, 29]],
-    ['빙잠', [9, 9, 30, 46]], ['화린', [99, 54, 116, 96]], ['금강영구', [34, 46, 51, 96]]],
-  chests: [[100, 12], [113, 103], [38, 37, 'big']]
+  W: 150, H: 150, C: [75, 75],
+  rho: { summit: 21, summitWall: 25, divider: 42, outer: 46, edge: 68 },   // 정상 < 21 · 바위 띠 < 25 · 안쪽 고리 < 42 · 바위 띠 < 46 · 바깥 고리 < 68
+  roads: { outer: 54, inner: 30 },
+  step: 130, outerBlock: 117, innerBlock: 150, gate: 190,                    // 각도 — 한 단 오르는 비탈 · 들머리 서쪽 막이 · 올라선 곳 서쪽 막이 · 정상 어귀
+  bear: [160, 47], ice: [-140, 44],                                          // 곰 동굴 · 얼음 동굴 (바위 띠를 파고든 굴, [각도, ρ])
+  lake: [75.5, 72, 12], pier: [73, 65, 78, 85],
+  frog: [-25, 62, 3], tarn: [-150, 37, 3], springs: [2, 37, 2.5], nest: [48, 37],
+  at: { '청룡': [8, 61.5], '구미호': [-100, 61.5], '백호': [180, 61.5], '웅녀': [160, 47], '산군': [142, 61.5], '주작': [95, 36.5], '금시조': [48, 38.5], '현무': [-90, 36.5], '봉황': [40, 15.5] },
+  zoneAt: { '백년 영사': [68, 61, 8], '금잠고': [38, 61, 8], '세 발 금두꺼비': [-25, 61, 9], '천년 산삼 동자': [-68, 61, 9], '빙잠': [-125, 61, 8], '화린': [0, 36, 7], '금강영구': [-148, 36, 7] },
+  in: [74, 146, 3], next: [73, 65, 4],
+  chestAt: [[-74, 64], [40, 27]]
 };
 function tianshanMap(data) {
-  const A = TIANSHAN;
-  return handMap(data, 11, A, c => {
-    const { tiles, idx, box, ring, road, secrets } = c;
-    const disk = (cx, cy, r, t) => { for (let y = Math.floor(cy - r); y <= cy + r; y++) for (let x = Math.floor(cx - r); x <= cx + r; x++) if (Math.hypot(x + 0.5 - cx, y + 0.5 - cy) < r) tiles[idx(x, y)] = t; };
-    // 산 — 바깥 고리 · 바위 띠 · 안쪽 고리 · 바위 띠 · 정상. 남쪽 기슭으로 들어섬
-    box(A.outer, FLOOR); box(A.divider, ROCK); box(A.inner, FLOOR); box(A.summitWall, ROCK); box(A.summit, FLOOR);
-    box([A.in[0], A.outer[3], A.in[0] + A.in[2], A.in[1] + 1], FLOOR);
-    // 한 방향으로만 돌게 — 바깥은 들머리 서쪽, 안쪽은 올라선 곳 북쪽을 막음. 남서쪽 한 단 오르는 비탈 · 정상 서쪽 어귀
-    box(A.outerBlock, ROCK); box(A.step, FLOOR); box(A.innerBlock, ROCK); box(A.summitGate, FLOOR);
+  const A = TIANSHAN, [cx, cy] = A.C, R = A.rho, rad = d => d * Math.PI / 180, W = A.W, H = A.H;
+  const zi = data.ZONES.findIndex(z => z.rank === 11), foes = data.ENEMIES.filter(e => e.zoneIndex === zi);
+  const wob = a => 1 + 0.035 * Math.sin(2 * a + 0.7) + 0.025 * Math.sin(3 * a + 2.1) + 0.015 * Math.sin(5 * a);   // 방위마다 산자락이 조금씩 나고 듦
+  const at = (deg, r) => [cx + Math.cos(rad(deg)) * r * wob(rad(deg)), cy + Math.sin(rad(deg)) * r * wob(rad(deg))];
+  const noise = valueNoise(11);
+  const polar = (x, y) => { const dx = x + 0.5 - cx, dy = y + 0.5 - cy, a = Math.atan2(dy, dx); return [Math.hypot(dx, dy) / wob(a) * (1 + (noise(x * 0.09, y * 0.09) - 0.5) * 0.06), a * 180 / Math.PI]; };
+  const angDiff = (a, b) => Math.abs(((a - b) % 360 + 540) % 360 - 180);
+  const cell = ([x, y]) => [Math.round(x), Math.round(y)];
+  const spot = {};
+  for (const [name, [deg, r]] of Object.entries(A.at)) { const n = foes.find(e => e.name === name).size, [x, y] = at(deg, r); spot[name] = [Math.round(x - n / 2), Math.round(y - n / 2)]; }
+  spot['이무기'] = [73, 80];                                                   // 천지 둑 위 — 하늘로 오르는 길을 몸으로 막음
+  const zrect = ([deg, r, h]) => { const [x, y] = cell(at(deg, r)); return [x - h, y - h, x + h, y + h]; };
+  const iceC = cell(at(...A.ice)), bearC = cell(at(...A.bear));
+  const iceR = [iceC[0] - 6, iceC[1] - 6, iceC[0] + 7, iceC[1] + 7], bearR = [bearC[0] - 6, bearC[1] - 6, bearC[0] + 7, bearC[1] + 7];
+  const start = cell(at(90, 62)), merchant = cell(at(82, 62));
+  const spec = { ...A, foes: spot, start, merchant, sections: [['웅녀의 곰 동굴', bearR], ['얼음 동굴', iceR]],
+    zones: Object.entries(A.zoneAt).map(([n, z]) => [n, zrect(z)]),
+    chests: [...A.chestAt.map(([d, r]) => cell(at(d, r))), [iceC[0], iceC[1], 'big']] };
+  return handMap(data, 11, spec, c => {
+    const { tiles, idx, box, road, secrets, shapes } = c;
+    const disk = (x0, y0, r0, t) => { for (let y = Math.floor(y0 - r0); y <= y0 + r0; y++) for (let x = Math.floor(x0 - r0); x <= x0 + r0; x++) if (Math.hypot(x + 0.5 - x0, y + 0.5 - y0) < r0) tiles[idx(x, y)] = t; };
+    // 산 — 바깥 고리 · 바위 띠 · 안쪽 고리 · 바위 띠 · 정상. 한 방향으로만 돌게 막이 둘, 한 단 오르는 비탈 · 정상 어귀
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const [r, d] = polar(x, y);
+      if (r >= R.edge) continue;
+      let t = r < R.summit ? FLOOR : r < R.summitWall ? ROCK : r < R.divider ? FLOOR : r < R.outer ? ROCK : FLOOR;
+      if (r >= R.outer - 1 && angDiff(d, A.outerBlock) < 2.6) t = ROCK;                         // 바깥 — 들머리 서쪽을 막는 바위 줄기
+      if (r >= R.summitWall - 1 && r < R.divider + 1 && angDiff(d, A.innerBlock) < 4) t = ROCK;   // 안쪽 — 올라선 곳 서쪽
+      if (r >= R.divider - 1 && r < R.outer + 1 && angDiff(d, A.step) < 3.2) t = FLOOR;          // 남서쪽 한 단 오르는 비탈
+      if (r >= R.summit - 1 && r < R.summitWall + 1 && angDiff(d, A.gate) < 5) t = FLOOR;         // 정상 서쪽 어귀
+      tiles[idx(x, y)] = t;
+    }
+    box([A.in[0], cy + 60, A.in[0] + A.in[2], A.in[1] + 1], FLOOR);                              // 들머리 (남쪽 기슭)
     // 물 — 정상 천지(하늘로 오르는 둑), 금두꺼비 연못, 만 년 호수, 불 밟는 온천
     disk(A.lake[0], A.lake[1], A.lake[2], WATER); box(A.pier, FLOOR);
-    disk(A.frog[0], A.frog[1], A.frog[2], WATER); box(A.tarn, WATER); box(A.springs, WATER);
-    // 웅녀의 곰 동굴 (바위 테, 서쪽 입구) · 얼음 동굴 (바위 테, 양쪽 숨은 샛길 — 바깥 서쪽 ↔ 안쪽 북서쪽)
-    box(A.bear, FLOOR); ring(A.bear, ROCK); box([A.bear[0], 89, A.bear[0] + 1, 93], FLOOR);
-    box(A.ice, FLOOR); ring(A.ice, ROCK);
-    secrets.push({ name: '숨은 샛길', x: A.divider[0], y: 39, w: A.ice[0] - A.divider[0] + 1, h: 2 }, { name: '숨은 샛길', x: A.ice[2] - 1, y: 39, w: 1, h: 2 });
-    // 흙길 — 바깥 고리(남 → 동 → 북 → 서 → 남서 비탈) · 안쪽 고리(남 → 동 → 북 → 서 → 정상 어귀)
-    road([74, 130, 77, A.in[1] + 1]); road([74, 130, 134, 134]); road([130, 17, 134, 134]); road([17, 17, 134, 21]); road([17, 17, 21, 134]); road([17, 130, 44, 134]);
-    road([37, 106, 40, 134]); road([37, 106, 109, 110]); road([105, 41, 109, 110]); road([45, 41, 109, 45]); road([45, 41, 49, 74]); road([45, 70, 62, 73]);
-    // 나무 — 산삼 숲 (길 · 자리 · 상자 곁은 비움)
-    const nearRoad = (x, y) => { for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) if (tiles[idx(x + i, y + j)] === ROAD) return true; return false; };
-    scatterTrees(c, [86, 9, 119, 29], (x, y) => nearFoe(A, x, y, 3) || nearRoad(x, y) || A.chests.some(([cx, cy]) => Math.abs(x - cx) <= 2 && Math.abs(y - cy) <= 2), 11, 0.16);
+    for (const [d, r, rr] of [A.frog, A.tarn, A.springs]) { const [x, y] = at(d, r); disk(x, y, rr, WATER); }
+    // 금시조의 절벽 둥지 — 둥지 둘레 바위
+    { const [x, y] = spot['금시조']; for (const [i, j] of [[-2, -1], [-2, 0], [5, 2], [5, 3], [1, -2], [2, -2]]) tiles[idx(x + i, y + j)] = ROCK; }
+    // 굴 — 바위 띠를 파고든 둥근 굴 (바위 테). 곰 동굴은 바깥 길 쪽으로 입구, 얼음 동굴은 양쪽 바위 속 숨은 샛길 (바깥 서쪽 ↔ 안쪽 북서쪽)
+    const cave = ([x0, y0], t0) => { for (let y = y0 - 6; y <= y0 + 6; y++) for (let x = x0 - 6; x <= x0 + 6; x++) { const h = Math.hypot(x - x0, y - y0); if (h < 4.6) tiles[idx(x, y)] = FLOOR; else if (h < 5.8) tiles[idx(x, y)] = t0; } };
+    cave(bearC, ROCK); cave(iceC, ROCK);
+    const toward = ([x0, y0], deg, k) => [Math.round(x0 + Math.cos(rad(deg)) * k), Math.round(y0 + Math.sin(rad(deg)) * k)];
+    for (let k = 4; k <= 7; k++) { const [x, y] = toward(bearC, A.bear[0], k); box([x - 1, y - 1, x + 2, y + 2], FLOOR); }
+    const iceDoor = sgn => { const cells = []; for (let k = 4; k <= 7; k++) { const [x, y] = toward(iceC, A.ice[0], sgn * k); for (let j = 0; j < 2; j++) for (let i = 0; i < 2; i++) if (tiles[idx(x + i, y + j)] !== FLOOR && tiles[idx(x + i, y + j)] !== ROAD) cells.push([x + i, y + j]); } return cells; };
+    for (const sgn of [1, -1]) for (const [x, y] of iceDoor(sgn)) { tiles[idx(x, y)] = ROCK; secrets.push({ name: '숨은 샛길', x, y, w: 1, h: 1 }); }
+    // 구간 — 고리마다 네 방위 (땅 모양대로)
+    const sector = (x, y) => {
+      const [r, d] = polar(x, y); if (r >= R.edge) return null;
+      if (r < R.summit) return '정상 천지';
+      if (r >= R.summitWall && r < R.divider) return angDiff(d, 102) < 48 ? '남쪽 높은 비탈 — 주작의 제단' : angDiff(d, 5) < 49 ? '동쪽 높은 비탈 — 불 밟는 온천' : angDiff(d, -90) < 45 ? '북쪽 높은 비탈 — 현무의 제단' : '서쪽 높은 비탈 — 만 년 호수';
+      if (r >= R.outer) return angDiff(d, 95) < 40 ? '천산 기슭' : angDiff(d, 5) < 50 ? '동쪽 산허리 — 청룡의 제단' : angDiff(d, -90) < 45 ? '북쪽 산허리 — 여우 고개' : '서쪽 산허리 — 백호의 제단';
+      return null;
+    };
+    const groups = {};
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const s0 = sector(x, y); if (s0 && tiles[idx(x, y)] !== WALL) (groups[s0] = groups[s0] || new Set()).add(idx(x, y)); }
+    for (const [n, cells] of Object.entries(groups)) shapes.push([n, solidShape(cells, W)]);
+    // 흙길 — 바깥 고리(남 → 동 → 북 → 서 → 남서 비탈) · 비탈 오름 · 안쪽 고리(남 → 동 → 북 → 서 → 정상 어귀)
+    const seg = (p0, p1) => { const n = Math.ceil(Math.hypot(p1[0] - p0[0], p1[1] - p0[1]) * 2); for (let k = 0; k <= n; k++) { const x = p0[0] + (p1[0] - p0[0]) * k / n, y = p0[1] + (p1[1] - p0[1]) * k / n; road([Math.round(x) - 1, Math.round(y) - 1, Math.round(x) + 2, Math.round(y) + 2]); } };
+    const arc = (r, a0, a1) => { const n = Math.ceil(Math.abs(a1 - a0) / 1.5); let prev = at(a0, r); for (let k = 1; k <= n; k++) { const cur = at(a0 + (a1 - a0) * k / n, r); seg(prev, cur); prev = cur; } };
+    seg([A.in[0] + 1, A.in[1]], at(90, A.roads.outer));
+    arc(A.roads.outer, 90, A.step - 360);
+    seg(at(A.step, A.roads.outer), at(A.step, A.roads.inner));
+    arc(A.roads.inner, A.step, A.gate - 360);
+    seg(at(A.gate, A.roads.inner), at(A.gate, R.summit - 2));
+    // 나무 — 북동쪽 산삼 숲 (길 · 자리 · 상자 곁은 비움)
+    const chest = spec.chests;
+    const keep = (x, y) => { const [r, d] = polar(x, y); return r < R.outer + 1 || angDiff(d, -68) > 22 || nearFoe(spec, x, y, 3) || nearTile(c, ROAD, x, y, 1) || chest.some(([qx, qy]) => Math.abs(x - qx) <= 2 && Math.abs(y - qy) <= 2); };
+    scatterTrees(c, [70, 0, 140, 50], keep, 11, 0.16);
   });
 }
 
