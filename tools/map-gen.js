@@ -1711,7 +1711,7 @@ function buildingInterior(data, b) {
   return buildTmj({ w: W, h: H, tiles, posts, ports, npcs: [{ name: 'start', x: out.x + (out.w >> 1), y: out.y - 1 }], look: lk, props: { title: b.title, interior: true } });
 }
 
-// ---------- 아직 손으로 짜지 않은 격의 임시 지도 (18격부터 — 하나씩 컨셉 논리대로 손으로 짠 지도로 바꿀 자리, docs/MAP-7PLUS-PLAN.md) ----------
+// ---------- 아직 손으로 짜지 않은 격의 임시 지도 (19격부터 — 하나씩 컨셉 논리대로 손으로 짠 지도로 바꿀 자리, docs/MAP-7PLUS-PLAN.md) ----------
 // 들머리(남쪽 끝 광장) → 레벨 순으로: 돌아다니는 일반의 방(구역) · 하나뿐인 일반의 벽감(길 벽에 오목하게) · 정예의 곁방(고리 —
 // 길에서 아래 문으로 들어가 위 문으로 다시 길에) → 북쪽 끝 보스가 꼭 맞게 막은 틈 → 그 너머 끝 방(히든 · 다음 격으로 가는 문).
 // 앞 격 보스 뒤 문으로 들어와 이 격 보스 뒤 문으로 나가므로 되돌아 걷지 않습니다 (사용자 결정 2026-11-24 — 문의 광장 없앰).
@@ -1737,7 +1737,8 @@ const RANK_MAPS = [
   { id: 'inferno', rank: 15, custom: data => infernoMap(data) },     // 손으로 짠 지도 (INFERNO)
   { id: 'yggdrasil', rank: 16, custom: data => yggdrasilMap(data) }, // 손으로 짠 지도 (YGGDRASIL)
   { id: 'primordial', rank: 17, custom: data => primordialMap(data) }, // 손으로 짠 지도 (PRIMORDIAL)
-  ...Array.from({ length: 3 }, (_, i) => ({ id: `rank${i + 18}`, rank: i + 18, temp: true }))
+  { id: 'olympus', rank: 18, custom: data => olympusMap(data) },       // 손으로 짠 지도 (OLYMPUS)
+  ...Array.from({ length: 2 }, (_, i) => ({ id: `rank${i + 19}`, rank: i + 19, temp: true }))
 ];
 const rankMapId = rank => (RANK_MAPS.find(m => m.rank === rank) || {}).id;
 // 장소 — 7~20격을 한 줄로 내리 잇지 않고 장소가 바뀌는 곳에서 나눔 (사용자 결정 2026-11-25). 한 장소 안의 격은 보스 뒤 문으로 바로,
@@ -2858,6 +2859,93 @@ function primordialMap(data) {
   });
 }
 
+// ---------- 18격 — 올림포스 정상 (손으로 짠 지도, 사용자 결정 2026-11-27) ----------
+// 「어느 신화의 주신이든, 결국 정상에서는 마주치게 된다.」 — 산 하나를 여러 면에서 저마다 오르다 정상에서 마주침. 티아마트의 몸이 하늘이 된 길로 남쪽 기슭 구름바다에 닿음.
+// 위에서 내려다본 산 — 들쭉날쭉한 등고선처럼 층층이 계단 진 비탈(층 사이 바위턱, 면마다 오르는 계단 자리가 다름), 깊은 골짜기 둘이 산허리를 세 면으로 가름.
+// 북쪽 면은 깎아지른 벼랑 — 꼭대기 뒤로만 내려감. 정상에 가까울수록(가운데로 갈수록) 셈.
+//   서쪽 면 — 죽음과 해(이집트)       사자의 들판 오시리스 → 해가 떠오르는 바위턱 라
+//   가운데 면 — 트리무르티와 인드라    연꽃 못 브라흐마 → 비슈누 → 천 개의 눈 인드라 → 카일라스처럼 솟은 바위의 시바 (트리무르티는 한 면에)
+//   동쪽 면 — 하늘 관청(동아시아)      하늘에 걸린 다리 아메노우키하시의 이자나기 → 하늘에서 내려다보는 벼랑의 환인 → 구름 위 관청의 옥황상제
+//   정상 둘레 — 주신들의 자리          높은 옥좌 흘리드스캴프의 오딘 → 계단 피라미드의 케찰코아틀 → 꺼지지 않는 불의 제단 아후라 마즈다
+//   꼭대기 — 제우스의 왕좌, 그 뒤 북쪽 벼랑으로 내려가는 「별의 길」 → 19격 가라앉은 르뤼에 (장소가 르뤼에로 — 구름 사이로 별이 제자리에 온 바다)
+//   숨은 곳 — 정상 북서쪽 바위틈의 암브로시아 저장고 (숨은 샛길, 큰 상자). 작은 상자는 브라흐마의 연꽃 못 · 이자나기의 하늘 다리.
+const OLYMPUS = {
+  W: 184, H: 196, C: [92, 82], R: [82, 66],
+  contours: [0.77, 0.55, 0.35, 0.16], ravines: [135, 45], north: [225, 315],
+  stairs: { 0.77: [205, 95, -25], 0.55: [150, 68, 28], 0.35: [192, 112, -8], 0.16: [90] },
+  foot: [56, 146, 128, 182],
+  place: { // 이름 → [각도(0 동 · 90 남), 가운데에서의 거리(1 = 산기슭)]
+    '오시리스': [168, 0.95], '라': [176, 0.72],                                     // 층 가운데 줄은 흙길 — 층의 바깥쪽 · 안쪽 가장자리로 비켜 섬
+    '브라흐마': [116, 0.70], '비슈누': [56, 0.62], '인드라': [104, 0.51], '시바': [126, 0.40],      // 가운데 면 — 오르막이 돌지 않는 쪽에
+    '이자나기': [12, 0.95], '환인': [-8, 0.72], '옥황상제': [16, 0.51],
+    '오딘': [-38, 0.30], '케찰코아틀': [207, 0.27], '아후라 마즈다': [-16, 0.20]
+  },
+  in: [91, 192, 3], next: [90, 1, 4], start: [92, 178], merchant: [98, 178]
+};
+function olympusMap(data) {
+  const A = OLYMPUS, [cx, cy] = A.C, [rx, ry] = A.R, rad = d => d * Math.PI / 180;
+  const zi = data.ZONES.findIndex(z => z.rank === 18), foes = data.ENEMIES.filter(e => e.zoneIndex === zi);
+  const at = (deg, f) => [cx + Math.cos(rad(deg)) * rx * f, cy + Math.sin(rad(deg)) * ry * f];
+  const spot = {};
+  for (const [name, [deg, f]] of Object.entries(A.place)) { const n = foes.find(e => e.name === name).size, [x, y] = at(deg, f); spot[name] = [Math.round(x - n / 2), Math.round(y - n / 2)]; }
+  spot['제우스'] = [cx - 2, cy - Math.round(ry * 0.16) + 1];                // 꼭대기 북쪽 끝 — 별의 길 어귀를 몸으로 꼭 막음
+  const [bx, by] = at(116, 0.78);                                  // 브라흐마의 연꽃 못
+  const store = [cx - 34, cy - 40, cx - 20, cy - 28];
+  const spec = { ...A, foes: spot, zones: [], sections: [['구름바다 기슭', A.foot], ['암브로시아 저장고', store], ['제우스의 왕좌', [cx - 12, cy - 12, cx + 12, cy + 12]], ['별의 길', [cx - 6, 0, cx + 6, cy - 10]]],
+    chests: [[Math.round(bx) + 0, Math.round(by) + 5], [spot['이자나기'][0], spot['이자나기'][1] - 6], [store[0] + 7, store[1] + 4, 'big']] };
+  return handMap(data, 18, spec, c => {
+    const { tiles, idx, box, ring, road, secrets, shapes } = c;
+    const W = A.W, H = A.H, noise = valueNoise(18);
+    const polar = (x, y) => { const dx = (x + 0.5 - cx) / rx, dy = (y + 0.5 - cy) / ry; return [Math.hypot(dx, dy) * (1 + (noise(x * 0.09, y * 0.09) - 0.5) * 0.12), Math.atan2(dy, dx) * 180 / Math.PI]; };   // 각도는 at() 과 같은 타원 각도
+    const angDiff = (a, b) => Math.abs(((a - b) % 360 + 540) % 360 - 180);
+    const inNorth = d => angDiff(d, 270) < 45;
+    // 산 — 등고선 바위턱(면마다 계단 자리), 골짜기 둘, 북쪽 벼랑 · 남쪽 구름바다 기슭
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const [r, d] = polar(x, y);
+      if (r >= 1) continue;
+      let t = FLOOR;
+      for (const c0 of A.contours) if (Math.abs(r - c0) < 0.016 && !(A.stairs[c0] || []).some(s => angDiff(d, s) < (c0 === 0.16 ? 14 : 4.5))) t = ROCK;
+      if (r > A.contours[2] - 0.01 && r < A.contours[0] && A.ravines.some(a => angDiff(d, a) < 2.2)) t = ROCK;   // 골짜기 — 산허리를 세 면으로
+      if (inNorth(d) && r > A.contours[3] - 0.01) t = ROCK;                 // 북쪽 벼랑 — 꼭대기 뒤로만
+      tiles[idx(x, y)] = t;
+    }
+    box(A.foot, FLOOR); box([A.in[0], A.foot[3], A.in[0] + A.in[2], A.in[1] + 1], FLOOR);
+    // 별의 길 — 꼭대기에서 북쪽 벼랑을 내려감 (제우스가 어귀를 막음)
+    box([cx - 2, 1, cx + 2, cy - Math.round(ry * 0.16) + 2], FLOOR);
+    // 상징 — 연꽃 못 · 해 뜨는 바위 · 카일라스 바위 · 하늘 다리(골 위) · 구름 관청(담) · 높은 옥좌 · 계단 피라미드 · 불의 제단 · 왕좌 기둥
+    const disk = (x0, y0, r0, t) => { for (let y = Math.floor(y0 - r0); y <= y0 + r0; y++) for (let x = Math.floor(x0 - r0); x <= x0 + r0; x++) if (Math.hypot(x + 0.5 - x0, y + 0.5 - y0) < r0) tiles[idx(x, y)] = t; };
+    disk(bx - 6, by - 4, 3, WATER);
+    const near = (name, dx, dy, w, h, t) => { const [x, y] = spot[name]; box([x + dx, y + dy, x + dx + w, y + dy + h], t); };
+    near('라', -4, -1, 2, 2, ROCK); near('시바', 4, -2, 2, 2, ROCK); near('오딘', -1, -3, 4, 1, ROCK); near('아후라 마즈다', -4, 0, 2, 2, ROCK);
+    { const [x, y] = spot['케찰코아틀']; ring([x + 5, y - 2, x + 11, y + 4], ROCK); ring([x + 6, y - 1, x + 10, y + 3], ROCK); }
+    { const [x, y] = spot['옥황상제']; ring([x - 5, y - 5, x + 7, y + 7], WALL); box([x - 5, y, x - 4, y + 3], FLOOR); }
+    { const [x, y] = spot['이자나기']; for (let k = -6; k <= 6; k++) if (Math.abs(k) > 1) tiles[idx(x - 4, y + k)] = WATER; }   // 하늘 다리 곁 구름 틈
+    for (const [x, y] of [[cx - 8, cy - 6], [cx + 6, cy - 6], [cx - 8, cy + 4], [cx + 6, cy + 4]]) box([x, y, x + 2, y + 2], ROCK);
+    // 숨은 곳 — 정상 북서쪽 바위틈의 암브로시아 저장고 (정상 둘레에서 숨은 샛길)
+    box(store, FLOOR); ring(store, ROCK);
+    { const [, sy] = at(215, 0.26), x0 = store[2] - 4, y0 = store[3] - 1, y1 = Math.round(sy);   // 저장고 아래 벽에서 정상 둘레 서북쪽까지 바위 속 좁은 길
+      for (let y = y0; y <= y1; y++) for (let x = x0; x < x0 + 2; x++) if (tiles[idx(x, y)] !== FLOOR) tiles[idx(x, y)] = WALL;
+      secrets.push({ name: '숨은 샛길', x: x0, y: y0, w: 2, h: y1 - y0 + 1 }); }
+    // 구간 — 면마다 · 정상 둘레 (땅 모양대로)
+    const sector = (x, y) => { const [r, d] = polar(x, y); if (r >= 1) return null; if (r < A.contours[3]) return null; if (r < A.contours[2]) return '정상 둘레 — 주신들의 자리';
+      if (angDiff(d, 180) < 45) return '서쪽 면 — 죽음과 해'; if (angDiff(d, 90) < 45) return '가운데 면 — 트리무르티와 인드라'; if (angDiff(d, 0) < 45) return '동쪽 면 — 하늘 관청'; return null; };
+    const groups = {};
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const s0 = sector(x, y); if (s0 && tiles[idx(x, y)] !== WALL) (groups[s0] = groups[s0] || new Set()).add(idx(x, y)); }
+    for (const [n, cells] of Object.entries(groups)) shapes.push([n, solidShape(cells, W)]);
+    // 흙길 — 층을 따라 돌다가 그 면의 계단 자리에서 한 단 오름 (기슭 → 세 면 → 정상 둘레 → 꼭대기)
+    const seg = (p0, p1) => { const n = Math.ceil(Math.hypot(p1[0] - p0[0], p1[1] - p0[1]) * 2); for (let k = 0; k <= n; k++) { const x = p0[0] + (p1[0] - p0[0]) * k / n, y = p0[1] + (p1[1] - p0[1]) * k / n; for (let j = -1; j <= 0; j++) for (let i = -1; i <= 0; i++) { const q = idx(Math.round(x) + i, Math.round(y) + j); if (tiles[q] === FLOOR) tiles[q] = ROAD; } } };
+    const arc = (f, a0, a1) => { let d = ((a1 - a0) % 360 + 540) % 360 - 180; const n = Math.max(2, Math.ceil(Math.abs(d) / 2)); let prev = at(a0, f); for (let k = 1; k <= n; k++) { const cur = at(a0 + d * k / n, f); seg(prev, cur); prev = cur; } };
+    const mids = [0.88, 0.66, 0.45, 0.26];
+    seg([cx, A.foot[1] + 4], at(90, mids[0]));
+    for (let f = 0; f < 3; f++) {
+      let ang = 90;
+      [0.77, 0.55, 0.35].forEach((c0, k) => { const s0 = A.stairs[c0][f]; arc(mids[k], ang, s0); seg(at(s0, mids[k]), at(s0, mids[k + 1])); ang = s0; });
+      arc(mids[3], ang, 90);
+    }
+    seg(at(90, mids[3]), at(90, 0.1));
+  });
+}
+
 const getFoe = (data, id) => data.ENEMIES.find(e => e.id === id);
 
 // ---------- 도시 — 옛 동네(oldtown) · 헌터들의 도시(city), 회차와 회차 사이에 머무는 곳 (docs/CITY-PLAN.md 1-가) ----------
@@ -3408,4 +3496,4 @@ function allMaps(data) {
   return out;
 }
 
-module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, looksPng, encodePng, generate, sewer, overworld, oldtown, city, deptInterior, dept2Interior, assocInterior, guildInterior, guild2Interior, homeInterior, home2Interior, arenaInterior, bmInterior, gateinInterior, chiefInterior, raidInterior, storeInterior, OLDTOWN, CITY, DEPT, DEPT2, ASSOC, GUILD, GUILD2, HOME, HOME2, ARENA, BM, GATEIN, CHIEF, RAID, W1, W2, W3, SKY, CITY_BIO, secretRoom, buildingInterior, allMaps, layoutFromPlan, RANK_MAPS, rankMapId, hallMap, HALL, PLACES, placeOf, ALEX, alexandriaMap, CAMELOT, camelotMap, AVALON, avalonMap, MURIM, murimMap, TIANSHAN, tianshanMap, SANCTUARY, sanctuaryMap, ELYSIUM, elysiumMap, HEAVEN, heavenMap, INFERNO, infernoMap, YGGDRASIL, yggdrasilMap, PRIMORDIAL, primordialMap, handMap, solidShape, SEWER, SECRET_ROOMS, CAVES, caveMap, BUILDINGS, BUILD, DOORWAY, CARPET, RUIN, UNDERS, ABYSS, DEMON_CASTLE, abyssMap };
+module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, looksPng, encodePng, generate, sewer, overworld, oldtown, city, deptInterior, dept2Interior, assocInterior, guildInterior, guild2Interior, homeInterior, home2Interior, arenaInterior, bmInterior, gateinInterior, chiefInterior, raidInterior, storeInterior, OLDTOWN, CITY, DEPT, DEPT2, ASSOC, GUILD, GUILD2, HOME, HOME2, ARENA, BM, GATEIN, CHIEF, RAID, W1, W2, W3, SKY, CITY_BIO, secretRoom, buildingInterior, allMaps, layoutFromPlan, RANK_MAPS, rankMapId, hallMap, HALL, PLACES, placeOf, ALEX, alexandriaMap, CAMELOT, camelotMap, AVALON, avalonMap, MURIM, murimMap, TIANSHAN, tianshanMap, SANCTUARY, sanctuaryMap, ELYSIUM, elysiumMap, HEAVEN, heavenMap, INFERNO, infernoMap, YGGDRASIL, yggdrasilMap, PRIMORDIAL, primordialMap, OLYMPUS, olympusMap, handMap, solidShape, SEWER, SECRET_ROOMS, CAVES, caveMap, BUILDINGS, BUILD, DOORWAY, CARPET, RUIN, UNDERS, ABYSS, DEMON_CASTLE, abyssMap };
