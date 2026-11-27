@@ -1016,7 +1016,7 @@ test('7격 알렉산드리아 — 파벌마다 상징 공간에, 파벌 안에�
   assert.ok(secretCells.length && !(walk(m, from, new Set([...bodies, ...secretCells]))[(big.y + 1) * m.w + big.x] >= 0), '샛길 없이는 못 감');
 });
 
-test('8격 카멜롯 — 남쪽 나루 → 바위의 검 광장 · 마상 시합장 → 세 갈래(서쪽 숲 · 가운데 성 · 동쪽 고개와 해안)가 원탁의 홀 앞에서 만나 왕좌의 아서왕 → 호숫가(호수의 여인 · 아발론으로 가는 배) · 로빈 후드 뒤 은신처', () => {
+test('8격 카멜롯 — 남쪽 나루 → 바위의 검 광장 · 마상 시합장 → 세 갈래(서쪽 숲 · 가운데 성 — 원탁의 기사 일곱 모두 · 동쪽 고개와 해안)가 원탁의 홀 앞에서 만나 왕좌의 아서왕 → 호숫가(호수의 여인 · 아발론으로 가는 배) · 로빈 후드 뒤 은신처', () => {
   const data = loadData();
   const m = loadMap('camelot');
   const sec = name => m.areas.find(a => a.section && a.name === name);
@@ -1025,14 +1025,13 @@ test('8격 카멜롯 — 남쪽 나루 → 바위의 검 광장 · 마상 시합
   const inside = (p, a) => p.x >= a.x && p.y >= a.y && p.x + p.w <= a.x + a.w && p.y + p.h <= a.y + a.h;
   const lv = name => data.ENEMIES.find(e => e.name === name).level;
   const routes = {
-    '서쪽 숲': ['광전사', '녹색 기사', '퍼시벌', '로빈 후드'],
-    '가운데 성': ['템플 기사', '가웨인', '갤러해드'],
-    '동쪽 고개 · 해안': ['용기사', '트리스탄', '롤랑', '엘 시드'],
-    '원탁의 홀로': ['랜슬롯', '베디비어', '모드레드', '아서왕']
+    '서쪽 숲': ['광전사', '녹색 기사', '로빈 후드'],
+    '가운데 성 (원탁의 기사 일곱 — 한 갈래)': ['랜슬롯', '가웨인', '갤러해드', '트리스탄', '퍼시벌', '베디비어', '모드레드', '아서왕'],
+    '동쪽 고개 · 해안': ['용기사', '롤랑', '엘 시드']
   };
   for (const [r, list] of Object.entries(routes)) for (let i = 1; i < list.length; i++)
     assert.ok(lv(list[i]) > lv(list[i - 1]) && spot(list[i]).y < spot(list[i - 1]).y, `${r}: ${list[i - 1]} → ${list[i]} (셀수록 북쪽)`);
-  const where = { '랜슬롯': '마상 시합장', '갤러해드': '성배 예배당', '모드레드': '원탁의 홀', '아서왕': '원탁의 홀', '호수의 여인': '호숫가', '롤랑': '롤랑의 고개', '트리스탄': '동쪽 해안 절벽', '엘 시드': '동문 밖 들판' };
+  const where = { '랜슬롯': '마상 시합장', '가웨인': '카멜롯 성', '갤러해드': '성배 예배당', '트리스탄': '카멜롯 성', '퍼시벌': '카멜롯 성', '베디비어': '카멜롯 성', '모드레드': '원탁의 홀', '아서왕': '원탁의 홀', '호수의 여인': '호숫가', '롤랑': '롤랑의 고개', '엘 시드': '동문 밖 들판' };
   for (const [name, a] of Object.entries(where)) assert.ok(inside(post(name), sec(a)), `${name} 은(는) ${a}`);
   // 이름난 기사는 트인 땅 (로빈 후드 — 숲에 숨은 의적, 아서왕 · 호수의 여인 빼고) · 지나가는 흙길에서 두 칸 넘게
   for (const p of m.posts.filter(q => !['로빈 후드', '아서왕', '호수의 여인'].includes(q.name))) {
@@ -1185,7 +1184,7 @@ test('11격 천산 — 나선 길: 바깥 고리(기슭 → 동 청룡 → 북 �
   assert.equal(m.ports.find(p => p.name === 'next').place, '신화의 땅', '이무기 뒤 — 장소가 신화의 땅으로');
 });
 
-test('12격 잊혀진 성역 — 구름 계단 끝 성스러운 숲 → 세 갈래(서쪽 바다의 과업 · 가운데 신성한 짐승 · 동쪽 땅의 과업)가 세상 끝 광장에서 만나 하데스의 문 · 헤스페리데스 정원 → 잊혀진 신전의 수호룡 · 크레타 섬의 다이달로스의 미궁', () => {
+test('12격 잊혀진 성역 — 구름 계단 끝 성스러운 숲 → 세 갈래(서쪽 바다의 과업 · 가운데 신성한 짐승 · 동쪽 땅의 과업)가 세상 끝 광장에서 만나 저승 어귀 · 헤스페리데스 정원 → 잊혀진 신전의 수호룡 · 크레타 섬의 다이달로스의 미궁', () => {
   const data = loadData();
   const m = loadMap('sanctuary');
   const sec = name => m.areas.find(a => a.section && a.name === name);
@@ -1203,7 +1202,7 @@ test('12격 잊혀진 성역 — 구름 계단 끝 성스러운 숲 → 세 갈�
     assert.ok(lv(list[i]) > lv(list[i - 1]) && spot(list[i]).y < spot(list[i - 1]).y, `${r}: ${list[i - 1]} → ${list[i]} (셀수록 북쪽)`);
   const where = { '크레타의 황소': '크레타 섬', '크라켄': '해협', '게리온': '에리테이아 — 세상 서쪽 끝 섬', '페가수스': '히포크레네 샘', '스핑크스': '테베 성문', '피닉스': '재의 제단',
     '네메아의 사자': '네메아의 사자 굴', '케리네이아의 사슴': '케리네이아 숲', '에리만토스의 멧돼지': '에리만토스 설산', '스팀팔로스의 새': '스팀팔로스 늪', '디오메데스의 말': '트라키아 마구간',
-    '케르베로스': '하데스의 문', '라돈': '헤스페리데스의 정원', '성역의 수호룡': '잊혀진 신전' };
+    '케르베로스': '저승 어귀 — 타이나론 동굴', '라돈': '헤스페리데스의 정원', '성역의 수호룡': '잊혀진 신전' };
   for (const [name, a] of Object.entries(where)) assert.ok(inside(post(name), sec(a)), `${name} 은(는) ${a}`);
   // 게리온 · 라돈은 전설대로 세상 서쪽 끝 — 지도 서쪽 반에
   for (const name of ['게리온', '라돈']) assert.ok(post(name).x < m.w / 2, `${name} — 서쪽`);
@@ -1323,7 +1322,8 @@ test('15격 얼어붙은 코키토스 — 깔때기로 꺼지는 원 일곱(안�
   const I = gen.INFERNO;
   const areaName = p => { const k = m.areaAt[(p.y + (p.h >> 1)) * m.w + p.x + (p.w >> 1)]; return k >= 0 ? m.areas[k].name : null; };
   const post = name => m.posts.find(p => p.name === name);
-  const ringOf = name => I.rings.findIndex(r => r[0] === areaName(post(name)));
+  const ringOf = name => (areaName(post(name)) === '몰록의 불타는 제단' ? 0 : I.rings.findIndex(r => r[0] === areaName(post(name))));
+  assert.equal(areaName(post('몰록')), '몰록의 불타는 제단', '몰록은 림보와 갈라 둔 제 제단 (첫째 원 안)');
   const sins = { '아스모데우스': '색욕', '벨제부브': '탐식', '아스타로트': '나태', '발람': '말레볼제', '자간': '말레볼제' };
   for (const [name, sin] of Object.entries(sins)) assert.ok(areaName(post(name)).includes(sin), `${name} 은(는) ${sin}의 원 (${areaName(post(name))})`);
   // 안쪽 원일수록 셈 — 원마다 가장 약한 자가 바깥 원의 가장 센 자보다 셈
@@ -1364,30 +1364,35 @@ test('15격 얼어붙은 코키토스 — 깔때기로 꺼지는 원 일곱(안�
   assert.equal(m.ports.find(p => p.name === 'next').place, '신들의 시대', '루시퍼 너머 — 장소가 신들의 시대로');
 });
 
-test('16격 이그드라실의 가지 — 우듬지에서 내려와 세 갈래(서쪽 가지 이집트 · 가운데 줄기 올림포스 · 동쪽 가지 해와 천둥)가 뿌리에서 만나 하데스가 막은 돌아온 자가 없는 문 · 내려갈수록 셈 · 숨은 미미르의 샘', () => {
+test('16격 이그드라실의 가지 — 우듬지에서 내려와 갈래(서쪽 가지 이집트 · 가운데 줄기 올림포스 열한 신 · 동쪽 가지 일본 · 줄기에서 갈라진 북유럽 가지)가 뿌리에서 만나 하데스가 막은 돌아온 자가 없는 문 · 파벌마다 한 갈래 · 내려갈수록 셈 · 숨은 미미르의 샘', () => {
   const data = loadData();
   const m = loadMap('yggdrasil');
   const post = name => m.posts.find(p => p.name === name);
   const lv = name => data.ENEMIES.find(e => e.name === name).level;
   const areaName = p => { const k = m.areaAt[(p.y + (p.h >> 1)) * m.w + p.x + (p.w >> 1)]; return k >= 0 ? m.areas[k].name : ''; };
   const routes = {
-    '서쪽 가지': ['바스테트', '아누비스', '포세이돈', '아프로디테', '이시스'],
-    '가운데 줄기': ['헤라', '헤르메스', '아테나', '아폴론', '아르테미스', '헤파이스토스', '아레스', '데메테르', '디오니소스'],
-    '동쪽 가지': ['스사노오', '토르', '아마테라스', '로키'],
+    '서쪽 가지 이집트': ['바스테트', '아누비스', '이시스'],
+    '가운데 줄기 올림포스': ['헤라', '헤르메스', '아테나', '포세이돈', '아폴론', '아르테미스', '아프로디테', '헤파이스토스', '아레스', '데메테르', '디오니소스'],
+    '동쪽 가지 일본': ['스사노오', '아마테라스'],
+    '북유럽 가지': ['토르', '로키'],
     '뿌리 밑': ['디오니소스', '하데스']
   };
   for (const [r, list] of Object.entries(routes)) for (let i = 1; i < list.length; i++)
     assert.ok(lv(list[i]) > lv(list[i - 1]) && post(list[i]).y > post(list[i - 1]).y, `${r}: ${list[i - 1]} → ${list[i]} (셀수록 아래 — 뿌리 쪽)`);
-  for (const name of ['바스테트', '아누비스', '포세이돈', '아프로디테']) assert.ok(areaName(post(name)).startsWith('서쪽 가지'), `${name} 은(는) 서쪽 가지`);
-  for (const name of ['헤르메스', '아테나', '아폴론', '아르테미스', '헤파이스토스', '아레스', '데메테르']) assert.ok(areaName(post(name)).startsWith('줄기'), `${name} 은(는) 줄기`);
-  for (const name of ['스사노오', '토르', '아마테라스']) assert.ok(areaName(post(name)).startsWith('동쪽 가지'), `${name} 은(는) 동쪽 가지`);
+  // 파벌마다 한 갈래 — 올림포스 열한 신(묶음 정예)은 모두 우듬지 · 줄기 · 뿌리 위 (다른 가지에 끼지 않음)
+  const olympians = data.ENEMIES.filter(e => e.rank.n === 16 && e.set === 'olympians').map(e => e.name);
+  assert.equal(olympians.length, 11);
+  for (const name of olympians) assert.ok(/^(우듬지|줄기|뿌리)/.test(areaName(post(name))), `${name} 은(는) 줄기 쪽 (${areaName(post(name))})`);
+  for (const name of ['바스테트', '아누비스']) assert.ok(areaName(post(name)).startsWith('서쪽 가지'), `${name} 은(는) 서쪽 가지`);
+  for (const name of ['스사노오', '아마테라스']) assert.ok(areaName(post(name)).startsWith('동쪽 가지'), `${name} 은(는) 동쪽 가지`);
+  assert.ok(areaName(post('토르')).startsWith('북유럽 가지'), '토르 은(는) 북유럽 가지');
   // 반듯하지 않음 — 줄기가 휘어 있음 (줄기 위 자리들의 가운데가 한 세로줄이 아님)
-  const trunkXs = routes['가운데 줄기'].slice(1, 8).map(n => post(n).x);
+  const trunkXs = routes['가운데 줄기 올림포스'].slice(1, 10).map(n => post(n).x);
   assert.ok(Math.max(...trunkXs) - Math.min(...trunkXs) > 12, '줄기가 휘어 있음');
-  // 우르드의 샘 곁 포세이돈 — 둘레 다섯 칸 안에 물
-  const po = post('포세이돈'); let water = false;
-  for (let y = po.y - 5; y < po.y + po.h + 5; y++) for (let x = po.x - 5; x < po.x + po.w + 5; x++) if (m.tile[y * m.w + x] === gen.WATER) water = true;
-  assert.ok(water, '포세이돈은 우르드의 샘 곁');
+  // 우르드의 샘은 뿌리에 (북유럽의 운명의 샘)
+  const roots = m.areas.find(a => a.name.startsWith('뿌리')); let water = false;
+  for (let k = 0; k < m.w * m.h; k++) if (m.tile[k] === gen.WATER && m.areaAt[k] === roots.index) water = true;
+  assert.ok(water, '뿌리에 우르드의 샘');
   // 세 갈래 — 가지 둘레 높이에서 둘을 막아도 남은 하나로 하데스 앞까지
   const bodies = m.posts.flatMap(q => cellsOf(m, q)), from = [m.start.y * m.w + m.start.x];
   const ha = post('하데스'), front = []; for (let x = ha.x; x < ha.x + ha.w; x++) front.push((ha.y - 1) * m.w + x);
@@ -1406,24 +1411,26 @@ test('16격 이그드라실의 가지 — 우듬지에서 내려와 세 갈래(�
   assert.ok(!next.place && next.to === `${gen.rankMapId(17)}.in`, '문 너머 태초의 바다로 — 장소는 그대로 신들의 시대');
 });
 
-test('17격 태초의 바다 — 타르타로스 해안에서 섬을 건너는 세 갈래(서쪽 땅 · 가운데 깊은 바다 · 동쪽 뱀)가 이미르의 땅에서 만나 갈라진 바다 끝의 티아마트 · 섬은 들쭉날쭉 · 숨은 이미르의 해골 동굴', () => {
+test('17격 태초의 바다 — 타르타로스 해안에서 섬을 건너는 세 갈래(서쪽 묶이고 깔린 것 · 가운데 땅 · 바다 · 하늘의 세 짐승 — 묶음 한 갈래 · 동쪽 뱀)가 이미르의 땅에서 만나 갈라진 바다 끝의 티아마트 · 섬은 들쭉날쭉 · 숨은 이미르의 해골 동굴', () => {
   const data = loadData();
   const m = loadMap('primordial');
   const post = name => m.posts.find(p => p.name === name);
   const lv = name => data.ENEMIES.find(e => e.name === name).level;
   const areaName = p => { const k = m.areaAt[(p.y + (p.h >> 1)) * m.w + p.x + (p.w >> 1)]; return k >= 0 ? m.areas[k].name : ''; };
   const routes = {
-    '서쪽 땅': ['베히모스', '펜리르', '브리트라'],
-    '가운데 바다': ['리바이어던', '티폰', '지즈'],
+    '서쪽 묶이고 깔린 것': ['펜리르', '티폰', '브리트라'],
+    '가운데 세 짐승': ['베히모스', '리바이어던', '지즈'],
     '동쪽 뱀': ['요르문간드', '아포피스', '야마타노오로치'],
     '끝': ['이미르', '티아마트']
   };
   for (const [r, list] of Object.entries(routes)) for (let i = 1; i < list.length; i++)
     assert.ok(lv(list[i]) > lv(list[i - 1]) && post(list[i]).y < post(list[i - 1]).y, `${r}: ${list[i - 1]} → ${list[i]} (셀수록 북쪽)`);
-  for (const r of ['서쪽 땅', '가운데 바다', '동쪽 뱀']) assert.ok(lv(routes[r][routes[r].length - 1]) < lv('이미르'), `${r} 끝보다 이미르가 셈`);
-  const where = { '베히모스': '짓눌린 대지', '펜리르': '묶인 섬 링비', '브리트라': '물이 갇혀 마른 골짜기', '리바이어던': '소용돌이', '티폰': '티폰의 화산섬', '지즈': '하늘에 닿는 바위 기둥',
+  for (const r of ['서쪽 묶이고 깔린 것', '가운데 세 짐승', '동쪽 뱀']) assert.ok(lv(routes[r][routes[r].length - 1]) < lv('이미르'), `${r} 끝보다 이미르가 셈`);
+  const where = { '베히모스': '짓눌린 대지', '펜리르': '묶인 섬 링비', '브리트라': '물이 갇혀 마른 골짜기', '리바이어던': '소용돌이', '티폰': '티폰이 깔린 화산섬', '지즈': '하늘에 닿는 바위 기둥',
     '요르문간드': '제 꼬리를 문 산호 띠', '아포피스': '해가 지는 수평선', '야마타노오로치': '여덟 골짜기 섬', '이미르': '이미르의 땅', '티아마트': '갈라진 바다' };
   for (const [name, a] of Object.entries(where)) assert.equal(areaName(post(name)), a, `${name} 은(는) ${a}`);
+  // 세 짐승(묶음 정예)은 한 갈래 — 셋 모두 가운데
+  for (const e of data.ENEMIES.filter(x => x.rank.n === 17 && x.set === 'primordialBeasts')) assert.ok(Math.abs(post(e.name).x - m.w / 2) < 20, `${e.name} 은(는) 가운데 갈래`);
   // 세 갈래 — 둘을 막아도 남은 하나로 이미르의 땅까지 (갈래 사이 모래톱도 함께 막힘)
   const bodies = m.posts.flatMap(q => cellsOf(m, q)), from = [m.start.y * m.w + m.start.x];
   const goal = [46 * m.w + 92];
