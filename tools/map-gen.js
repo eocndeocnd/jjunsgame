@@ -1739,7 +1739,7 @@ const RANK_MAPS = [
   { id: 'primordial', rank: 17, custom: data => primordialMap(data) }, // 손으로 짠 지도 (PRIMORDIAL)
   { id: 'olympus', rank: 18, custom: data => olympusMap(data) },       // 손으로 짠 지도 (OLYMPUS)
   { id: 'rlyeh', rank: 19, custom: data => rlyehMap(data) },           // 손으로 짠 지도 (RLYEH)
-  { id: 'rank20', rank: 20, temp: true }
+  { id: 'chaos', rank: 20, custom: data => chaosMap(data) }            // 손으로 짠 지도 (CHAOS)
 ];
 const rankMapId = rank => (RANK_MAPS.find(m => m.rank === rank) || {}).id;
 // 장소 — 7~20격을 한 줄로 내리 잇지 않고 장소가 바뀌는 곳에서 나눔 (사용자 결정 2026-11-25). 한 장소 안의 격은 보스 뒤 문으로 바로,
@@ -3027,6 +3027,81 @@ function rlyehMap(data) {
   });
 }
 
+// ---------- 20격 — 궁극의 혼돈 (손으로 짠 지도, 사용자 결정 2026-11-27) ----------
+// 「여기엔 위도 아래도 없다. 신화도 없다. 신화는 인간의 것이니까.」 — 우주 한가운데, 눈먼 백치 신 아자토스의 궁정. 크툴루 무덤 너머 틈으로 혼돈의 바깥 가장자리에 떨어짐.
+// 땅이 없는 어둠 속 크고 작은 조각들, 가는 실 같은 길로 이어짐. 위아래 없이 가장자리에서 중심으로 — 세 소용돌이가 같은 방향으로 휘감기며 빨려 들어감.
+//   첫째 소용돌이(처음의 웅덩이들 — 가장 약함)  슈브니구라스(천 마리 새끼의 검은 염소) → 우보-사틀라(모든 것의 처음이자 끝) → 아브호스(새것을 게워내는 웅덩이)
+//   둘째 소용돌이(시간과 공간 바깥)            다올로스(장막을 찢는 자) → 요그소토스(문이자 열쇠이며 문지기 — 곁에 숨은 은열쇠의 방) → 이브-츠틀(시간 바깥에서 기다리는)
+//   셋째 소용돌이(궁정으로 가는 길 — 가장 셈)  공허의 군주(하나뿐) → 툴주샤(궁정의 초록 불꽃) → 니알라토텝(바깥 신들의 사자) → 그로스(별을 깨우며 떠도는 행성)
+//   중심 — 백치 신의 궁정: 둘레를 돌며 피리를 멈추지 않는 아자토스의 피리꾼(돌아다님) · 한가운데 아자토스 (마지막 — 뒤 문 없음)
+// 바깥 가장자리 실 길이 떨어진 조각에서 둘째 · 셋째 소용돌이 들머리로, 뒤 소용돌이 들머리에서 앞 소용돌이 허리로 실 다리 — 갈래를 바꿀 수 있음.
+// 작은 상자는 아브호스의 웅덩이 가 · 그로스가 떠도는 조각.
+const CHAOS = {
+  W: 204, H: 204, C: [102, 100],
+  arms: [[90, '첫째 소용돌이 — 처음의 웅덩이들'], [210, '둘째 소용돌이 — 시간과 공간 바깥'], [330, '셋째 소용돌이 — 궁정으로 가는 길']],
+  turn: 240, r0: 82, r1: 31, court: 28, strand: 3.2,
+  place: { // 이름 → [소용돌이, 0~1 자리]
+    '슈브니구라스': [0, 0.18], '우보-사틀라': [0, 0.42], '아브호스': [0, 0.82],                  // 실 다리(210 · 330도)가 붙는 허리는 비켜서
+    '다올로스': [1, 0.16], '요그소토스': [1, 0.58], '이브-츠틀': [1, 0.84],
+    '공허의 군주': [2, 0.12], '툴주샤': [2, 0.38], '니알라토텝': [2, 0.64], '그로스': [2, 0.9]
+  },
+  in: [101, 200, 3], start: [102, 190], merchant: [108, 190]
+};
+function chaosMap(data) {
+  const A = CHAOS, [cx, cy] = A.C, rad = d => d * Math.PI / 180;
+  const zi = data.ZONES.findIndex(z => z.rank === 20), foes = data.ENEMIES.filter(e => e.zoneIndex === zi);
+  const armAt = (k, t) => { const th = A.arms[k][0] + A.turn * t, r = A.r0 - (A.r0 - A.r1) * t; return [cx + Math.cos(rad(th)) * r, cy + Math.sin(rad(th)) * r, th, r]; };
+  const polarAt = (th, r) => [cx + Math.cos(rad(th)) * r, cy + Math.sin(rad(th)) * r];
+  const spot = {};
+  for (const [name, [k, t]] of Object.entries(A.place)) { const n = foes.find(e => e.name === name).size, [, , th, r] = armAt(k, t), [x, y] = polarAt(th, r + 6.5); spot[name] = [Math.round(x - n / 2), Math.round(y - n / 2)]; }
+  spot['아자토스'] = [cx - 2, cy - 2];
+  const [kx, ky] = (() => { const [, , th, r] = armAt(1, 0.5); return polarAt(th - 9, r + 15); })();   // 은열쇠의 방 — 요그소토스 곁 바깥쪽
+  const keyRoom = [Math.round(kx) - 6, Math.round(ky) - 5, Math.round(kx) + 6, Math.round(ky) + 5];
+  const chestOff = (k, t) => { const [, , th, r] = armAt(k, t); const [x, y] = polarAt(th, r + 6); return [Math.round(x), Math.round(y)]; };
+  const spec = { ...A, foes: spot, next: null,
+    sections: [['혼돈의 가장자리 — 떨어진 조각', [86, 180, 120, 204]], ['은열쇠의 방', keyRoom]],
+    zones: [['아자토스의 피리꾼', [cx - A.court, cy - A.court, cx + A.court, cy + A.court]]],
+    chests: [chestOff(0, 0.7), chestOff(2, 0.78), [keyRoom[0] + 6, keyRoom[1] + 4, 'big']] };
+  return handMap(data, 20, spec, c => {
+    const { tiles, idx, box, ring, road, secrets, shapes } = c;
+    const W = A.W, H = A.H, noise = valueNoise(20), owner = new Map();
+    const put = (x, y, who) => { x = Math.round(x); y = Math.round(y); if (x < 2 || y < 2 || x >= W - 2 || y >= H - 2) return; const q = idx(x, y); tiles[q] = FLOOR; if (who !== undefined && !owner.has(q)) owner.set(q, who); };
+    const blob = (x0, y0, rx, ry, who) => { for (let y = Math.floor(y0 - ry * 1.4); y <= y0 + ry * 1.4; y++) for (let x = Math.floor(x0 - rx * 1.4); x <= x0 + rx * 1.4; x++) if (Math.hypot((x + 0.5 - x0) / rx, (y + 0.5 - y0) / ry) < 1 + (noise(x * 0.17, y * 0.17) - 0.5) * 0.6) put(x, y, who); };
+    const thread = (pts, who) => { for (let k = 0; k + 1 < pts.length; k++) { const [a, b] = [pts[k], pts[k + 1]], n = Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) * 2); for (let i = 0; i <= n; i++) { const x = a[0] + (b[0] - a[0]) * i / n, y = a[1] + (b[1] - a[1]) * i / n; for (let j = -A.strand / 2; j <= A.strand / 2; j += 0.5) for (let ii = -A.strand / 2; ii <= A.strand / 2; ii += 0.5) if (Math.hypot(ii, j) <= A.strand / 2) put(x + ii, y + j, who); } } };
+    const spiral = (k, t0, t1) => { const pts = []; for (let i = 0; i <= 60; i++) pts.push(armAt(k, t0 + (t1 - t0) * i / 60)); return pts; };
+    const arc = (r, th0, th1) => { const pts = []; for (let i = 0; i <= 50; i++) pts.push(polarAt(th0 + (th1 - th0) * i / 50, r)); return pts; };
+    // 떨어진 조각(들머리) · 세 소용돌이(조각 사슬과 실 길) · 바깥 가장자리 실 길 · 뒤 소용돌이 들머리에서 앞 소용돌이 허리로 실 다리 · 중심 궁정
+    blob(cx, 188, 15, 8, 'edge'); box([A.in[0], 192, A.in[0] + A.in[2], A.in[1] + 1], FLOOR);
+    for (let k = 0; k < 3; k++) {
+      thread(spiral(k, 0, 1), k);
+      for (let i = 0; i <= 6; i++) { const t = i / 6, [x, y, th, r] = armAt(k, t), [bx, by] = polarAt(th, r + 3); blob(bx, by, 9 - t * 2, 8 - t * 2, k); }
+      for (const [n, [kk, t]] of Object.entries(A.place)) if (kk === k) { const [, , th, r] = armAt(k, t), [bx, by] = polarAt(th, r + 6); blob(bx, by, 8, 7, k); }   // 사는 자마다 제 조각
+      for (const t of [k === 0 ? 0.7 : -1, k === 2 ? 0.78 : -1]) if (t >= 0) { const [, , th, r] = armAt(k, t), [bx, by] = polarAt(th, r + 6); blob(bx, by, 6, 5, k); }
+    }
+    thread(arc(A.r0 + 4, 90, 210), 'edge'); thread(arc(A.r0 + 4, 90, -30), 'edge');
+    thread([polarAt(210, A.r0), polarAt(210, A.r0 - (A.r0 - A.r1) * 0.5)], 1); thread([polarAt(330, A.r0), polarAt(330, A.r0 - (A.r0 - A.r1) * 0.5)], 2);
+    blob(cx, cy, A.court, A.court * 0.95, 'court');
+    // 은열쇠의 방 — 요그소토스 곁 바깥쪽에 떠 있는 닫힌 조각, 보이지 않는 실 다리(숨은 샛길)
+    box(keyRoom, FLOOR); ring(keyRoom, WALL);
+    { const [sx, sy] = spot['요그소토스'], x0 = Math.min(sx, keyRoom[0] + 6), x1 = Math.max(sx, keyRoom[0] + 6), ty = keyRoom[3] - 1;
+      const cells = []; for (let y = Math.min(ty, sy - 1); y <= Math.max(ty, sy - 1); y++) cells.push([keyRoom[0] + 6, y]);
+      for (const [x, y] of cells) if (tiles[idx(x, y)] !== FLOOR) tiles[idx(x, y)] = WALL;
+      secrets.push({ name: '숨은 샛길', x: keyRoom[0] + 6, y: Math.min(ty, sy - 1), w: 1, h: Math.abs(sy - 1 - ty) + 1 }); }
+    // 구간 — 소용돌이마다 · 궁정 (조각 모양대로)
+    const names = ['첫째 소용돌이 — 처음의 웅덩이들', '둘째 소용돌이 — 시간과 공간 바깥', '셋째 소용돌이 — 궁정으로 가는 길'];
+    const byWho = {};
+    for (const [q, who] of owner) if (tiles[q] === FLOOR) (byWho[who] = byWho[who] || new Set()).add(q);
+    for (const [who, cells] of Object.entries(byWho)) if (who !== 'edge') shapes.push([who === 'court' ? '백치 신의 궁정' : names[who], solidShape(cells, W)]);
+    // 흙길 — 소용돌이 가운데 실 · 바깥 가장자리 실 · 실 다리 · 들머리에서 첫째 소용돌이로
+    const mark = (x, y) => { for (let j = -1; j <= 0; j++) for (let i = -1; i <= 0; i++) { const q = idx(Math.round(x) + i, Math.round(y) + j); if (tiles[q] === FLOOR) tiles[q] = ROAD; } };
+    const markPts = pts => { for (let k = 0; k + 1 < pts.length; k++) { const [a, b] = [pts[k], pts[k + 1]], n = Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) * 2); for (let i = 0; i <= n; i++) mark(a[0] + (b[0] - a[0]) * i / n, a[1] + (b[1] - a[1]) * i / n); } };
+    for (let k = 0; k < 3; k++) markPts(spiral(k, 0, 1));
+    markPts(arc(A.r0 + 4, 90, 210)); markPts(arc(A.r0 + 4, 90, -30));
+    markPts([polarAt(210, A.r0), polarAt(210, A.r0 - (A.r0 - A.r1) * 0.5)]); markPts([polarAt(330, A.r0), polarAt(330, A.r0 - (A.r0 - A.r1) * 0.5)]);
+    markPts([[cx, 192], polarAt(90, A.r0)]);
+  });
+}
+
 const getFoe = (data, id) => data.ENEMIES.find(e => e.id === id);
 
 // ---------- 도시 — 옛 동네(oldtown) · 헌터들의 도시(city), 회차와 회차 사이에 머무는 곳 (docs/CITY-PLAN.md 1-가) ----------
@@ -3577,4 +3652,4 @@ function allMaps(data) {
   return out;
 }
 
-module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, looksPng, encodePng, generate, sewer, overworld, oldtown, city, deptInterior, dept2Interior, assocInterior, guildInterior, guild2Interior, homeInterior, home2Interior, arenaInterior, bmInterior, gateinInterior, chiefInterior, raidInterior, storeInterior, OLDTOWN, CITY, DEPT, DEPT2, ASSOC, GUILD, GUILD2, HOME, HOME2, ARENA, BM, GATEIN, CHIEF, RAID, W1, W2, W3, SKY, CITY_BIO, secretRoom, buildingInterior, allMaps, layoutFromPlan, RANK_MAPS, rankMapId, hallMap, HALL, PLACES, placeOf, ALEX, alexandriaMap, CAMELOT, camelotMap, AVALON, avalonMap, MURIM, murimMap, TIANSHAN, tianshanMap, SANCTUARY, sanctuaryMap, ELYSIUM, elysiumMap, HEAVEN, heavenMap, INFERNO, infernoMap, YGGDRASIL, yggdrasilMap, PRIMORDIAL, primordialMap, OLYMPUS, olympusMap, RLYEH, rlyehMap, handMap, solidShape, SEWER, SECRET_ROOMS, CAVES, caveMap, BUILDINGS, BUILD, DOORWAY, CARPET, RUIN, UNDERS, ABYSS, DEMON_CASTLE, abyssMap };
+module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, looksPng, encodePng, generate, sewer, overworld, oldtown, city, deptInterior, dept2Interior, assocInterior, guildInterior, guild2Interior, homeInterior, home2Interior, arenaInterior, bmInterior, gateinInterior, chiefInterior, raidInterior, storeInterior, OLDTOWN, CITY, DEPT, DEPT2, ASSOC, GUILD, GUILD2, HOME, HOME2, ARENA, BM, GATEIN, CHIEF, RAID, W1, W2, W3, SKY, CITY_BIO, secretRoom, buildingInterior, allMaps, layoutFromPlan, RANK_MAPS, rankMapId, hallMap, HALL, PLACES, placeOf, ALEX, alexandriaMap, CAMELOT, camelotMap, AVALON, avalonMap, MURIM, murimMap, TIANSHAN, tianshanMap, SANCTUARY, sanctuaryMap, ELYSIUM, elysiumMap, HEAVEN, heavenMap, INFERNO, infernoMap, YGGDRASIL, yggdrasilMap, PRIMORDIAL, primordialMap, OLYMPUS, olympusMap, RLYEH, rlyehMap, CHAOS, chaosMap, handMap, solidShape, SEWER, SECRET_ROOMS, CAVES, caveMap, BUILDINGS, BUILD, DOORWAY, CARPET, RUIN, UNDERS, ABYSS, DEMON_CASTLE, abyssMap };
