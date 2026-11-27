@@ -1317,6 +1317,53 @@ test('14격 일곱 번째 하늘 — 진주 문 섬에서 들쭉날쭉한 구름
   assert.ok(!next.place && next.to === `${gen.rankMapId(15)}.in`, '하늘의 갈라진 틈으로 — 장소는 그대로 하늘과 지옥');
 });
 
+test('15격 얼어붙은 코키토스 — 깔때기로 꺼지는 원 일곱(안쪽일수록 셈, 단테의 죄마다 그 죄의 마신) · 원마다 좌우 어느 쪽으로 돌아도 다음 비탈 · 원 사이 벽은 끊기지 않음 · 한가운데 얼음 둑 끝의 루시퍼 · 숨은 고귀한 이교도들의 성', () => {
+  const data = loadData();
+  const m = loadMap('inferno');
+  const I = gen.INFERNO;
+  const areaName = p => { const k = m.areaAt[(p.y + (p.h >> 1)) * m.w + p.x + (p.w >> 1)]; return k >= 0 ? m.areas[k].name : null; };
+  const post = name => m.posts.find(p => p.name === name);
+  const ringOf = name => I.rings.findIndex(r => r[0] === areaName(post(name)));
+  const sins = { '아스모데우스': '색욕', '벨제부브': '탐식', '아스타로트': '나태', '발람': '말레볼제', '자간': '말레볼제' };
+  for (const [name, sin] of Object.entries(sins)) assert.ok(areaName(post(name)).includes(sin), `${name} 은(는) ${sin}의 원 (${areaName(post(name))})`);
+  // 안쪽 원일수록 셈 — 원마다 가장 약한 자가 바깥 원의 가장 센 자보다 셈
+  const byRing = I.rings.map(() => []);
+  for (const e of data.ENEMIES.filter(x => x.rank.n === 15 && x.kind !== 'boss' && (x.kind !== 'normal' || x.solo))) { const k = ringOf(e.name); assert.ok(k >= 0, `${e.name} 은(는) 어느 원에`); byRing[k].push(e.level); }
+  for (let k = 1; k < byRing.length; k++) assert.ok(Math.min(...byRing[k]) > Math.max(...byRing[k - 1]), `${I.rings[k][0]} 은(는) 바깥 원보다 셈`);
+  // 원마다 좌우 — 원에 들어선 자리와 다음 비탈 사이, 한쪽 반을 끊어도 다른 쪽으로 루시퍼 앞까지
+  const bodies = m.posts.flatMap(q => cellsOf(m, q)), from = [m.start.y * m.w + m.start.x];
+  const lu = post('루시퍼'), front = []; for (let y = lu.y; y < lu.y + lu.h; y++) front.push(y * m.w + lu.x + lu.w);
+  assert.ok(front.some(k => walk(m, from, new Set(bodies))[k] >= 0), '루시퍼 앞까지');
+  const [cx, cy] = I.C;
+  for (let k = 0; k < I.rings.length; k++) {
+    const enter = k === 0 ? I.entry : I.rings[k - 1][3], leave = I.rings[k][3];
+    const mid = (a, b, sgn) => { let d = ((b - a) % 360 + 360) % 360; if (sgn < 0) d -= 360; return a + d / 2; };
+    for (const sgn of [1, -1]) {
+      const cut = mid(enter, leave, sgn), shut = new Set(bodies);
+      for (let y = 0; y < m.h; y++) for (let x = 0; x < m.w; x++) {
+        const dx = x + 0.5 - cx, dy = y + 0.5 - cy, r = Math.hypot(dx, dy), d = Math.atan2(dy, dx) * 180 / Math.PI;
+        const diff = Math.abs(((d - cut) % 360 + 540) % 360 - 180);
+        if (r > I.rings[k][1] - 4 && r < I.rings[k][2] + 4 && diff < 4) shut.add(y * m.w + x);
+      }
+      assert.ok(front.some(q => walk(m, from, shut)[q] >= 0), `${I.rings[k][0]} — ${sgn > 0 ? '한쪽' : '다른 쪽'} 반을 끊어도 루시퍼 앞까지`);
+    }
+  }
+  // 원 사이 벽은 끊기지 않음 — 비탈을 다 막으면 첫째 원 밖으로 못 내려감
+  const shut = new Set(bodies);
+  for (let y = 0; y < m.h; y++) for (let x = 0; x < m.w; x++) {
+    const d = Math.atan2(y + 0.5 - cy, x + 0.5 - cx) * 180 / Math.PI;
+    if (I.rings.some(r => Math.abs(((d - r[3]) % 360 + 540) % 360 - 180) < 6) && Math.hypot(x + 0.5 - cx, y + 0.5 - cy) < I.rings[0][1] + 2) shut.add(y * m.w + x);
+  }
+  const dd = walk(m, from, shut);
+  assert.ok(!(dd[cy * m.w + cx + I.rings[1][2] - 5] >= 0) && !(dd[(cy - I.rings[1][2] + 5) * m.w + cx] >= 0), '비탈 말고는 둘째 원으로 못 내려감');
+  // 숨은 성 · 다음 격
+  const big = m.chests.find(c => c.big), castle = m.areas.find(a => a.name === '고귀한 이교도들의 성');
+  assert.ok(big.x >= castle.x && big.x < castle.x + castle.w && big.y >= castle.y && big.y < castle.y + castle.h, '큰 상자는 숨은 성');
+  const secretCells = []; for (let k = 0; k < m.w * m.h; k++) if (m.secret[k]) secretCells.push(k);
+  assert.ok(secretCells.length && !(walk(m, from, new Set([...bodies, ...secretCells]))[(big.y + 1) * m.w + big.x] >= 0), '샛길 없이는 못 감');
+  assert.equal(m.ports.find(p => p.name === 'next').place, '신들의 시대', '루시퍼 너머 — 장소가 신들의 시대로');
+});
+
 test('조이스틱이 향하는 쪽으로 — 비스듬히 밀면 대각선 · 곧은 걸음을 섞어 그 각도대로 곧게, 대각선도 같은 빠르기', () => {
   const rows = ['########################'];
   for (let y = 0; y < 14; y++) rows.push('#' + (y === 0 ? '@' : '.') + '.'.repeat(21) + '#');
