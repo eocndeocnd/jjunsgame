@@ -2352,7 +2352,10 @@ function sanctuaryMap(data) {
     const disk = (cx, cy, r, t) => { for (let y = Math.floor(cy - r); y <= cy + r; y++) for (let x = Math.floor(cx - r); x <= cx + r; x++) if (Math.hypot(x + 0.5 - cx, y + 0.5 - cy) < r) tiles[idx(x, y)] = t; };
     // 땅 — 남쪽 성스러운 숲 · 북쪽 세상 끝 광장, 세 갈래를 가르는 바위 등성이 둘. 구름 계단으로 들어섬
     box(A.south, FLOOR); box(A.plaza, FLOOR); box(A.center, FLOOR); box(A.east, FLOOR);
-    for (const r of A.ridges) box(r, ROCK);
+    const [rw, re] = A.ridges;                                                             // 굽이치는 바위 등성이 (곁 틈은 땅으로 메우고)
+    box(rw, FLOOR); box(re, FLOOR);
+    wavyBand(c, { vertical: true, from: rw[1], to: rw[3], at: 50, half: 1.6, amp: 2, period: 5, tile: ROCK, seed: 121 });
+    wavyBand(c, { vertical: true, from: re[1], to: re[3], at: 100, half: 1.6, amp: 2, period: 6, tile: ROCK, seed: 122, phase: 2 });
     box([A.in[0], A.south[3], A.in[0] + A.in[2], A.in[1] + 1], FLOOR);
     // 서쪽 바다의 과업 — 바다 위 섬들을 여울 · 모래톱으로 건넘. 크레타 섬 서쪽에 다이달로스의 미궁 (바깥 벽 동쪽 숨은 샛길, 안쪽 고리는 북쪽만 트임)
     box(A.westSea, WATER); box(A.crete, FLOOR); box(A.creteFord, FLOOR); box(A.strait, FLOOR); box(A.shoal, FLOOR); box(A.erytheia, FLOOR); box(A.westShore, FLOOR);
@@ -2361,11 +2364,13 @@ function sanctuaryMap(data) {
     // 가운데 신성한 짐승 — 히포크레네 샘 · 테베 성벽과 성문 · 재의 제단 · 바람 절벽 바위
     disk(A.spring[0], A.spring[1], A.spring[2], WATER);
     box(A.thebes, WALL); box(A.thebesGate, FLOOR);
+    for (let y = A.thebes[1]; y < A.thebes[3]; y++) for (const [x0, dx] of [[A.thebes[0] - 1, -1], [A.thebes[2], 1]]) for (let x = x0; tiles[idx(x, y)] === FLOOR; x += dx) tiles[idx(x, y)] = WALL;   // 성벽은 등성이에 닿게
     box([A.altar[0], A.altar[1], A.altar[0] + 2, A.altar[1] + 2], ROCK);
     for (const [x, y] of A.crags) box([x, y, x + 2, y + 2], ROCK);
     // 동쪽 땅의 과업 — 네메아의 사자 굴(바위 테, 서쪽 입구) · 스팀팔로스 늪 웅덩이 · 트라키아 마구간(담, 서문)
     ring(A.lionDen, ROCK); box([A.lionDen[0], 119, A.lionDen[0] + 1, 124], FLOOR);
-    for (const r of A.marsh) box(r, WATER);
+    for (const [x0, y0, x1, y1] of A.marsh) { const ex = (x0 + x1) / 2, ey = (y0 + y1) / 2, rx = (x1 - x0) / 2 + 0.5, ry = (y1 - y0) / 2 + 0.5;   // 늪 웅덩이 — 둥글게
+      for (let y = y0 - 1; y <= y1; y++) for (let x = x0 - 1; x <= x1; x++) if (((x + 0.5 - ex) / rx) ** 2 + ((y + 0.5 - ey) / ry) ** 2 < 1) tiles[idx(x, y)] = WATER; }
     ring(A.stable, WALL); box([A.stable[0], 41, A.stable[0] + 1, 46], FLOOR);
     // 세상 끝 — 저승 어귀(타이나론 동굴의 바위 절벽) · 황금 사과나무 · 잊혀진 신전(담, 남문 · 뒷문, 기둥) · 엘리시온으로 가는 문의 방
     box(A.hades, ROCK); tiles[idx(A.apple[0], A.apple[1])] = TREE;
@@ -2379,6 +2384,20 @@ function sanctuaryMap(data) {
     const nearRoad = (x, y) => { for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) if (tiles[idx(x + i, y + j)] === ROAD) return true; return false; };
     const keep = (x, y) => nearFoe(A, x, y, 3) || nearRoad(x, y) || A.chests.some(([cx, cy]) => Math.abs(x - cx) <= 2 && Math.abs(y - cy) <= 2) || Math.abs(y - A.in[1]) < 12 && Math.abs(x - 75) < 8;
     scatterTrees(c, [54, 138, 96, 162], keep, 12, 0.1); scatterTrees(c, [102, 90, 142, 110], keep, 13, 0.16);
+    // 마지막 손질 — 섬 바닷가 · 늪가 · 땅 가장자리를 들쭉날쭉하게 (미궁 · 신전 · 마구간 · 사자 굴 · 길 · 자리 · 상자 · 여울 곁은 그대로)
+    const inR = (r, x, y, m) => x >= r[0] - m && x < r[2] + m && y >= r[1] - m && y < r[3] + m;
+    const built = [A.labyrinth, A.temple, A.stable, A.lionDen, A.creteFord, A.strait, A.shoal, A.westShore, [A.in[0] - 8, A.south[3] - 14, A.in[0] + 11, A.in[1] + 1]];
+    const wild = (x, y) => keep(x, y) || nearTile(c, ROAD, x, y, 2) || built.some(r => inR(r, x, y, 2));
+    const isle = (x, y) => keep(x, y) || inR(A.labyrinth, x, y, 1) || inR(A.creteFord, x, y, 1) || inR(A.strait, x, y, 1) || inR(A.shoal, x, y, 1) || inR(A.westShore, x, y, 1);   // 섬은 길 곁까지 깎임
+    naturalize(c, A.erytheia, 'ws', 8, WATER, 129, isle); naturalize(c, A.erytheia, 'e', 3, WATER, 130, isle);
+    naturalize(c, A.crete, 'wns', 7, WATER, 131, isle); naturalize(c, A.crete, 'e', 3, WATER, 132, isle);
+    erodeShore(c, [A.westSea[0], A.westSea[1], A.ridges[0][0], A.westSea[3]], WATER, 2.5, 124, isle);
+    { const n = valueNoise(133); for (let y = A.westSea[1]; y < A.westSea[3]; y++) for (let x = A.westSea[0]; x < A.crete[0]; x++) if (tiles[idx(x, y)] === WATER && x - A.westSea[0] < 3.5 * n(x * 0.2, y * 0.1)) tiles[idx(x, y)] = WALL; }   // 바다 서쪽 끝
+    naturalize(c, [A.south[0], A.south[1], A.ridges[0][0], A.south[1] + 6], 'n', 4, WATER, 134, wild);                       // 숲의 북쪽 바닷가
+    erodeShore(c, A.east, WATER, 2, 125, wild);
+    naturalize(c, A.south, 'wes', 7, WALL, 126, wild);
+    naturalize(c, A.plaza, 'nwe', 6, WALL, 127, wild);
+    naturalize(c, A.east, 'e', 6, WALL, 128, wild);
   });
 }
 
