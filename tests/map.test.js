@@ -1268,6 +1268,50 @@ test('13격 엘리시온 평원 — 레테 강을 건너 세 갈래(서쪽 그�
   assert.equal(m.ports.find(p => p.name === 'next').place, '하늘과 지옥', '헤라클레스 뒤 — 장소가 하늘과 지옥으로');
 });
 
+test('14격 일곱 번째 하늘 — 진주 문에서 구름 층을 하나씩 오름: 층마다 대천사 하나(그 층에서 가장 셈, 가운데 뒤)와 낮은 품계부터 나눈 성가대 · 층 사이 서쪽 · 동쪽 두 문 · 일곱째 하늘 왕좌 앞 미카엘 · 숨은 에덴동산', () => {
+  const data = loadData();
+  const m = loadMap('heaven');
+  const sec = name => m.areas.find(a => a.section && a.name === name);
+  const inside = (p, a) => p.x >= a.x && p.y >= a.y && p.x + p.w <= a.x + a.w && p.y + p.h <= a.y + a.h;
+  const lv = e => e.level;
+  const foes = data.ENEMIES.filter(e => e.rank.n === 14);
+  const spot = e => m.posts.find(p => p.enemy === e.id) || m.areas.find(a => a.monster === e.id);
+  let below = -Infinity;
+  for (const [name, , , angel] of gen.HEAVEN.tiers) {
+    const t = sec(name), mine = foes.filter(e => e.kind !== 'boss' && inside(spot(e), t));
+    const a = mine.find(e => e.name === angel);
+    assert.ok(a && a.kind === 'elite', `${name} — ${angel}`);
+    assert.ok(mine.every(e => e === a || lv(e) < lv(a)), `${name} — ${angel} 이(가) 그 층에서 가장 셈`);
+    assert.ok(Math.min(...mine.map(lv)) > below, `${name} 은(는) 아래층보다 셈`);
+    below = Math.max(...mine.map(lv));
+    const p = spot(a);
+    for (const e of mine.filter(q => q !== a)) { const z = spot(e); assert.ok(p.y < z.y + z.h / 2, `${angel} 은(는) ${e.name} 보다 뒤(북쪽)`); }
+    assert.ok(Math.abs(p.x + p.w / 2 - m.w / 2) < 6, `${angel} 은(는) 가운데`);
+  }
+  assert.equal(foes.filter(e => e.kind === 'normal').length, m.areas.filter(a => a.monster).length, '아홉 품계 성가대 — 층마다 돌아다님');
+  // 두 문 — 층마다 서쪽 문만 막아도 · 동쪽 문만 막아도 미카엘 앞까지
+  const bodies = m.posts.flatMap(q => cellsOf(m, q)), from = [m.start.y * m.w + m.start.x];
+  const mi = m.posts.find(p => p.name === '미카엘'), front = []; for (let x = mi.x; x < mi.x + mi.w; x++) front.push((mi.y + mi.h) * m.w + x);
+  for (const [g0, g1] of gen.HEAVEN.gates) {
+    const shut = new Set(bodies);
+    for (const [, , y1] of gen.HEAVEN.tiers.slice(1)) for (let y = y1; y < y1 + 3; y++) for (let x = g0; x < g1; x++) shut.add(y * m.w + x);   // 둘째 하늘부터 — 제 아래 구름 벽의 문
+    for (let y = gen.HEAVEN.throne[3]; y < gen.HEAVEN.tiers[5][1]; y++) for (let x = g0; x < g1; x++) shut.add(y * m.w + x);
+    assert.ok(front.some(k => walk(m, from, shut)[k] >= 0), `${g0 < 70 ? '서쪽' : '동쪽'} 문을 다 막아도 다른 쪽 문으로 미카엘 앞까지`);
+  }
+  for (const p of m.posts.filter(q => q.name !== '미카엘')) {
+    let open = 0, all = 0;
+    for (let y = p.y - 3; y < p.y + p.h + 3; y++) for (let x = p.x - 3; x < p.x + p.w + 3; x++) { all++; if (!m.solid[y * m.w + x]) open++; }
+    assert.ok(open / all > 0.75, `${p.name} — 트인 땅 (${Math.round(open / all * 100)}%)`);
+  }
+  const big = m.chests.find(c => c.big);
+  assert.ok(inside({ x: big.x, y: big.y, w: 1, h: 1 }, sec('에덴동산')), '큰 상자는 에덴동산');
+  assert.ok(inside(sec('에덴동산'), { x: 0, y: sec('다섯째 하늘').y, w: m.w, h: sec('다섯째 하늘').h }), '에덴은 다섯째 하늘 곁');
+  const secretCells = []; for (let k = 0; k < m.w * m.h; k++) if (m.secret[k]) secretCells.push(k);
+  assert.ok(secretCells.length && !(walk(m, from, new Set([...bodies, ...secretCells]))[(big.y + 1) * m.w + big.x] >= 0), '샛길 없이는 못 감');
+  const next = m.ports.find(p => p.name === 'next');
+  assert.ok(!next.place && next.to === `${gen.rankMapId(15)}.in`, '하늘의 갈라진 틈으로 — 장소는 그대로 하늘과 지옥');
+});
+
 test('조이스틱이 향하는 쪽으로 — 비스듬히 밀면 대각선 · 곧은 걸음을 섞어 그 각도대로 곧게, 대각선도 같은 빠르기', () => {
   const rows = ['########################'];
   for (let y = 0; y < 14; y++) rows.push('#' + (y === 0 ? '@' : '.') + '.'.repeat(21) + '#');

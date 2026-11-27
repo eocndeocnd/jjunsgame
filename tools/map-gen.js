@@ -1711,7 +1711,7 @@ function buildingInterior(data, b) {
   return buildTmj({ w: W, h: H, tiles, posts, ports, npcs: [{ name: 'start', x: out.x + (out.w >> 1), y: out.y - 1 }], look: lk, props: { title: b.title, interior: true } });
 }
 
-// ---------- 아직 손으로 짜지 않은 격의 임시 지도 (14격부터 — 하나씩 컨셉 논리대로 손으로 짠 지도로 바꿀 자리, docs/MAP-7PLUS-PLAN.md) ----------
+// ---------- 아직 손으로 짜지 않은 격의 임시 지도 (15격부터 — 하나씩 컨셉 논리대로 손으로 짠 지도로 바꿀 자리, docs/MAP-7PLUS-PLAN.md) ----------
 // 들머리(남쪽 끝 광장) → 레벨 순으로: 돌아다니는 일반의 방(구역) · 하나뿐인 일반의 벽감(길 벽에 오목하게) · 정예의 곁방(고리 —
 // 길에서 아래 문으로 들어가 위 문으로 다시 길에) → 북쪽 끝 보스가 꼭 맞게 막은 틈 → 그 너머 끝 방(히든 · 다음 격으로 가는 문).
 // 앞 격 보스 뒤 문으로 들어와 이 격 보스 뒤 문으로 나가므로 되돌아 걷지 않습니다 (사용자 결정 2026-11-24 — 문의 광장 없앰).
@@ -1733,7 +1733,8 @@ const RANK_MAPS = [
   { id: 'tianshan', rank: 11, custom: data => tianshanMap(data) },  // 손으로 짠 지도 (TIANSHAN)
   { id: 'sanctuary', rank: 12, custom: data => sanctuaryMap(data) }, // 손으로 짠 지도 (SANCTUARY)
   { id: 'elysium', rank: 13, custom: data => elysiumMap(data) },     // 손으로 짠 지도 (ELYSIUM)
-  ...Array.from({ length: 7 }, (_, i) => ({ id: `rank${i + 14}`, rank: i + 14, temp: true }))
+  { id: 'heaven', rank: 14, custom: data => heavenMap(data) },       // 손으로 짠 지도 (HEAVEN)
+  ...Array.from({ length: 6 }, (_, i) => ({ id: `rank${i + 15}`, rank: i + 15, temp: true }))
 ];
 const rankMapId = rank => (RANK_MAPS.find(m => m.rank === rank) || {}).id;
 // 장소 — 7~20격을 한 줄로 내리 잇지 않고 장소가 바뀌는 곳에서 나눔 (사용자 결정 2026-11-25). 한 장소 안의 격은 보스 뒤 문으로 바로,
@@ -2413,6 +2414,69 @@ function elysiumMap(data) {
   });
 }
 
+// ---------- 14격 — 일곱 번째 하늘 (손으로 짠 지도, 사용자 결정 2026-11-27) ----------
+// 「노래가 한 번도 멈춘 적 없는 곳. 아홉 겹의 성가대가 문을 지킨다.」 — 전승의 일곱 겹 하늘, 겹마다 대천사 하나가 다스림 (대천사도 일곱 — 정예 여섯 + 보스 미카엘).
+// 헤라클레스의 하늘 계단으로 남쪽 진주 문에 닿아 구름 층을 하나씩 오름 — 아홉 품계 성가대를 낮은 품계부터 층마다 나누면 그 층 대천사가 그 층에서 가장 셈.
+//   첫째 하늘 수호천사 · 권천사 + 라파엘(치유의 샘)    둘째 하늘 능천사 · 나팔의 천사 + 우리엘(불꽃 제단)    셋째 하늘 역천사 · 주천사 + 라구엘(심판석)
+//   넷째 하늘 좌천사 + 가브리엘(하늘 문)               다섯째 하늘 지품천사 + 사리엘(달빛 관측대)          여섯째 하늘 치품천사 + 레미엘(부활의 정원)
+//   일곱째 하늘 미카엘 — 왕좌 앞, 뒤의 「하늘의 갈라진 틈」(루시퍼가 떨어진 곳)을 막음 → 15격 얼어붙은 코키토스 (장소는 그대로 하늘과 지옥).
+// 층 사이는 구름 벽, 성가대가 지키는 문이 서쪽 · 동쪽 두 곳 — 어느 문으로 오를지 고름. 대천사는 두 문 사이 가운데 뒤(북쪽)에 서서 길을 막지 않음.
+//   숨은 곳 — 다섯째 하늘 동쪽 구름 너머의 에덴동산 (지품천사가 불칼로 지키는 그 동산 — 숨은 샛길, 생명나무 열매 — 큰 상자). 작은 상자는 둘째 하늘(일곱 나팔) · 넷째 하늘(바퀴 곁).
+const HEAVEN = {
+  W: 150, H: 232,
+  plaza: [48, 214, 92, 226], pearlGate: [64, 76],
+  tiers: [ // [이름, y0, y1, 대천사]
+    ['첫째 하늘', 182, 211, '라파엘'], ['둘째 하늘', 150, 179, '우리엘'], ['셋째 하늘', 118, 147, '라구엘'],
+    ['넷째 하늘', 90, 115, '가브리엘'], ['다섯째 하늘', 62, 87, '사리엘'], ['여섯째 하늘', 34, 59, '레미엘']],
+  field: [10, 130], gates: [[30, 40], [101, 111]], throne: [30, 12, 110, 31], rift: [68, 4, 72, 12],
+  spring: [82, 192, 3], altar: [58, 158], seat: [78, 124], arch: [[60, 94], [78, 94]], observatory: [86, 68, 96, 78], eden: [132, 64, 148, 86],
+  in: [69, 227, 3], next: [68, 3, 4], start: [70, 222], merchant: [80, 220],
+  foes: {
+    '라파엘': [69, 186], '우리엘': [69, 154], '라구엘': [69, 122], '가브리엘': [69, 94], '사리엘': [69, 66], '레미엘': [69, 38], '미카엘': [68, 8]
+  },
+  sections: [['진주 문', [48, 211, 92, 230]], ['첫째 하늘', [10, 182, 130, 211]], ['둘째 하늘', [10, 150, 130, 179]], ['셋째 하늘', [10, 118, 130, 147]],
+    ['넷째 하늘', [10, 90, 130, 115]], ['다섯째 하늘', [10, 62, 130, 87]], ['에덴동산', 'eden'], ['여섯째 하늘', [10, 34, 130, 59]], ['일곱째 하늘 — 왕좌', [30, 2, 110, 31]]],
+  zones: [['수호천사', [12, 184, 62, 209]], ['권천사', [78, 184, 128, 209]], ['능천사', [12, 152, 62, 177]], ['나팔의 천사', [78, 152, 128, 177]],
+    ['역천사', [12, 120, 62, 145]], ['주천사', [78, 120, 128, 145]], ['좌천사', [12, 92, 128, 113]], ['지품천사', [12, 64, 128, 85]], ['치품천사', [12, 36, 128, 57]]],
+  chests: [[16, 154], [124, 94], [140, 75, 'big']]
+};
+function heavenMap(data) {
+  const A = HEAVEN;
+  return handMap(data, 14, A, c => {
+    const { tiles, idx, box, ring, road, secrets } = c;
+    const disk = (cx, cy, r, t) => { for (let y = Math.floor(cy - r); y <= cy + r; y++) for (let x = Math.floor(cx - r); x <= cx + r; x++) if (Math.hypot(x + 0.5 - cx, y + 0.5 - cy) < r) tiles[idx(x, y)] = t; };
+    const [fx0, fx1] = A.field;
+    // 진주 문 앞 광장 — 첫째 하늘로 드는 진주 문 하나
+    box(A.plaza, FLOOR); box([A.in[0], A.plaza[3], A.in[0] + A.in[2], A.in[1] + 1], FLOOR);
+    box([A.pearlGate[0], A.tiers[0][2], A.pearlGate[1], A.plaza[1]], FLOOR);
+    // 구름 층 여섯 — 층 사이 구름 벽의 서쪽 · 동쪽 문 (여섯째 하늘 위로는 일곱째 하늘)
+    for (const [, y0, y1] of A.tiers) {
+      box([fx0, y0, fx1, y1], FLOOR);
+      for (const [g0, g1] of A.gates) box([g0, y1, g1, y1 === A.tiers[0][2] ? y1 : y1 + 3], FLOOR);
+    }
+    for (const [g0, g1] of A.gates) box([g0, A.throne[3], g1, A.tiers[5][1]], FLOOR);
+    // 층마다 상징 — 치유의 샘 · 불꽃 제단 · 심판석 · 하늘 문 기둥 · 달빛 관측대(바위 고리) · 부활의 정원(나무)
+    disk(A.spring[0], A.spring[1], A.spring[2], WATER);
+    box([A.altar[0], A.altar[1], A.altar[0] + 2, A.altar[1] + 2], ROCK);
+    box([A.seat[0], A.seat[1], A.seat[0] + 2, A.seat[1] + 2], ROCK);
+    for (const [x, y] of A.arch) box([x, y, x + 2, y + 2], ROCK);
+    ring(A.observatory, ROCK); box([A.observatory[0], 72, A.observatory[0] + 1, 75], FLOOR);
+    // 에덴동산 — 다섯째 하늘 동쪽 구름 너머 (구름 벽 속 숨은 샛길)
+    box(A.eden, FLOOR); ring(A.eden, WALL);
+    secrets.push({ name: '숨은 샛길', x: fx1, y: 72, w: A.eden[0] - fx1 + 1, h: 2 });
+    // 일곱째 하늘 — 왕좌의 방(기둥), 그 뒤 하늘의 갈라진 틈 (미카엘이 막음)
+    box(A.throne, FLOOR);
+    for (const [x, y] of [[50, 15], [88, 15], [50, 25], [88, 25]]) box([x, y, x + 2, y + 2], ROCK);
+    box(A.rift, FLOOR); box([A.next[0], A.next[1], A.next[0] + A.next[2], A.next[1] + 1], FLOOR);
+    // 흙길 — 진주 문 → 첫째 하늘 가로 길 → 서쪽 · 동쪽 오르는 길 → 왕좌 앞 가로 길 → 틈
+    road([69, A.tiers[0][2] - 6, 72, A.in[1] + 1]); road([33, A.tiers[0][2] - 6, 107, A.tiers[0][2] - 3]);
+    road([33, 20, 37, A.tiers[0][2] - 3]); road([103, 20, 107, A.tiers[0][2] - 3]); road([33, 20, 107, 24]); road([68, 8, 72, 24]);
+    // 부활의 정원 나무 (길 · 자리 곁은 비움)
+    const nearRoad = (x, y) => { for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) if (tiles[idx(x + i, y + j)] === ROAD) return true; return false; };
+    scatterTrees(c, [40, 36, 100, 57], (x, y) => nearFoe(A, x, y, 3) || nearRoad(x, y), 15, 0.08);
+  });
+}
+
 const getFoe = (data, id) => data.ENEMIES.find(e => e.id === id);
 
 // ---------- 도시 — 옛 동네(oldtown) · 헌터들의 도시(city), 회차와 회차 사이에 머무는 곳 (docs/CITY-PLAN.md 1-가) ----------
@@ -2963,4 +3027,4 @@ function allMaps(data) {
   return out;
 }
 
-module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, looksPng, encodePng, generate, sewer, overworld, oldtown, city, deptInterior, dept2Interior, assocInterior, guildInterior, guild2Interior, homeInterior, home2Interior, arenaInterior, bmInterior, gateinInterior, chiefInterior, raidInterior, storeInterior, OLDTOWN, CITY, DEPT, DEPT2, ASSOC, GUILD, GUILD2, HOME, HOME2, ARENA, BM, GATEIN, CHIEF, RAID, W1, W2, W3, SKY, CITY_BIO, secretRoom, buildingInterior, allMaps, layoutFromPlan, RANK_MAPS, rankMapId, hallMap, HALL, PLACES, placeOf, ALEX, alexandriaMap, CAMELOT, camelotMap, AVALON, avalonMap, MURIM, murimMap, TIANSHAN, tianshanMap, SANCTUARY, sanctuaryMap, ELYSIUM, elysiumMap, handMap, SEWER, SECRET_ROOMS, CAVES, caveMap, BUILDINGS, BUILD, DOORWAY, CARPET, RUIN, UNDERS, ABYSS, DEMON_CASTLE, abyssMap };
+module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, looksPng, encodePng, generate, sewer, overworld, oldtown, city, deptInterior, dept2Interior, assocInterior, guildInterior, guild2Interior, homeInterior, home2Interior, arenaInterior, bmInterior, gateinInterior, chiefInterior, raidInterior, storeInterior, OLDTOWN, CITY, DEPT, DEPT2, ASSOC, GUILD, GUILD2, HOME, HOME2, ARENA, BM, GATEIN, CHIEF, RAID, W1, W2, W3, SKY, CITY_BIO, secretRoom, buildingInterior, allMaps, layoutFromPlan, RANK_MAPS, rankMapId, hallMap, HALL, PLACES, placeOf, ALEX, alexandriaMap, CAMELOT, camelotMap, AVALON, avalonMap, MURIM, murimMap, TIANSHAN, tianshanMap, SANCTUARY, sanctuaryMap, ELYSIUM, elysiumMap, HEAVEN, heavenMap, handMap, SEWER, SECRET_ROOMS, CAVES, caveMap, BUILDINGS, BUILD, DOORWAY, CARPET, RUIN, UNDERS, ABYSS, DEMON_CASTLE, abyssMap };
