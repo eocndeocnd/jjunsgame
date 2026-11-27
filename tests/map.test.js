@@ -1364,6 +1364,48 @@ test('15격 얼어붙은 코키토스 — 깔때기로 꺼지는 원 일곱(안�
   assert.equal(m.ports.find(p => p.name === 'next').place, '신들의 시대', '루시퍼 너머 — 장소가 신들의 시대로');
 });
 
+test('16격 이그드라실의 가지 — 우듬지에서 내려와 세 갈래(서쪽 가지 이집트 · 가운데 줄기 올림포스 · 동쪽 가지 해와 천둥)가 뿌리에서 만나 하데스가 막은 돌아온 자가 없는 문 · 내려갈수록 셈 · 숨은 미미르의 샘', () => {
+  const data = loadData();
+  const m = loadMap('yggdrasil');
+  const post = name => m.posts.find(p => p.name === name);
+  const lv = name => data.ENEMIES.find(e => e.name === name).level;
+  const areaName = p => { const k = m.areaAt[(p.y + (p.h >> 1)) * m.w + p.x + (p.w >> 1)]; return k >= 0 ? m.areas[k].name : ''; };
+  const routes = {
+    '서쪽 가지': ['바스테트', '아누비스', '포세이돈', '아프로디테', '이시스'],
+    '가운데 줄기': ['헤라', '헤르메스', '아테나', '아폴론', '아르테미스', '헤파이스토스', '아레스', '데메테르', '디오니소스'],
+    '동쪽 가지': ['스사노오', '토르', '아마테라스', '로키'],
+    '뿌리 밑': ['디오니소스', '하데스']
+  };
+  for (const [r, list] of Object.entries(routes)) for (let i = 1; i < list.length; i++)
+    assert.ok(lv(list[i]) > lv(list[i - 1]) && post(list[i]).y > post(list[i - 1]).y, `${r}: ${list[i - 1]} → ${list[i]} (셀수록 아래 — 뿌리 쪽)`);
+  for (const name of ['바스테트', '아누비스', '포세이돈', '아프로디테']) assert.ok(areaName(post(name)).startsWith('서쪽 가지'), `${name} 은(는) 서쪽 가지`);
+  for (const name of ['헤르메스', '아테나', '아폴론', '아르테미스', '헤파이스토스', '아레스', '데메테르']) assert.ok(areaName(post(name)).startsWith('줄기'), `${name} 은(는) 줄기`);
+  for (const name of ['스사노오', '토르', '아마테라스']) assert.ok(areaName(post(name)).startsWith('동쪽 가지'), `${name} 은(는) 동쪽 가지`);
+  // 반듯하지 않음 — 줄기가 휘어 있음 (줄기 위 자리들의 가운데가 한 세로줄이 아님)
+  const trunkXs = routes['가운데 줄기'].slice(1, 8).map(n => post(n).x);
+  assert.ok(Math.max(...trunkXs) - Math.min(...trunkXs) > 12, '줄기가 휘어 있음');
+  // 우르드의 샘 곁 포세이돈 — 둘레 다섯 칸 안에 물
+  const po = post('포세이돈'); let water = false;
+  for (let y = po.y - 5; y < po.y + po.h + 5; y++) for (let x = po.x - 5; x < po.x + po.w + 5; x++) if (m.tile[y * m.w + x] === gen.WATER) water = true;
+  assert.ok(water, '포세이돈은 우르드의 샘 곁');
+  // 세 갈래 — 가지 둘레 높이에서 둘을 막아도 남은 하나로 하데스 앞까지
+  const bodies = m.posts.flatMap(q => cellsOf(m, q)), from = [m.start.y * m.w + m.start.x];
+  const ha = post('하데스'), front = []; for (let x = ha.x; x < ha.x + ha.w; x++) front.push((ha.y - 1) * m.w + x);
+  const band = (x0, x1) => { const out = []; for (let y = 136; y < 142; y++) for (let x = x0; x < x1; x++) out.push(y * m.w + x); return out; };
+  const lanes = { 서: band(0, 62), 가운데: band(62, 114), 동: band(114, m.w) };
+  for (const keep of Object.keys(lanes)) {
+    const shut = new Set([...bodies, ...Object.entries(lanes).filter(([k]) => k !== keep).flatMap(([, c]) => c)]);
+    assert.ok(front.some(k => walk(m, from, shut)[k] >= 0), `${keep}쪽 갈래만으로 하데스 앞까지`);
+  }
+  const big = m.chests.find(c => c.big), well = m.areas.find(a => a.name === '미미르의 샘');
+  assert.ok(big.x >= well.x && big.x < well.x + well.w && big.y >= well.y && big.y < well.y + well.h, '큰 상자는 미미르의 샘');
+  const secretCells = []; for (let k = 0; k < m.w * m.h; k++) if (m.secret[k]) secretCells.push(k);
+  assert.ok(secretCells.length && !(walk(m, from, new Set([...bodies, ...secretCells]))[(big.y + 1) * m.w + big.x] >= 0), '샛길 없이는 못 감');
+  assert.ok(walk(m, from, new Set(bodies))[(big.y + 1) * m.w + big.x] >= 0, '샛길로 닿음');
+  const next = m.ports.find(p => p.name === 'next');
+  assert.ok(!next.place && next.to === `${gen.rankMapId(17)}.in`, '문 너머 태초의 바다로 — 장소는 그대로 신들의 시대');
+});
+
 test('조이스틱이 향하는 쪽으로 — 비스듬히 밀면 대각선 · 곧은 걸음을 섞어 그 각도대로 곧게, 대각선도 같은 빠르기', () => {
   const rows = ['########################'];
   for (let y = 0; y < 14; y++) rows.push('#' + (y === 0 ? '@' : '.') + '.'.repeat(21) + '#');

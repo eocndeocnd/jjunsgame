@@ -1711,7 +1711,7 @@ function buildingInterior(data, b) {
   return buildTmj({ w: W, h: H, tiles, posts, ports, npcs: [{ name: 'start', x: out.x + (out.w >> 1), y: out.y - 1 }], look: lk, props: { title: b.title, interior: true } });
 }
 
-// ---------- 아직 손으로 짜지 않은 격의 임시 지도 (16격부터 — 하나씩 컨셉 논리대로 손으로 짠 지도로 바꿀 자리, docs/MAP-7PLUS-PLAN.md) ----------
+// ---------- 아직 손으로 짜지 않은 격의 임시 지도 (17격부터 — 하나씩 컨셉 논리대로 손으로 짠 지도로 바꿀 자리, docs/MAP-7PLUS-PLAN.md) ----------
 // 들머리(남쪽 끝 광장) → 레벨 순으로: 돌아다니는 일반의 방(구역) · 하나뿐인 일반의 벽감(길 벽에 오목하게) · 정예의 곁방(고리 —
 // 길에서 아래 문으로 들어가 위 문으로 다시 길에) → 북쪽 끝 보스가 꼭 맞게 막은 틈 → 그 너머 끝 방(히든 · 다음 격으로 가는 문).
 // 앞 격 보스 뒤 문으로 들어와 이 격 보스 뒤 문으로 나가므로 되돌아 걷지 않습니다 (사용자 결정 2026-11-24 — 문의 광장 없앰).
@@ -1735,7 +1735,8 @@ const RANK_MAPS = [
   { id: 'elysium', rank: 13, custom: data => elysiumMap(data) },     // 손으로 짠 지도 (ELYSIUM)
   { id: 'heaven', rank: 14, custom: data => heavenMap(data) },       // 손으로 짠 지도 (HEAVEN)
   { id: 'inferno', rank: 15, custom: data => infernoMap(data) },     // 손으로 짠 지도 (INFERNO)
-  ...Array.from({ length: 5 }, (_, i) => ({ id: `rank${i + 16}`, rank: i + 16, temp: true }))
+  { id: 'yggdrasil', rank: 16, custom: data => yggdrasilMap(data) }, // 손으로 짠 지도 (YGGDRASIL)
+  ...Array.from({ length: 4 }, (_, i) => ({ id: `rank${i + 17}`, rank: i + 17, temp: true }))
 ];
 const rankMapId = rank => (RANK_MAPS.find(m => m.rank === rank) || {}).id;
 // 장소 — 7~20격을 한 줄로 내리 잇지 않고 장소가 바뀌는 곳에서 나눔 (사용자 결정 2026-11-25). 한 장소 안의 격은 보스 뒤 문으로 바로,
@@ -2662,6 +2663,102 @@ function infernoMap(data) {
   });
 }
 
+// ---------- 16격 — 이그드라실의 가지 (손으로 짠 지도, 사용자 결정 2026-11-27) ----------
+// 「아홉 세계가 이 나무 하나에 매달려 있다. 어느 신화든 여기서 만난다.」 — 세계수에 여러 신화의 신들이 가지마다 매달려 삶.
+// 루시퍼를 지나 지구 반대편으로 빠져나오면 나무 꼭대기(우듬지) — 위에서 아래로 가지를 타고 뿌리까지 내려감 (위쪽이 약하고 뿌리 쪽이 셈).
+// 굽은 줄기 하나와 늘어진 큰 가지 둘, 아래로 넓게 퍼진 뿌리 — 반듯한 데 없이 휘어진 나무. 가지와 줄기가 중간에 맞닿는 잔가지로 갈래를 바꿀 수 있음.
+//   서쪽 늘어진 가지(이집트 · 바다) 바스테트(가지 끝 고양이 신전) → 아누비스(심장의 저울) → 포세이돈(가지가 잠긴 우르드의 샘) → 아프로디테(샘의 거품) → 이시스(뿌리 — 흩어진 것을 다시 모음)
+//   가운데 줄기(올림포스 12신)       헤라(우듬지의 신들의 왕좌) → 헤르메스(가지가 갈리는 갈림목) → 아테나 → 아폴론(볕 드는 줄기) → 아르테미스(그늘진 줄기의 달빛)
+//                                   → 헤파이스토스(줄기 속 대장간) → 아레스 → 데메테르(뿌리 위 밭) → 디오니소스(가장 깊은 뿌리의 포도밭)
+//   동쪽 늘어진 가지(일본 · 북유럽) 스사노오(가지 끝 폭풍) → 토르(천둥 치는 가지) → 아마테라스(가지 속 바위 동굴 아마노이와토에서 나온 해) → 로키(뿌리 밑 동굴에 묶인 — 이야기가 있는 구석)
+//   뿌리 밑 하데스 — 「돌아온 자가 없는 문」을 막음, 그 너머 모든 것 아래의 태초의 바다(17격, 장소는 그대로 신들의 시대).
+//   숨은 곳 — 뿌리 밑 미미르의 샘(지혜의 샘, 숨은 샛길 — 큰 상자). 작은 상자는 헤르메스의 갈림목 · 헤파이스토스의 대장간.
+const YGGDRASIL = {
+  W: 176, H: 244,
+  canopy: [88, 30, 62, 20], roots: [88, 196, 66, 17], trunkTop: 40, trunkBottom: 190, trunkHalf: 11, limbHalf: 8.5,
+  limbs: { west: [[48, 40], [2, 78], [6, 152], [52, 190]], east: [[128, 40], [172, 92], [160, 146], [124, 190]] },
+  twigs: [[[16, 112], [50, 102], [80, 118]], [[160, 116], [126, 104], [96, 120]]],
+  gate: [85, 210, 89, 238], well: [10, 118, 4],
+  in: [86, 2, 3], next: [85, 238, 4], start: [87, 12], merchant: [94, 14],
+  place: { // 이름 → [갈래, 갈래 위 자리(가지는 0~1, 줄기는 y), 비켜 선 쪽(-1 왼쪽 · 1 오른쪽)]
+    '바스테트': ['west', 0.14, 1], '아누비스': ['west', 0.33, -1], '포세이돈': ['west', 0.55, 1], '아프로디테': ['west', 0.7, -1], '이시스': ['west', 0.93, 1],
+    '헤라': ['canopy', [74, 16]], '헤르메스': ['trunk', 50, 1], '아테나': ['trunk', 66, -1], '아폴론': ['trunk', 86, 1], '아르테미스': ['trunk', 104, -1],
+    '헤파이스토스': ['trunk', 128, 1], '아레스': ['trunk', 148, -1], '데메테르': ['trunk', 172, 1], '디오니소스': ['roots', [70, 198]],
+    '스사노오': ['east', 0.14, -1], '토르': ['east', 0.36, 1], '아마테라스': ['east', 0.6, -1], '로키': ['roots', [132, 204]],
+    '하데스': ['gate', [87, 216]]
+  }
+};
+function yggdrasilMap(data) {
+  const Y = YGGDRASIL, zi = data.ZONES.findIndex(z => z.rank === 16), foes = data.ENEMIES.filter(e => e.zoneIndex === zi);
+  const bez = (P, t) => { const u = 1 - t; return [u * u * u * P[0][0] + 3 * u * u * t * P[1][0] + 3 * u * t * t * P[2][0] + t * t * t * P[3][0], u * u * u * P[0][1] + 3 * u * u * t * P[1][1] + 3 * u * t * t * P[2][1] + t * t * t * P[3][1]]; };
+  const tangent = (P, t) => { const a = bez(P, Math.max(0, t - 0.01)), b = bez(P, Math.min(1, t + 0.01)), dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy); return [dx / l, dy / l]; };
+  const trunkX = y => 88 + 6 * Math.sin(y / 24);
+  const spot = {};
+  for (const [name, [kind, at, side]] of Object.entries(Y.place)) {
+    const e = foes.find(q => q.name === name), n = e.size;
+    let x, y;
+    if (kind === 'west' || kind === 'east') { const P = Y.limbs[kind], [px, py] = bez(P, at), [tx, ty] = tangent(P, at); x = px + -ty * side * 5.6; y = py + tx * side * 5.6; }
+    else if (kind === 'trunk') { x = trunkX(at) + side * 6; y = at; }
+    else [x, y] = at;
+    spot[name] = [Math.round(x - n / 2), Math.round(y - n / 2)];
+  }
+  const sec = { canopy: [], west: [], trunk: [], east: [], roots: [] };
+  const spec = {
+    ...Y, foes: spot, zones: [],
+    sections: [['미미르의 샘', [8, 204, 34, 226]], ['돌아온 자가 없는 문', [76, 212, 98, 244]]],
+    chests: [[spot['헤르메스'][0] + 6, spot['헤르메스'][1] + 1], [spot['헤파이스토스'][0] - 4, spot['헤파이스토스'][1] + 1], [20, 214, 'big']]
+  };
+  return handMap(data, 16, spec, c => {
+    const { tiles, idx, box, ring, road, secrets, shapes } = c;
+    const W = Y.W, H = Y.H, noise = valueNoise(16), owner = new Int8Array(W * H).fill(-1);
+    const keys = Object.keys(sec);
+    const put = (x, y, who) => { x = Math.round(x); y = Math.round(y); if (x < 1 || y < 1 || x >= W - 1 || y >= H - 1) return; const k = idx(x, y); tiles[k] = FLOOR; if (owner[k] < 0) owner[k] = keys.indexOf(who); };
+    const blob = (cx, cy, rx, ry, who) => { for (let y = Math.floor(cy - ry * 1.3); y <= cy + ry * 1.3; y++) for (let x = Math.floor(cx - rx * 1.3); x <= cx + rx * 1.3; x++) if (Math.hypot((x + 0.5 - cx) / rx, (y + 0.5 - cy) / ry) < 1 + (noise(x * 0.1, y * 0.1) - 0.5) * 0.45) put(x, y, who); };
+    const thick = (P, half, who) => { for (let k = 0; k <= 400; k++) { const t = k / 400, [x, y] = bez(P, t), h = half * (0.85 + noise(t * 6, half) * 0.3); for (let j = -h; j <= h; j += 0.5) for (let i = -h; i <= h; i += 0.5) if (Math.hypot(i, j) <= h) put(x + i, y + j, who); } };
+    // 나무 — 우듬지 · 굽은 줄기 · 늘어진 큰 가지 둘 · 줄기와 맞닿는 잔가지 · 넓게 퍼진 뿌리
+    blob(...Y.canopy, 'canopy');
+    for (let y = Y.trunkTop; y <= Y.trunkBottom; y += 0.5) { const h = Y.trunkHalf * (0.9 + noise(3, y * 0.08) * 0.25); for (let x = -h; x <= h; x += 0.5) put(trunkX(y) + x, y, 'trunk'); }
+    thick(Y.limbs.west, Y.limbHalf, 'west'); thick(Y.limbs.east, Y.limbHalf, 'east');
+    for (const tw of Y.twigs) { const P = [tw[0], tw[1], tw[1], tw[2]]; for (let k = 0; k <= 200; k++) { const [x, y] = bez(P, k / 200); for (let j = -2; j <= 2; j++) for (let i = -2; i <= 2; i++) if (Math.hypot(i, j) <= 2.5) put(x + i, y + j, x < 88 ? 'west' : 'east'); } }
+    blob(...Y.roots, 'roots');
+    for (const [x0, y0, x1, y1] of [[136, 200, 154, 226], [70, 206, 58, 232], [106, 206, 118, 232]]) for (let k = 0; k <= 60; k++) { const t = k / 60; for (let j = -2; j <= 2; j++) for (let i = -2; i <= 2; i++) if (Math.hypot(i, j) <= 2.6 - t * 1.4) put(x0 + (x1 - x0) * t + i, y0 + (y1 - y0) * t + j, 'roots'); }
+    box([Y.in[0], 1, Y.in[0] + Y.in[2], 10], FLOOR);
+    // 상징 — 우르드의 샘(서쪽 가지가 잠김) · 아마노이와토(바위 동굴, 남쪽 입구) · 대장간 모루 · 로키의 동굴(바위, 북쪽 입구)
+    for (let y = Y.well[1] - Y.well[2]; y <= Y.well[1] + Y.well[2]; y++) for (let x = Y.well[0] - Y.well[2]; x <= Y.well[0] + Y.well[2]; x++) if (Math.hypot(x + 0.5 - Y.well[0], y + 0.5 - Y.well[1]) < Y.well[2]) tiles[idx(x, y)] = WATER;
+    const [ax, ay] = spot['아마테라스']; ring([ax - 3, ay - 3, ax + 5, ay + 5], ROCK); box([ax, ay + 4, ax + 2, ay + 5], FLOOR);
+    const [hx, hy] = spot['헤파이스토스']; box([hx + 3, hy - 3, hx + 5, hy - 1], ROCK);
+    const [lx, ly] = spot['로키']; ring([lx - 3, ly - 3, lx + 5, ly + 5], ROCK); box([lx, ly - 3, lx + 2, ly - 2], FLOOR);
+    // 뿌리 밑 — 돌아온 자가 없는 문(하데스가 꼭 맞게 막음)과 그 너머 · 미미르의 샘(바위 방, 숨은 샛길)
+    box(Y.gate, FLOOR); box([Y.next[0], Y.next[1], Y.next[0] + Y.next[2], Y.next[1] + 2], FLOOR);   // 문 너머 한 칸 더 — 내려가는 어둠
+    for (let y = Y.gate[1]; y < Y.gate[3]; y++) for (const x of [Y.gate[0] - 1, Y.gate[2]]) tiles[idx(x, y)] = WALL;
+    const M = spec.sections[0][1];
+    box(M, FLOOR); ring(M, ROCK); for (let y = 210; y < 220; y++) for (let x = 12; x < 18; x++) if (Math.hypot(x - 14.5, y - 218.5) < 3) tiles[idx(x, y)] = WATER;
+    for (let y = M[1] - 3; y <= M[1]; y++) for (let x = 27; x < 31; x++) if (tiles[idx(x, y)] !== FLOOR) tiles[idx(x, y)] = WALL;
+    secrets.push({ name: '숨은 샛길', x: 27, y: M[1] - 3, w: 4, h: 4 });   // 뿌리에서 방 위쪽 벽으로
+    // 구간 — 우듬지 · 서쪽 가지 · 줄기 · 동쪽 가지 · 뿌리 (나무 모양대로)
+    const names = { canopy: '우듬지 — 신들의 왕좌', west: '서쪽 가지 — 이집트와 우르드의 샘', trunk: '줄기 — 올림포스', east: '동쪽 가지 — 해와 천둥', roots: '뿌리' };
+    for (const [k, i] of keys.map((k, i) => [k, i])) {
+      const cells = new Set(); for (let q = 0; q < W * H; q++) if (owner[q] === i && tiles[q] !== WALL) cells.add(q);
+      // 가장 큰 덩어리만 (잔가지 끝 조각 빼고)
+      const seen = new Set(); let best = null;
+      for (const q0 of cells) { if (seen.has(q0)) continue; const part = [q0]; seen.add(q0); for (let n = 0; n < part.length; n++) for (const d of [1, -1, W, -W]) { const j = part[n] + d; if (cells.has(j) && !seen.has(j)) { seen.add(j); part.push(j); } } if (!best || part.length > best.length) best = part; }
+      const mine = new Set(best), xs = best.map(q => q % W), ys = best.map(q => (q / W) | 0);
+      const bb = { x: Math.min(...xs) - 1, y: Math.min(...ys) - 1, w: Math.max(...xs) - Math.min(...xs) + 3, h: Math.max(...ys) - Math.min(...ys) + 3 };
+      const outside = new Set(), st = [];
+      for (let y = bb.y; y < bb.y + bb.h; y++) for (let x = bb.x; x < bb.x + bb.w; x++) if ((x === bb.x || y === bb.y || x === bb.x + bb.w - 1 || y === bb.y + bb.h - 1) && !mine.has(idx(x, y))) { outside.add(idx(x, y)); st.push([x, y]); }
+      while (st.length) { const [x, y] = st.pop(); for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const nx = x + dx, ny = y + dy, j = idx(nx, ny); if (nx < bb.x || ny < bb.y || nx >= bb.x + bb.w || ny >= bb.y + bb.h || mine.has(j) || outside.has(j)) continue; outside.add(j); st.push([nx, ny]); } }
+      for (let y = bb.y + 1; y < bb.y + bb.h - 1; y++) for (let x = bb.x + 1; x < bb.x + bb.w - 1; x++) if (!mine.has(idx(x, y)) && !outside.has(idx(x, y))) mine.add(idx(x, y));
+      shapes.push([names[k], mine]);
+    }
+    // 흙길 — 줄기 가운데 · 큰 가지 가운데 · 우듬지에서 가지로 · 뿌리에서 문으로
+    const mark = (x, y) => { for (let j = -1; j <= 0; j++) for (let i = -1; i <= 0; i++) { const q = idx(Math.round(x) + i, Math.round(y) + j); if (tiles[q] === FLOOR) tiles[q] = ROAD; } };
+    for (let y = 10; y <= Y.trunkBottom + 6; y += 0.5) mark(y < Y.trunkTop ? 88 : trunkX(y), y);
+    for (const P of Object.values(Y.limbs)) for (let k = 0; k <= 400; k++) mark(...bez(P, k / 400));
+    for (const P of Object.values(Y.limbs)) for (let k = 0; k <= 30; k++) { const t = k / 30; mark(88 + (P[0][0] - 88) * t, 14 + (P[0][1] - 14) * t); mark(P[3][0] + (88 - P[3][0]) * t, P[3][1] + (196 - P[3][1]) * t); }
+    road([86, 196, 88, Y.gate[1] + 2]);
+  });
+}
+
 const getFoe = (data, id) => data.ENEMIES.find(e => e.id === id);
 
 // ---------- 도시 — 옛 동네(oldtown) · 헌터들의 도시(city), 회차와 회차 사이에 머무는 곳 (docs/CITY-PLAN.md 1-가) ----------
@@ -3212,4 +3309,4 @@ function allMaps(data) {
   return out;
 }
 
-module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, looksPng, encodePng, generate, sewer, overworld, oldtown, city, deptInterior, dept2Interior, assocInterior, guildInterior, guild2Interior, homeInterior, home2Interior, arenaInterior, bmInterior, gateinInterior, chiefInterior, raidInterior, storeInterior, OLDTOWN, CITY, DEPT, DEPT2, ASSOC, GUILD, GUILD2, HOME, HOME2, ARENA, BM, GATEIN, CHIEF, RAID, W1, W2, W3, SKY, CITY_BIO, secretRoom, buildingInterior, allMaps, layoutFromPlan, RANK_MAPS, rankMapId, hallMap, HALL, PLACES, placeOf, ALEX, alexandriaMap, CAMELOT, camelotMap, AVALON, avalonMap, MURIM, murimMap, TIANSHAN, tianshanMap, SANCTUARY, sanctuaryMap, ELYSIUM, elysiumMap, HEAVEN, heavenMap, INFERNO, infernoMap, handMap, SEWER, SECRET_ROOMS, CAVES, caveMap, BUILDINGS, BUILD, DOORWAY, CARPET, RUIN, UNDERS, ABYSS, DEMON_CASTLE, abyssMap };
+module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, looksPng, encodePng, generate, sewer, overworld, oldtown, city, deptInterior, dept2Interior, assocInterior, guildInterior, guild2Interior, homeInterior, home2Interior, arenaInterior, bmInterior, gateinInterior, chiefInterior, raidInterior, storeInterior, OLDTOWN, CITY, DEPT, DEPT2, ASSOC, GUILD, GUILD2, HOME, HOME2, ARENA, BM, GATEIN, CHIEF, RAID, W1, W2, W3, SKY, CITY_BIO, secretRoom, buildingInterior, allMaps, layoutFromPlan, RANK_MAPS, rankMapId, hallMap, HALL, PLACES, placeOf, ALEX, alexandriaMap, CAMELOT, camelotMap, AVALON, avalonMap, MURIM, murimMap, TIANSHAN, tianshanMap, SANCTUARY, sanctuaryMap, ELYSIUM, elysiumMap, HEAVEN, heavenMap, INFERNO, infernoMap, YGGDRASIL, yggdrasilMap, handMap, SEWER, SECRET_ROOMS, CAVES, caveMap, BUILDINGS, BUILD, DOORWAY, CARPET, RUIN, UNDERS, ABYSS, DEMON_CASTLE, abyssMap };
