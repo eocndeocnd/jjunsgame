@@ -1861,6 +1861,23 @@ function naturalize(c, rect, sides, amp, tile, seed, keep) {
   }
 }
 // wavyBand — 곧은 등성이 · 시내 대신 구불구불한 띠. vertical 이면 y 를 따라(from → to) x = at + 흔들림, 아니면 x 를 따라. gaps — 띠를 끊어 둘 구간(건너는 곳)
+// 굽은 흙길 — 지날 점(pts)을 부드럽게 잇고(캣멀-롬) 점 사이를 소음으로 조금 흔듦 (점에서는 흔들림 0 — 갈림목이 정확히 맞물림). 빈 땅만 흙길로
+function trail(c, pts, o = {}) {
+  const w = o.width || 4, amp = o.amp === undefined ? 1.5 : o.amp, noise = valueNoise(o.seed || 7), r0 = w / 2;
+  const P = [pts[0], ...pts, pts[pts.length - 1]];
+  for (let i = 1; i < P.length - 2; i++) {
+    const [p0, p1, p2, p3] = [P[i - 1], P[i], P[i + 1], P[i + 2]];
+    const dx = p2[0] - p1[0], dy = p2[1] - p1[1], L = Math.hypot(dx, dy) || 1, n = Math.max(2, Math.ceil(L * 3));
+    for (let k = 0; k <= n; k++) {
+      const t = k / n, t2 = t * t, t3 = t2 * t;
+      const cr = j => 0.5 * (2 * p1[j] + (p2[j] - p0[j]) * t + (2 * p0[j] - 5 * p1[j] + 4 * p2[j] - p3[j]) * t2 + (3 * p1[j] - p0[j] - 3 * p2[j] + p3[j]) * t3);
+      const off = amp * Math.sin(Math.PI * t) * (noise((i * 40 + t * L) * 0.09, 5) - 0.5) * 2;
+      const x = cr(0) - dy / L * off, y = cr(1) + dx / L * off;
+      for (let yy = Math.floor(y - r0); yy <= y + r0; yy++) for (let xx = Math.floor(x - r0); xx <= x + r0; xx++)
+        if (Math.hypot(xx + 0.5 - x, yy + 0.5 - y) < r0 + 0.2 && c.tiles[c.idx(xx, yy)] === FLOOR) c.tiles[c.idx(xx, yy)] = ROAD;
+    }
+  }
+}
 // 물가 · 바위 테를 들쭉날쭉하게 — rect 안의 바닥 중 tile에 가까운 칸을 소음에 따라 tile로 (가까울수록 잘 먹힘)
 function erodeShore(c, rect, tile, amp, seed, keep) {
   const noise = valueNoise(seed), [x0, y0, x1, y1] = rect, R = Math.ceil(amp);
@@ -2037,7 +2054,11 @@ function camelotMap(data) {
     wavyBand(c, { vertical: false, from: A.ridge[0], to: A.ridge[2], at: (A.ridge[1] + A.ridge[3]) / 2, half: 2.5, amp: 1.6, period: 5, tile: ROCK, seed: 81, gaps: [A.pass] });   // 롤랑의 고개 — 구불구불한 바위 등성이, 고갯길만 트임
     // 흙길 — 가운데 큰길(나루 → 원탁의 홀 문) · 서쪽 숲길 · 동쪽 고갯길 · 성 안 가로 길(서문 ↔ 동문) · 마을 가로 길
     road([69, A.hall[3], 72, A.in[1] + 1]);
-    road([24, 57, 27, 151]); road([24, 57, A.castle[2] + 18, 60]); road([110, 57, 113, 151]); road([24, 148, 113, 151]);
+    trail(c, [[25.5, 150], [22, 132], [30, 112], [21, 90], [28, 72], [25.5, 58.5]], { width: 3.5, seed: 141 });   // 서쪽 숲길 — 굽음
+    trail(c, [[25.5, 58.5], [34, 56.5], [44, 58.5]], { width: 3.5, seed: 142 }); road([44, 57, A.castle[2], 60]);   // 성 안은 반듯
+    trail(c, [[96, 58.5], [104, 60.5], [111.5, 58.5]], { width: 3.5, seed: 143 });
+    trail(c, [[111.5, 58.5], [112.5, 64], [112, 69.5], [108, 82], [115, 100], [109, 118], [111.5, 149.5]], { width: 3.5, seed: 144 });   // 동쪽 들길 — 롤랑의 고개를 넘음
+    road([24, 148, 113, 151]);                                                                                     // 마을 거리 — 반듯
     // 나무 — 숲에 듬성듬성 (길 · 자리 · 상자 · 은신처 둘레는 비움)
     const keep = (x, y) => nearFoe(A, x, y, 3) || (x >= 22 && x < 29) || (y >= 55 && y < 62) || (x < Hd[2] + 2 && y < Hd[3] + 2) || A.chests.some(([cx, cy]) => Math.abs(x - cx) <= 2 && Math.abs(y - cy) <= 2);
     scatterTrees(c, A.forest, keep, 8, 0.14);
@@ -2120,7 +2141,11 @@ function avalonMap(data) {
     box([66, A.palace[3] - 1, 75, A.palace[3]], FLOOR); box([69, A.palace[1], 72, A.palace[1] + 1], FLOOR);
     box(A.portal, FLOOR); box([69, A.portal[3], 72, A.crystal[1] + 1], FLOOR); box([A.next[0], A.next[1], A.next[0] + A.next[2], A.next[1] + 1], FLOOR);
     // 흙길 — 가운데 큰길(나루 → 수정 동굴) · 서쪽 원소의 길(→ 땅굴 남문) · 동쪽 숲길 · 마을 가로 길 · 과수원 가로 길
-    road([69, A.crystal[1] + 1, 72, A.in[1] + 1]); road([24, 41, 28, 152]); road([24, 148, 104, 152]); road([100, 52, 104, 152]); road([24, 51, 104, 55]);
+    road([69, A.crystal[1] + 1, 72, 106]); road([69, 132, 72, A.in[1] + 1]);                                      // 궁 · 과수원 · 공방 거리 · 마을 — 반듯
+    trail(c, [[70.5, 106], [67, 114], [74, 124], [70.5, 133]], { width: 3.5, seed: 151 });                          // 룬 언덕 — 굽음
+    trail(c, [[26, 151], [23, 138], [25, 128], [22.5, 118], [26, 104], [22, 86], [21.5, 70], [25, 57], [26, 42]], { seed: 152 });   // 서쪽 원소의 길
+    trail(c, [[102, 151], [106, 138], [101, 121], [106, 104], [101, 88], [105, 70], [102, 53]], { seed: 153 });   // 동쪽 숲길
+    road([24, 148, 104, 152]); road([24, 51, 104, 55]);                                                           // 마을 가로 길 · 과수원 가로 길 — 반듯
     // 나무 — 과수원은 줄 맞춘 사과나무, 동쪽 숲은 듬성듬성 (길 · 자리 · 상자 곁은 비움)
     const nearRoad = (x, y) => { for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) if (tiles[idx(x + i, y + j)] === ROAD) return true; return false; };
     const keep = (x, y) => nearFoe(A, x, y, 3) || nearRoad(x, y) || A.chests.some(([cx, cy]) => Math.abs(x - cx) <= 2 && Math.abs(y - cy) <= 2);
@@ -2201,7 +2226,9 @@ function murimMap(data) {
     box([66, A.stage[3] - 1, 75, A.stage[3]], FLOOR); box([69, A.snow[3], 72, A.stage[1] + 1], FLOOR);
     box(A.snow, FLOOR); box([A.next[0], A.next[1], A.next[0] + A.next[2], A.next[1] + 1], FLOOR);
     // 흙길 — 가운데 세가 거리(마을 → 비무대) · 서쪽 불가의 길 · 동쪽 도가의 길 · 마을 가로 길 · 관전석 가로 길
-    road([69, A.stage[3] - 1, 72, A.in[1] + 1]); road([36, 44, 40, 152]); road([102, 30, 106, 152]); road([24, 148, 106, 152]); road([36, 43, 106, 46]);
+    road([69, A.stage[3] - 1, 72, A.in[1] + 1]); road([24, 148, 106, 152]); road([36, 43, 106, 46]);            // 세가 거리 · 마을 거리 · 관전석 — 반듯
+    trail(c, [[38, 151], [36, 138], [39.5, 124], [36.5, 108], [39.5, 92], [36, 76], [39, 60], [38, 45]], { amp: 1, seed: 161 });   // 불가의 산길
+    trail(c, [[104, 151], [107.5, 140], [103, 127], [103.5, 110], [107, 96], [104, 82], [107.5, 68], [104, 52], [104, 31]], { seed: 162 });   // 도가의 산길
     // 매화나무 — 화산 매화 숲에 듬성듬성
     const nearRoad = (x, y) => { for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) if (tiles[idx(x + i, y + j)] === ROAD) return true; return false; };
     scatterTrees(c, A.plum, (x, y) => nearFoe(A, x, y, 3) || nearRoad(x, y), 10, 0.12);
@@ -2379,7 +2406,13 @@ function sanctuaryMap(data) {
     for (const [x, y] of [[62, 14], [86, 14], [62, 24], [86, 24]]) box([x, y, x + 2, y + 2], ROCK);
     box(A.elysion, FLOOR); box([A.next[0], A.next[1], A.next[0] + A.next[2], A.next[1] + 1], FLOOR);
     // 흙길 — 가운데(구름 계단 → 신전) · 서쪽 바다의 길(여울 · 모래톱) · 동쪽 땅의 길 · 숲 가로 길 · 광장 가로 길
-    road([73, A.temple[1] + 1, 77, A.in[1] + 1]); road([34, 40, 38, 152]); road([112, 40, 116, 152]); road([34, 148, 116, 152]); road([34, 40, 116, 44]);
+    road([73, A.temple[1] + 1, 77, A.in[1] + 1]); road(A.strait); road(A.creteFord);                           // 신전 참배길 — 반듯 · 해협 · 여울은 좁은 땅 그대로
+    trail(c, [[36, 151], [33, 144], [36, 136]], { seed: 171 });
+    trail(c, [[36, 128], [38, 121], [33, 109], [35, 98], [36, 96]], { seed: 172 });                                          // 크레타 섬
+    trail(c, [[36, 80], [40, 70], [33, 60], [36, 52], [36, 41]], { seed: 173 });                                   // 에리테이아
+    trail(c, [[114, 151], [110, 140], [115, 126], [109, 112], [109.5, 98], [115, 84], [112.5, 70], [112, 58], [114, 46], [114, 41]], { seed: 174 });   // 동쪽 땅의 길
+    trail(c, [[36, 150], [55, 152.5], [75, 150], [95, 147.5], [114, 150]], { seed: 175 });                        // 숲 가로 길
+    trail(c, [[36, 42], [55, 44.5], [75, 42], [95, 39.5], [114, 42]], { seed: 176 });                             // 광장 가로 길
     // 나무 — 성스러운 숲 · 케리네이아 숲 (길 · 자리 · 상자 곁은 비움)
     const nearRoad = (x, y) => { for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) if (tiles[idx(x + i, y + j)] === ROAD) return true; return false; };
     const keep = (x, y) => nearFoe(A, x, y, 3) || nearRoad(x, y) || A.chests.some(([cx, cy]) => Math.abs(x - cx) <= 2 && Math.abs(y - cy) <= 2) || Math.abs(y - A.in[1]) < 12 && Math.abs(x - 75) < 8;
@@ -2462,7 +2495,12 @@ function elysiumMap(data) {
     ring(A.lair, ROCK); box([58, A.lair[3] - 1, 63, A.lair[3]], FLOOR);
     box(A.stairs, FLOOR); box([A.next[0], A.next[1], A.next[0] + A.next[2], A.next[1] + 1], FLOOR);
     // 흙길 — 가운데(다리 → 하늘 계단) · 서쪽 · 동쪽 · 강가 가로 길 · 북쪽 가로 길
-    road([73, A.stairs[3] - 3, 77, A.in[1] + 1]); road([36, 30, 40, 150]); road([112, 30, 116, 150]); road([36, 146, 116, 150]); road([36, 30, 116, 34]);
+    road([73, A.stairs[3] - 3, 77, A.in[1] + 1]);                                                                 // 트로이 성문 앞 큰길 — 반듯
+    trail(c, [[38, 148], [41, 139], [38.5, 128], [42, 116], [38, 102], [41.5, 88], [38, 76], [38, 66], [40.5, 52], [37.5, 42], [38, 32]], { seed: 181 });   // 서쪽 그리스 들길
+    trail(c, [[114, 148], [110.5, 138], [113, 126], [111.5, 112], [114, 104]], { seed: 182 }); road([112, 80, 116, 105]);   // 우루크 성 안은 반듯
+    trail(c, [[114, 80], [110, 73], [114.5, 66], [117, 54], [113, 44], [114, 32]], { seed: 183 });
+    trail(c, [[38, 148], [56, 146], [75, 148], [95, 146], [114, 148]], { seed: 184 });                            // 강가 가로 길
+    trail(c, [[38, 32], [56, 34.5], [75, 31.5], [95, 34], [114, 32]], { seed: 185 });                             // 북쪽 가로 길
     // 삼나무 — 엔키두의 숲 (길 · 자리 곁은 비움)
     const nearRoad = (x, y) => { for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) if (tiles[idx(x + i, y + j)] === ROAD) return true; return false; };
     scatterTrees(c, A.cedars, (x, y) => nearFoe(A, x, y, 3) || nearRoad(x, y), 14, 0.15);
@@ -3673,4 +3711,4 @@ function allMaps(data) {
   return out;
 }
 
-module.exports = { erodeShore, TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, looksPng, encodePng, generate, sewer, overworld, oldtown, city, deptInterior, dept2Interior, assocInterior, guildInterior, guild2Interior, homeInterior, home2Interior, arenaInterior, bmInterior, gateinInterior, chiefInterior, raidInterior, storeInterior, OLDTOWN, CITY, DEPT, DEPT2, ASSOC, GUILD, GUILD2, HOME, HOME2, ARENA, BM, GATEIN, CHIEF, RAID, W1, W2, W3, SKY, CITY_BIO, secretRoom, buildingInterior, allMaps, layoutFromPlan, RANK_MAPS, rankMapId, adminRoom, PLACES, placeOf, ALEX, alexandriaMap, CAMELOT, camelotMap, AVALON, avalonMap, MURIM, murimMap, TIANSHAN, tianshanMap, naturalize, wavyBand, SANCTUARY, sanctuaryMap, ELYSIUM, elysiumMap, HEAVEN, heavenMap, INFERNO, infernoMap, YGGDRASIL, yggdrasilMap, PRIMORDIAL, primordialMap, OLYMPUS, olympusMap, RLYEH, rlyehMap, CHAOS, chaosMap, handMap, solidShape, SEWER, SECRET_ROOMS, CAVES, caveMap, BUILDINGS, BUILD, DOORWAY, CARPET, RUIN, UNDERS, ABYSS, DEMON_CASTLE, abyssMap };
+module.exports = { trail, erodeShore, TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, looksPng, encodePng, generate, sewer, overworld, oldtown, city, deptInterior, dept2Interior, assocInterior, guildInterior, guild2Interior, homeInterior, home2Interior, arenaInterior, bmInterior, gateinInterior, chiefInterior, raidInterior, storeInterior, OLDTOWN, CITY, DEPT, DEPT2, ASSOC, GUILD, GUILD2, HOME, HOME2, ARENA, BM, GATEIN, CHIEF, RAID, W1, W2, W3, SKY, CITY_BIO, secretRoom, buildingInterior, allMaps, layoutFromPlan, RANK_MAPS, rankMapId, adminRoom, PLACES, placeOf, ALEX, alexandriaMap, CAMELOT, camelotMap, AVALON, avalonMap, MURIM, murimMap, TIANSHAN, tianshanMap, naturalize, wavyBand, SANCTUARY, sanctuaryMap, ELYSIUM, elysiumMap, HEAVEN, heavenMap, INFERNO, infernoMap, YGGDRASIL, yggdrasilMap, PRIMORDIAL, primordialMap, OLYMPUS, olympusMap, RLYEH, rlyehMap, CHAOS, chaosMap, handMap, solidShape, SEWER, SECRET_ROOMS, CAVES, caveMap, BUILDINGS, BUILD, DOORWAY, CARPET, RUIN, UNDERS, ABYSS, DEMON_CASTLE, abyssMap };
