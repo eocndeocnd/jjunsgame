@@ -1861,6 +1861,18 @@ function naturalize(c, rect, sides, amp, tile, seed, keep) {
   }
 }
 // wavyBand — 곧은 등성이 · 시내 대신 구불구불한 띠. vertical 이면 y 를 따라(from → to) x = at + 흔들림, 아니면 x 를 따라. gaps — 띠를 끊어 둘 구간(건너는 곳)
+// 물가 · 바위 테를 들쭉날쭉하게 — rect 안의 바닥 중 tile에 가까운 칸을 소음에 따라 tile로 (가까울수록 잘 먹힘)
+function erodeShore(c, rect, tile, amp, seed, keep) {
+  const noise = valueNoise(seed), [x0, y0, x1, y1] = rect, R = Math.ceil(amp);
+  const hit = [];
+  for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
+    if (c.tiles[c.idx(x, y)] !== FLOOR || (keep && keep(x, y))) continue;
+    let d = Infinity;
+    for (let j = -R; j <= R; j++) for (let i = -R; i <= R; i++) if (c.tiles[c.idx(x + i, y + j)] === tile) d = Math.min(d, Math.hypot(i, j));
+    if (d < amp * (0.3 + noise(x * 0.11, y * 0.11) * 0.9)) hit.push(c.idx(x, y));
+  }
+  for (const k of hit) c.tiles[k] = tile;
+}
 function wavyBand(c, o) {
   const noise = valueNoise(o.seed || 1);
   for (let s = o.from; s < o.to; s++) {
@@ -2080,7 +2092,8 @@ function avalonMap(data) {
     box([A.cave[2], A.land[1], A.palace[0], 38], WATER); box([A.palace[2], A.land[1], A.land[2], A.orchard[1]], WATER);   // 궁 양옆 북쪽 물가
     box([A.tower[0], A.tower[1], A.tower[0] + 4, A.tower[1] + 4], ROCK);
     // 세 갈래를 가르는 시내 둘 (마을 · 과수원에서만 이어짐)
-    box(A.westStream, WATER); box(A.eastStream, WATER);
+    wavyBand(c, { vertical: true, from: A.westStream[1], to: A.westStream[3], at: 47, half: 1.2, amp: 1.2, period: 6, tile: WATER, seed: 91 });
+    wavyBand(c, { vertical: true, from: A.eastStream[1], to: A.eastStream[3], at: 97, half: 1.2, amp: 1.2, period: 7, tile: WATER, seed: 92, phase: 2 });
     // 서쪽 원소의 길 — 불의 제단(용암 웅덩이) · 환상열석(선돌 여덟) · 물의 샘 · 바람 절벽(바위) · 땅굴(바위 테, 남문 · 동문, 안쪽 보물방)
     box(A.altarPool, WATER);
     const [ccx, ccy, cr] = A.circle;
@@ -2114,6 +2127,12 @@ function avalonMap(data) {
     const O = A.orchard;
     for (let y = O[1] + 2; y < O[3] - 1; y++) for (let x = O[0] + 2; x < O[2] - 1; x++) if (x % 4 === 1 && y % 4 === 2 && tiles[idx(x, y)] === FLOOR && !keep(x, y)) tiles[idx(x, y)] = TREE;
     scatterTrees(c, A.wood, keep, 9, 0.14);
+    // 마지막 손질 — 바닷가 · 호숫가 · 시냇가를 들쭉날쭉하게 (나루 · 여울 · 길 · 자리 · 상자 · 땅굴 곁은 그대로)
+    const inR = (r, x, y, m) => x >= r[0] - m && x < r[2] + m && y >= r[1] - m && y < r[3] + m;
+    const wild = (x, y) => keep(x, y) || nearTile(c, ROAD, x, y, 2) || inR(A.cave, x, y, 1) || inR([60, 150, 82, 172], x, y, 0) || inR(A.ford, x, y, 2)
+      || inR(A.palace, x, y, 1) || inR(A.crystal, x, y, 1) || inR(A.study, x, y, 1) || inR(A.tomes, x, y, 1) || inR([A.tower[0], A.tower[1], A.tower[0] + 4, A.tower[1] + 4], x, y, 2);
+    naturalize(c, [A.land[0], A.land[1], A.land[2], A.land[3]], 'wes', 9, WATER, 94, wild);   // 바닷가 — 만 · 곶
+    erodeShore(c, A.land, WATER, 3, 93, wild);                                            // 호숫가 · 시냇가 · 궁 양옆 물가
   });
 }
 
@@ -3571,4 +3590,4 @@ function allMaps(data) {
   return out;
 }
 
-module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, looksPng, encodePng, generate, sewer, overworld, oldtown, city, deptInterior, dept2Interior, assocInterior, guildInterior, guild2Interior, homeInterior, home2Interior, arenaInterior, bmInterior, gateinInterior, chiefInterior, raidInterior, storeInterior, OLDTOWN, CITY, DEPT, DEPT2, ASSOC, GUILD, GUILD2, HOME, HOME2, ARENA, BM, GATEIN, CHIEF, RAID, W1, W2, W3, SKY, CITY_BIO, secretRoom, buildingInterior, allMaps, layoutFromPlan, RANK_MAPS, rankMapId, adminRoom, PLACES, placeOf, ALEX, alexandriaMap, CAMELOT, camelotMap, AVALON, avalonMap, MURIM, murimMap, TIANSHAN, tianshanMap, naturalize, wavyBand, SANCTUARY, sanctuaryMap, ELYSIUM, elysiumMap, HEAVEN, heavenMap, INFERNO, infernoMap, YGGDRASIL, yggdrasilMap, PRIMORDIAL, primordialMap, OLYMPUS, olympusMap, RLYEH, rlyehMap, CHAOS, chaosMap, handMap, solidShape, SEWER, SECRET_ROOMS, CAVES, caveMap, BUILDINGS, BUILD, DOORWAY, CARPET, RUIN, UNDERS, ABYSS, DEMON_CASTLE, abyssMap };
+module.exports = { erodeShore, TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, looksPng, encodePng, generate, sewer, overworld, oldtown, city, deptInterior, dept2Interior, assocInterior, guildInterior, guild2Interior, homeInterior, home2Interior, arenaInterior, bmInterior, gateinInterior, chiefInterior, raidInterior, storeInterior, OLDTOWN, CITY, DEPT, DEPT2, ASSOC, GUILD, GUILD2, HOME, HOME2, ARENA, BM, GATEIN, CHIEF, RAID, W1, W2, W3, SKY, CITY_BIO, secretRoom, buildingInterior, allMaps, layoutFromPlan, RANK_MAPS, rankMapId, adminRoom, PLACES, placeOf, ALEX, alexandriaMap, CAMELOT, camelotMap, AVALON, avalonMap, MURIM, murimMap, TIANSHAN, tianshanMap, naturalize, wavyBand, SANCTUARY, sanctuaryMap, ELYSIUM, elysiumMap, HEAVEN, heavenMap, INFERNO, infernoMap, YGGDRASIL, yggdrasilMap, PRIMORDIAL, primordialMap, OLYMPUS, olympusMap, RLYEH, rlyehMap, CHAOS, chaosMap, handMap, solidShape, SEWER, SECRET_ROOMS, CAVES, caveMap, BUILDINGS, BUILD, DOORWAY, CARPET, RUIN, UNDERS, ABYSS, DEMON_CASTLE, abyssMap };
