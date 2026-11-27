@@ -2173,7 +2173,9 @@ function murimMap(data) {
     const { tiles, idx, box, ring, road, secrets } = c;
     // 산 — 아래 땅 · 비무대 앞 관전석 · 동쪽 능선 꼭대기, 세 갈래를 가르는 바위 등성이 둘
     box(A.low, FLOOR); box(A.plaza, FLOOR); box(A.ridgeTop, FLOOR);
-    for (const r of A.ridges) box(r, ROCK);
+    const [rw, re] = A.ridges;                                                             // 굽이치는 바위 등성이 (세가 장원 담과 길 사이)
+    wavyBand(c, { vertical: true, from: rw[1], to: rw[3], at: 45.5, half: 2, amp: 1.5, period: 7, tile: ROCK, seed: 101 });
+    wavyBand(c, { vertical: true, from: re[1], to: re[3], at: 96.5, half: 2, amp: 1.5, period: 6, tile: ROCK, seed: 102, phase: 1.5 });
     box([A.in[0], A.low[3], A.in[0] + 3, A.in[1] + 1], FLOOR);                               // 멀린의 문으로 들어서는 곳
     // 객잔 마을 — 객잔(담, 동문)
     ring(A.inn, WALL); box([A.inn[2] - 1, 141, A.inn[2], 145], FLOOR);
@@ -2203,6 +2205,16 @@ function murimMap(data) {
     // 매화나무 — 화산 매화 숲에 듬성듬성
     const nearRoad = (x, y) => { for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) if (tiles[idx(x + i, y + j)] === ROAD) return true; return false; };
     scatterTrees(c, A.plum, (x, y) => nearFoe(A, x, y, 3) || nearRoad(x, y), 10, 0.12);
+    // 마지막 손질 — 산비탈 가장자리를 들쭉날쭉하게 (장원 · 절 · 도관 · 동굴 · 비무대 · 길 · 자리 · 상자 곁은 그대로)
+    const inR = (r, x, y, m) => x >= r[0] - m && x < r[2] + m && y >= r[1] - m && y < r[3] + m;
+    const built = [A.inn, A.hermitage, A.shaolin, A.dharma, ...Object.values(A.manors), A.wudang, A.cave, A.stage, [60, 150, 82, 172]];
+    const wild = (x, y) => nearFoe(A, x, y, 3) || nearTile(c, ROAD, x, y, 2) || built.some(r => inR(r, x, y, 2))
+      || A.chests.some(([cx, cy]) => Math.abs(x - cx) <= 2 && Math.abs(y - cy) <= 2);
+    const L = [A.low[0] - 7, A.low[1], A.low[2] + 6, A.low[3]];                                  // 비탈을 바깥으로 넓혔다가 깎음
+    box([L[0], L[1], A.low[0], L[3]], FLOOR); box([A.low[2], L[1], L[2], L[3]], FLOOR);
+    naturalize(c, L, 'wes', 12, WALL, 103, wild);
+    naturalize(c, A.plaza, 'nw', 5, WALL, 104, wild);
+    naturalize(c, A.ridgeTop, 'ne', 5, WALL, 105, wild);
   });
 }
 
