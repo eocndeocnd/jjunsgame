@@ -938,7 +938,7 @@ test('7격부터 — 장소로 나눔: 장소가 바뀌는 문(마왕성 왕좌 
   }
 });
 
-test('7격부터 — 하나뿐인 일반은 2칸 넘게 · 가운데 흙길에서 2칸 넘게 떨어진 벽감 · 정예의 곁방은 문 둘(고리 — 한 문을 막아도 다른 문으로)', () => {
+test('7격부터 — 하나뿐인 일반은 2칸 넘게 · 길을 막지 않고 흙길에서 2칸 넘게', () => {
   const data = loadData();
   const foe = id => data.ENEMIES.find(e => e.id === id);
   for (const e of data.ENEMIES.filter(x => x.solo)) assert.ok(e.rank.n >= 7 && e.size >= 2, `${e.name} — ${e.rank.n}격 · ${e.size}칸`);
@@ -948,19 +948,6 @@ test('7격부터 — 하나뿐인 일반은 2칸 넘게 · 가운데 흙길에�
       assert.ok(!p.blocks, `${spec.id} ${p.name} — 길을 막지 않음`);
       for (let y = p.y - 2; y < p.y + p.h + 2; y++) for (let x = p.x - 2; x < p.x + p.w + 2; x++)
         assert.notEqual(m.tile[y * m.w + x], gen.ROAD, `${spec.id} ${p.name} — 흙길 (${x}, ${y}) 이(가) 2칸 안`);
-    }
-    if (m.props.loops === undefined) continue;                 // 손으로 짠 지도(7격 알렉산드리아)는 곁방 대신 트인 땅에
-    const loops = String(m.props.loops || '').split('|').filter(Boolean).map(t => { const [id, ds] = t.split(':'); return { id, doors: ds.split(';').map(d => { const [x, y, w, h] = d.split(',').map(Number); return { x, y, w, h }; }) }; });
-    assert.deepEqual(loops.map(l => l.id).sort(), m.posts.filter(q => foe(q.enemy).kind === 'elite').map(q => q.enemy).sort(), `${spec.id} — 정예마다 곁방`);
-    const from = [m.start.y * m.w + m.start.x], bodies = m.posts.flatMap(q => cellsOf(m, q));
-    for (const l of loops) {
-      const p = m.posts.find(q => q.enemy === l.id);
-      const nearP = []; for (let x = p.x - 1; x <= p.x + p.w; x++) for (let y = p.y - 1; y <= p.y + p.h; y++) nearP.push(y * m.w + x);
-      for (const [i, d] of l.doors.entries()) {
-        assert.ok(cellsOf(m, d).every(k => !m.solid[k]), `${spec.id} ${p.name} 곁방 문 ${i + 1}`);
-        const shut = walk(m, from, new Set([...bodies, ...cellsOf(m, d)]));   // 이 문을 막아도 다른 문으로 닿음
-        assert.ok(nearP.some(k => shut[k] >= 0), `${spec.id} ${p.name} — 문 ${i + 1} 을 막아도 닿음`);
-      }
     }
   }
 });
@@ -1560,6 +1547,20 @@ test('20격 궁극의 혼돈 — 위아래 없이 가장자리에서 중심으�
   const secretCells = []; for (let k = 0; k < m.w * m.h; k++) if (m.secret[k]) secretCells.push(k);
   assert.ok(secretCells.length && !(walk(m, from, new Set([...bodies, ...secretCells]))[(big.y + 1) * m.w + big.x] >= 0), '샛길 없이는 못 감');
   assert.ok(walk(m, from, new Set(bodies))[(big.y + 1) * m.w + big.x] >= 0, '샛길로 닿음');
+});
+
+test('관리자 방 — 1~20격 문이 하나씩, 문은 그 격의 지역으로 (adminZone) · 방 안에서 모든 문 앞에 닿음 · 일반 지도와 이어지지 않음', () => {
+  const data = loadData();
+  const m = loadMap('adminroom');
+  assert.equal(m.props.title, '관리자 방');
+  assert.equal(m.areas.length, 0, '몬스터 · 지역 없음');
+  assert.deepEqual(m.ports.map(p => p.adminZone).sort(), data.ZONES.map(z => z.id).sort(), '격마다 문 하나');
+  const d = walk(m, [m.start.y * m.w + m.start.x]);
+  for (const p of m.ports) {
+    const near = []; for (let x = p.x; x < p.x + p.w; x++) near.push((p.y + 1) * m.w + x, (p.y - 1) * m.w + x);
+    assert.ok(near.some(i => d[i] >= 0), `${p.label} 앞에 닿음`);
+  }
+  for (const name of allMapNames().filter(n => n !== 'adminroom')) assert.ok(!loadMap(name).ports.some(p => String(p.to).startsWith('adminroom')), `${name} 에서 관리자 방으로 가는 문 없음`);
 });
 
 test('조이스틱이 향하는 쪽으로 — 비스듬히 밀면 대각선 · 곧은 걸음을 섞어 그 각도대로 곧게, 대각선도 같은 빠르기', () => {

@@ -1781,7 +1781,7 @@ const TP_TALK = [
 //  월드맵 — 걷다가 닿으면 조우 · 싸움 · 결과 창이 지도 위에 뜹니다
 // ============================================================
 // 지도 캔버스는 index.html 의 #mapStage 에 화면 가득 늘 붙어 있고(다시 그릴 때 지워지지 않게), 창만 #mapOverlay 에 그립니다.
-// 지도는 여러 장(maps/*.tmj) — 지하수로(1격) · overworld(2~5격) · 마계(6격) · 7격부터는 격 하나에 한 장(알렉산드리아 library · 카멜롯 camelot · 아발론 avalon · 무림 murim · 천산 tianshan · 성역 sanctuary · 엘리시온 elysium · 하늘 heaven · 지옥 inferno · 세계수 yggdrasil · 태초 primordial · 올림포스 olympus · 르뤼에 rlyeh · 혼돈 chaos). 장 사이는 문(ports)으로 오갑니다.
+// 지도는 여러 장(maps/*.tmj) — 지하수로(1격) · overworld(2~5격) · 마계(6격) · 7격부터는 격 하나에 한 장(알렉산드리아 library · 카멜롯 camelot · 아발론 avalon · 무림 murim · 천산 tianshan · 성역 sanctuary · 엘리시온 elysium · 하늘 heaven · 지옥 inferno · 세계수 yggdrasil · 태초 primordial · 올림포스 olympus · 르뤼에 rlyeh · 혼돈 chaos) · 관리자 방(adminroom — 관리자 창에서만). 장 사이는 문(ports)으로 오갑니다.
 // 스무 지역이 모두 어느 한 장 위에 있습니다 (tests/map.test.js 가 지킵니다).
 let mapView = null, maps = null, zoneMap = null;   // 읽은 지도들(id → 지도), 지역 id → 그 지역이 있는 지도 id
 let mapKey = '', mapZone = -1, mapShown = null;    // 지금 걷는 세계가 어느 칸 · 여정 · 지역 · 지도 것인가
@@ -1903,6 +1903,14 @@ liveMapMobs = () => {
 // 그 지도가 없으면(손으로 지운 경우 등) 문에 적힌 지역(zone)으로 건너가 그 지역이 있는 지도의 들머리에 섭니다.
 function goThroughPort(port) {
   const run = State.run;
+  if (port.adminZone) {                                          // 관리자 방의 문 — 그 격의 지역으로 건너가 그 격 지도의 들머리에 (syncMap 의 mapEntrance)
+    adminJumpZone(ZONES.findIndex(z => z.id === port.adminZone));
+    run.mapId = null;
+    run.mapAt = null;
+    mapShown = null;
+    Sound.play('zoneMove');
+    return;
+  }
   const [id, door] = port.to.split('.');
   if (run.test && id !== 'arena') leaveArena();   // 시험장을 나서면 시험은 거기서 끝 (game.js)
   if (run.gateIn && id !== 'gatein') leaveFound();  // 게이트 안에서 나서면 끝
@@ -4489,6 +4497,7 @@ function renderAdmin() {
       <div class="adm-row">
         <select class="swap-from" id="admZone" ${off}>${zoneOpts}</select>
         <button class="btn tiny" data-adm="zone" ${off}>이동</button>
+        <button class="btn tiny" data-adm="room" ${off}>관리자 방</button>
       </div>
       <div class="adm-row">
         <select class="swap-from" id="admFoe" ${off}>${foeOpts}</select>
@@ -4549,6 +4558,15 @@ function adminAction(a) {
       endRun('관리자가 끝냈다');
       break;
     case 'zone': adminJumpZone(Number($('admZone').value)); break;
+    case 'room':                                                 // 관리자 방 — 격마다 문이 있어 아무 격으로나 바로 (maps/adminroom.tmj)
+      if (!maps || !maps.adminroom) break;
+      stopBattle();
+      run.encounter = null;
+      run.lastResult = null;
+      closeAdmin();
+      showTab('journey');
+      fadeThrough(() => goThroughPort({ to: 'adminroom.start' }));
+      return;
     case 'foe':
       adminSummon($('admFoe').value);
       closeAdmin();

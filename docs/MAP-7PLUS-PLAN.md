@@ -325,7 +325,8 @@
 - **17격 태초의 바다** (`maps/primordial.tmj`, `PRIMORDIAL` · `primordialMap`) — 4-11 그대로. 지도를 짤 때 자리 문제를 모아 보는 개발용 `handMap.loose`.
 - **18격 올림포스 정상** (`maps/olympus.tmj`, `OLYMPUS` · `olympusMap`) — 4-13 그대로.
 - **19격 가라앉은 르뤼에** (`maps/rlyeh.tmj`, `RLYEH` · `rlyehMap`) — 4-14 그대로.
-- **20격 궁극의 혼돈** (`maps/chaos.tmj`, `CHAOS` · `chaosMap`) — 4-15 그대로. **이로써 7~20격 모두 손으로 짠 지도** (임시 지도 · `hallMap` 은 이제 쓰는 격이 없음). — 같은 틀에 구간 하나, 레벨 순 그대로. 보스 뒤 문으로 한 줄로 이어 둠 (6번에서 나누는 대로 바꿀 자리).
+- **20격 궁극의 혼돈** (`maps/chaos.tmj`, `CHAOS` · `chaosMap`) — 4-15 그대로. **이로써 7~20격 모두 손으로 짠 지도.** 임시 지도 틀 `hallMap` 은 지움 (사용자 결정 2026-11-27).
+- **관리자 방** (`maps/adminroom.tmj`, `adminRoom`) — 관리자 창(시험 모드)의 「관리자 방」 단추로만 들어가는 방, 위 벽에 1~10격 · 아래 벽에 11~20격 문. 문으로 들어서면 그 격 지도의 들머리에 섬 (`ui.js` 의 `goThroughPort` — 문 속성 `adminZone`). 일반 지도와는 이어지지 않음 (사용자 결정 2026-11-27 — 격을 자유롭게 오가는 방). — 같은 틀에 구간 하나, 레벨 순 그대로. 보스 뒤 문으로 한 줄로 이어 둠 (6번에서 나누는 대로 바꿀 자리).
 - 하나뿐인 일반 59종 (`data.js` 의 `SOLO_NORMALS`) — 벽감에 2칸 이상, 꺾어도 다시 섬 · 기운은 다시 굴림 (`game.js` 의 `meetOnMap` · `engage`, `map.js` 의 `resolve` — 이기면 한 칸 물러남).
 - 구간에 들어서면 이름이 한 줄 뜸 (`ui.js` 의 `onMapEvents`).
 - 지운 것: 문의 광장(`hub`) · 일곱 장(`legends` … `outer`)과 그 생성기(`REALMS` · `HUB_DOORS` · `hub()`).
