@@ -2436,10 +2436,11 @@ function elysiumMap(data) {
   return handMap(data, 13, A, c => {
     const { tiles, idx, box, ring, road, secrets } = c;
     // 들판 — 남쪽 레테 강과 다리 · 강가, 세 갈래를 가르는 언덕 둘, 북쪽 먼 땅과 가르는 켈트의 여울(냇물 — 갈래마다 건너는 곳)
-    box(A.plain, FLOOR); box(A.river, WATER); box([A.bridge[0], A.river[1], A.bridge[1], A.river[3]], FLOOR); box(A.bank, FLOOR);
+    box(A.plain, FLOOR); box(A.river, FLOOR); box(A.bank, FLOOR);
+    wavyBand(c, { vertical: false, from: A.river[0], to: A.river[2], at: (A.river[1] + A.river[3]) / 2, half: 2.5, amp: 1.5, period: 8, tile: WATER, seed: 131, gaps: [A.bridge] });   // 굽이치는 레테 강 (다리는 그대로)
     box([A.in[0], A.bank[3], A.in[0] + A.in[2], A.in[1] + 1], FLOOR);
-    for (const r of A.ridges) box(r, ROCK);
-    box(A.stream, WATER); for (const [x0, x1] of A.fords) box([x0, A.stream[1], x1, A.stream[3]], FLOOR);
+    for (const [i, r] of A.ridges.entries()) wavyBand(c, { vertical: true, from: r[1] - 5, to: r[3], at: (r[0] + r[2]) / 2, half: 1.6, amp: 1.8, period: 6 + i, tile: ROCK, seed: 132 + i, phase: i * 2 });   // 언덕 — 냇물에 겹치게 올려 갈래 사이를 막음
+    wavyBand(c, { vertical: false, from: A.stream[0], to: A.stream[2], at: (A.stream[1] + A.stream[3]) / 2, half: 1.5, amp: 1.5, period: 7, tile: WATER, seed: 134, phase: 1, gaps: A.fords });   // 켈트의 여울 냇물 — 건너는 곳 셋
     // 서쪽 그리스 — 돌 미로(동쪽 어귀) · 메두사의 석상들 · 바닷가와 배 · 타원 경주로(동서로 트임)
     ring(A.maze, ROCK); box([A.maze[2] - 1, 135, A.maze[2], 140], FLOOR);
     for (const [x, y] of A.statues) tiles[idx(x, y)] = ROCK;
@@ -2465,6 +2466,14 @@ function elysiumMap(data) {
     // 삼나무 — 엔키두의 숲 (길 · 자리 곁은 비움)
     const nearRoad = (x, y) => { for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) if (tiles[idx(x + i, y + j)] === ROAD) return true; return false; };
     scatterTrees(c, A.cedars, (x, y) => nearFoe(A, x, y, 3) || nearRoad(x, y), 14, 0.15);
+    // 마지막 손질 — 들판 · 강가 가장자리와 바닷가를 들쭉날쭉하게 (미로 · 연회장 · 우루크 · 트로이 · 둥지 · 계단 · 길 · 자리 · 상자 곁은 그대로)
+    const inR = (r, x, y, m) => x >= r[0] - m && x < r[2] + m && y >= r[1] - m && y < r[3] + m;
+    const built = [A.maze, A.hall, A.uruk, A.lair, A.stairs, A.horse, [A.troyWall[0], A.troyWall[1], A.troyWall[2], A.plain[3]], [A.in[0] - 8, A.bank[3] - 12, A.in[0] + 11, A.in[1] + 1], [A.chariot[0], A.chariot[1], A.chariot[0] + 2, A.chariot[1] + 2]];
+    const wild = (x, y) => nearFoe(A, x, y, 3) || nearTile(c, ROAD, x, y, 2) || built.some(r => inR(r, x, y, 2)) || A.chests.some(([cx, cy]) => Math.abs(x - cx) <= 2 && Math.abs(y - cy) <= 2);
+    naturalize(c, [A.plain[0], A.plain[1], A.plain[2], A.stream[1]], 'wen', 7, WALL, 135, wild);
+    naturalize(c, [A.plain[0], A.stream[3], A.plain[2], A.plain[3]], 'we', 6, WALL, 136, (x, y) => wild(x, y) || inR(A.sea, x, y, 5));   // 바닷가는 땅 끝이 바다에 닿게
+    naturalize(c, A.bank, 'wes', 5, WALL, 137, wild);
+    erodeShore(c, [A.sea[2], A.sea[1] - 6, A.sea[2] + 8, A.sea[3] + 6], WATER, 4, 138, wild);                                  // 오디세우스의 바닷가
   });
 }
 
