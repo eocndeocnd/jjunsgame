@@ -2211,7 +2211,7 @@ function murimMap(data) {
     const wild = (x, y) => nearFoe(A, x, y, 3) || nearTile(c, ROAD, x, y, 2) || built.some(r => inR(r, x, y, 2))
       || A.chests.some(([cx, cy]) => Math.abs(x - cx) <= 2 && Math.abs(y - cy) <= 2);
     const L = [A.low[0] - 7, A.low[1], A.low[2] + 6, A.low[3]];                                  // 비탈을 바깥으로 넓혔다가 깎음
-    box([L[0], L[1], A.low[0], L[3]], FLOOR); box([A.low[2], L[1], L[2], L[3]], FLOOR);
+    box([L[0], L[1], A.low[0], L[3]], FLOOR); box([A.low[2], A.cave[3] + 1, L[2], L[3]], FLOOR);   // 동쪽은 기연 동굴 바위 테 아래부터
     naturalize(c, L, 'wes', 12, WALL, 103, wild);
     naturalize(c, A.plaza, 'nw', 5, WALL, 104, wild);
     naturalize(c, A.ridgeTop, 'ne', 5, WALL, 105, wild);
