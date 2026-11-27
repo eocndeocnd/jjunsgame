@@ -1487,6 +1487,44 @@ test('18격 올림포스 정상 — 남쪽 기슭에서 세 면(서쪽 이집트
   assert.equal(m.ports.find(p => p.name === 'next').place, '르뤼에', '제우스 뒤 별의 길 — 장소가 르뤼에로');
 });
 
+test('19격 가라앉은 르뤼에 — 남쪽 물가에서 물길 둘로 갈린 세 갈래(서쪽 원소별 옛 지배자 넷 · 가운데 홀로 깨어 있는 옛 지배자들 · 동쪽 종들)가 무덤 앞 광장에서 만나 심연의 아틀락-나챠 → 무덤 속 크툴루 · 숨은 네크로노미콘', () => {
+  const data = loadData();
+  const m = loadMap('rlyeh');
+  const post = name => m.posts.find(p => p.name === name);
+  const spot = name => post(name) || (a => ({ x: a.x, y: a.y + a.h / 2, w: 1, h: 1 }))(m.areas.find(a => a.monster === data.ENEMIES.find(e => e.name === name).id));
+  const lv = name => data.ENEMIES.find(e => e.name === name).level;
+  const areaName = p => { const k = m.areaAt[(p.y + (p.h >> 1)) * m.w + p.x + (p.w >> 1)]; return k >= 0 ? m.areas[k].name : ''; };
+  const routes = {
+    '서쪽 원소의 탑': ['다곤', '하스터', '크투가', '츠아토구아'],
+    '가운데 옛 지배자': ['이그', '이타콰', '차우그나르 파우근', '글라아키'],
+    '동쪽 종들': ['쇼고스', '미-고'],
+    '무덤 앞': ['아틀락-나챠', '크툴루']
+  };
+  for (const [r, list] of Object.entries(routes)) for (let i = 1; i < list.length; i++)
+    assert.ok(lv(list[i]) > lv(list[i - 1]) && spot(list[i]).y < spot(list[i - 1]).y, `${r}: ${list[i - 1]} → ${list[i]} (셀수록 북쪽)`);
+  for (const r of ['서쪽 원소의 탑', '가운데 옛 지배자', '동쪽 종들']) assert.ok(lv(routes[r][routes[r].length - 1]) < lv('아틀락-나챠'), `${r} 끝보다 아틀락-나챠가 셈`);
+  for (const e of data.ENEMIES.filter(x => x.rank.n === 19 && x.set === 'elementalOldOnes')) assert.equal(areaName(post(e.name)), '원소의 탑 거리', `원소의 옛 지배자 ${e.name} 은(는) 한 갈래`);
+  for (const n of ['이그', '이타콰', '차우그나르 파우근', '글라아키']) assert.equal(areaName(post(n)), '옛 지배자들의 기운 거리', `${n} 은(는) 가운데`);
+  assert.equal(areaName(post('아틀락-나챠')), '무덤 앞 광장');
+  // 세 갈래 — 둘을 막아도 남은 하나로 무덤 앞 광장까지
+  const bodies = m.posts.flatMap(q => cellsOf(m, q)), from = [m.start.y * m.w + m.start.x];
+  const goal = [46 * m.w + 88];
+  const band = (x0, x1) => { const out = []; for (let y = 70; y < 150; y++) for (let x = x0; x < x1; x++) out.push(y * m.w + x); return out; };
+  const lanes = { 서: band(0, 58), 가운데: band(58, 118), 동: band(118, m.w) };
+  for (const keep of Object.keys(lanes)) {
+    const shut = new Set([...bodies, ...Object.entries(lanes).filter(([k]) => k !== keep).flatMap(([, c]) => c)]);
+    assert.ok(goal.some(k => walk(m, from, shut)[k] >= 0), `${keep}쪽 갈래만으로 무덤 앞 광장까지`);
+  }
+  const cth = post('크툴루'), front = []; for (let x = cth.x; x < cth.x + cth.w; x++) front.push((cth.y + cth.h) * m.w + x);
+  assert.ok(cth.blocks && front.some(k => walk(m, from, new Set(bodies))[k] >= 0), '심연 위 다리로 크툴루 앞까지');
+  const big = m.chests.find(c => c.big), temple = m.areas.find(a => a.name === '반쯤 잠긴 신전 밑');
+  assert.ok(big.x >= temple.x && big.x < temple.x + temple.w && big.y >= temple.y && big.y < temple.y + temple.h, '큰 상자(네크로노미콘)는 반쯤 잠긴 신전 밑');
+  const secretCells = []; for (let k = 0; k < m.w * m.h; k++) if (m.secret[k]) secretCells.push(k);
+  assert.ok(secretCells.length && !(walk(m, from, new Set([...bodies, ...secretCells]))[(big.y + 1) * m.w + big.x] >= 0), '샛길 없이는 못 감');
+  assert.ok(walk(m, from, new Set(bodies))[(big.y + 1) * m.w + big.x] >= 0, '샛길로 닿음');
+  assert.equal(m.ports.find(p => p.name === 'next').place, '바깥', '크툴루 너머 — 장소가 바깥으로');
+});
+
 test('조이스틱이 향하는 쪽으로 — 비스듬히 밀면 대각선 · 곧은 걸음을 섞어 그 각도대로 곧게, 대각선도 같은 빠르기', () => {
   const rows = ['########################'];
   for (let y = 0; y < 14; y++) rows.push('#' + (y === 0 ? '@' : '.') + '.'.repeat(21) + '#');
