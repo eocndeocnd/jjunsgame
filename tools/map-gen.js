@@ -1845,6 +1845,31 @@ function solidShape(cells, W) {
   for (let y = bb.y + 1; y < bb.y + bb.h - 1; y++) for (let x = bb.x + 1; x < bb.x + bb.w - 1; x++) if (!mine.has(idx(x, y)) && !outside.has(idx(x, y))) mine.add(idx(x, y));
   return mine;
 }
+// 자연의 땅을 들쭉날쭉하게 (사용자 결정 2026-11-27 — 반듯함은 사람이 지은 것에만)
+// naturalize — 네모 rect 의 sides('n' · 's' · 'w' · 'e') 가장자리 빈 땅을 amp 칸까지 잡음 따라 tile(바다 · 벼랑)로 깎음. keep(x, y) 이 참이면 그대로
+function naturalize(c, rect, sides, amp, tile, seed, keep) {
+  const noise = valueNoise(seed), [x0, y0, x1, y1] = rect;
+  for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
+    const k = c.idx(x, y);
+    if (c.tiles[k] !== FLOOR || (keep && keep(x, y))) continue;
+    let d = Infinity;
+    if (sides.includes('w')) d = Math.min(d, x - x0);
+    if (sides.includes('e')) d = Math.min(d, x1 - 1 - x);
+    if (sides.includes('n')) d = Math.min(d, y - y0);
+    if (sides.includes('s')) d = Math.min(d, y1 - 1 - y);
+    if (d < amp * (0.35 + noise(x * 0.13, y * 0.13) * 0.9)) c.tiles[k] = tile;
+  }
+}
+// wavyBand — 곧은 등성이 · 시내 대신 구불구불한 띠. vertical 이면 y 를 따라(from → to) x = at + 흔들림, 아니면 x 를 따라. gaps — 띠를 끊어 둘 구간(건너는 곳)
+function wavyBand(c, o) {
+  const noise = valueNoise(o.seed || 1);
+  for (let s = o.from; s < o.to; s++) {
+    if ((o.gaps || []).some(([a, b]) => s >= a && s < b)) continue;
+    const mid = o.at + o.amp * Math.sin(s / o.period + (o.phase || 0)) + (noise(s * 0.15, 3) - 0.5) * o.amp * 0.6;
+    for (let t = Math.floor(mid - o.half); t <= mid + o.half; t++) { const [x, y] = o.vertical ? [t, s] : [s, t]; c.tiles[c.idx(x, y)] = o.tile; }
+  }
+}
+const nearTile = (c, t, x, y, d) => { for (let j = -d; j <= d; j++) for (let i = -d; i <= d; i++) if (c.tiles[c.idx(x + i, y + j)] === t) return true; return false; };
 // 숲 — 네모 안 빈 땅에 나무를 듬성듬성 (홀로 선 나무만 — 구역을 가르지 않게). keep(x, y) 이 참인 칸은 비움
 function scatterTrees(c, r, keep, seed, density) {
   const hash = (x, y) => { const v = Math.sin(x * 127.1 + y * 311.7 + seed * 74.7) * 43758.5453; return v - Math.floor(v); };
@@ -1997,13 +2022,19 @@ function camelotMap(data) {
     secrets.push({ name: '숨은 샛길', x: 12, y: Hd[3] - 1, w: 2, h: 1 });
     // 동쪽 — 들판 · 롤랑의 고개(바위 등성이의 좁은 길) · 해안 절벽과 바다
     box(A.east, FLOOR); box(A.eastSea, WATER);
-    box(A.ridge, ROCK); box([A.pass[0], A.ridge[1], A.pass[1], A.ridge[3]], FLOOR);
+    wavyBand(c, { vertical: false, from: A.ridge[0], to: A.ridge[2], at: (A.ridge[1] + A.ridge[3]) / 2, half: 2.5, amp: 1.6, period: 5, tile: ROCK, seed: 81, gaps: [A.pass] });   // 롤랑의 고개 — 구불구불한 바위 등성이, 고갯길만 트임
     // 흙길 — 가운데 큰길(나루 → 원탁의 홀 문) · 서쪽 숲길 · 동쪽 고갯길 · 성 안 가로 길(서문 ↔ 동문) · 마을 가로 길
     road([69, A.hall[3], 72, A.in[1] + 1]);
     road([24, 57, 27, 151]); road([24, 57, A.castle[2] + 18, 60]); road([110, 57, 113, 151]); road([24, 148, 113, 151]);
     // 나무 — 숲에 듬성듬성 (길 · 자리 · 상자 · 은신처 둘레는 비움)
     const keep = (x, y) => nearFoe(A, x, y, 3) || (x >= 22 && x < 29) || (y >= 55 && y < 62) || (x < Hd[2] + 2 && y < Hd[3] + 2) || A.chests.some(([cx, cy]) => Math.abs(x - cx) <= 2 && Math.abs(y - cy) <= 2);
     scatterTrees(c, A.forest, keep, 8, 0.14);
+    // 자연의 땅은 들쭉날쭉 — 숲의 서쪽 끝 · 호숫가 · 동쪽 바닷가 · 남쪽 나루의 물가 (성 · 마을 · 시합장은 사람이 지은 것이라 그대로)
+    const wild = (x, y) => nearFoe(A, x, y, 3) || nearTile(c, ROAD, x, y, 1) || A.chests.some(([cx, cy]) => Math.abs(x - cx) <= 2 && Math.abs(y - cy) <= 2) || (x < Hd[2] + 3 && y < Hd[3] + 3);
+    naturalize(c, A.forest, 'wn', 6, WALL, 82, wild);
+    naturalize(c, [A.east[0], A.east[1], A.east[2], A.east[3]], 'ne', 6, WATER, 83, wild);
+    naturalize(c, [A.town[0], A.town[1], A.town[2], A.town[3]], 'we', 5, WALL, 84, wild);
+    naturalize(c, [A.town[0], A.town[1], A.dock[0], A.town[3]], 's', 4, WATER, 85, wild); naturalize(c, [A.dock[2], A.town[1], A.town[2], A.town[3]], 's', 4, WATER, 86, wild);
   });
 }
 
@@ -3540,4 +3571,4 @@ function allMaps(data) {
   return out;
 }
 
-module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, looksPng, encodePng, generate, sewer, overworld, oldtown, city, deptInterior, dept2Interior, assocInterior, guildInterior, guild2Interior, homeInterior, home2Interior, arenaInterior, bmInterior, gateinInterior, chiefInterior, raidInterior, storeInterior, OLDTOWN, CITY, DEPT, DEPT2, ASSOC, GUILD, GUILD2, HOME, HOME2, ARENA, BM, GATEIN, CHIEF, RAID, W1, W2, W3, SKY, CITY_BIO, secretRoom, buildingInterior, allMaps, layoutFromPlan, RANK_MAPS, rankMapId, adminRoom, PLACES, placeOf, ALEX, alexandriaMap, CAMELOT, camelotMap, AVALON, avalonMap, MURIM, murimMap, TIANSHAN, tianshanMap, SANCTUARY, sanctuaryMap, ELYSIUM, elysiumMap, HEAVEN, heavenMap, INFERNO, infernoMap, YGGDRASIL, yggdrasilMap, PRIMORDIAL, primordialMap, OLYMPUS, olympusMap, RLYEH, rlyehMap, CHAOS, chaosMap, handMap, solidShape, SEWER, SECRET_ROOMS, CAVES, caveMap, BUILDINGS, BUILD, DOORWAY, CARPET, RUIN, UNDERS, ABYSS, DEMON_CASTLE, abyssMap };
+module.exports = { TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, looksPng, encodePng, generate, sewer, overworld, oldtown, city, deptInterior, dept2Interior, assocInterior, guildInterior, guild2Interior, homeInterior, home2Interior, arenaInterior, bmInterior, gateinInterior, chiefInterior, raidInterior, storeInterior, OLDTOWN, CITY, DEPT, DEPT2, ASSOC, GUILD, GUILD2, HOME, HOME2, ARENA, BM, GATEIN, CHIEF, RAID, W1, W2, W3, SKY, CITY_BIO, secretRoom, buildingInterior, allMaps, layoutFromPlan, RANK_MAPS, rankMapId, adminRoom, PLACES, placeOf, ALEX, alexandriaMap, CAMELOT, camelotMap, AVALON, avalonMap, MURIM, murimMap, TIANSHAN, tianshanMap, naturalize, wavyBand, SANCTUARY, sanctuaryMap, ELYSIUM, elysiumMap, HEAVEN, heavenMap, INFERNO, infernoMap, YGGDRASIL, yggdrasilMap, PRIMORDIAL, primordialMap, OLYMPUS, olympusMap, RLYEH, rlyehMap, CHAOS, chaosMap, handMap, solidShape, SEWER, SECRET_ROOMS, CAVES, caveMap, BUILDINGS, BUILD, DOORWAY, CARPET, RUIN, UNDERS, ABYSS, DEMON_CASTLE, abyssMap };
