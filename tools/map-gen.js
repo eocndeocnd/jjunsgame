@@ -1914,10 +1914,11 @@ const nearFoe = (A, x, y, d) => Object.values(A.foes).some(([fx, fy]) => x >= fx
 // ---------- 7격 — 알렉산드리아 (손으로 짠 지도, 사용자 결정 2026-11-25 「맵도 컨셉에 관련된 논리가 있어야」) ----------
 // 대도서관 두루마리 속 위인들이 살아난 바둑판 계획도시. 남쪽 성문에서 북쪽 대항구로 — 세 갈래 큰길을 따라 파벌마다 제 상징 공간에 모여 있고,
 // 이름난 사람은 구석이 아니라 트인 광장 · 뜰에 섭니다. 파벌 안에서는 센 사람이 가운데나 뒤(북쪽)에 — 어느 파벌을 따라가도 북쪽으로 갈수록 셈.
-//   서쪽 (반란자 → 정복자)  세라페움 언덕(손자 — 싸우지 않고 이기는 은둔한 병법가라 구석, 이야기가 있는 예외) · 원형극장(앞 광장의 화형대에 잔 다르크, 검투장 한가운데 스파르타쿠스)
-//                           · 소마 — 알렉산드로스의 무덤 (앞뜰 게르 진영에 칭기즈 칸, 한가운데 알렉산드로스 — 이 도시를 세운 자)
-//   가운데 (학자)           필사실(필경사) · 무세이온 뜰(아르키메데스 → 대도서관 정문 앞 히파티아 — 마지막 도서관장) · 대도서관 본관(작업실의 다 빈치 → 맨 안 기록 서고의 헤로도토스)
-//                           · 본관 안 숨은 비밀 서고 (벽 속 숨은 샛길, 큰 보물상자)
+//   서쪽 (반란자)           세라페움 언덕(손자 — 싸우지 않고 이기는 은둔한 병법가라 구석, 이야기가 있는 예외) · 필사실 뜰(필경사)
+//                           · 항구 쪽 — 큰길 서쪽 화형대 광장의 잔 다르크, 원형극장 검투장 한가운데 스파르타쿠스
+//   가운데 (학자 → 정복자)  무세이온 뜰(아르키메데스 → 대도서관 정문 앞 히파티아 — 마지막 도서관장) · 대도서관 본관(작업실의 다 빈치 → 맨 안 기록 서고의 헤로도토스)
+//                           · 본관 안 숨은 비밀 서고(벽 속 숨은 샛길, 큰 보물상자) · 항구 앞 소마 — 알렉산드로스의 무덤(앞뜰 게르 진영에 칭기즈 칸, 한가운데 알렉산드로스 — 이 도시를 세운 자)
+//   진행 (사용자 결정 2026-11-28 「문끝으로 가면서 점점 강한 상대」) — 약한 학자는 입구 쪽, 센 정복자 · 반란자는 항구(보스) 쪽. 걸음으로 잰 진행도와 레벨이 같이 오름.
 //   동쪽 (촉한의 오호대장군) 목책 두른 군영이 남북으로 길게 — 영채 정문 관우 → 운하의 다리(장판교) 장비 → 한가운데 조운 → 본진의 마초 · 가운데 황충
 //   남쪽 성문 안 시장(이야기꾼, 돌아다님 · 상인) · 북쪽 대항구 부두에서 세 갈래가 만나고, 파로스 등대 섬으로 가는 둑길을 이순신(수군)이 막음.
 //   등대 섬에 헤르메스 트리스메기스투스(히든 — 보스를 꺾으면) · 8격으로 가는 배.
@@ -1927,22 +1928,20 @@ const ALEX = {
   island: [58, 3, 82, 14], water: [6, 14, 134, 22], causeway: 69, quay: [6, 22, 134, 30],
   streets: [[24, 30, 33, 120], [6, 114, 134, 121], [6, 58, 134, 67]],   // 서쪽 큰길 · 시장 북쪽 거리 · 가운데 거리
   market: [36, 121, 104, 143], gate: 69,
-  serapeum: [8, 92, 23, 113], serapeumRamp: [23, 100, 24, 105],
-  theater: { cx: 45, cy: 84, r: 12, seat: [9, 10.6] }, theaterSquare: [34, 98, 57, 114],
-  soma: [34, 30, 60, 57],
-  scriptorium: [54, 98, 87, 114], museion: [54, 68, 87, 96],
-  library: [54, 30, 87, 58], vault: [77, 31, 86, 38],
+  serapeum: [8, 92, 23, 113], serapeumRamp: [23, 100, 24, 105], scriptorium: [34, 88, 53, 114],
+  pyre: [8, 34, 24, 56], theater: { cx: 45, cy: 43, r: 12, seat: [9, 10.6] },
+  museion: [54, 98, 87, 114], library: [54, 68, 87, 96], vault: [77, 69, 86, 76], soma: [57, 30, 84, 57],
   camp: [90, 30, 133, 115], canal: [91, 84, 132, 88], bridge: [103, 118], campRoad: [109, 112, 30],
   foes: {                                                      // 이름 → 몸 왼쪽 위 칸
-    '손자': [13, 99], '잔 다르크': [39, 105], '스파르타쿠스': [49, 82], '칭기즈 칸': [41, 50], '알렉산드로스': [51, 37],
-    '아르키메데스': [61, 87], '히파티아': [75, 71], '레오나르도 다 빈치': [59, 47], '헤로도토스': [62, 33],
+    '손자': [13, 99], '잔 다르크': [14, 44], '스파르타쿠스': [49, 41],
+    '아르키메데스': [60, 106], '히파티아': [75, 100], '레오나르도 다 빈치': [59, 85], '헤로도토스': [62, 71], '칭기즈 칸': [63, 48], '알렉산드로스': [74, 38],
     '관우': [97, 106], '장비': [103, 85], '조운': [98, 70], '마초': [122, 46], '황충': [114, 37],
     '이순신': [69, 19], '헤르메스 트리스메기스투스': [61, 5]
   },
-  sections: [['세라페움 언덕', 'serapeum'], ['원형극장', [32, 71, 59, 114]], ['소마 — 알렉산드로스의 무덤', 'soma'], ['무세이온', 'museion'],
-    ['대도서관', 'library'], ['비밀 서고', 'vault'], ['촉한 진영', 'camp'], ['대항구', 'quay'], ['파로스 등대 섬', 'island']],
+  sections: [['세라페움 언덕', 'serapeum'], ['필사실', 'scriptorium'], ['화형대 광장', 'pyre'], ['원형극장', [32, 30, 57, 58]], ['무세이온', 'museion'],
+    ['대도서관', 'library'], ['비밀 서고', 'vault'], ['소마 — 알렉산드로스의 무덤', 'soma'], ['촉한 진영', 'camp'], ['대항구', 'quay'], ['파로스 등대 섬', 'island']],
   zones: [['이름 없는 이야기꾼', 'market'], ['필경사', 'scriptorium']],
-  merchant: [40, 124], chests: [[10, 94], [129, 90], [81, 34, 'big']],
+  merchant: [40, 124], chests: [[10, 94], [129, 90], [81, 72, 'big']],
   in: [69, 144, 3], next: [68, 2, 4], start: [70, 140]
 };
 function alexandriaMap(data) {
@@ -1957,39 +1956,39 @@ function alexandriaMap(data) {
     for (const s of A.streets) box(s, FLOOR);
     box(A.market, FLOOR);
     box([A.gate, A.market[3], A.gate + 3, A.market[3] + 2], FLOOR);                          // 남쪽 성문
-    // 서쪽 — 세라페움 언덕(바위 테, 동쪽 비탈길) · 원형극장(돌 관람석 고리, 남북으로 트임) · 극장 앞 광장 · 소마(담, 남 · 서 · 북 문)
+    // 서쪽 — 세라페움 언덕(바위 테, 동쪽 비탈길) · 필사실 뜰 · 항구 쪽에 화형대 광장(큰길 서쪽) · 원형극장(돌 관람석 고리, 남북으로 트임)
     box(A.serapeum, FLOOR); ring(A.serapeum, ROCK); box([A.serapeum[2] - 1, A.serapeumRamp[1], A.streets[0][0], A.serapeumRamp[3]], FLOOR);
+    box(A.scriptorium, FLOOR); box(A.pyre, FLOOR);
     const T = A.theater;
     for (let y = T.cy - T.r; y <= T.cy + T.r; y++) for (let x = T.cx - T.r; x <= T.cx + T.r; x++) {
       const d = Math.hypot(x + 0.5 - (T.cx + 0.5), y + 0.5 - (T.cy + 0.5));
       if (d < T.r) tiles[idx(x, y)] = d >= T.seat[0] && d < T.seat[1] && Math.abs(x - T.cx) > 2 ? ROCK : FLOOR;
     }
-    box([T.cx - 2, T.cy - T.r - 1, T.cx + 3, T.cy - T.r + 1], FLOOR);                        // 극장 북쪽 길 → 가운데 거리
-    box(A.theaterSquare, FLOOR); box([A.streets[0][2], A.theaterSquare[1] + 4, A.theaterSquare[0], A.theaterSquare[3] - 4], FLOOR);
-    box(A.soma, FLOOR); ring(A.soma, WALL);
-    const S = A.soma, sx = (S[0] + S[2]) >> 1;
-    box([sx - 2, S[3] - 1, sx + 3, S[3] + 1], FLOOR); box([S[0] - 1, 40, S[0] + 1, 45], FLOOR); box([sx - 2, S[1] - 1, sx + 3, S[1] + 1], FLOOR);
-    // 가운데 — 필사실 · 무세이온 뜰 · 대도서관 본관(담, 남 · 북 문, 기둥 줄) · 비밀 서고(본관 안 막힌 방)
-    box(A.scriptorium, FLOOR); box(A.museion, FLOOR);
-    box([64, A.museion[3], 77, A.scriptorium[1]], FLOOR);                                    // 필사실 ↔ 무세이온
-    box([64, A.streets[2][3], 77, A.museion[1]], FLOOR);                                     // 무세이온 ↔ 가운데 거리
+    box([T.cx - 2, A.quay[3] - 1, T.cx + 3, T.cy - T.r + 1], FLOOR); box([T.cx - 2, T.cy + T.r - 1, T.cx + 3, A.streets[2][1]], FLOOR);   // 극장 북쪽 → 부두 · 남쪽 → 가운데 거리
+    // 가운데 (학자 → 정복자) — 무세이온 뜰 · 대도서관 본관(담, 남 · 북 문, 기둥 줄) · 비밀 서고(본관 안 막힌 방) · 항구 앞 소마(담, 남 · 북 문)
+    box(A.museion, FLOOR);
     const L = A.library;
     box(L, FLOOR); ring(L, WALL);
     box([66, L[3] - 1, 75, L[3]], FLOOR); box([66, L[1], 75, L[1] + 1], FLOOR);
-    for (const px of [58, 64, 76, 82]) for (const py of [41, 52]) box([px, py, px + 2, py + 2], ROCK);
+    box([64, L[3], 77, A.museion[1]], FLOOR);                                                // 대도서관 ↔ 무세이온
+    box([64, A.streets[2][3], 77, L[1]], FLOOR);                                             // 가운데 거리 ↔ 대도서관
+    for (const px of [58, 64, 76, 82]) for (const py of [L[1] + 11, L[1] + 22]) box([px, py, px + 2, py + 2], ROCK);
     const V = A.vault;
     for (let y = V[1]; y <= V[3]; y++) tiles[idx(V[0] - 1, y)] = WALL;
     for (let x = V[0] - 1; x < V[2]; x++) tiles[idx(x, V[3])] = WALL;
     secrets.push({ name: '숨은 샛길', x: V[0] + 3, y: V[3], w: 2, h: 1 });
+    box(A.soma, FLOOR); ring(A.soma, WALL);
+    const S = A.soma, sx = (S[0] + S[2]) >> 1;
+    box([sx - 2, S[3] - 1, sx + 3, S[3] + 1], FLOOR); box([sx - 2, S[1] - 1, sx + 3, S[1] + 1], FLOOR);
     // 동쪽 — 목책 두른 촉한 진영 (남 · 북 · 서 문), 운하와 다리
     const C = A.camp, mid = 110;
     box(C, FLOOR); ring(C, ROCK);
     box([mid - 4, C[3] - 1, mid + 5, C[3]], FLOOR); box([mid - 4, C[1], mid + 5, C[1] + 1], FLOOR); box([C[0], A.streets[2][1], C[0] + 1, A.streets[2][3]], FLOOR);
     box(A.canal, WATER); box([A.bridge[0], A.canal[1], A.bridge[1], A.canal[3]], FLOOR);
-    // 흙길 — 서쪽 큰길 · 가로 거리 둘 · 부두 · 진영 안 · 구역마다 지나가는 길(극장 · 소마 · 가운데 학자의 길). 이름난 사람은 이 길에서 두 칸 넘게 비켜 섬
+    // 흙길 — 서쪽 큰길 · 가로 거리 둘 · 부두 · 진영 안 · 구역마다 지나가는 길(극장 · 가운데 학자 → 정복자의 길). 이름난 사람은 이 길에서 두 칸 넘게 비켜 섬
     road([27, 30, 30, 121]); road([6, 116, 134, 119]); road([6, 61, 134, 64]); road([6, 25, 134, 28]);
     road([A.campRoad[0], A.campRoad[2], A.campRoad[1], C[3]]); road([A.gate, 119, A.gate + 3, A.market[3] + 2]);
-    road([A.gate, A.quay[3], A.gate + 3, A.streets[1][1]]); road([T.cx - 1, T.cy - T.r - 1, T.cx + 2, A.theaterSquare[3]]); road([sx - 1, S[1], sx + 2, S[3]]);
+    road([A.gate, A.quay[3], A.gate + 3, A.streets[1][1]]); road([T.cx - 1, A.quay[3], T.cx + 2, A.streets[2][1]]);
   });
 }
 
