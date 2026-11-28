@@ -1751,6 +1751,12 @@ const placeOf = rank => PLACES.find(p => p.ranks.includes(rank)) || null;
 //   A.in · A.next [x, y, 폭] — 앞 격(또는 마왕성)에서 들어오는 문 · 보스 뒤 다음 격으로 가는 문. A.start · A.merchant [x, y]
 //   A.chests   [x, y, 'big'?] — 작은 상자 둘 · 큰 상자 하나
 // 좌표는 칸 (x 오른쪽 · y 아래쪽), 네모는 [x0, y0, x1, y1) 반열린.
+// 실내 건물의 문 — 건물 네모(box)의 아래 줄 한가운데 (문 앞 칸은 빈 땅)
+const roomDoor = r => [(r.box[0] + r.box[2] - 1) >> 1, r.box[3] - 1];
+// 7격부터의 실내 방 — 지도 id → 그 지도의 rooms (allMaps 가 안 지도를 뽑음)
+const rankRooms = id => (({ library: ALEX, camelot: CAMELOT, avalon: AVALON, murim: MURIM, tianshan: TIANSHAN, sanctuary: SANCTUARY, elysium: ELYSIUM, heaven: HEAVEN, inferno: INFERNO,
+  yggdrasil: YGGDRASIL, primordial: PRIMORDIAL, olympus: OLYMPUS, rlyeh: RLYEH, chaos: CHAOS })[id] || {}).rooms || [];
+const roomMap = (mapId, r, data) => storeInterior({ clerks: [], signs: [], wild: true, ...r.room, title: r.title, to: `${mapId}.${r.id}` }, data);
 function handMap(data, rank, A, paint) {
   const W = A.W, H = A.H, idx = (x, y) => y * W + x;
   const zi = data.ZONES.findIndex(z => z.rank === rank), zone = data.ZONES[zi];
@@ -1763,6 +1769,9 @@ function handMap(data, rank, A, paint) {
   const rectOf = k => (Array.isArray(k) ? k : A[k]);
   const secrets = [], shapes = [];                             // shapes — [이름, 칸 모음] 땅 모양대로 그린 구간 (구멍 없는 한 덩어리 — 동그란 고리는 반씩 나눠서)
   paint({ tiles, idx, box, ring, road, rectOf, secrets, shapes });
+  // 실내 (사용자 결정 2026-11-28 — 지붕 아래가 컨셉인 곁방의 하나뿐인 존재) — 바깥엔 문 하나 난 닫힌 건물, 안은 따로 뽑은 방 (allMaps 의 storeInterior)
+  const rooms = A.rooms || [], inRoom = new Set(rooms.flatMap(r => r.room.foes.map(f => f.name)));
+  for (const r of rooms) { const [x0, y0, x1, y1] = r.box; box(r.box, WALL); tiles[idx(roomDoor(r)[0], roomDoor(r)[1])] = FLOOR; if (tiles[idx(roomDoor(r)[0], y1)] === WALL) tiles[idx(roomDoor(r)[0], y1)] = FLOOR; }
 
   // 자리 — 모두 트인 땅에, 보스 말고는 흙길에서 2칸 넘게 (지나가며 닿지 않게)
   const posts = Object.entries(A.foes).map(([name, [x, y]]) => {
@@ -1772,7 +1781,7 @@ function handMap(data, rank, A, paint) {
     return { name: e.name, x, y, w: n, h: n, enemy: e.id, blocks: e.kind === 'boss' };
   });
   const boss = foes.find(e => e.kind === 'boss');
-  for (const e of foes) if ((e.kind !== 'normal' || e.solo) && !posts.some(p => p.enemy === e.id)) throw new Error(`${rank}격 — ${e.name} 자리가 없음`);
+  for (const e of foes) if ((e.kind !== 'normal' || e.solo) && !posts.some(p => p.enemy === e.id) && !inRoom.has(e.name)) throw new Error(`${rank}격 — ${e.name} 자리가 없음`);
 
   // 구역 — 구간(상징 공간, 이름이 뜸)을 먼저, 돌아다니는 일반의 구역을 뒤에 (겹치면 뒤의 것)
   const areas = A.sections.map(([name, k]) => { const r = rectOf(k); return { name, x: r[0], y: r[1], w: r[2] - r[0], h: r[3] - r[1], zone: zone.id, section: true }; });
@@ -1816,6 +1825,7 @@ function handMap(data, rank, A, paint) {
   const prevZone = data.ZONES.find(z => z.rank === rank - 1), nextZone = data.ZONES.find(z => z.rank === rank + 1);
   const place = placeOf(rank), nextPlace = placeOf(rank + 1);
   const ports = [{ name: 'in', label: rank === 7 ? DEMON_CASTLE.title : prevZone.name, x: A.in[0], y: A.in[1], w: A.in[2], h: 1, to: `${rank === 7 ? DEMON_CASTLE.id : rankMapId(rank - 1)}.next` }];
+  for (const r of rooms) { const [dx, dy] = roomDoor(r); ports.push({ name: r.id, label: r.title, x: dx, y: dy, w: 1, h: 1, to: `${r.id}.out`, door: true }); }
   if (nextZone) ports.push({ name: 'next', label: nextZone.name, x: A.next[0], y: A.next[1], w: A.next[2], h: 1, to: `${rankMapId(rank + 1)}.in`, opensAfter: boss.id, ...(nextPlace !== place ? { place: nextPlace.name } : {}) });
   const npcs = [{ name: 'start', x: A.start[0], y: A.start[1] }, { name: 'entry', x: A.start[0], y: A.start[1], zone: zone.id }, { name: 'merchant', x: A.merchant[0], y: A.merchant[1], zone: zone.id }];
   const item = (data.ITEMS.find(i => i.chest && i.rank.n === rank) || {}).id;
@@ -1909,7 +1919,8 @@ function scatterTrees(c, r, keep, seed, density) {
     if (alone) c.tiles[c.idx(x, y)] = TREE;
   }
 }
-const nearFoe = (A, x, y, d) => Object.values(A.foes).some(([fx, fy]) => x >= fx - d && x < fx + 4 + d && y >= fy - d && y < fy + 4 + d);
+const nearFoe = (A, x, y, d) => Object.values(A.foes).some(([fx, fy]) => x >= fx - d && x < fx + 4 + d && y >= fy - d && y < fy + 4 + d)
+  || (A.rooms || []).some(({ box: b }) => x >= b[0] - d && x < b[2] + d && y >= b[1] - d && y < b[3] + 1 + d);   // 실내 건물과 그 문 앞도
 
 // ---------- 7격 — 알렉산드리아 (손으로 짠 지도, 사용자 결정 2026-11-25 「맵도 컨셉에 관련된 논리가 있어야」) ----------
 // 대도서관 두루마리 속 위인들이 살아난 바둑판 계획도시. 남쪽 성문에서 북쪽 대항구로 — 세 갈래 큰길을 따라 파벌마다 제 상징 공간에 모여 있고,
@@ -2092,7 +2103,7 @@ const AVALON = {
   in: [69, 170, 3], next: [68, 1, 4], start: [70, 160], merchant: [75, 156],
   foes: {
     '샐러맨더': [30, 118], '운디네': [30, 68], '실프': [14, 50], '노움': [32, 33],
-    '파우스트': [56, 80], '바바 야가': [122, 84], '키르케': [119, 48], '모르간 르 페이': [58, 30], '멀린': [69, 7]
+    '파우스트': [56, 80], '키르케': [119, 48], '모르간 르 페이': [58, 30], '멀린': [69, 7]
   },
   sections: [['안개 나루 · 마탑 마을', [20, 132, 121, 174]], ['불의 제단', [10, 106, 46, 132]], ['환상열석', [10, 82, 46, 106]], ['물의 샘', [10, 62, 46, 82]],
     ['바람 절벽', [10, 42, 44, 62]], ['노움의 땅굴', 'cave'], ['노움의 보물방', 'hoard'], ['룬 언덕', [48, 106, 96, 132]], ['연금 공방 거리', [48, 90, 96, 106]],
@@ -2100,7 +2111,13 @@ const AVALON = {
     ['사과 과수원', 'orchard'], ['모르간의 궁', 'palace'], ['멀린의 수정 동굴', [54, 2, 86, 25]]],
   zones: [['대마법사', [22, 136, 62, 162]], ['원소술사', [78, 136, 120, 162]], ['소환술사', [10, 84, 44, 104]], ['룬 마법사', [50, 108, 94, 130]],
     ['연금술사', [50, 92, 94, 104]], ['드루이드', [104, 104, 132, 132]], ['흑마법사', [75, 65, 93, 81]]],
-  chests: [[35, 94], [53, 77], [15, 32, 'big']]
+  chests: [[35, 94], [53, 77], [15, 32, 'big']],
+  // 실내 — 숲 속 닭다리 오두막 (바깥엔 문 하나, 안에 바바 야가). 안은 어둑한 통나무 방: 큰 화덕 · 말린 약초 · 약병 · 낡은 침대 · 책 더미 · 버섯
+  rooms: [{ id: 'babayaga', title: '바바 야가의 오두막', box: [119, 80, 126, 85], room: {
+    w: 9, h: 7, theme: 'witch', outLabel: '숲으로',
+    wall: [{ x: 0, w: 3, kind: 'herbs' }, { x: 3, w: 3, kind: 'potions' }, { x: 6, w: 3, kind: 'herbs' }],
+    props: [{ kind: 'cauldron', x: 0, y: 1, w: 2, h: 2 }, { kind: 'bed', x: 7, y: 3, w: 2, h: 3 }, { kind: 'books', x: 8, y: 0 }, { kind: 'shroom', x: 0, y: 5 }, { kind: 'shroom', x: 8, y: 6 }],
+    foes: [{ name: '바바 야가', x: 4, y: 1 }] } }]
 };
 function avalonMap(data) {
   const A = AVALON;
@@ -3707,9 +3724,9 @@ function allMaps(data) {
   out.abyss = abyssMap(data);
   out[DEMON_CASTLE.id] = buildingInterior(data, DEMON_CASTLE);
   for (const b of BUILDINGS) out[b.id] = b.room ? storeInterior(ROOMS[b.room], data) : buildingInterior(data, b);
-  for (const m of RANK_MAPS) out[m.id] = m.custom(data);
+  for (const m of RANK_MAPS) { out[m.id] = m.custom(data); for (const r of rankRooms(m.id)) out[r.id] = roomMap(m.id, r, data); }
   out.adminroom = adminRoom(data);
   return out;
 }
 
-module.exports = { trail, erodeShore, TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, looksPng, encodePng, generate, sewer, overworld, oldtown, city, deptInterior, dept2Interior, assocInterior, guildInterior, guild2Interior, homeInterior, home2Interior, arenaInterior, bmInterior, gateinInterior, chiefInterior, raidInterior, storeInterior, OLDTOWN, CITY, DEPT, DEPT2, ASSOC, GUILD, GUILD2, HOME, HOME2, ARENA, BM, GATEIN, CHIEF, RAID, W1, W2, W3, SKY, CITY_BIO, secretRoom, buildingInterior, allMaps, layoutFromPlan, RANK_MAPS, rankMapId, adminRoom, PLACES, placeOf, ALEX, alexandriaMap, CAMELOT, camelotMap, AVALON, avalonMap, MURIM, murimMap, TIANSHAN, tianshanMap, naturalize, wavyBand, SANCTUARY, sanctuaryMap, ELYSIUM, elysiumMap, HEAVEN, heavenMap, INFERNO, infernoMap, YGGDRASIL, yggdrasilMap, PRIMORDIAL, primordialMap, OLYMPUS, olympusMap, RLYEH, rlyehMap, CHAOS, chaosMap, handMap, solidShape, SEWER, SECRET_ROOMS, CAVES, caveMap, BUILDINGS, BUILD, DOORWAY, CARPET, RUIN, UNDERS, ABYSS, DEMON_CASTLE, abyssMap };
+module.exports = { rankRooms, roomMap, roomDoor, trail, erodeShore, TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, looksPng, encodePng, generate, sewer, overworld, oldtown, city, deptInterior, dept2Interior, assocInterior, guildInterior, guild2Interior, homeInterior, home2Interior, arenaInterior, bmInterior, gateinInterior, chiefInterior, raidInterior, storeInterior, OLDTOWN, CITY, DEPT, DEPT2, ASSOC, GUILD, GUILD2, HOME, HOME2, ARENA, BM, GATEIN, CHIEF, RAID, W1, W2, W3, SKY, CITY_BIO, secretRoom, buildingInterior, allMaps, layoutFromPlan, RANK_MAPS, rankMapId, adminRoom, PLACES, placeOf, ALEX, alexandriaMap, CAMELOT, camelotMap, AVALON, avalonMap, MURIM, murimMap, TIANSHAN, tianshanMap, naturalize, wavyBand, SANCTUARY, sanctuaryMap, ELYSIUM, elysiumMap, HEAVEN, heavenMap, INFERNO, infernoMap, YGGDRASIL, yggdrasilMap, PRIMORDIAL, primordialMap, OLYMPUS, olympusMap, RLYEH, rlyehMap, CHAOS, chaosMap, handMap, solidShape, SEWER, SECRET_ROOMS, CAVES, caveMap, BUILDINGS, BUILD, DOORWAY, CARPET, RUIN, UNDERS, ABYSS, DEMON_CASTLE, abyssMap };

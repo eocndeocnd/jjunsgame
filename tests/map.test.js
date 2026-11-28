@@ -813,6 +813,8 @@ test('숨은 굴 — 3격 보스(몰락한 왕)를 꺾으면 성 안 바로 뒤�
 // ---------- 지도 전부 · 7격부터 격 하나에 한 장 ----------
 const loadMap = name => M.parseTiled(JSON.parse(fs.readFileSync(path.join(ROOT, `maps/${name}.tmj`), 'utf8')), name);
 const allMapNames = () => fs.readdirSync(path.join(ROOT, 'maps')).filter(f => f.endsWith('.tmj')).map(f => f.replace(/\.tmj$/, ''));
+// 실내 — 바깥 지도 m 에서, 그 이름의 상대가 안에 있는 건물의 문 (7격부터 rooms, 사용자 결정 2026-11-28)
+const roomDoorOf = (m, name) => m.ports.find(p => p.door && p.to && p.to.endsWith('.out') && allMapNames().includes(p.to.split('.')[0]) && loadMap(p.to.split('.')[0]).posts.some(q => q.name === name));
 
 test('지도 전부 — 스무 지역이 저마다 한 장에만, 296마리가 모두 한 번씩 (하나뿐인 일반은 구역 대신 정해진 자리에)', () => {
   const data = loadData();
@@ -1051,7 +1053,7 @@ test('9격 아발론 — 안개 나루 · 마탑 마을 → 시내로 갈린 세
   const m = loadMap('avalon');
   const sec = name => m.areas.find(a => a.section && a.name === name);
   const post = name => m.posts.find(p => p.name === name);
-  const spot = name => post(name) || (a => ({ x: a.x, y: a.y + a.h / 2, w: 1, h: 1 }))(m.areas.find(a => a.monster === data.ENEMIES.find(e => e.name === name).id));
+  const spot = name => post(name) || roomDoorOf(m, name) || (a => ({ x: a.x, y: a.y + a.h / 2, w: 1, h: 1 }))(m.areas.find(a => a.monster === data.ENEMIES.find(e => e.name === name).id));
   const inside = (p, a) => p.x >= a.x && p.y >= a.y && p.x + p.w <= a.x + a.w && p.y + p.h <= a.y + a.h;
   const lv = name => data.ENEMIES.find(e => e.name === name).level;
   const routes = {
@@ -1063,8 +1065,9 @@ test('9격 아발론 — 안개 나루 · 마탑 마을 → 시내로 갈린 세
   for (const [r, list] of Object.entries(routes)) for (let i = 1; i < list.length; i++)
     assert.ok(lv(list[i]) > lv(list[i - 1]) && spot(list[i]).y < spot(list[i - 1]).y, `${r}: ${list[i - 1]} → ${list[i]} (셀수록 북쪽)`);
   const where = { '샐러맨더': '불의 제단', '운디네': '물의 샘', '실프': '바람 절벽', '노움': '노움의 땅굴', '파우스트': '파우스트의 서재', '바바 야가': '바바 야가의 숲', '키르케': '키르케의 섬', '모르간 르 페이': '모르간의 궁', '멀린': '멀린의 수정 동굴' };
-  for (const [name, a] of Object.entries(where)) assert.ok(inside(post(name), sec(a)), `${name} 은(는) ${a}`);
-  for (const p of m.posts.filter(q => !['바바 야가', '노움', '멀린'].includes(q.name))) {   // 숲의 마녀 · 땅속 정령 · 갇힌 멀린 빼고 트인 땅
+  for (const [name, a] of Object.entries(where)) assert.ok(inside(spot(name), sec(a)), `${name} 은(는) ${a}`);
+  assert.ok(!post('바바 야가') && roomDoorOf(m, '바바 야가').name === 'babayaga', '바바 야가는 숲 속 오두막 안');
+  for (const p of m.posts.filter(q => !['노움', '멀린'].includes(q.name))) {   // 숲의 마녀 · 땅속 정령 · 갇힌 멀린 빼고 트인 땅
     let open = 0, all = 0;
     for (let y = p.y - 3; y < p.y + p.h + 3; y++) for (let x = p.x - 3; x < p.x + p.w + 3; x++) { all++; if (!m.solid[y * m.w + x]) open++; }
     assert.ok(open / all > 0.75, `${p.name} — 트인 땅 (${Math.round(open / all * 100)}%)`);
@@ -1565,6 +1568,7 @@ test('7격부터 — 진행: 입구에서 보스 쪽으로 갈수록 센 상대 
       const p = m.posts.find(q => q.enemy === e.id);
       let a, b;
       if (p) { const r = ring(p).filter(k => A[k] >= 0 && B[k] >= 0); if (!r.length) continue; a = Math.min(...r.map(k => A[k])); b = Math.min(...r.map(k => B[k])); }
+      else if (roomDoorOf(m, e.name)) { const dr = roomDoorOf(m, e.name), k = dr.y * m.w + dr.x; if (!(A[k] >= 0 && B[k] >= 0)) continue; a = A[k]; b = B[k]; }   // 실내 — 건물 문까지
       else { const z = m.areas.find(q => q.monster === e.id); const k = z.mid.y * m.w + z.mid.x; if (!(A[k] >= 0 && B[k] >= 0)) continue; a = A[k]; b = B[k]; }
       rows.push({ lv: e.level, f: a / (a + b) });
     }
@@ -1573,6 +1577,33 @@ test('7격부터 — 진행: 입구에서 보스 쪽으로 갈수록 센 상대 
     const rho = 1 - 6 * rows.reduce((t, v) => t + (rl.get(v) - rf.get(v)) ** 2, 0) / (n * (n * n - 1));
     assert.ok(n >= 8 && rho > 0.75, `${spec.rank}격 ${spec.id} — 진행도와 레벨 상관 ${rho.toFixed(2)} (${n}종)`);
   }
+});
+
+test('7격부터 — 실내: 지붕 아래가 컨셉인 곁방의 존재는 바깥 지도엔 문 하나 난 닫힌 건물만, 안 지도에 그 상대 · 나가면 그 문 앞 · 문 앞까지 걸어서 닿음', () => {
+  const data = loadData();
+  let count = 0;
+  for (const spec of gen.RANK_MAPS) {
+    const m = loadMap(spec.id);
+    for (const r of gen.rankRooms(spec.id)) {
+      count++;
+      const door = m.ports.find(p => p.name === r.id), h = loadMap(r.id);
+      assert.ok(door && door.door && door.to === `${r.id}.out` && door.w === 1, `${r.title} — 바깥 문`);
+      assert.ok(!m.solid[door.y * m.w + door.x] && !m.solid[(door.y + 1) * m.w + door.x], `${r.title} — 문과 문 앞은 걸을 수 있음`);
+      const [x0, y0, x1, y1] = r.box;
+      for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) if (!(x === door.x && y === door.y)) assert.ok(m.solid[y * m.w + x], `${r.title} — 건물 (${x}, ${y}) 은 막힘`);
+      assert.ok(walk(m, [m.start.y * m.w + m.start.x], new Set(m.posts.flatMap(p => cellsOf(m, p))))[(door.y + 1) * m.w + door.x] >= 0, `${r.title} — 문 앞까지 걸어서`);
+      assert.ok(h.props.interior && h.props.title === r.title, `${r.title} — 안 지도`);
+      const out = h.ports.find(p => p.name === 'out');
+      assert.equal(out.to, `${spec.id}.${r.id}`, `${r.title} — 나가면 그 문 앞`);
+      for (const f of r.room.foes) {
+        const e = data.ENEMIES.find(q => q.name === f.name), p = h.posts.find(q => q.enemy === e.id);
+        assert.ok(p && e.rank.n === spec.rank && !m.posts.some(q => q.enemy === e.id), `${f.name} — 안에만 (${spec.rank}격)`);
+        const d = walk(h, [h.start.y * h.w + h.start.x]);
+        assert.ok(cellsOf(h, p).some(i => d[i] >= 0) || [-1, h.w].some(o => d[p.y * h.w + p.x + o] >= 0 || d[(p.y + p.h) * h.w + p.x] >= 0), `${f.name} 에게 걸어서 닿음`);
+      }
+    }
+  }
+  assert.ok(count >= 1);
 });
 
 test('관리자 방 — 1~20격 문이 하나씩, 문은 그 격의 지역으로 (adminZone) · 방 안에서 모든 문 앞에 닿음 · 일반 지도와 이어지지 않음', () => {
