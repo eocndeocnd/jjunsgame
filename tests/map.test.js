@@ -1512,7 +1512,7 @@ test('19격 가라앉은 르뤼에 — 남쪽 물가에서 물길 둘로 갈린 
   assert.equal(m.ports.find(p => p.name === 'next').place, '바깥', '크툴루 너머 — 장소가 바깥으로');
 });
 
-test('20격 궁극의 혼돈 — 위아래 없이 가장자리에서 중심으로: 세 소용돌이(처음의 웅덩이들 · 시간과 공간 바깥 · 궁정으로 가는 길)가 휘감겨 백치 신의 궁정의 아자토스로 · 중심에 가까울수록 셈 · 숨은 은열쇠의 방 · 마지막이라 뒤 문 없음', () => {
+test('20격 궁극의 혼돈 — 위아래 없이 가장자리에서 중심으로: 세 소용돌이(처음의 웅덩이들 · 시간과 공간 바깥 · 궁정으로 가는 길) — 첫째 · 둘째는 반 바퀴 돌아 다음 소용돌이로, 셋째만 백치 신의 궁정의 아자토스로 · 중심에 가까울수록 셈 · 숨은 은열쇠의 방 · 마지막이라 뒤 문 없음', () => {
   const data = loadData();
   const m = loadMap('chaos');
   const [cx, cy] = gen.CHAOS.C;
@@ -1534,14 +1534,14 @@ test('20격 궁극의 혼돈 — 위아래 없이 가장자리에서 중심으�
   assert.ok(!m.ports.some(p => p.name === 'next'), '마지막 — 뒤 문 없음');
   const pip = m.areas.find(a => a.monster === data.ENEMIES.find(e => e.name === '아자토스의 피리꾼').id);
   assert.ok(Math.hypot(pip.x + pip.w / 2 - cx, pip.y + pip.h / 2 - cy) < 8, '피리꾼은 궁정 둘레를 돎');
-  // 세 소용돌이 — 둘을 끊어도 남은 하나로 궁정까지
+  // 진행 — 궁정 앞은 셋째 소용돌이뿐 (첫째 · 둘째는 실 다리로 다음 소용돌이 들머리에). 가장자리 실 길로 약한 소용돌이는 건너뛸 수 있음
   const bodies = m.posts.flatMap(q => cellsOf(m, q)), from = [m.start.y * m.w + m.start.x];
   const goal = [(cy + 20) * m.w + cx];
-  for (const keep of Object.keys(arms)) {
-    const shut = new Set(bodies);
-    for (let k = 0; k < m.w * m.h; k++) { const a = m.areaAt[k] >= 0 ? m.areas[m.areaAt[k]].name : ''; const r = Math.hypot(k % m.w - cx, ((k / m.w) | 0) - cy); if (a.includes('소용돌이') && !a.startsWith(keep) && r > 36 && r < 70) shut.add(k); }
-    assert.ok(goal.some(k => walk(m, from, shut)[k] >= 0), `${keep}만으로 궁정까지`);
-  }
+  const armCells = names => { const out = []; for (let k = 0; k < m.w * m.h; k++) { const a = m.areaAt[k] >= 0 ? m.areas[m.areaAt[k]].name : ''; if (names.some(n => a.startsWith(n))) out.push(k); } return out; };
+  assert.ok(!goal.some(k => walk(m, from, new Set([...bodies, ...armCells(['셋째 소용돌이'])]))[k] >= 0), '셋째 소용돌이를 지나지 않고는 궁정에 못 감');
+  assert.ok(goal.some(k => walk(m, from, new Set([...bodies, ...armCells(['첫째 소용돌이', '둘째 소용돌이'])]))[k] >= 0), '첫째 · 둘째를 건너뛰고 셋째로');
+  const d0 = walk(m, from, new Set(bodies));
+  for (const [a, list] of Object.entries(arms)) assert.ok(list.every(n => { const p = post(n); return d0[(p.y + p.h) * m.w + p.x] >= 0 || d0[(p.y - 1) * m.w + p.x] >= 0 || d0[p.y * m.w + p.x - 1] >= 0 || d0[p.y * m.w + p.x + p.w] >= 0; }), `${a} — 모두 닿음`);
   const big = m.chests.find(c => c.big), room = m.areas.find(a => a.name === '은열쇠의 방');
   assert.ok(big.x >= room.x && big.x < room.x + room.w && big.y >= room.y && big.y < room.y + room.h, '큰 상자는 은열쇠의 방');
   const secretCells = []; for (let k = 0; k < m.w * m.h; k++) if (m.secret[k]) secretCells.push(k);

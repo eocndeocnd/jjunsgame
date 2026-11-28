@@ -3073,21 +3073,23 @@ function rlyehMap(data) {
 
 // ---------- 20격 — 궁극의 혼돈 (손으로 짠 지도, 사용자 결정 2026-11-27) ----------
 // 「여기엔 위도 아래도 없다. 신화도 없다. 신화는 인간의 것이니까.」 — 우주 한가운데, 눈먼 백치 신 아자토스의 궁정. 크툴루 무덤 너머 틈으로 혼돈의 바깥 가장자리에 떨어짐.
-// 땅이 없는 어둠 속 크고 작은 조각들, 가는 실 같은 길로 이어짐. 위아래 없이 가장자리에서 중심으로 — 세 소용돌이가 같은 방향으로 휘감기며 빨려 들어감.
+// 땅이 없는 어둠 속 크고 작은 조각들, 가는 실 같은 길로 이어짐. 위아래 없이 가장자리에서 중심으로 — 세 소용돌이가 같은 방향으로 휘감김.
+// 첫째 · 둘째는 반 바퀴 돌다 실 다리로 다음 소용돌이 들머리에 튕겨 나가고, 셋째만 궁정으로 빨려 듦 — 어느 길로 가도 궁정 앞은 가장 센 셋째 소용돌이.
 //   첫째 소용돌이(처음의 웅덩이들 — 가장 약함)  슈브니구라스(천 마리 새끼의 검은 염소) → 우보-사틀라(모든 것의 처음이자 끝) → 아브호스(새것을 게워내는 웅덩이)
 //   둘째 소용돌이(시간과 공간 바깥)            다올로스(장막을 찢는 자) → 요그소토스(문이자 열쇠이며 문지기 — 곁에 숨은 은열쇠의 방) → 이브-츠틀(시간 바깥에서 기다리는)
 //   셋째 소용돌이(궁정으로 가는 길 — 가장 셈)  공허의 군주(하나뿐) → 툴주샤(궁정의 초록 불꽃) → 니알라토텝(바깥 신들의 사자) → 그로스(별을 깨우며 떠도는 행성)
 //   중심 — 백치 신의 궁정: 둘레를 돌며 피리를 멈추지 않는 아자토스의 피리꾼(돌아다님) · 한가운데 아자토스 (마지막 — 뒤 문 없음)
-// 바깥 가장자리 실 길이 떨어진 조각에서 둘째 · 셋째 소용돌이 들머리로, 뒤 소용돌이 들머리에서 앞 소용돌이 허리로 실 다리 — 갈래를 바꿀 수 있음.
+// 바깥 가장자리 실 길이 떨어진 조각에서 둘째 · 셋째 소용돌이 들머리로 (약한 소용돌이를 건너뛸 수 있음), 앞 소용돌이 끝(허리)에서 뒤 소용돌이 들머리로 실 다리.
 // 작은 상자는 아브호스의 웅덩이 가 · 그로스가 떠도는 조각.
 const CHAOS = {
   W: 204, H: 204, C: [102, 100],
   arms: [[90, '첫째 소용돌이 — 처음의 웅덩이들'], [210, '둘째 소용돌이 — 시간과 공간 바깥'], [330, '셋째 소용돌이 — 궁정으로 가는 길']],
   turn: 240, r0: 82, r1: 31, court: 28, strand: 3.2,
+  ends: [0.5, 0.5, 1],   // 소용돌이마다 어디까지 휘감기나 — 첫째 · 둘째는 반 바퀴 돌다 실 다리로 다음 소용돌이 들머리에 튕겨 나가고, 셋째만 궁정까지 (사용자 결정 2026-11-28 진행)
   place: { // 이름 → [소용돌이, 0~1 자리]
-    '슈브니구라스': [0, 0.18], '우보-사틀라': [0, 0.42], '아브호스': [0, 0.82],                  // 실 다리(210 · 330도)가 붙는 허리는 비켜서
-    '다올로스': [1, 0.16], '요그소토스': [1, 0.58], '이브-츠틀': [1, 0.84],
-    '공허의 군주': [2, 0.12], '툴주샤': [2, 0.38], '니알라토텝': [2, 0.64], '그로스': [2, 0.9]
+    '슈브니구라스': [0, 0.16], '우보-사틀라': [0, 0.3], '아브호스': [0, 0.44],
+    '다올로스': [1, 0.12], '요그소토스': [1, 0.27], '이브-츠틀': [1, 0.43],
+    '공허의 군주': [2, 0.14], '툴주샤': [2, 0.4], '니알라토텝': [2, 0.65], '그로스': [2, 0.9]
   },
   in: [101, 200, 3], start: [102, 190], merchant: [108, 190]
 };
@@ -3099,13 +3101,13 @@ function chaosMap(data) {
   const spot = {};
   for (const [name, [k, t]] of Object.entries(A.place)) { const n = foes.find(e => e.name === name).size, [, , th, r] = armAt(k, t), [x, y] = polarAt(th, r + 6.5); spot[name] = [Math.round(x - n / 2), Math.round(y - n / 2)]; }
   spot['아자토스'] = [cx - 2, cy - 2];
-  const [kx, ky] = (() => { const [, , th, r] = armAt(1, 0.5); return polarAt(th - 9, r + 15); })();   // 은열쇠의 방 — 요그소토스 곁 바깥쪽
+  const [kx, ky] = (() => { const [, , th, r] = armAt(1, A.place['요그소토스'][1]); return polarAt(th, r + 17); })();   // 요그소토스 바로 바깥쪽   // 은열쇠의 방 — 요그소토스 곁 바깥쪽
   const keyRoom = [Math.round(kx) - 6, Math.round(ky) - 5, Math.round(kx) + 6, Math.round(ky) + 5];
   const chestOff = (k, t) => { const [, , th, r] = armAt(k, t); const [x, y] = polarAt(th, r + 6); return [Math.round(x), Math.round(y)]; };
   const spec = { ...A, foes: spot, next: null,
     sections: [['혼돈의 가장자리 — 떨어진 조각', [86, 180, 120, 204]], ['은열쇠의 방', keyRoom]],
     zones: [['아자토스의 피리꾼', [cx - A.court, cy - A.court, cx + A.court, cy + A.court]]],
-    chests: [chestOff(0, 0.7), chestOff(2, 0.78), [keyRoom[0] + 6, keyRoom[1] + 4, 'big']] };
+    chests: [chestOff(0, 0.34), chestOff(2, 0.78), [keyRoom[0] + 6, keyRoom[1] + 4, 'big']] };
   return handMap(data, 20, spec, c => {
     const { tiles, idx, box, ring, road, secrets, shapes } = c;
     const W = A.W, H = A.H, noise = valueNoise(20), owner = new Map();
@@ -3117,10 +3119,10 @@ function chaosMap(data) {
     // 떨어진 조각(들머리) · 세 소용돌이(조각 사슬과 실 길) · 바깥 가장자리 실 길 · 뒤 소용돌이 들머리에서 앞 소용돌이 허리로 실 다리 · 중심 궁정
     blob(cx, 188, 15, 8, 'edge'); box([A.in[0], 192, A.in[0] + A.in[2], A.in[1] + 1], FLOOR);
     for (let k = 0; k < 3; k++) {
-      thread(spiral(k, 0, 1), k);
-      for (let i = 0; i <= 6; i++) { const t = i / 6, [x, y, th, r] = armAt(k, t), [bx, by] = polarAt(th, r + 3); blob(bx, by, 9 - t * 2, 8 - t * 2, k); }
+      thread(spiral(k, 0, A.ends[k]), k);
+      for (let i = 0; i <= 6; i++) { const t = i / 6 * A.ends[k], [x, y, th, r] = armAt(k, t), [bx, by] = polarAt(th, r + 3); blob(bx, by, 9 - t * 2, 8 - t * 2, k); }
       for (const [n, [kk, t]] of Object.entries(A.place)) if (kk === k) { const [, , th, r] = armAt(k, t), [bx, by] = polarAt(th, r + 6); blob(bx, by, 8, 7, k); }   // 사는 자마다 제 조각
-      for (const t of [k === 0 ? 0.7 : -1, k === 2 ? 0.78 : -1]) if (t >= 0) { const [, , th, r] = armAt(k, t), [bx, by] = polarAt(th, r + 6); blob(bx, by, 6, 5, k); }
+      for (const t of [k === 0 ? 0.34 : -1, k === 2 ? 0.78 : -1]) if (t >= 0) { const [, , th, r] = armAt(k, t), [bx, by] = polarAt(th, r + 6); blob(bx, by, 6, 5, k); }
     }
     thread(arc(A.r0 + 4, 90, 210), 'edge'); thread(arc(A.r0 + 4, 90, -30), 'edge');
     thread([polarAt(210, A.r0), polarAt(210, A.r0 - (A.r0 - A.r1) * 0.5)], 1); thread([polarAt(330, A.r0), polarAt(330, A.r0 - (A.r0 - A.r1) * 0.5)], 2);
@@ -3139,7 +3141,7 @@ function chaosMap(data) {
     // 흙길 — 소용돌이 가운데 실 · 바깥 가장자리 실 · 실 다리 · 들머리에서 첫째 소용돌이로
     const mark = (x, y) => { for (let j = -1; j <= 0; j++) for (let i = -1; i <= 0; i++) { const q = idx(Math.round(x) + i, Math.round(y) + j); if (tiles[q] === FLOOR) tiles[q] = ROAD; } };
     const markPts = pts => { for (let k = 0; k + 1 < pts.length; k++) { const [a, b] = [pts[k], pts[k + 1]], n = Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) * 2); for (let i = 0; i <= n; i++) mark(a[0] + (b[0] - a[0]) * i / n, a[1] + (b[1] - a[1]) * i / n); } };
-    for (let k = 0; k < 3; k++) markPts(spiral(k, 0, 1));
+    for (let k = 0; k < 3; k++) markPts(spiral(k, 0, A.ends[k]));
     markPts(arc(A.r0 + 4, 90, 210)); markPts(arc(A.r0 + 4, 90, -30));
     markPts([polarAt(210, A.r0), polarAt(210, A.r0 - (A.r0 - A.r1) * 0.5)]); markPts([polarAt(330, A.r0), polarAt(330, A.r0 - (A.r0 - A.r1) * 0.5)]);
     markPts([[cx, 192], polarAt(90, A.r0)]);
