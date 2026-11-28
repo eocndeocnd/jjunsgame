@@ -1549,6 +1549,32 @@ test('20격 궁극의 혼돈 — 위아래 없이 가장자리에서 중심으�
   assert.ok(walk(m, from, new Set(bodies))[(big.y + 1) * m.w + big.x] >= 0, '샛길로 닿음');
 });
 
+test('7격부터 — 진행: 입구에서 보스 쪽으로 갈수록 센 상대 (걸음으로 잰 진행도와 레벨의 순위 상관 0.75 넘게 — 갈래 · 이야기 때문의 예외는 조금 허용)', () => {
+  // 진행도 = 입구에서 걸은 거리 / (입구에서 + 보스 앞까지). 숨은 샛길 · 다른 자리의 몸은 막고 잼. 보스 · 숨은 샛길 너머(히든)는 뺌 (사용자 결정 2026-11-28)
+  const data = loadData();
+  for (const spec of gen.RANK_MAPS) {
+    const m = loadMap(spec.id), zi = data.ZONES.findIndex(z => z.rank === spec.rank);
+    const foes = data.ENEMIES.filter(e => e.zoneIndex === zi), boss = foes.find(e => e.kind === 'boss'), bp = m.posts.find(p => p.enemy === boss.id);
+    const bodies = new Set(m.posts.flatMap(p => cellsOf(m, p))), shut = new Set(bodies);
+    for (let k = 0; k < m.w * m.h; k++) if (m.secret[k]) shut.add(k);
+    const ring = p => { const out = []; for (let y = p.y - 1; y <= p.y + p.h; y++) for (let x = p.x - 1; x <= p.x + p.w; x++) { const k = y * m.w + x; if (!bodies.has(k) && !m.solid[k]) out.push(k); } return out; };
+    const A = walk(m, [m.start.y * m.w + m.start.x], shut), B = walk(m, ring(bp), shut);
+    const rows = [];
+    for (const e of foes) {
+      if (e === boss) continue;
+      const p = m.posts.find(q => q.enemy === e.id);
+      let a, b;
+      if (p) { const r = ring(p).filter(k => A[k] >= 0 && B[k] >= 0); if (!r.length) continue; a = Math.min(...r.map(k => A[k])); b = Math.min(...r.map(k => B[k])); }
+      else { const z = m.areas.find(q => q.monster === e.id); const k = z.mid.y * m.w + z.mid.x; if (!(A[k] >= 0 && B[k] >= 0)) continue; a = A[k]; b = B[k]; }
+      rows.push({ lv: e.level, f: a / (a + b) });
+    }
+    const rank = key => { const s = [...rows].sort((p, q) => p[key] - q[key]); return new Map(s.map((v, i) => [v, i])); };
+    const rl = rank('lv'), rf = rank('f'), n = rows.length;
+    const rho = 1 - 6 * rows.reduce((t, v) => t + (rl.get(v) - rf.get(v)) ** 2, 0) / (n * (n * n - 1));
+    assert.ok(n >= 8 && rho > 0.75, `${spec.rank}격 ${spec.id} — 진행도와 레벨 상관 ${rho.toFixed(2)} (${n}종)`);
+  }
+});
+
 test('관리자 방 — 1~20격 문이 하나씩, 문은 그 격의 지역으로 (adminZone) · 방 안에서 모든 문 앞에 닿음 · 일반 지도와 이어지지 않음', () => {
   const data = loadData();
   const m = loadMap('adminroom');
