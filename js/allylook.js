@@ -61,10 +61,14 @@ const EYES = {   // 왼눈(x 10~12)과 오른눈(x 19~21)에 같은 모양을 �
   sleepy: ['...', '...', 'kkk', 'iij'],
   big:    ['kkk', 'hii', 'iii', 'jjj'],
   dot:    ['...', '...', '.k.', '.k.'],
-  smile:  ['...', '...', '.k.', 'k.k']
+  smile:  ['...', '...', '.k.', 'k.k'],
+  // 화려한 — 바깥으로 올라간 긴 속눈썹 · 진한 윗눈꺼풀(살짝 내려옴) · 빛 한 점의 눈동자 (이야기 인물 · 거울만 — 무작위는 앞의 여섯 가지만 뽑음, 2026-11-28).
+  // 속눈썹은 두 눈 모두 바깥쪽(l 왼눈 · r 오른눈), 눈동자는 두 눈의 같은 자리 — 같은 곳을 봄
+  elegant: { l: ['k..', 'kkk', 'hii', 'iji'], r: ['..k', 'kkk', 'hii', 'iji'] }
 };
-const EYES_KO = { round: '둥근', sharp: '날카로운', sleepy: '졸린', big: '큰', dot: '점', smile: '웃는' };
+const EYES_KO = { round: '둥근', sharp: '날카로운', sleepy: '졸린', big: '큰', dot: '점', smile: '웃는', elegant: '화려한' };
 const MOUTHS = ['small', 'line', 'open', 'none'];
+const MOUTHS_ALL = [...MOUTHS, 'smirk'];   // smirk(한쪽 입꼬리만 올라간 비웃음)은 거울 · 이야기 인물만 — 무작위(rollLook)에 넣으면 이미 맞은 동료의 생김새가 바뀜
 const MARKS = [['none', 10], ['blush', 2], ['scar', 1], ['bandage', 1], ['mole', 1]];
 const TOPS = ['tee', 'long', 'hoodie', 'jacket', 'suit', 'robe', 'armor', 'dobok', 'sleeveless'];
 const TOPS_KO = { tee: '반팔', long: '긴팔', hoodie: '후드', jacket: '재킷', suit: '정장', robe: '로브', armor: '갑옷', dobok: '도복', sleeveless: '민소매' };
@@ -131,13 +135,14 @@ function drawSkin(cv, S, view, hideEars) {
 function drawFace(cv, L, S, HC, E) {
   // 눈썹 — 머리색. 앞머리가 덮으면 머리가 위에 그려져 가려짐
   for (const x0 of [10, 19]) for (let i = 0; i < 3; i++) cv.put(x0 + i, 16, HC[0], 'face');
-  const rows = EYES[L.eye];
+  const def = EYES[L.eye];
   const col = { k: LASH, i: E[1], j: E[3], h: SHINE };
-  for (const x0 of [10, 19]) rows.forEach((row, j) => [...row].forEach((ch, i) => { if (col[ch]) cv.put(x0 + i, 17 + j, col[ch], 'face'); }));
+  for (const [x0, rows] of [[10, def.l || def], [19, def.r || def]]) rows.forEach((row, j) => [...row].forEach((ch, i) => { if (col[ch]) cv.put(x0 + i, 17 + j, col[ch], 'face'); }));
   const m = L.mouth;
   if (m === 'small') cv.put(16, 22, MOUTH, 'face');
   else if (m === 'line') { cv.put(15, 22, MOUTH, 'face'); cv.put(16, 22, MOUTH, 'face'); }
   else if (m === 'open') { cv.put(15, 22, MOUTH, 'face'); cv.put(16, 22, MOUTH, 'face'); cv.put(16, 23, TONGUE, 'face'); cv.put(15, 23, MOUTH, 'face'); }
+  else if (m === 'smirk') { cv.put(14, 22, MOUTH, 'face'); cv.put(15, 22, MOUTH, 'face'); cv.put(16, 22, MOUTH, 'face'); cv.put(17, 21, MOUTH, 'face'); }   // 비웃음 — 화면 오른쪽 입꼬리만 위로
   const k = L.mark;
   if (k === 'blush') { const p = mix(S[2], '#d05a58', 0.38); [[9, 21], [10, 21], [21, 21], [22, 21]].forEach(([x, y]) => cv.put(x, y, p, 'face')); }
   else if (k === 'scar') { cv.put(21, 21, S[0], 'face'); cv.put(22, 22, S[0], 'face'); cv.put(20, 21, S[4], 'face'); }
@@ -264,7 +269,252 @@ function runOf(m, x, y, part) {
   while (m.get(y * W + b + 1) === part) b++;
   return [a, b];
 }
+// ---------- 손으로 디자인한 머리 — 이야기 인물 전용 (4대 길드 에이스 · 사용자 요청 2026-11-25: 머리는 새로, 더 좋게) ----------
+// 머리 하나 = 가닥 목록. 가닥마다 뿌리 → 끝의 점(p)과 그 점의 굵기(w)를 정해 주면, 가닥을 따라 칠함:
+//   가닥 안에서 빛(왼쪽 위)을 향한 쪽은 밝게 · 반대쪽은 어둡게, 끝(t > 0.82)은 한 단계 어둡게, ring 구간의 밝은 쪽은 빛 띠,
+//   먼저 그린 가닥 위에 겹치는 가장자리는 가장 어두운 단계로 → 가닥 사이 경계선이 저절로 생김.
+// cap — 가닥 밑을 메우는 바탕(타원, maxY 줄까지), 어두운 단계로. 뷰마다 behind(몸 뒤) · front(얼굴 위) 두 겹.
+// acc — 끈 · 장식 칸 [x, y, 색] (색은 '#hex' 그대로)
+const HAIR_ART = {};
+const LIGHT_DIR = [-0.6, -0.8];
+function lockPixels(lk) {
+  const p = lk.p, w = lk.w, segs = [];
+  let total = 0;
+  for (let i = 0; i < p.length - 1; i++) { const dx = p[i + 1][0] - p[i][0], dy = p[i + 1][1] - p[i][1], len = Math.hypot(dx, dy) || 1e-6; segs.push({ i, dx, dy, len, s0: total }); total += len; }
+  const xs = p.map(q => q[0]), ys = p.map(q => q[1]), mw = Math.max(...w) / 2 + 1;
+  const out = [];
+  for (let y = Math.floor(Math.min(...ys) - mw); y <= Math.ceil(Math.max(...ys) + mw); y++) for (let x = Math.floor(Math.min(...xs) - mw); x <= Math.ceil(Math.max(...xs) + mw); x++) {
+    const cx = x + 0.5, cy = y + 0.5;
+    let best = null;
+    for (const s of segs) {
+      const a = p[s.i], f = Math.max(0, Math.min(1, ((cx - a[0]) * s.dx + (cy - a[1]) * s.dy) / (s.len * s.len)));
+      const px = a[0] + s.dx * f, py = a[1] + s.dy * f, d = Math.hypot(cx - px, cy - py);
+      if (!best || d < best.d) best = { d, s, f, side: ((cx - px) * -s.dy + (cy - py) * s.dx) / s.len };
+    }
+    const t = (best.s.s0 + best.s.len * best.f) / total;
+    const k = t * (p.length - 1), i0 = Math.min(p.length - 2, Math.floor(k)), wt = w[i0] + (w[i0 + 1] - w[i0]) * (k - i0);
+    if (best.d > wt / 2 + 0.2) continue;
+    const nx = -best.s.dy / best.s.len, ny = best.s.dx / best.s.len, toward = nx * LIGHT_DIR[0] + ny * LIGHT_DIR[1];   // 오른쪽 법선이 빛을 향하는 정도
+    const u = Math.max(-1, Math.min(1, best.side / Math.max(0.5, wt / 2)));
+    out.push({ x, y, t, lit: u * Math.sign(toward || 1) * Math.min(1, Math.abs(toward) + 0.35), edge: Math.abs(u) > 0.62 && wt >= 2 });
+  }
+  return out;
+}
+function drawHairArt(cv, HC, art, view, layer) {
+  const part = art[view] && art[view][layer];
+  if (!part) return;
+  const own = new Map();   // 칸 → 그 칸을 칠한 가닥 번호 (-1 = 바탕)
+  const put = (x, y, t, id) => { if (x >= 0 && y >= 0 && x < W && y < H) { cv.put(x, y, HC[clampT(t)], 'hair'); own.set(y * W + x, id); } };
+  if (part.cap) { const c = part.cap; for (let y = Math.floor(c.cy - c.ry); y <= Math.min(c.maxY, c.cy + c.ry); y++) for (let x = Math.floor(c.cx - c.rx); x <= Math.ceil(c.cx + c.rx); x++) if (((x + 0.5 - c.cx) / c.rx) ** 2 + ((y + 0.5 - c.cy) / c.ry) ** 2 <= 1) put(x, y, c.tone == null ? 1 : c.tone, -1); }
+  (part.locks || []).forEach((lk, id) => {
+    for (const q of lockPixels(lk)) {
+      let t = 2 + (q.lit > 0.45 ? 1 : q.lit < -0.55 ? -1 : 0) + (lk.tone || 0);
+      if (q.t > 0.86) t--;
+      if (lk.ring && q.t >= lk.ring[0] && q.t <= lk.ring[1] && q.lit > 0.05) t = lk.ringTone || 4;
+      const prev = own.get(q.y * W + q.x);
+      if (q.edge && q.lit < 0 && prev != null && prev !== id) t = Math.min(t, 1);   // 먼저 그린 가닥 위, 그늘 쪽 가장자리만 — 경계선
+      put(q.x, q.y, Math.min(t, lk.ring && t === (lk.ringTone || 4) ? 4 : 3), id);
+    }
+  });
+  for (const [x, y, c] of part.acc || []) cv.put(x, y, c, 'hair');
+}
+
+// ---------- 4대 길드 에이스 전용 머리 (사용자 결정 2026-11-25 ~ 11-28 — 시안은 design/characters/hair.js) ----------
+// 대표 특징이 앞 · 뒤 · 옆 어디서나 실루엣으로 보이게: 홍염 — 매끈한 긴 생머리 · 머리 위로 튀어나온 불꽃 머리핀 · 금 귀걸이,
+// 청해 — 정수리 상투(남색 끈) · 등까지 흐르는 꼬리, 크라운 — 가르마 탄 단정한 짧은 머리, 달 — 턱선 단발(뒤는 길게) · 이마를 덮는 앞머리
+const NAVY = '#2f3b5e', NAVY_HI = '#4a5a86';
+
+// ---------- 홍염 에이스 — 세련된 여성 (사용자 결정 2026-11-28): 깊은 옆 가르마 · 이마를 비스듬히 덮는 긴 앞머리 · 윤기 있는 빛 띠 ·
+//            끝을 일자로 자른 매끈한 긴 생머리 · 한쪽은 귀 뒤로 넘겨 금 귀걸이 · 머리 위로 튀어나온 불꽃 금 머리핀 ----------
+const PIN = { tip: '#e8662e', red: '#b8322a', gold: '#f0c860', goldDk: '#b8862e' };
+const EARRING = '#f0c860';
+HAIR_ART.ace_hongyeom = {
+  front: {
+    behind: { locks: [
+      { p: [[8, 12], [6, 20], [6, 30]], w: [5, 6, 5], ring: [0.3, 0.42] },               // 어깨 뒤로 내려오는 긴 머리 — 끝은 일자로
+      { p: [[23, 12], [25, 20], [25, 30]], w: [5, 6, 5], tone: -1 }
+    ] },
+    front: {
+      cap: { cx: 15.5, cy: 12, rx: 9.6, ry: 7.2, maxY: 12 },
+      locks: [
+        { p: [[9, 10], [13, 5], [19, 5], [23, 10]], w: [4, 5, 5, 4], ring: [0.2, 0.55] },   // 정수리 — 윤기 있는 결
+        { p: [[11, 6], [9, 9], [8, 13]], w: [3, 3, 2] },                                   // 가르마 왼쪽 — 귀 뒤로 넘김 (귀 · 귀걸이가 보임)
+        { p: [[10, 11], [9, 14], [7, 17]], w: [2, 2, 1], tone: -1 },                         // 관자놀이에서 귀 뒤로 넘어가는 가닥
+        { p: [[23, 11], [24, 18], [24, 25], [24, 30]], w: [3, 4, 4, 3], tone: -1 },         // 오른쪽 — 얼굴 옆으로 곧게
+        { p: [[12, 9], [15, 11], [18, 13]], w: [2, 2, 1], tone: -1 },                       // 앞머리 밑결
+        { p: [[12, 7], [16, 9], [20, 12], [22, 16]], w: [4, 5, 4, 2], ring: [0.1, 0.28] }    // 이마를 비스듬히 덮는 긴 앞머리
+      ],
+      acc: [[7, 3, PIN.tip], [6, 4, PIN.red], [7, 4, PIN.tip], [8, 4, PIN.red], [6, 5, PIN.red], [7, 5, PIN.tip], [8, 5, PIN.tip], [9, 5, PIN.red], [7, 6, PIN.gold], [8, 6, PIN.gold], [9, 6, PIN.goldDk], [8, 7, PIN.goldDk],
+        [6, 21, EARRING]]                                                                 // 불꽃 머리핀 (그 사람의 오른쪽, 머리 위로) · 금 귀걸이
+    }
+  },
+  back: {
+    front: {
+      cap: { cx: 15.5, cy: 13.6, rx: 9.9, ry: 8.6, maxY: 21 },
+      locks: [
+        { p: [[11, 6], [9, 18], [9, 30]], w: [5, 6, 4], ring: [0.12, 0.22] },              // 허리까지 매끈하게 — 가운데가 살짝 길게
+        { p: [[20, 6], [22, 18], [22, 30]], w: [5, 6, 4], tone: -1 },
+        { p: [[15.5, 5], [15.5, 18], [15.5, 31]], w: [5, 7, 5], ring: [0.1, 0.2] }
+      ],
+      acc: [[24, 3, PIN.tip], [25, 4, PIN.red], [24, 4, PIN.tip], [23, 4, PIN.red], [25, 5, PIN.red], [24, 5, PIN.tip], [23, 5, PIN.tip], [22, 5, PIN.red], [24, 6, PIN.gold], [23, 6, PIN.gold], [22, 6, PIN.goldDk], [23, 7, PIN.goldDk]]
+    }
+  },
+  side: {   // 대표 특징: 등 뒤로 흐르는 매끈한 긴 머리 · 머리핀 · 귀 뒤로 넘긴 머리와 귀걸이
+    behind: { locks: [{ p: [[10, 9], [6, 18], [6, 31]], w: [6, 7, 6], ring: [0.15, 0.25] }] },
+    front: {
+      cap: { cx: 14.5, cy: 12, rx: 10, ry: 7.4, maxY: 12 },
+      locks: [
+        { p: [[8, 9], [6, 16], [6, 22]], w: [4, 4, 3] },                                     // 뒤통수
+        { p: [[23, 9], [17, 5], [10, 6], [6, 11]], w: [4, 5, 5, 4], ring: [0.25, 0.5] },      // 이마에서 뒤로 흐르는 결
+        { p: [[13, 11], [12, 18], [11, 26], [11, 31]], w: [3, 3, 3, 3], tone: -1 },           // 귀 뒤로 넘겨 내린 머리
+        { p: [[17, 7], [20, 10], [23, 13], [24, 16]], w: [4, 4, 3, 2], ring: [0.1, 0.25] }    // 이마를 비스듬히 덮는 앞머리
+      ],
+      acc: [[11, 2, PIN.tip], [10, 3, PIN.red], [11, 3, PIN.tip], [12, 3, PIN.red], [10, 4, PIN.red], [11, 4, PIN.tip], [12, 4, PIN.tip], [13, 4, PIN.red], [11, 5, PIN.gold], [12, 5, PIN.gold], [13, 5, PIN.goldDk], [12, 6, PIN.goldDk],
+        [15, 20, EARRING]]
+    }
+  }
+};
+
+// ---------- 청해 에이스 — 이마를 드러내 넘긴 머리 · 정수리에 남색 끈으로 높이 묶은 긴 꼬리 · 얼굴 옆 두 가닥 (남성, 무협풍) ----------
+HAIR_ART.ace_cheonghae = {
+  front: {
+    behind: { locks: [
+      { p: [[20, 7], [24, 8], [26, 14], [26, 21], [25, 28]], w: [3, 4, 4, 3, 1] }   // 꼬리가 등 뒤로 (머리 오른쪽 뒤로 보임)
+    ] },
+    front: {
+      cap: { cx: 15.5, cy: 12.6, rx: 9.2, ry: 6.8, maxY: 12 },
+      locks: [
+        { p: [[15, 6], [11, 7], [8, 11], [8, 14]], w: [4, 4, 3, 2], ring: [0.2, 0.42] },   // 가운데에서 갈라 넘긴 머리
+        { p: [[16, 6], [20, 7], [23, 11], [23, 14]], w: [4, 4, 3, 2], tone: -1 },
+        { p: [[15.5, 6], [15.5, 3], [15.5, 1]], w: [4, 4, 3], ring: [0.2, 0.7] },        // 정수리 상투 — 머리 위로 솟음 (실루엣에서 보이게)
+        { p: [[11, 9], [9, 15], [8, 21], [8, 27]], w: [2.5, 2.5, 2, 1] },                // 얼굴 옆으로 길게 내려온 두 가닥
+        { p: [[20, 9], [22, 15], [23, 21], [23, 27]], w: [2.5, 2.5, 2, 1], tone: -1 },
+        { p: [[14, 8], [13, 11], [12, 14]], w: [2, 1.5, 1] },                             // 이마에 몇 올
+        { p: [[18, 8], [19, 11], [19, 13]], w: [1.5, 1.5, 1] }
+      ],
+      acc: [[14, 5, NAVY_HI], [15, 5, NAVY], [16, 5, NAVY], [17, 5, NAVY]]             // 남색 끈
+    }
+  },
+  back: {
+    front: {
+      cap: { cx: 15.5, cy: 13.6, rx: 9.9, ry: 8.6, maxY: 21 },
+      locks: [
+        { p: [[15, 5], [11, 10], [9, 17]], w: [3, 4, 4], ring: [0.3, 0.45] },              // 목덜미에서 정수리로 빗어 올린 결
+        { p: [[16, 5], [20, 10], [22, 17]], w: [3, 4, 4], tone: -1 },
+        { p: [[15.5, 5], [15.5, 12], [15.5, 19]], w: [3, 5, 5] },
+        { p: [[15.5, 4], [16.5, 10], [15.5, 18], [16, 25], [15, 31]], w: [4, 5, 4, 3, 1], ring: [0.08, 0.2] },   // 긴 꼬리
+        { p: [[9, 14], [8, 20], [8, 25]], w: [2, 2, 1] },                                   // 얼굴 옆 가닥 끝
+        { p: [[22, 14], [23, 20], [23, 25]], w: [2, 2, 1], tone: -1 }
+      ],
+      acc: [[14, 4, NAVY_HI], [15, 4, NAVY], [16, 4, NAVY], [17, 4, NAVY], [14, 5, NAVY], [15, 5, NAVY], [16, 5, NAVY], [17, 5, NAVY]]
+    }
+  },
+  side: {   // 옆모습 다시 — 대표 특징: 정수리 상투 · 등까지 흐르는 긴 꼬리, 이마는 드러남
+    behind: { locks: [
+      { p: [[12, 3], [8, 5], [5, 12], [5, 22], [6, 30]], w: [4, 4, 4, 3, 1], ring: [0.1, 0.22] }
+    ] },
+    front: {
+      cap: { cx: 14.5, cy: 12.5, rx: 9.6, ry: 6.6, maxY: 12 },
+      locks: [
+        { p: [[11, 6], [7, 13], [8, 19]], w: [4, 4, 3] },                                     // 뒤통수 — 상투 쪽으로 빗어 올림
+        { p: [[23, 12], [17, 10], [11, 9]], w: [2, 3, 4], tone: -1 },
+        { p: [[23, 11], [19, 7], [14, 5]], w: [3, 4, 4], ring: [0.3, 0.6] },                  // 이마에서 정수리로 넘긴 결
+        { p: [[14, 5], [13, 2], [11, 2]], w: [4, 4, 3], ring: [0.1, 0.6] },                   // 상투
+        { p: [[19, 9], [16, 11], [14, 15]], w: [3, 4, 3], tone: -1 },                         // 관자놀이 — 귀 위를 덮어 빈 곳이 없게 (2026-11-28)
+        { p: [[16, 11], [16, 16], [16, 22], [16, 27]], w: [3, 2.5, 2, 1] }                     // 관자놀이에서 가슴까지 한 가닥 (귀 바로 앞)
+      ],
+      acc: [[12, 4, NAVY_HI], [13, 4, NAVY], [12, 5, NAVY], [13, 5, NAVY]]
+    }
+  }
+};
+
+// ---------- 크라운 에이스 — 가르마를 타 한쪽으로 단정하게 빗어 넘긴 금발 · 짧고 깔끔한 옆머리 (남성, 점잖게 — 사용자 결정 2026-11-25) ----------
+HAIR_ART.ace_crown = {
+  front: {
+    front: {
+      cap: { cx: 15.5, cy: 12, rx: 9.3, ry: 6.6, maxY: 11 },
+      locks: [
+        { p: [[8, 11], [7, 15]], w: [3, 2] },                                              // 짧은 옆머리 (귀는 보임)
+        { p: [[23, 11], [24, 15]], w: [3, 2], tone: -1 },
+        { p: [[11, 6], [9, 8], [8, 11]], w: [3, 3, 2] },                                   // 가르마 왼쪽 — 옆으로 빗어 내림
+        { p: [[12, 8], [17, 8], [21, 10], [22, 13]], w: [3, 4, 3, 1], tone: -1 },           // 가르마 오른쪽 — 이마 위로 넘긴 결
+        { p: [[12, 6], [17, 5], [22, 7], [23, 11]], w: [4, 4, 4, 2], ring: [0.2, 0.55] },
+        { p: [[12, 9], [16, 10], [20, 11]], w: [2, 2, 1] }                                 // 이마 위 가지런한 끝
+      ]
+    }
+  },
+  back: {
+    front: {
+      cap: { cx: 15.5, cy: 14, rx: 9.9, ry: 8.6, maxY: 22 },
+      locks: [
+        { p: [[12, 6], [11, 12], [10, 19]], w: [4, 4, 3] },
+        { p: [[16, 5], [16, 12], [16, 20]], w: [4, 5, 3], ring: [0.15, 0.3] },
+        { p: [[20, 6], [21, 12], [21, 19]], w: [4, 4, 3], tone: -1 }
+      ]
+    }
+  },
+  side: {   // 옆모습 다시 — 대표 특징: 단정한 짧은 머리(귀가 보임) · 망토
+    front: {
+      cap: { cx: 14.5, cy: 12, rx: 9.6, ry: 6.8, maxY: 12 },
+      locks: [
+        { p: [[10, 7], [7, 13], [8, 20]], w: [4, 4, 3] },                                     // 뒤통수
+        { p: [[12, 14], [12, 20]], w: [3, 2], tone: -1 },                                      // 목덜미 짧게
+        { p: [[22, 12], [17, 9], [11, 9]], w: [2, 3, 3], tone: -1 },
+        { p: [[23, 10], [18, 5], [11, 5], [7, 9]], w: [3, 4, 4, 3], ring: [0.25, 0.5] },      // 앞에서 뒤로 빗어 넘긴 결
+        { p: [[16, 12], [16, 16]], w: [2, 1.5], tone: -1 }                                     // 귀 앞 짧은 구레나룻
+      ]
+    }
+  }
+};
+
+// ---------- 달 에이스 — 어깨까지 오는 은발 · 한쪽 눈을 덮는 긴 앞머리 · 안으로 말린 끝 (여성) ----------
+HAIR_ART.ace_dal = {
+  front: {
+    behind: { locks: [
+      { p: [[8, 14], [6, 20], [8, 24]], w: [4, 4, 2] },
+      { p: [[23, 14], [25, 20], [23, 24]], w: [4, 4, 2], tone: -1 }
+    ] },
+    front: {
+      cap: { cx: 15.5, cy: 12.4, rx: 9.6, ry: 7.4, maxY: 13 },
+      locks: [
+        { p: [[8, 11], [7, 17], [8, 22], [10, 24]], w: [3, 3, 3, 1] },                     // 옆머리 — 턱선에서 안으로
+        { p: [[23, 11], [24, 17], [23, 22], [21, 24]], w: [3, 3, 3, 1], tone: -1 },
+        { p: [[9, 10], [13, 5], [19, 5], [23, 9]], w: [3, 4, 4, 3], ring: [0.2, 0.5] },    // 정수리 결
+        { p: [[12, 8], [10, 12], [9, 16]], w: [4, 3, 1] },                                 // 왼쪽 짧은 앞머리
+        { p: [[13, 7], [18, 10], [22, 15]], w: [3, 4, 2], tone: -1 },
+        { p: [[12, 7], [17, 11], [20, 16], [21, 21]], w: [4, 5, 4, 1], ring: [0.15, 0.3] }  // 오른쪽 눈을 덮는 긴 앞머리
+      ]
+    }
+  },
+  back: {
+    front: {
+      cap: { cx: 15.5, cy: 15, rx: 10.4, ry: 10.4, maxY: 26 },                             // 뒤는 길고 가득 — 목 · 뒤통수 살이 안 보이게 (2026-11-28)
+      locks: [
+        { p: [[8, 10], [7, 19], [8, 26], [10, 28]], w: [3, 4, 3, 1] },
+        { p: [[23, 10], [24, 19], [23, 26], [21, 28]], w: [3, 4, 3, 1], tone: -1 },
+        { p: [[12, 6], [10, 17], [10, 25], [12, 28]], w: [5, 6, 5, 1], ring: [0.15, 0.28] },
+        { p: [[19, 6], [21, 17], [21, 25], [19, 28]], w: [5, 6, 5, 1], tone: -1 },
+        { p: [[15.5, 5], [15.5, 17], [15.5, 28]], w: [5, 6, 4], ring: [0.12, 0.25] }
+      ]
+    }
+  },
+  side: {   // 옆모습 다시 — 대표 특징: 둥근 단발(끝이 안으로) · 이마를 덮는 앞머리
+    behind: { locks: [{ p: [[10, 10], [7, 17], [8, 22], [10, 24]], w: [6, 6, 4, 1] }] },
+    front: {
+      cap: { cx: 14.5, cy: 12.4, rx: 9.8, ry: 7.4, maxY: 13 },
+      locks: [
+        { p: [[8, 9], [6, 16], [7, 21], [10, 24]], w: [4, 4, 3, 1] },                         // 뒤로 둥글게 — 턱선까지
+        { p: [[22, 8], [16, 5], [9, 8]], w: [3, 4, 4], ring: [0.3, 0.6] },                    // 정수리
+        { p: [[15, 11], [14, 17], [14, 21], [16, 24]], w: [4, 4, 3, 1], tone: -1 },            // 귀를 덮고 턱으로 말려 드는 옆머리
+        { p: [[17, 7], [19, 11], [20, 16]], w: [4, 4, 2] },                                   // 이마를 덮는 앞머리
+        { p: [[21, 7], [23, 11], [24, 16]], w: [3, 4, 1], ring: [0.15, 0.3] }
+      ]
+    }
+  }
+};
+
 function drawHair(cv, L, HC, view, layer) {
+  if (L.hair && HAIR_ART[L.hair]) return drawHairArt(cv, HC, HAIR_ART[L.hair], view, layer);
   const info = hairMask(L, view), src = layer === 'behind' ? info.behind : info.m;
   const all = new Map([...info.m, ...info.behind]);
   const has = (x, y) => all.has(y * W + x);
@@ -414,7 +664,7 @@ function drawCapeBehind(cv, L) {
 //  옆모습 — 오른쪽(화면 오른쪽)을 봄. 왼쪽을 보는 모습은 좌우로 뒤집음 (주인공 지도 걷기에 씀 — 2026-11-25)
 //  비율은 주인공 옆모습(assets/hero/walk.png 의 셋째 줄)을 따름: 머리 x 5~25, 얼굴은 오른쪽, 몸통은 좁게, 다리는 겹쳐서
 // ============================================================
-const SKULL_SIDE = { 7: [11, 20], 8: [9, 22], 9: [8, 23], 20: [8, 24], 21: [10, 24], 22: [11, 23], 23: [13, 23], 24: [15, 21] };   // 그 밖(10~19)은 7~24 — 뒤통수 아래는 깎여 목으로, 턱은 앞으로
+const SKULL_SIDE = { 7: [11, 20], 8: [9, 22], 9: [8, 23], 20: [8, 24], 21: [9, 24], 22: [10, 23], 23: [12, 22], 24: [14, 20] };   // 그 밖(10~19)은 7~24 — 뒤통수 아래는 깎여 목으로, 턱은 앞으로
 const skullRowSide = y => SKULL_SIDE[y] || (y >= 10 && y <= 19 ? [7, 24] : null);
 function drawSkinSide(cv, S, hideEar) {
   for (let y = 7; y <= 24; y++) {
@@ -428,17 +678,56 @@ function drawSkinSide(cv, S, hideEar) {
     }
   }
   for (let y = 24; y <= 25; y++) for (let x = 14; x <= 17; x++) cv.put(x, y, S[1], 'skin');   // 목
-  if (!hideEar) for (let y = 17; y <= 19; y++) { cv.put(13, y, S[2], 'skin'); cv.put(14, y, S[y === 18 ? 1 : 3], 'skin'); }
+  cv.put(25, 19, S[2], 'skin');                                      // 코 — 얼굴 앞선이 일직선이면 상자처럼 보임 (옆모습 다시 그리기 2026-11-25)
   for (let y = 31; y <= 32; y++) { cv.put(14, y, S[3], 'skin'); cv.put(15, y, S[2], 'skin'); }   // 앞 손
+}
+// 옆모습 귀 — 머리 한가운데(x 14~15). 귀가 보여야 옆모습으로 읽힘. 뒤통수 머리 바탕을 깐 뒤에 그림
+function drawEarSide(cv, S) {
+  for (let y = 17; y <= 19; y++) { cv.put(14, y, S[y === 18 ? 1 : 2], 'skin'); cv.put(15, y, S[y === 17 ? 3 : 2], 'skin'); }
+}
+// 옆모습 뒤통수 — 귀 뒤(x ≤ 13)는 모두 머리카락. 맨살로 남으면 얼굴이 머리 폭만큼 넓은 대머리처럼 보임 (2026-11-25)
+// 경계는 귀 뒤에서 목덜미로 갈수록 비스듬히 물러남 — 세로 일직선이면 얼굴과 ㄱ자로 만남 (2026-11-28)
+const BACK_HEAD_EDGE = { 18: 13, 19: 13, 20: 12, 21: 11 };
+function drawBackHeadSide(cv, HC) {
+  for (let y = 7; y <= 21; y++) {
+    const [a] = skullRowSide(y), b = BACK_HEAD_EDGE[y] || 13;
+    for (let x = a; x <= b; x++) cv.put(x, y, HC[y <= 10 ? 2 : x <= 9 ? 2 : 1], 'hair');
+  }
+}
+// 옆모습 머리 · 얼굴 경계 다듬기 (사용자 요청 2026-11-28 — 얼굴과 맞닿는 머리카락이 너무 직각):
+//   안쪽 모서리 — 살이 위와 한쪽 옆을 머리에 둘러싸인 칸은 머리(어두운 단계)로 채움
+//   바깥 모서리 — 머리 덩어리가 얼굴 쪽으로 각지게 튀어나온 칸(위 · 뒤는 머리, 아래 · 앞 · 대각선은 살)은 살로 깎음
+//   → 1칸짜리 사선 계단. 가는 가닥 끝(위나 뒤가 머리가 아닌 칸)은 건드리지 않음. 한 번에 보고 한 번에 바꿈 (번지지 않게)
+function roundHairEdgesSide(cv, S, HC) {
+  const kind = (x, y) => { const p = cv.at(x, y); return p ? p.g : null; };
+  // 머리 안의 살색 구멍 — 좌우나 위아래가 머리인 살 칸은 머리로 (가닥 사이로 머리뼈가 비침)
+  const holes = [];
+  for (let y = 8; y <= 21; y++) for (let x = 6; x <= 24; x++) if (kind(x, y) === 'skin' && ((kind(x - 1, y) === 'hair' && kind(x + 1, y) === 'hair') || (kind(x, y - 1) === 'hair' && kind(x, y + 1) === 'hair'))) holes.push([x, y]);
+  for (const [x, y] of holes) cv.put(x, y, HC[1], 'hair');
+  // 얼굴 뒤쪽 위 모서리 — 머리선 세 줄 아래의 얼굴 뒤쪽 선(b)을 기준으로, 위로 갈수록 한 칸씩 앞으로 들어가는 사선으로 깎음
+  const firstSkin = y => { for (let x = 12; x <= 24; x++) if (kind(x, y) === 'skin') return x; return -1; };
+  let hl = -1;
+  for (let y = 8; y <= 18; y++) if (firstSkin(y) >= 0) { hl = y; break; }
+  const b = hl >= 0 ? firstSkin(hl + 3) : -1;
+  if (b >= 0) for (let k = 0; k < 3; k++) for (let x = 12; x < Math.min(20, b + 3 - k); x++) if (kind(x, hl + k) === 'skin') cv.put(x, hl + k, HC[1], 'hair');
+  const fill = [], cut = [];
+  for (let y = 8; y <= 23; y++) for (let x = 8; x <= 25; x++) {
+    const k = kind(x, y);
+    if (k === 'skin' && kind(x, y - 1) === 'hair' && (kind(x - 1, y) === 'hair' || kind(x + 1, y) === 'hair')) fill.push([x, y]);
+    else if (k === 'hair' && kind(x, y - 1) === 'hair' && kind(x - 1, y) === 'hair' && kind(x, y + 1) === 'skin' && kind(x + 1, y) === 'skin' && kind(x + 1, y + 1) === 'skin') cut.push([x, y]);
+  }
+  for (const [x, y] of fill) cv.put(x, y, HC[1], 'hair');
+  for (const [x, y] of cut) cv.put(x, y, cv.at(x + 1, y).c, 'skin');
 }
 function drawFaceSide(cv, L, S, HC, E) {
   for (let i = 0; i < 3; i++) cv.put(20 + i, 16, HC[0], 'face');   // 눈썹
-  const rows = EYES[L.eye], col = { k: LASH, i: E[1], j: E[3], h: SHINE };
+  const rows = EYES[L.eye].l || EYES[L.eye], col = { k: LASH, i: E[1], j: E[3], h: SHINE };   // 오른쪽을 보면 그 사람의 오른눈(앞모습의 왼눈)이 보임
   rows.forEach((row, j) => [...row.slice(0, 2)].forEach((ch, i) => { if (col[ch]) cv.put(20 + i, 17 + j, col[ch], 'face'); }));   // 눈 하나 — 앞모습 눈의 앞 두 칸
   const m = L.mouth;
   if (m === 'small') cv.put(23, 22, MOUTH, 'face');
   else if (m === 'line') { cv.put(22, 22, MOUTH, 'face'); cv.put(23, 22, MOUTH, 'face'); }
   else if (m === 'open') { cv.put(22, 22, MOUTH, 'face'); cv.put(23, 22, MOUTH, 'face'); cv.put(23, 23, TONGUE, 'face'); }
+  else if (m === 'smirk') { cv.put(22, 22, MOUTH, 'face'); cv.put(23, 21, MOUTH, 'face'); }
   const k = L.mark;
   if (k === 'blush') { const p = mix(S[2], '#d05a58', 0.38); cv.put(20, 21, p, 'face'); cv.put(21, 21, p, 'face'); }
   else if (k === 'scar') { cv.put(19, 21, S[0], 'face'); cv.put(20, 22, S[0], 'face'); cv.put(18, 21, S[4], 'face'); }
@@ -567,8 +856,11 @@ function drawLook(L, view = 'front') {
     drawHair(cv, L, HC, 'side', 'behind');
     drawSkinSide(cv, S, sideY >= 18);
     drawClothesSide(cv, L, S);
+    drawBackHeadSide(cv, HC);
+    if (sideY < 18 || (L.hair && HAIR_ART[L.hair])) drawEarSide(cv, S);   // 전용 머리는 귀를 그린 뒤 가닥이 덮을지 정함
     drawFaceSide(cv, L, S, HC, E);
     drawHair(cv, L, HC, 'side', 'front');
+    roundHairEdgesSide(cv, S, HC);
     for (let y = 1; y < 26; y++) for (let x = 0; x < W; x++) { const p = cv.at(x, y), up = cv.at(x, y - 1); if (p && p.g === 'skin' && up && up.g === 'hair') cv.put(x, y, S[1], 'skin'); }
   } else if (view === 'front') {
     if (L.extra === 'cape') drawCapeBehind(cv, L);
@@ -580,7 +872,7 @@ function drawLook(L, view = 'front') {
     // 머리카락 바로 밑 살은 그늘
     for (let y = 1; y < H; y++) for (let x = 0; x < W; x++) { const p = cv.at(x, y), up = cv.at(x, y - 1); if (p && p.g === 'skin' && up && up.g === 'hair' && y < 26) cv.put(x, y, S[1], 'skin'); }
   } else {
-    drawSkin(cv, S, 'back', sideY >= 18);
+    drawSkin(cv, S, 'back', sideY >= 18 || !!(L.hair && HAIR_ART[L.hair]));   // 전용 머리는 뒷모습에서 귀를 그리지 않음 — 긴 머리 옆으로 귀가 삐져나옴 (2026-11-28)
     drawClothes(cv, L, S, 'back');
     drawHair(cv, L, HC, 'back', 'front');
   }
@@ -607,7 +899,7 @@ function cleanLook(o) {
   const one = (k, list) => { if (list.includes(o[k])) L[k] = o[k]; };
   idx('skin', SKINS.length); idx('hc', HAIR_COLORS.length); idx('side', SIDES.length); idx('back', BACKS.length); idx('tie', TIES.length); idx('ec', EYE_COLORS.length);
   idx('c1', CLOTH_COLORS.length); idx('c2', CLOTH_COLORS.length); idx('c3', CLOTH_COLORS.length); idx('shoe', SHOES.length);
-  one('bangs', BANGS); one('eye', Object.keys(EYES)); one('mouth', MOUTHS); one('mark', MARKS.map(m => m[0])); one('top', TOPS); one('bottom', BOTTOMS.map(b => b[0])); one('extra', EXTRAS.map(e => e[0]));
+  one('bangs', BANGS); one('eye', Object.keys(EYES)); one('mouth', MOUTHS_ALL); one('mark', MARKS.map(m => m[0])); one('top', TOPS); one('bottom', BOTTOMS.map(b => b[0])); one('extra', EXTRAS.map(e => e[0]));
   if (o.vol === 1 || o.vol === 2) L.vol = o.vol;
   if (typeof o.flip === 'boolean') L.flip = o.flip;
   if (Number.isInteger(o.hseed) && o.hseed >= 0 && o.hseed < 2 ** 31) L.hseed = o.hseed;
@@ -621,7 +913,7 @@ const OPTIONS = [
   { group: '얼굴', key: 'skin', name: '피부', values: idxs(SKINS.length), labels: SKINS.map(s => s[0]), swatch: SKINS.map(s => s[1]) },
   { group: '얼굴', key: 'eye', name: '눈', values: Object.keys(EYES), labels: Object.keys(EYES).map(k => EYES_KO[k]) },
   { group: '얼굴', key: 'ec', name: '눈동자', values: idxs(EYE_COLORS.length), labels: EYE_COLORS.map(e => e[0]), swatch: EYE_COLORS.map(e => e[1]) },
-  { group: '얼굴', key: 'mouth', name: '입', values: MOUTHS, labels: ['작게', '일자', '벌림', '없음'] },
+  { group: '얼굴', key: 'mouth', name: '입', values: MOUTHS_ALL, labels: ['작게', '일자', '벌림', '없음', '비웃음'] },
   { group: '얼굴', key: 'mark', name: '얼굴 표시', values: MARKS.map(m => m[0]), labels: ['없음', '볼터치', '흉터', '반창고', '점'] },
   { group: '머리', key: 'bangs', name: '앞머리', values: BANGS, labels: BANGS.map(b => BANGS_KO[b]) },
   { group: '머리', key: 'flip', name: '가르마', values: [false, true], labels: ['왼쪽', '오른쪽'] },
@@ -693,6 +985,6 @@ const COUNT = SKINS.length * HAIR_COLORS.length * BANGS.length * SIDES.length * 
 
 // 색 목록 · 명암 — 캐릭터 일러스트 프롬프트(design/characters/make.js)가 픽셀과 같은 색 코드를 쓰도록
 const PALETTE = { SKINS, HAIR_COLORS, EYE_COLORS, CLOTH_COLORS, SHOES, BANGS, SIDES, BACKS, TIES, ramp };
-const api = { W, H, PALETTE, HERO_LOOK, OPTIONS, cleanLook, rollLook, drawLook, walkSheet, describe, COUNT, SKINS, HAIR_COLORS };
+const api = { W, H, PALETTE, HAIR_ART, HERO_LOOK, OPTIONS, cleanLook, rollLook, drawLook, walkSheet, describe, COUNT, SKINS, HAIR_COLORS };
 if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.AllyLook = api;
 })(typeof window !== 'undefined' ? window : globalThis);

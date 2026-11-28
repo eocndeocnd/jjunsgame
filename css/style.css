@@ -809,6 +809,9 @@ kbd {
 .talk-face .ally-sprite .ally-px { width: 36px; height: 45px; flex: none; }
 .ally-row .ally-ic .ally-px { width: 32px; height: 40px; margin: 0 auto; }
 .ally-row.gone { opacity: 0.55; }
+/* 싸움 상대가 사람(S급 시험관 — 4대 길드 에이스)일 때 — 그림의 2배쯤 */
+.ally-sprite.foe-person { width: 64px; height: 80px; margin: 0 auto; }
+@media (min-width: 861px) { .ally-sprite.foe-person { width: 96px; height: 120px; } }
 .ally-row .btn.part { color: #ffd2cc; }
 /* 거울 — 내 생김새 바꾸기 (ui.js 의 renderMirror). 왼쪽 앞 · 뒤 · 옆 미리보기(그림의 2배), 오른쪽 부위마다 ◀ 값 ▶ */
 .mirror { display: flex; gap: 12px; align-items: flex-start; }

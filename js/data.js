@@ -2535,11 +2535,17 @@ const TOP_GRADES = [
 // 암시장의 거래에 드는 것 — 보스가 가끔 떨어뜨림 (이름은 가칭. 특수장비의 「보석」과 헷갈리지 않게 원석)
 const BM_GEM = { name: '검은 원석', icon: '🔮' };
 // 순위 (사용자 결정 2026-11-19): 달 < 크라운 < 청해 < 홍염 — score 를 넘으면 그 길드의 한마디 + 협회 상금(prize — 내 격의 핵 n개어치 돈) · 검은 원석 gems
+// look — 그 길드의 S급 헌터(에이스) 생김새 (js/allylook.js 의 조합 그림 · 머리는 전용 HAIR_ART — 사용자 결정 2026-11-25 ~ 11-28).
+//   협회장실 · 광장 위기 게이트 · S급 시험관 · 대화창 얼굴에 씀. 홍염 여성 · 청해 남성(무협) · 크라운 남성 · 달 여성. 일러스트 프롬프트는 design/characters/PROMPTS.md
 const BIG_GUILDS = [
-  { id: 'hongyeom', name: '홍염', icon: '👺', mark: '🔥', score: 1200, prize: 80, gems: 2 },
-  { id: 'cheonghae', name: '청해', icon: '🧘', mark: '🌊', score: 900, prize: 50, gems: 1 },    // 무협을 이어받은 길드
-  { id: 'crown', name: '크라운', icon: '🤴', mark: '👑', score: 650, prize: 60, gems: 1 },     // 자신만만 · 돈 많음 · 뒤가 구린 부정부패 길드 (사용자 결정) — 상금이 더 두꺼움(「협찬」)
-  { id: 'dal', name: '달', icon: '🕵️', mark: '🌙', score: 400, prize: 30, gems: 1 }
+  { id: 'hongyeom', name: '홍염', icon: '👺', mark: '🔥', score: 1200, prize: 80, gems: 2,
+    look: { v: 1, seed: 7101, hseed: 7101, skin: 0, hc: 4, bangs: 'side', side: 0, back: 2, tie: 0, vol: 1, flip: false, eye: 'elegant', ec: 5, mouth: 'small', mark: 'none', top: 'jacket', bottom: 'pants', extra: 'belt', c1: 4, c2: 0, c3: 0, shoe: 0, hair: 'ace_hongyeom' } },
+  { id: 'cheonghae', name: '청해', icon: '🧘', mark: '🌊', score: 900, prize: 50, gems: 1,    // 무협을 이어받은 길드
+    look: { v: 1, seed: 7102, hseed: 7102, skin: 0, hc: 0, bangs: 'parted', side: 0, back: 2, tie: 3, vol: 1, flip: false, eye: 'sharp', ec: 2, mouth: 'small', mark: 'none', top: 'dobok', bottom: 'pants', extra: 'none', c1: 3, c2: 2, c3: 2, shoe: 0, hair: 'ace_cheonghae' } },
+  { id: 'crown', name: '크라운', icon: '🤴', mark: '👑', score: 650, prize: 60, gems: 1,     // 자신만만 · 돈 많음 · 뒤가 구린 부정부패 길드 (사용자 결정) — 상금이 더 두꺼움(「협찬」)
+    look: { v: 1, seed: 7103, hseed: 7103, skin: 0, hc: 3, bangs: 'side', side: 0, back: 0, tie: 0, vol: 1, flip: true, eye: 'sleepy', ec: 5, mouth: 'smirk', mark: 'none', top: 'suit', bottom: 'pants', extra: 'cape', c1: 3, c2: 3, c3: 10, shoe: 1, hair: 'ace_crown' } },
+  { id: 'dal', name: '달', icon: '🕵️', mark: '🌙', score: 400, prize: 30, gems: 1,
+    look: { v: 1, seed: 7104, hseed: 7104, skin: 0, hc: 5, bangs: 'side', side: 2, back: 1, tie: 0, vol: 1, flip: true, eye: 'sleepy', ec: 6, mouth: 'none', mark: 'none', top: 'hoodie', bottom: 'pants', extra: 'scarf', c1: 2, c2: 0, c3: 1, shoe: 0, hair: 'ace_dal' } }
 ];
 
 const DEPT_ID = 'dept';

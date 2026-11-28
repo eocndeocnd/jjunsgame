@@ -17,7 +17,8 @@ const { png } = require('../ally/png.js');
 const Look = require('../../js/allylook.js');
 
 const ROOT = path.join(__dirname, '..', '..');
-const { ALLIES } = vm.runInNewContext(`${fs.readFileSync(path.join(ROOT, 'js/data.js'), 'utf8')}\n;({ ALLIES })`, {}, { filename: 'data.js' });
+const { ALLIES, BIG_GUILDS } = vm.runInNewContext(`${fs.readFileSync(path.join(ROOT, 'js/data.js'), 'utf8')}\n;({ ALLIES, BIG_GUILDS })`, {}, { filename: 'data.js' });
+const aceLook = id => BIG_GUILDS.find(B => B.id === id).look;   // 4대 길드 에이스 생김새 — 게임 데이터 그대로 (전용 머리 HAIR_ART)
 const P = Look.PALETTE;
 
 // ---------- 캐릭터 ----------
@@ -36,29 +37,37 @@ const CHARACTERS = [
     pose: 'standing straight, one fist resting in the other palm in front of the chest (a martial-arts salute)',
     extra: 'the uniform is old and worn, mended in a few places' },
   { id: 'hongyeom', name: '홍염 에이스', role: '4대 길드 1위 홍염의 S급 · 시험관 · 광장 위기 게이트', guild: '홍염 — 붉은 불꽃 문장, 뜨겁고 거친 쪽',
-    look: { v: 1, seed: 7101, skin: 2, hc: 4, bangs: 'spiky', side: 0, back: 0, tie: 5, vol: 2, flip: false, eye: 'sharp', ec: 5, mouth: 'line', mark: 'scar', top: 'jacket', bottom: 'pants', extra: 'belt', c1: 4, c2: 0, c3: 0, shoe: 0, hseed: 7101 },
-    ko: '「불 좀 붙여 봐. 미지근하면 바로 끝낸다.」 — 거칠고 뜨거운 싸움꾼. (생김새는 제안: 여성 · 붉은 뻗친 머리 · 빨간 재킷 — 성별은 사용자 결정 2026-11-25)',
-    who: 'a woman in her late twenties, the S-rank ace of the top hunter guild "Hongyeom" (red flame); rough, hot-blooded, fearless',
-    face: 'a cocky, fierce grin, eyes narrowed like a challenge',
-    pose: 'standing with shoulders squared, one hand in a loose fist with faint sparks of fire around the knuckles',
+    look: aceLook('hongyeom'),
+    ko: '「불 좀 붙여 봐. 미지근하면 바로 끝낸다.」 — 뜨겁지만 세련된 싸움꾼. (여성 · 밝은 피부 · 매끈한 붉은 긴 생머리 · 불꽃 금 머리핀 · 금 귀걸이 · 화려하지만 점잖은 눈 — 사용자 결정 2026-11-25 ~ 11-28)',
+    hairKo: '전용 머리 — 깊은 옆 가르마 · 이마를 비스듬히 덮는 긴 앞머리 · 끝을 일자로 자른 매끈한 긴 생머리 · 한쪽은 귀 뒤로 · 머리 위로 튀어나온 불꽃 금 머리핀',
+    hairEn: 'long, sleek, perfectly straight hair falling to the waist with blunt-cut ends and a glossy shine; a deep side part with long side-swept bangs crossing the forehead diagonally (eyes stay visible); on one side the hair is tucked behind the ear; a small gold hairpin shaped like a flame, set high on the head so it sticks out of the hair outline',
+    who: 'a woman in her late twenties, the S-rank ace of the top hunter guild "Hongyeom" (red flame); elegant and refined, but with a fierce fire underneath',
+    face: 'a composed, confident look with a faint knowing smile; a small gold earring on the visible ear',
+    pose: 'standing tall and poised, one hand lightly brushing the hair behind her ear, the other hand relaxed with faint sparks of fire at the fingertips',
     extra: 'a small red flame emblem pin on the jacket chest' },
   { id: 'cheonghae', name: '청해 에이스', role: '4대 길드 2위 청해의 S급 · 시험관 · 광장 위기 게이트', guild: '청해 — 푸른 파도 문장, 옛 문파의 무공을 잇는 무협 길드',
-    look: { v: 1, seed: 7102, skin: 0, hc: 0, bangs: 'straight', side: 3, back: 2, tie: 1, vol: 1, flip: false, eye: 'sharp', ec: 2, mouth: 'small', mark: 'none', top: 'dobok', bottom: 'pants', extra: 'none', c1: 3, c2: 2, c3: 2, shoe: 0, hseed: 7102 },
-    ko: '「예를 갖추고 — 한 수 겨뤄 봅시다.」 포권을 하는 정중한 무인. (생김새는 제안: 남성 · 긴 검은 머리를 높이 묶음 · 흰 도복에 남색 띠 — 성별은 사용자 결정 2026-11-25)',
+    look: aceLook('cheonghae'),
+    ko: '「예를 갖추고 — 한 수 겨뤄 봅시다.」 포권을 하는 정중한 무인. (남성 · 정수리 상투에 긴 꼬리 · 흰 도복에 남색 띠 — 사용자 결정 2026-11-25)',
+    hairKo: '전용 머리 — 이마를 드러내 넘긴 머리 · 정수리 상투(남색 끈) · 등까지 흐르는 긴 꼬리 · 얼굴 옆으로 길게 내려온 두 가닥',
+    hairEn: 'long black hair combed sleekly back from the forehead (forehead visible) and tied in a high topknot on the crown with a navy cord, the rest flowing down the back as a long tail; two long thin strands fall from the temples down past the chin, framing the face (classic wuxia style)',
     who: 'a man in his mid twenties, the S-rank ace of the martial-arts guild "Cheonghae" (blue wave), heir of an old martial school; poised, polite, precise',
     face: 'composed and polite, a calm level gaze',
     pose: 'standing upright with a straight back, giving a martial-arts salute (right fist against the open left palm in front of the chest)',
     extra: 'a thin pattern of blue waves embroidered along the sleeve hems of the uniform' },
   { id: 'crown', name: '크라운 에이스', role: '4대 길드 3위 크라운의 S급 · 시험관 · 광장 위기 게이트', guild: '크라운 — 금빛 왕관 문장, 자신만만하고 돈이 많고 뒤가 구린 길드',
-    look: { v: 1, seed: 7103, skin: 0, hc: 3, bangs: 'side', side: 1, back: 0, tie: 0, vol: 1, flip: true, eye: 'sleepy', ec: 5, mouth: 'small', mark: 'none', top: 'suit', bottom: 'pants', extra: 'cape', c1: 3, c2: 3, c3: 10, shoe: 1, hseed: 7103 },
-    ko: '「바쁜 사람 불러 놓고 실망시키진 않겠지?」 — 돈 많고 자신만만한 사람. (생김새는 제안: 남성 · 금발 · 흰 정장에 겨자빛 넥타이와 짧은 망토)',
+    look: aceLook('crown'),
+    ko: '「바쁜 사람 불러 놓고 실망시키진 않겠지?」 — 돈 많고 자신만만한 사람. (남성 · 단정한 금발 · 비웃는 입 · 흰 정장에 겨자빛 넥타이와 짧은 망토 — 사용자 결정 2026-11-28)',
+    hairKo: '전용 머리 — 가르마를 타 한쪽으로 단정하게 빗어 넘긴 짧은 금발 · 짧고 깔끔한 옆머리(귀가 보임)',
+    hairEn: 'short, neat blond hair with a clean side part, combed smoothly to one side in a dignified gentleman style; short tidy sides with the ears showing; no loose strands',
     who: 'a man in his late twenties, the S-rank ace of the rich and arrogant guild "Crown" (golden crown); confident, smug, used to winning',
-    face: 'a smug half-lidded look and a small superior smile',
+    face: 'half-lidded eyes and a mocking smirk — only one corner of the mouth raised, as if sneering',
     pose: 'standing with one hand in the trouser pocket and the other adjusting the necktie',
     extra: 'a small gold crown pin on the lapel and an expensive-looking gold wristwatch' },
   { id: 'dal', name: '달 에이스', role: '4대 길드 4위 달의 S급 · 시험관 · 광장 위기 게이트', guild: '달 — 달 문장, 밤에만 움직이는 길드',
-    look: { v: 1, seed: 7104, skin: 0, hc: 5, bangs: 'side', side: 2, back: 1, tie: 0, vol: 1, flip: true, eye: 'sleepy', ec: 6, mouth: 'none', mark: 'none', top: 'hoodie', bottom: 'pants', extra: 'scarf', c1: 2, c2: 0, c3: 1, shoe: 0, hseed: 7104 },
-    ko: '「조용히 끝내요. 아프지 않게.」 — 밤에만 움직이는 조용한 사람. (생김새는 제안: 여성 · 어깨까지 오는 은발 · 남색 후드에 먹색 목도리)',
+    look: aceLook('dal'),
+    ko: '「조용히 끝내요. 아프지 않게.」 — 밤에만 움직이는 조용한 사람. (여성 · 은발 단발 · 한쪽 눈을 덮는 앞머리 · 남색 후드에 먹색 목도리)',
+    hairKo: '전용 머리 — 앞 · 옆은 턱선에서 안으로 말린 은발 단발, 뒤는 등까지 길고 가득 · 한쪽 눈을 덮는 긴 앞머리 · 옆에서도 이마가 안 보임',
+    hairEn: 'silver hair: from the front and sides a bob that curls inward at the jawline, but at the back it is long and full, reaching down the back; long bangs cover the forehead completely and one eye (her left eye) — the forehead never shows, even from the side',
     who: 'a woman in her early twenties, the S-rank ace of the night guild "Dal" (moon); quiet, sleepy-looking, unsettlingly calm',
     face: 'expressionless, sleepy half-closed eyes, the scarf pulled up just under the chin',
     pose: 'standing loosely with hands hidden in the hoodie pocket, head tilted slightly',
@@ -70,7 +79,7 @@ const BANGS_EN = { messy: 'messy, tousled bangs', straight: 'blunt straight-cut 
 const SIDE_EN = { short: 'short sides with the ears showing', ear: 'side hair covering the ears', cheek: 'side locks down to the cheeks', chin: 'side locks down to the jaw' };
 const BACK_EN = { none: 'short at the back of the neck', shoulder: 'back hair reaching the shoulders', long: 'long hair falling down the back' };
 const TIE_EN = { none: '', ponytail: 'gathered into a high ponytail at the back', twin: 'tied in twin tails', bun: 'tied up in a top bun', ahoge: 'one stray strand sticking up on top', spikes: 'spiking up on top' };
-const EYE_EN = { round: 'round eyes', sharp: 'sharp, narrow eyes', sleepy: 'half-lidded, sleepy eyes', big: 'big, bright eyes', dot: 'small, simple eyes', smile: 'eyes often curved in a smile' };
+const EYE_EN = { elegant: 'elegant almond eyes with long lashes sweeping up at the outer corners, slightly lowered lids and a gleaming iris — glamorous but composed', round: 'round eyes', sharp: 'sharp, narrow eyes', sleepy: 'half-lidded, sleepy eyes', big: 'big, bright eyes', dot: 'small, simple eyes', smile: 'eyes often curved in a smile' };
 const MARK_EN = { none: '', blush: 'a light blush on both cheeks', scar: 'a small diagonal scar on the left cheek', bandage: 'a small square bandage on the left cheek', mole: 'a small mole under the right eye' };
 const TOP_EN = {
   tee: 'a short-sleeved T-shirt', long: 'a plain long-sleeved shirt', hoodie: 'a hoodie with the hood down and two white drawstrings',
@@ -125,7 +134,7 @@ ${lockLines}
 Small details (buttons, buckles, metal) may be silver or gold.
 
 CHARACTER: ${c.who}.
-HAIR: ${hairText(L)}.
+HAIR: ${c.hairEn || hairText(L)}.
 FACE: ${EYE_EN[L.eye]}${MARK_EN[L.mark] ? `, ${MARK_EN[L.mark]}` : ''}; ${c.face}.
 OUTFIT: ${TOP_EN[L.top]}, ${BOTTOM_EN[L.bottom]}${EXTRA_EN[L.extra] ? `, ${EXTRA_EN[L.extra]}` : ''}, shoes in the Shoes color. ${c.extra[0].toUpperCase() + c.extra.slice(1)}.
 POSE: ${c.pose}. Facing the viewer at a slight 3/4 angle.`;
@@ -203,9 +212,9 @@ ${c.ko}${c.guild ? `\n\n길드: ${c.guild}` : ''}
 
 | 부위 | 픽셀 생김새 | 색 |
 |---|---|---|
-| 머리 | ${{ messy: '덥수룩', straight: '일자', parted: '가르마', side: '옆으로', spiky: '삐죽', short: '이마 보임' }[L.bangs]} 앞머리 · ${P.SIDES[L.side][2]} · 뒤 ${P.BACKS[L.back][2]} · ${P.TIES[L.tie][1]} · 숱 ${L.vol === 2 ? '많이' : '적게'} | ${name(P.HAIR_COLORS, L.hc)} \`${hex(P.HAIR_COLORS, L.hc)}\` |
+| 머리 | ${c.hairKo || `${{ messy: '덥수룩', straight: '일자', parted: '가르마', side: '옆으로', spiky: '삐죽', short: '이마 보임' }[L.bangs]} 앞머리 · ${P.SIDES[L.side][2]} · 뒤 ${P.BACKS[L.back][2]} · ${P.TIES[L.tie][1]} · 숱 ${L.vol === 2 ? '많이' : '적게'}`} | ${name(P.HAIR_COLORS, L.hc)} \`${hex(P.HAIR_COLORS, L.hc)}\` |
 | 피부 | | ${name(P.SKINS, L.skin)} \`${hex(P.SKINS, L.skin)}\` |
-| 눈 | ${{ round: '둥근', sharp: '날카로운', sleepy: '졸린', big: '큰', dot: '점', smile: '웃는' }[L.eye]} 눈${L.mark !== 'none' ? ` · ${{ blush: '볼터치', scar: '흉터', bandage: '반창고', mole: '점' }[L.mark]}` : ''} | ${name(P.EYE_COLORS, L.ec)} \`${hex(P.EYE_COLORS, L.ec)}\` |
+| 눈 | ${{ round: '둥근', sharp: '날카로운', sleepy: '졸린', big: '큰', dot: '점', smile: '웃는', elegant: '화려한' }[L.eye]} 눈${L.mark !== 'none' ? ` · ${{ blush: '볼터치', scar: '흉터', bandage: '반창고', mole: '점' }[L.mark]}` : ''} | ${name(P.EYE_COLORS, L.ec)} \`${hex(P.EYE_COLORS, L.ec)}\` |
 | 윗옷 | ${{ tee: '반팔', long: '긴팔', hoodie: '후드', jacket: '재킷', suit: '정장', robe: '로브', armor: '갑옷', dobok: '도복', sleeveless: '민소매' }[L.top]} | ${name(P.CLOTH_COLORS, L.c1)} \`${hex(P.CLOTH_COLORS, L.c1)}\` |
 | 아래옷 | ${{ pants: '바지', shorts: '반바지', skirt: '치마' }[L.bottom]} | ${name(P.CLOTH_COLORS, L.c2)} \`${hex(P.CLOTH_COLORS, L.c2)}\` |
 | 포인트 | ${{ none: '—', scarf: '목도리', belt: '허리띠', strap: '가방끈', cape: '망토' }[L.extra]} · 속옷 · 띠 · 넥타이 | ${name(P.CLOTH_COLORS, L.c3)} \`${hex(P.CLOTH_COLORS, L.c3)}\` |

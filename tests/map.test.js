@@ -2223,3 +2223,18 @@ test('6격 마계(abyss) — 남쪽 묘실 문에서 북쪽으로 갈수록 센 
   const lust = b.posts[0], db = walk(b, [b.start.y * b.w + b.start.x], new Set(cellsOf(b, lust)));
   assert.ok([...Array(lust.w)].some((_, i) => db[(lust.y + lust.h) * b.w + lust.x + i] >= 0), '문에서 색욕 앞까지');
 });
+
+test('4대 길드 에이스 그림 — 생김새가 검사를 그대로 통과 · 전용 머리가 있음 · 네 방향 모두 그려짐 · 넷의 앞모습 실루엣이 서로 다름', () => {
+  const Look = require('../js/allylook.js');
+  const { BIG_GUILDS } = vm.runInNewContext(`${fs.readFileSync(path.join(ROOT, 'js/data.js'), 'utf8')}\n;({ BIG_GUILDS })`, {}, { filename: 'data.js' });
+  const sil = [];
+  for (const B of BIG_GUILDS) {
+    assert.ok(B.look && Look.HAIR_ART[B.look.hair], `${B.name} — 전용 머리`);
+    const c = Look.cleanLook(B.look);
+    for (const k of ['skin', 'hc', 'eye', 'ec', 'mouth', 'top', 'c1', 'c2', 'c3']) assert.equal(c[k], B.look[k], `${B.name} — ${k} 가 검사에서 바뀜`);
+    for (const v of ['front', 'back', 'side', 'sideL']) assert.ok(Look.drawLook(B.look, v).some((x, i) => i % 4 === 3 && x), `${B.name} ${v}`);
+    const f = Look.drawLook(B.look, 'front');
+    sil.push(Array.from({ length: Look.W * Look.H }, (_, i) => f[i * 4 + 3] ? 1 : 0).join(''));
+  }
+  assert.equal(new Set(sil).size, BIG_GUILDS.length, '실루엣이 같은 에이스가 있음');
+});

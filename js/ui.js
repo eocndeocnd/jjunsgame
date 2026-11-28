@@ -1290,6 +1290,21 @@ function allyPng(a, view) {
 const allyPic = (a, view = 'front') => a && a.look != null && typeof AllyLook !== 'undefined'
   ? `<span class="ally-px" style="background-image:url('${allyPng(a, view)}')"></span>` : `<span>${(a && a.icon) || '🧑'}</span>`;
 const allySprite = (id = State.meta.ally || 'hayun', view = 'back') => `<span class="ally-sprite">${allyPic(ALLIES[id], view)}</span>`;
+// 4대 길드 에이스 — 얼굴(대화창 · 싸움 초상)과 지도 위 걷기 시트 (data.js 의 BIG_GUILDS[].look). allylook.js 가 없으면 이모지
+const ace = i => BIG_GUILDS[i] && { id: `ace_${BIG_GUILDS[i].id}`, look: BIG_GUILDS[i].look, icon: BIG_GUILDS[i].icon };
+const aceFace = (i, view = 'front') => `<span class="ally-sprite">${allyPic(ace(i), view)}</span>`;
+const aceSheets = {};
+function aceSheet(i) {
+  if (typeof AllyLook === 'undefined' || !ace(i) || !ace(i).look) return null;
+  if (!aceSheets[i]) {
+    const s = AllyLook.walkSheet(ace(i).look), c = document.createElement('canvas');
+    c.width = s.width; c.height = s.height;
+    const g = c.getContext('2d'), img = g.createImageData(s.width, s.height);
+    img.data.set(s.data); g.putImageData(img, 0, 0);
+    aceSheets[i] = c.toDataURL();
+  }
+  return aceSheets[i];
+}
 
 // 전투 카드 — 처음 그릴 때. 그다음부터는 paintBattle 이 바 · 숫자 · 줄만 바꿉니다.
 // 위에서부터 상대 체력 · 상대 초상(크게) · 내 초상(작게) · 내 체력 · 기록.
@@ -2146,7 +2161,7 @@ function mapMarks() {
     if (n.shop === 'gateboss') { const g = gateInNow(), f = findFoe(g); out.push({ x: n.x, y: n.y, icon: f.icon, label: f.name }); continue; }
     if (n.shop === 'raidboss' || /^exboss\d$/.test(n.shop)) { const f = raidFoe(); out.push({ x: n.x, y: n.y, icon: f.icon, label: f.name }); continue; }
     const sm = /^(chiefS|raidS|raidD)(\d)$/.exec(n.shop || '');   // 4대 길드 S급 — 협회장실 · 위기 게이트 (밀려나면 벽 쪽 자리로)
-    if (sm) { const B = BIG_GUILDS[+sm[2]]; out.push({ x: n.x, y: n.y, icon: B.icon, label: sm[1] === 'raidD' ? `${B.name} · 밀려남` : `${B.name} S급` }); continue; }
+    if (sm) { const B = BIG_GUILDS[+sm[2]]; out.push({ x: n.x, y: n.y, icon: B.icon, person: aceSheet(+sm[2]), face: 'down', label: sm[1] === 'raidD' ? `${B.name} · 밀려남` : `${B.name} S급` }); continue; }
     if (n.shop === 'examiner') {
       const f = examinerNow();
       if (sHunterComing()) {   // S급 — 4대 길드의 헌터가 아직 안 옴: 감독의 말 → 문에서 걸어 들어옴
@@ -2154,10 +2169,10 @@ function mapMarks() {
         if (!sEntrance || !sEntrance.t0) continue;
         const door = mapView.world.map.ports.find(p => p.name === 'out');   // 시험장 문(로비 쪽)에서 출발
         const k = Math.min(1, (performance.now() - sEntrance.t0) / S_WALK_MS), y0 = door ? door.y : mapView.world.map.h;
-        out.push({ x: n.x, y: y0 + (n.y - y0) * (1 - (1 - k) * (1 - k)), icon: f.icon, label: f.name });
+        out.push({ x: n.x, y: y0 + (n.y - y0) * (1 - (1 - k) * (1 - k)), icon: f.icon, person: f.guild != null ? aceSheet(f.guild) : null, face: k < 1 ? 'up' : 'down', walking: k < 1, label: f.name });
         continue;
       }
-      out.push({ x: n.x, y: n.y, icon: f.icon, label: f.name });
+      out.push({ x: n.x, y: n.y, icon: f.icon, person: f.guild != null ? aceSheet(f.guild) : null, face: 'down', label: f.name });
       continue;
     }
     const sec = n.shop && (DEPT_SECTIONS[n.shop] || CLERK_DESKS[n.shop]);
@@ -4337,7 +4352,7 @@ function renderTalk() {
   $('talk').classList.toggle('sys', !!sys);
   if (sys) $('talk').dataset.sys = sys; else delete $('talk').dataset.sys;
   $('talkWho').textContent = TALK_WHO[line.who]();
-  $('talkFace').innerHTML = line.who === 'guide' ? guideEye('bob') : line.who === 'me' ? heroSprite() : line.who === 'stranger' || line.who === 'ally' ? allySprite('hayun', 'front') : line.who === 'stranger2' || line.who === 'ally2' ? allySprite('danwoo', 'front') : line.who === 'examiner' ? `<span class="ally-sprite">${(examinerNow() || {}).icon || '🧑‍🏫'}</span>` : line.who === 'chief' ? `<span class="ally-sprite">${CLERK_DESKS.chief.icon}</span>` : line.who === 'union' ? '<span class="ally-sprite">🌐</span>' : line.who === 'raidboss' ? `<span class="ally-sprite">${raidFoe().icon}</span>` : line.who === 'gateboss' ? `<span class="ally-sprite">${(gateInNow() && findFoe(gateInNow()).icon) || '👹'}</span>` : line.who === 'proctor' || line.who === 'desk' ? `<span class="ally-sprite">${CLERK_DESKS.assoc.icon}</span>` : /^bg\d$/.test(line.who) ? `<span class="ally-sprite">${BIG_GUILDS[+line.who.slice(2)].icon}</span>` : '';
+  $('talkFace').innerHTML = line.who === 'guide' ? guideEye('bob') : line.who === 'me' ? heroSprite() : line.who === 'stranger' || line.who === 'ally' ? allySprite('hayun', 'front') : line.who === 'stranger2' || line.who === 'ally2' ? allySprite('danwoo', 'front') : line.who === 'examiner' ? (examinerNow() && examinerNow().guild != null ? aceFace(examinerNow().guild) : `<span class="ally-sprite">${(examinerNow() || {}).icon || '🧑‍🏫'}</span>`) : line.who === 'chief' ? `<span class="ally-sprite">${CLERK_DESKS.chief.icon}</span>` : line.who === 'union' ? '<span class="ally-sprite">🌐</span>' : line.who === 'raidboss' ? `<span class="ally-sprite">${raidFoe().icon}</span>` : line.who === 'gateboss' ? `<span class="ally-sprite">${(gateInNow() && findFoe(gateInNow()).icon) || '👹'}</span>` : line.who === 'proctor' || line.who === 'desk' ? `<span class="ally-sprite">${CLERK_DESKS.assoc.icon}</span>` : /^bg\d$/.test(line.who) ? aceFace(+line.who.slice(2)) : '';
   $('talkFace').classList.toggle('hidden', line.who === 'nameless' || line.who === 'end');   // end — 엔딩의 「끝」 (얼굴 · 이름 없이)
   const body = typeof line.text === 'function' ? line.text() : line.text;
   if (sys) typeTalk($('talkBody'), body); else { stopTyping(); $('talkBody').innerHTML = body; }
@@ -4426,6 +4441,7 @@ function maybeCityWake() {
 // 지도 도트가 있는 몬스터는 싸움 화면 · 마주침 · 도감에서도 같은 도트로 (사용자 결정 2026-11-21 — 더 그린 그림은 나중에). A · B 를 걸음 박자대로 번갈아
 function foeIcon(foe) {
   if (foe && foe.id === 'observer') return guideEye('foe-eye');
+  if (foe && foe.examiner && foe.guild != null && typeof AllyLook !== 'undefined') return `<span class="ally-sprite foe-person">${allyPic(ace(foe.guild), 'front')}</span>`;   // S급 시험관 — 4대 길드 에이스
   return foe && typeof MOB_SPRITES !== 'undefined' && MOB_SPRITES[foe.id] ? mobIcon(foe.id) : foe.icon;
 }
 const mobIconSrc = {};

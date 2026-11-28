@@ -21,6 +21,8 @@ const MapView = (function () {
   // 줄 순서는 앞 · 뒤 · 왼옆 · 오른옆 — 왼옆이 보이는 모습이 화면 오른쪽을 봅니다. 못 불러오면(맵 초안) 예전 동그라미로.
   const HERO = { w: 32, h: 40, foot: 38, body: 34, row: { down: 0, up: 1, right: 2, left: 3 } };
   const heroImg = new Image();
+  const personImgs = {};   // 걷기 시트 주소 → 그림 (다 불러오면 그림)
+  const personImg = url => { let im = personImgs[url]; if (!im) { im = personImgs[url] = new Image(); im.src = url; } return im.complete && im.naturalWidth ? im : null; };
   heroImg.src = 'assets/hero/walk.png';
   // 기운 — 발밑에 숨 쉬는 빛 웅덩이 + 몸 둘레에 ✦(가장자리로 갈수록 가늘어지는 마름모)가 하나씩 커졌다 작아짐
   // (시안 B — 사용자 결정 2026-11-20. 시안 모음은 design/mobs/aura-preview.html, 떠오르는 빛가루(C)는 나중에 쓸 거리)
@@ -498,6 +500,24 @@ const MapView = (function () {
       if (o.hideActors && o.hideActors()) return;
       for (const mk of (o.marks ? o.marks() : [])) {   // 상인 같은 표시 — 그림, 이름이 있으면 그 위에 작게
         if (!seen(mk.x, mk.y)) continue;
+        const pImg = mk.person && personImg(mk.person);   // 사람(4대 길드 에이스) — 주인공처럼 걷기 시트의 한 칸 (face 방향 · walking 이면 걸음)
+        if (pImg) {
+          const k = Math.max(1, Math.round(T * dpr * 1.5 / HERO.body)) / dpr;
+          const fx = Math.round((ox + (mk.x + 0.5) * T) * dpr) / dpr, fy = Math.round((oy + (mk.y + 0.9) * T) * dpr) / dpr;
+          ctx.fillStyle = 'rgba(28,16,7,0.3)';
+          ctx.beginPath(); ctx.ellipse(fx, fy - k, T * 0.3, T * 0.1, 0, 0, Math.PI * 2); ctx.fill();
+          ctx.imageSmoothingEnabled = false;
+          ctx.drawImage(pImg, (mk.walking ? Math.floor(clock * 6) % 4 : 0) * HERO.w, HERO.row[mk.face || 'down'] * HERO.h, HERO.w, HERO.h, fx - (HERO.w / 2) * k, fy - HERO.foot * k, HERO.w * k, HERO.h * k);
+          if (mk.label) {
+            ctx.font = `bold ${Math.max(9, Math.round(T * 0.36))}px system-ui, sans-serif`;
+            ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+            ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(28,16,7,0.85)';
+            ctx.strokeText(mk.label, fx, fy - (HERO.foot - 2) * k);
+            ctx.fillStyle = '#f6e7c3';
+            ctx.fillText(mk.label, fx, fy - (HERO.foot - 2) * k);
+          }
+          continue;
+        }
         const mArt = mk.sprite && mobSprite(mk.sprite);   // 도트가 있는 표시(떠돌이 상인) — 몬스터처럼 발밑 그림자 · A · B (서 있어도 sway 면 바뀜)
         let mTop = oy + mk.y * T + 1;
         if (mArt) mTop = Math.min(mTop, sprite(mArt, mk.x, mk.y, 1, 1, Math.floor(clock * 1.6 * mArt.pace) % 2) + 1);

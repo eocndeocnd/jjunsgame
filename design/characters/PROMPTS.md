@@ -174,7 +174,7 @@ Same rules: no text, one flat magenta (#FF00FF) background, nothing else in the 
 
 ## 홍염 에이스 — 4대 길드 1위 홍염의 S급 · 시험관 · 광장 위기 게이트
 
-「불 좀 붙여 봐. 미지근하면 바로 끝낸다.」 — 거칠고 뜨거운 싸움꾼. (생김새는 제안: 여성 · 붉은 뻗친 머리 · 빨간 재킷 — 성별은 사용자 결정 2026-11-25)
+「불 좀 붙여 봐. 미지근하면 바로 끝낸다.」 — 뜨겁지만 세련된 싸움꾼. (여성 · 밝은 피부 · 매끈한 붉은 긴 생머리 · 불꽃 금 머리핀 · 금 귀걸이 · 화려하지만 점잖은 눈 — 사용자 결정 2026-11-25 ~ 11-28)
 
 길드: 홍염 — 붉은 불꽃 문장, 뜨겁고 거친 쪽
 
@@ -184,9 +184,9 @@ Same rules: no text, one flat magenta (#FF00FF) background, nothing else in the 
 
 | 부위 | 픽셀 생김새 | 색 |
 |---|---|---|
-| 머리 | 삐죽 앞머리 · 귀 보임 · 뒤 없음 · 뻗친 정수리 · 숱 많이 | 빨강 `#a3402e` |
-| 피부 | | 구릿빛 `#cf9a72` |
-| 눈 | 날카로운 눈 · 흉터 | 금색 `#c99a2e` |
+| 머리 | 전용 머리 — 깊은 옆 가르마 · 이마를 비스듬히 덮는 긴 앞머리 · 끝을 일자로 자른 매끈한 긴 생머리 · 한쪽은 귀 뒤로 · 머리 위로 튀어나온 불꽃 금 머리핀 | 빨강 `#a3402e` |
+| 피부 | | 아주 흰 `#f2d3c0` |
+| 눈 | 화려한 눈 | 금색 `#c99a2e` |
 | 윗옷 | 재킷 | 빨강 `#963434` |
 | 아래옷 | 바지 | 검정 `#2e2b33` |
 | 포인트 | 허리띠 · 속옷 · 띠 · 넥타이 | 검정 `#2e2b33` |
@@ -213,7 +213,7 @@ Copy its hairstyle, outfit shapes and colors exactly, but draw it as a detailed 
 
 COLOR LOCK — the colors MUST match the pixel sprite. Use these as the main colors, nothing else as a main color:
 - Hair: #a3402e  (shadows #7c1d22)
-- Skin: #cf9a72  (shadows #c96649)
+- Skin: #f2d3c0  (shadows #eea594)
 - Eyes (iris): #c99a2e  (shadows #98591c)
 - Top (main outfit color): #963434  (shadows #702232)
 - Bottom: #2e2b33  (shadows #121115)
@@ -221,11 +221,11 @@ COLOR LOCK — the colors MUST match the pixel sprite. Use these as the main col
 - Shoes: #2a2730  (shadows #131317)
 Small details (buttons, buckles, metal) may be silver or gold.
 
-CHARACTER: a woman in her late twenties, the S-rank ace of the top hunter guild "Hongyeom" (red flame); rough, hot-blooded, fearless.
-HAIR: spiky, pointed bangs, short sides with the ears showing, short at the back of the neck, spiking up on top, thick and voluminous.
-FACE: sharp, narrow eyes, a small diagonal scar on the left cheek; a cocky, fierce grin, eyes narrowed like a challenge.
+CHARACTER: a woman in her late twenties, the S-rank ace of the top hunter guild "Hongyeom" (red flame); elegant and refined, but with a fierce fire underneath.
+HAIR: long, sleek, perfectly straight hair falling to the waist with blunt-cut ends and a glossy shine; a deep side part with long side-swept bangs crossing the forehead diagonally (eyes stay visible); on one side the hair is tucked behind the ear; a small gold hairpin shaped like a flame, set high on the head so it sticks out of the hair outline.
+FACE: elegant almond eyes with long lashes sweeping up at the outer corners, slightly lowered lids and a gleaming iris — glamorous but composed; a composed, confident look with a faint knowing smile; a small gold earring on the visible ear.
 OUTFIT: an open jacket worn over an inner shirt (the inner shirt is the ACCENT color), long trousers, a brown leather belt with a small gold buckle, shoes in the Shoes color. A small red flame emblem pin on the jacket chest.
-POSE: standing with shoulders squared, one hand in a loose fist with faint sparks of fire around the knuckles. Facing the viewer at a slight 3/4 angle.
+POSE: standing tall and poised, one hand lightly brushing the hair behind her ear, the other hand relaxed with faint sparks of fire at the fingertips. Facing the viewer at a slight 3/4 angle.
 ```
 
 ### 상반신 (같은 대화에서 이어서)
@@ -235,14 +235,14 @@ POSE: standing with shoulders squared, one hand in a loose fist with faint spark
 ```text
 Now draw the SAME character again — same face, hair, outfit and colors as the full-body image above.
 ONE image, 1024x1024: a bust portrait (from the top of the head to the middle of the chest), facing the viewer at a slight 3/4 angle.
-Expression: a cocky, fierce grin, eyes narrowed like a challenge.
+Expression: a composed, confident look with a faint knowing smile; a small gold earring on the visible ear.
 Same rules: no text, one flat magenta (#FF00FF) background, nothing else in the image.
 ```
 
 <details><summary>게임에 넣을 생김새 (js/allylook.js 의 생김새 객체)</summary>
 
 ```js
-{"v":1,"seed":7101,"skin":2,"hc":4,"bangs":"spiky","side":0,"back":0,"tie":5,"vol":2,"flip":false,"eye":"sharp","ec":5,"mouth":"line","mark":"scar","top":"jacket","bottom":"pants","extra":"belt","c1":4,"c2":0,"c3":0,"shoe":0,"hseed":7101}
+{"v":1,"seed":7101,"hseed":7101,"skin":0,"hc":4,"bangs":"side","side":0,"back":2,"tie":0,"vol":1,"flip":false,"eye":"elegant","ec":5,"mouth":"small","mark":"none","top":"jacket","bottom":"pants","extra":"belt","c1":4,"c2":0,"c3":0,"shoe":0,"hair":"ace_hongyeom"}
 ```
 </details>
 
@@ -250,7 +250,7 @@ Same rules: no text, one flat magenta (#FF00FF) background, nothing else in the 
 
 ## 청해 에이스 — 4대 길드 2위 청해의 S급 · 시험관 · 광장 위기 게이트
 
-「예를 갖추고 — 한 수 겨뤄 봅시다.」 포권을 하는 정중한 무인. (생김새는 제안: 남성 · 긴 검은 머리를 높이 묶음 · 흰 도복에 남색 띠 — 성별은 사용자 결정 2026-11-25)
+「예를 갖추고 — 한 수 겨뤄 봅시다.」 포권을 하는 정중한 무인. (남성 · 정수리 상투에 긴 꼬리 · 흰 도복에 남색 띠 — 사용자 결정 2026-11-25)
 
 길드: 청해 — 푸른 파도 문장, 옛 문파의 무공을 잇는 무협 길드
 
@@ -260,7 +260,7 @@ Same rules: no text, one flat magenta (#FF00FF) background, nothing else in the 
 
 | 부위 | 픽셀 생김새 | 색 |
 |---|---|---|
-| 머리 | 일자 앞머리 · 턱까지 · 뒤 길게 · 포니테일 · 숱 적게 | 검정 `#2b2530` |
+| 머리 | 전용 머리 — 이마를 드러내 넘긴 머리 · 정수리 상투(남색 끈) · 등까지 흐르는 긴 꼬리 · 얼굴 옆으로 길게 내려온 두 가닥 | 검정 `#2b2530` |
 | 피부 | | 아주 흰 `#f2d3c0` |
 | 눈 | 날카로운 눈 | 파랑 `#3f6fb0` |
 | 윗옷 | 도복 | 흰색 `#d6d2c8` |
@@ -298,7 +298,7 @@ COLOR LOCK — the colors MUST match the pixel sprite. Use these as the main col
 Small details (buttons, buckles, metal) may be silver or gold.
 
 CHARACTER: a man in his mid twenties, the S-rank ace of the martial-arts guild "Cheonghae" (blue wave), heir of an old martial school; poised, polite, precise.
-HAIR: blunt straight-cut bangs, side locks down to the jaw, long hair falling down the back, gathered into a high ponytail at the back, neat and close to the head.
+HAIR: long black hair combed sleekly back from the forehead (forehead visible) and tied in a high topknot on the crown with a navy cord, the rest flowing down the back as a long tail; two long thin strands fall from the temples down past the chin, framing the face (classic wuxia style).
 FACE: sharp, narrow eyes; composed and polite, a calm level gaze.
 OUTFIT: a martial-arts uniform with a crossed collar, tied with a belt (the belt is the ACCENT color), long trousers, shoes in the Shoes color. A thin pattern of blue waves embroidered along the sleeve hems of the uniform.
 POSE: standing upright with a straight back, giving a martial-arts salute (right fist against the open left palm in front of the chest). Facing the viewer at a slight 3/4 angle.
@@ -318,7 +318,7 @@ Same rules: no text, one flat magenta (#FF00FF) background, nothing else in the 
 <details><summary>게임에 넣을 생김새 (js/allylook.js 의 생김새 객체)</summary>
 
 ```js
-{"v":1,"seed":7102,"skin":0,"hc":0,"bangs":"straight","side":3,"back":2,"tie":1,"vol":1,"flip":false,"eye":"sharp","ec":2,"mouth":"small","mark":"none","top":"dobok","bottom":"pants","extra":"none","c1":3,"c2":2,"c3":2,"shoe":0,"hseed":7102}
+{"v":1,"seed":7102,"hseed":7102,"skin":0,"hc":0,"bangs":"parted","side":0,"back":2,"tie":3,"vol":1,"flip":false,"eye":"sharp","ec":2,"mouth":"small","mark":"none","top":"dobok","bottom":"pants","extra":"none","c1":3,"c2":2,"c3":2,"shoe":0,"hair":"ace_cheonghae"}
 ```
 </details>
 
@@ -326,7 +326,7 @@ Same rules: no text, one flat magenta (#FF00FF) background, nothing else in the 
 
 ## 크라운 에이스 — 4대 길드 3위 크라운의 S급 · 시험관 · 광장 위기 게이트
 
-「바쁜 사람 불러 놓고 실망시키진 않겠지?」 — 돈 많고 자신만만한 사람. (생김새는 제안: 남성 · 금발 · 흰 정장에 겨자빛 넥타이와 짧은 망토)
+「바쁜 사람 불러 놓고 실망시키진 않겠지?」 — 돈 많고 자신만만한 사람. (남성 · 단정한 금발 · 비웃는 입 · 흰 정장에 겨자빛 넥타이와 짧은 망토 — 사용자 결정 2026-11-28)
 
 길드: 크라운 — 금빛 왕관 문장, 자신만만하고 돈이 많고 뒤가 구린 길드
 
@@ -336,7 +336,7 @@ Same rules: no text, one flat magenta (#FF00FF) background, nothing else in the 
 
 | 부위 | 픽셀 생김새 | 색 |
 |---|---|---|
-| 머리 | 옆으로 앞머리 · 귀 덮음 · 뒤 없음 · 없음 · 숱 적게 | 금발 `#cfa955` |
+| 머리 | 전용 머리 — 가르마를 타 한쪽으로 단정하게 빗어 넘긴 짧은 금발 · 짧고 깔끔한 옆머리(귀가 보임) | 금발 `#cfa955` |
 | 피부 | | 아주 흰 `#f2d3c0` |
 | 눈 | 졸린 눈 | 금색 `#c99a2e` |
 | 윗옷 | 정장 | 흰색 `#d6d2c8` |
@@ -374,8 +374,8 @@ COLOR LOCK — the colors MUST match the pixel sprite. Use these as the main col
 Small details (buttons, buckles, metal) may be silver or gold.
 
 CHARACTER: a man in his late twenties, the S-rank ace of the rich and arrogant guild "Crown" (golden crown); confident, smug, used to winning.
-HAIR: side-swept bangs (swept toward the left side of the face), side hair covering the ears, short at the back of the neck, neat and close to the head.
-FACE: half-lidded, sleepy eyes; a smug half-lidded look and a small superior smile.
+HAIR: short, neat blond hair with a clean side part, combed smoothly to one side in a dignified gentleman style; short tidy sides with the ears showing; no loose strands.
+FACE: half-lidded, sleepy eyes; half-lidded eyes and a mocking smirk — only one corner of the mouth raised, as if sneering.
 OUTFIT: a suit jacket over a white shirt with a necktie (the necktie is the ACCENT color), long trousers, a short cape over the shoulders with gold clasps (ACCENT color), shoes in the Shoes color. A small gold crown pin on the lapel and an expensive-looking gold wristwatch.
 POSE: standing with one hand in the trouser pocket and the other adjusting the necktie. Facing the viewer at a slight 3/4 angle.
 ```
@@ -387,14 +387,14 @@ POSE: standing with one hand in the trouser pocket and the other adjusting the n
 ```text
 Now draw the SAME character again — same face, hair, outfit and colors as the full-body image above.
 ONE image, 1024x1024: a bust portrait (from the top of the head to the middle of the chest), facing the viewer at a slight 3/4 angle.
-Expression: a smug half-lidded look and a small superior smile.
+Expression: half-lidded eyes and a mocking smirk — only one corner of the mouth raised, as if sneering.
 Same rules: no text, one flat magenta (#FF00FF) background, nothing else in the image.
 ```
 
 <details><summary>게임에 넣을 생김새 (js/allylook.js 의 생김새 객체)</summary>
 
 ```js
-{"v":1,"seed":7103,"skin":0,"hc":3,"bangs":"side","side":1,"back":0,"tie":0,"vol":1,"flip":true,"eye":"sleepy","ec":5,"mouth":"small","mark":"none","top":"suit","bottom":"pants","extra":"cape","c1":3,"c2":3,"c3":10,"shoe":1,"hseed":7103}
+{"v":1,"seed":7103,"hseed":7103,"skin":0,"hc":3,"bangs":"side","side":0,"back":0,"tie":0,"vol":1,"flip":true,"eye":"sleepy","ec":5,"mouth":"smirk","mark":"none","top":"suit","bottom":"pants","extra":"cape","c1":3,"c2":3,"c3":10,"shoe":1,"hair":"ace_crown"}
 ```
 </details>
 
@@ -402,7 +402,7 @@ Same rules: no text, one flat magenta (#FF00FF) background, nothing else in the 
 
 ## 달 에이스 — 4대 길드 4위 달의 S급 · 시험관 · 광장 위기 게이트
 
-「조용히 끝내요. 아프지 않게.」 — 밤에만 움직이는 조용한 사람. (생김새는 제안: 여성 · 어깨까지 오는 은발 · 남색 후드에 먹색 목도리)
+「조용히 끝내요. 아프지 않게.」 — 밤에만 움직이는 조용한 사람. (여성 · 은발 단발 · 한쪽 눈을 덮는 앞머리 · 남색 후드에 먹색 목도리)
 
 길드: 달 — 달 문장, 밤에만 움직이는 길드
 
@@ -412,7 +412,7 @@ Same rules: no text, one flat magenta (#FF00FF) background, nothing else in the 
 
 | 부위 | 픽셀 생김새 | 색 |
 |---|---|---|
-| 머리 | 옆으로 앞머리 · 볼까지 · 뒤 어깨까지 · 없음 · 숱 적게 | 은색 `#a9adbb` |
+| 머리 | 전용 머리 — 앞 · 옆은 턱선에서 안으로 말린 은발 단발, 뒤는 등까지 길고 가득 · 한쪽 눈을 덮는 긴 앞머리 · 옆에서도 이마가 안 보임 | 은색 `#a9adbb` |
 | 피부 | | 아주 흰 `#f2d3c0` |
 | 눈 | 졸린 눈 | 보라 `#7a4ab0` |
 | 윗옷 | 후드 | 남색 `#2f3b5e` |
@@ -450,7 +450,7 @@ COLOR LOCK — the colors MUST match the pixel sprite. Use these as the main col
 Small details (buttons, buckles, metal) may be silver or gold.
 
 CHARACTER: a woman in her early twenties, the S-rank ace of the night guild "Dal" (moon); quiet, sleepy-looking, unsettlingly calm.
-HAIR: side-swept bangs (swept toward the left side of the face), side locks down to the cheeks, back hair reaching the shoulders, neat and close to the head.
+HAIR: silver hair: from the front and sides a bob that curls inward at the jawline, but at the back it is long and full, reaching down the back; long bangs cover the forehead completely and one eye (her left eye) — the forehead never shows, even from the side.
 FACE: half-lidded, sleepy eyes; expressionless, sleepy half-closed eyes, the scarf pulled up just under the chin.
 OUTFIT: a hoodie with the hood down and two white drawstrings, long trousers, a scarf around the neck (ACCENT color), shoes in the Shoes color. A small silver crescent-moon pendant on a thin chain.
 POSE: standing loosely with hands hidden in the hoodie pocket, head tilted slightly. Facing the viewer at a slight 3/4 angle.
@@ -470,6 +470,6 @@ Same rules: no text, one flat magenta (#FF00FF) background, nothing else in the 
 <details><summary>게임에 넣을 생김새 (js/allylook.js 의 생김새 객체)</summary>
 
 ```js
-{"v":1,"seed":7104,"skin":0,"hc":5,"bangs":"side","side":2,"back":1,"tie":0,"vol":1,"flip":true,"eye":"sleepy","ec":6,"mouth":"none","mark":"none","top":"hoodie","bottom":"pants","extra":"scarf","c1":2,"c2":0,"c3":1,"shoe":0,"hseed":7104}
+{"v":1,"seed":7104,"hseed":7104,"skin":0,"hc":5,"bangs":"side","side":2,"back":1,"tie":0,"vol":1,"flip":true,"eye":"sleepy","ec":6,"mouth":"none","mark":"none","top":"hoodie","bottom":"pants","extra":"scarf","c1":2,"c2":0,"c3":1,"shoe":0,"hair":"ace_dal"}
 ```
 </details>
