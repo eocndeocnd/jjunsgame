@@ -958,7 +958,7 @@ test('7격 알렉산드리아 — 파벌마다 상징 공간에, 파벌 안에�
   const data = loadData();
   const m = loadMap('library');
   const sec = name => m.areas.find(a => a.section && a.name === name);
-  const post = name => m.posts.find(p => p.name === name);
+  const post = name => m.posts.find(p => p.name === name) || roomDoorOf(m, name);   // 실내 — 그 건물 문
   const inside = (p, a) => p.x >= a.x && p.y >= a.y && p.x + p.w <= a.x + a.w && p.y + p.h <= a.y + a.h;
   const lv = name => data.ENEMIES.find(e => e.name === name).level;
   const factions = {
@@ -1009,7 +1009,7 @@ test('8격 카멜롯 — 남쪽 나루 → 바위의 검 광장 · 마상 시합
   const data = loadData();
   const m = loadMap('camelot');
   const sec = name => m.areas.find(a => a.section && a.name === name);
-  const post = name => m.posts.find(p => p.name === name);
+  const post = name => m.posts.find(p => p.name === name) || roomDoorOf(m, name);   // 실내 — 그 건물 문
   const spot = name => post(name) || (a => ({ x: a.x, y: a.y + a.h / 2, w: 1, h: 1 }))(m.areas.find(a => a.monster === data.ENEMIES.find(e => e.name === name).id));
   const inside = (p, a) => p.x >= a.x && p.y >= a.y && p.x + p.w <= a.x + a.w && p.y + p.h <= a.y + a.h;
   const lv = name => data.ENEMIES.find(e => e.name === name).level;
@@ -1052,7 +1052,7 @@ test('9격 아발론 — 안개 나루 · 마탑 마을 → 시내로 갈린 세
   const data = loadData();
   const m = loadMap('avalon');
   const sec = name => m.areas.find(a => a.section && a.name === name);
-  const post = name => m.posts.find(p => p.name === name);
+  const post = name => m.posts.find(p => p.name === name) || roomDoorOf(m, name);   // 실내 — 그 건물 문
   const spot = name => post(name) || roomDoorOf(m, name) || (a => ({ x: a.x, y: a.y + a.h / 2, w: 1, h: 1 }))(m.areas.find(a => a.monster === data.ENEMIES.find(e => e.name === name).id));
   const inside = (p, a) => p.x >= a.x && p.y >= a.y && p.x + p.w <= a.x + a.w && p.y + p.h <= a.y + a.h;
   const lv = name => data.ENEMIES.find(e => e.name === name).level;
@@ -1066,7 +1066,7 @@ test('9격 아발론 — 안개 나루 · 마탑 마을 → 시내로 갈린 세
     assert.ok(lv(list[i]) > lv(list[i - 1]) && spot(list[i]).y < spot(list[i - 1]).y, `${r}: ${list[i - 1]} → ${list[i]} (셀수록 북쪽)`);
   const where = { '샐러맨더': '불의 제단', '운디네': '물의 샘', '실프': '바람 절벽', '노움': '노움의 땅굴', '파우스트': '파우스트의 서재', '바바 야가': '바바 야가의 숲', '키르케': '키르케의 섬', '모르간 르 페이': '모르간의 궁', '멀린': '멀린의 수정 동굴' };
   for (const [name, a] of Object.entries(where)) assert.ok(inside(spot(name), sec(a)), `${name} 은(는) ${a}`);
-  assert.ok(!post('바바 야가') && roomDoorOf(m, '바바 야가').name === 'babayaga', '바바 야가는 숲 속 오두막 안');
+  assert.ok(!m.posts.some(p => p.name === '바바 야가') && roomDoorOf(m, '바바 야가').name === 'babayaga', '바바 야가는 숲 속 오두막 안');
   for (const p of m.posts.filter(q => !['노움', '멀린'].includes(q.name))) {   // 숲의 마녀 · 땅속 정령 · 갇힌 멀린 빼고 트인 땅
     let open = 0, all = 0;
     for (let y = p.y - 3; y < p.y + p.h + 3; y++) for (let x = p.x - 3; x < p.x + p.w + 3; x++) { all++; if (!m.solid[y * m.w + x]) open++; }
@@ -1093,7 +1093,7 @@ test('10격 천하제일 비무대 — 객잔 마을 → 바위 등성이로 갈
   const data = loadData();
   const m = loadMap('murim');
   const sec = name => m.areas.find(a => a.section && a.name === name);
-  const post = name => m.posts.find(p => p.name === name);
+  const post = name => m.posts.find(p => p.name === name) || roomDoorOf(m, name);   // 실내 — 그 건물 문
   const spot = name => post(name) || (a => ({ x: a.x, y: a.y + a.h / 2, w: 1, h: 1 }))(m.areas.find(a => a.monster === data.ENEMIES.find(e => e.name === name).id));
   const inside = (p, a) => p.x >= a.x && p.y >= a.y && p.x + p.w <= a.x + a.w && p.y + p.h <= a.y + a.h;
   const lv = name => data.ENEMIES.find(e => e.name === name).level;
@@ -1138,7 +1138,7 @@ test('11격 천산 — 나선 길: 바깥 고리(기슭 → 동 청룡 → 북 �
   const data = loadData();
   const m = loadMap('tianshan');
   const sec = name => m.areas.find(a => a.section && a.name === name);
-  const post = name => m.posts.find(p => p.name === name);
+  const post = name => m.posts.find(p => p.name === name) || roomDoorOf(m, name);   // 실내 — 그 건물 문
   const inside = (p, a) => p.x >= a.x && p.y >= a.y && p.x + p.w <= a.x + a.w && p.y + p.h <= a.y + a.h;
   const foe = name => data.ENEMIES.find(e => e.name === name);
   // 사신수는 제 방위 — 정상 한가운데에서 본 쪽
@@ -1178,7 +1178,7 @@ test('12격 잊혀진 성역 — 구름 계단 끝 성스러운 숲 → 세 갈�
   const data = loadData();
   const m = loadMap('sanctuary');
   const sec = name => m.areas.find(a => a.section && a.name === name);
-  const post = name => m.posts.find(p => p.name === name);
+  const post = name => m.posts.find(p => p.name === name) || roomDoorOf(m, name);   // 실내 — 그 건물 문
   const spot = name => post(name) || (a => ({ x: a.x, y: a.y + a.h / 2, w: 1, h: 1 }))(m.areas.find(a => a.monster === data.ENEMIES.find(e => e.name === name).id));
   const inside = (p, a) => p.x >= a.x && p.y >= a.y && p.x + p.w <= a.x + a.w && p.y + p.h <= a.y + a.h;
   const lv = name => data.ENEMIES.find(e => e.name === name).level;
@@ -1222,7 +1222,7 @@ test('13격 엘리시온 평원 — 레테 강을 건너 세 갈래(서쪽 그�
   const data = loadData();
   const m = loadMap('elysium');
   const sec = name => m.areas.find(a => a.section && a.name === name);
-  const post = name => m.posts.find(p => p.name === name);
+  const post = name => m.posts.find(p => p.name === name) || roomDoorOf(m, name);   // 실내 — 그 건물 문
   const inside = (p, a) => p.x >= a.x && p.y >= a.y && p.x + p.w <= a.x + a.w && p.y + p.h <= a.y + a.h;
   const lv = name => data.ENEMIES.find(e => e.name === name).level;
   assert.equal(m.areas.filter(a => a.monster).length, 0, '돌아다니는 일반 없음');
@@ -1311,7 +1311,7 @@ test('15격 얼어붙은 코키토스 — 깔때기로 꺼지는 원 일곱(안�
   const m = loadMap('inferno');
   const I = gen.INFERNO;
   const areaName = p => { const k = m.areaAt[(p.y + (p.h >> 1)) * m.w + p.x + (p.w >> 1)]; return k >= 0 ? m.areas[k].name : null; };
-  const post = name => m.posts.find(p => p.name === name);
+  const post = name => m.posts.find(p => p.name === name) || roomDoorOf(m, name);   // 실내 — 그 건물 문
   const ringOf = name => (areaName(post(name)) === '몰록의 불타는 제단' ? 0 : I.rings.findIndex(r => r[0] === areaName(post(name))));
   assert.equal(areaName(post('몰록')), '몰록의 불타는 제단', '몰록은 림보와 갈라 둔 제 제단 (첫째 원 안)');
   const sins = { '아스모데우스': '색욕', '벨제부브': '탐식', '아스타로트': '나태', '발람': '말레볼제', '자간': '말레볼제' };
@@ -1357,7 +1357,7 @@ test('15격 얼어붙은 코키토스 — 깔때기로 꺼지는 원 일곱(안�
 test('16격 이그드라실의 가지 — 우듬지에서 내려와 갈래(서쪽 가지 이집트 · 가운데 줄기 올림포스 열한 신 · 동쪽 가지 일본 · 줄기에서 갈라진 북유럽 가지)가 뿌리에서 만나 하데스가 막은 돌아온 자가 없는 문 · 파벌마다 한 갈래 · 내려갈수록 셈 · 숨은 미미르의 샘', () => {
   const data = loadData();
   const m = loadMap('yggdrasil');
-  const post = name => m.posts.find(p => p.name === name);
+  const post = name => m.posts.find(p => p.name === name) || roomDoorOf(m, name);   // 실내 — 그 건물 문
   const lv = name => data.ENEMIES.find(e => e.name === name).level;
   const areaName = p => { const k = m.areaAt[(p.y + (p.h >> 1)) * m.w + p.x + (p.w >> 1)]; return k >= 0 ? m.areas[k].name : ''; };
   const routes = {
@@ -1404,7 +1404,7 @@ test('16격 이그드라실의 가지 — 우듬지에서 내려와 갈래(서�
 test('17격 태초의 바다 — 타르타로스 해안에서 섬을 건너는 세 갈래(서쪽 묶이고 깔린 것 · 가운데 땅 · 바다 · 하늘의 세 짐승 — 묶음 한 갈래 · 동쪽 뱀)가 이미르의 땅에서 만나 갈라진 바다 끝의 티아마트 · 섬은 들쭉날쭉 · 숨은 이미르의 해골 동굴', () => {
   const data = loadData();
   const m = loadMap('primordial');
-  const post = name => m.posts.find(p => p.name === name);
+  const post = name => m.posts.find(p => p.name === name) || roomDoorOf(m, name);   // 실내 — 그 건물 문
   const lv = name => data.ENEMIES.find(e => e.name === name).level;
   const areaName = p => { const k = m.areaAt[(p.y + (p.h >> 1)) * m.w + p.x + (p.w >> 1)]; return k >= 0 ? m.areas[k].name : ''; };
   const routes = {
@@ -1445,7 +1445,7 @@ test('18격 올림포스 정상 — 남쪽 기슭에서 세 면(서쪽 이집트
   const data = loadData();
   const m = loadMap('olympus');
   const O = gen.OLYMPUS, [cx, cy] = O.C, [rx, ry] = O.R;
-  const post = name => m.posts.find(p => p.name === name);
+  const post = name => m.posts.find(p => p.name === name) || roomDoorOf(m, name);   // 실내 — 그 건물 문
   const lv = name => data.ENEMIES.find(e => e.name === name).level;
   const rr = p => Math.hypot((p.x + p.w / 2 - cx) / rx, (p.y + p.h / 2 - cy) / ry);
   const areaName = p => { const k = m.areaAt[(p.y + (p.h >> 1)) * m.w + p.x + (p.w >> 1)]; return k >= 0 ? m.areas[k].name : ''; };
@@ -1480,7 +1480,7 @@ test('18격 올림포스 정상 — 남쪽 기슭에서 세 면(서쪽 이집트
 test('19격 가라앉은 르뤼에 — 남쪽 물가에서 물길 둘로 갈린 세 갈래(서쪽 원소별 옛 지배자 넷 · 가운데 홀로 깨어 있는 옛 지배자들 · 동쪽 종들)가 무덤 앞 광장에서 만나 심연의 아틀락-나챠 → 무덤 속 크툴루 · 숨은 네크로노미콘', () => {
   const data = loadData();
   const m = loadMap('rlyeh');
-  const post = name => m.posts.find(p => p.name === name);
+  const post = name => m.posts.find(p => p.name === name) || roomDoorOf(m, name);   // 실내 — 그 건물 문
   const spot = name => post(name) || (a => ({ x: a.x, y: a.y + a.h / 2, w: 1, h: 1 }))(m.areas.find(a => a.monster === data.ENEMIES.find(e => e.name === name).id));
   const lv = name => data.ENEMIES.find(e => e.name === name).level;
   const areaName = p => { const k = m.areaAt[(p.y + (p.h >> 1)) * m.w + p.x + (p.w >> 1)]; return k >= 0 ? m.areas[k].name : ''; };
@@ -1519,7 +1519,7 @@ test('20격 궁극의 혼돈 — 위아래 없이 가장자리에서 중심으�
   const data = loadData();
   const m = loadMap('chaos');
   const [cx, cy] = gen.CHAOS.C;
-  const post = name => m.posts.find(p => p.name === name);
+  const post = name => m.posts.find(p => p.name === name) || roomDoorOf(m, name);   // 실내 — 그 건물 문
   const lv = name => data.ENEMIES.find(e => e.name === name).level;
   const rr = p => Math.hypot(p.x + p.w / 2 - cx, p.y + p.h / 2 - cy);
   const areaName = p => { const k = m.areaAt[(p.y + (p.h >> 1)) * m.w + p.x + (p.w >> 1)]; return k >= 0 ? m.areas[k].name : ''; };
@@ -1588,10 +1588,13 @@ test('7격부터 — 실내: 지붕 아래가 컨셉인 곁방의 존재는 바�
       count++;
       const door = m.ports.find(p => p.name === r.id), h = loadMap(r.id);
       assert.ok(door && door.door && door.to === `${r.id}.out` && door.w === 1, `${r.title} — 바깥 문`);
-      assert.ok(!m.solid[door.y * m.w + door.x] && !m.solid[(door.y + 1) * m.w + door.x], `${r.title} — 문과 문 앞은 걸을 수 있음`);
-      const [x0, y0, x1, y1] = r.box;
+      const [x0b, y0b, x1b, y1b] = r.box || [door.x, door.y, door.x + 1, door.y + 1], outside = (x, y) => x < x0b || x >= x1b || y < y0b || y >= y1b;
+      const steps = [[1, 0], [-1, 0], [0, 1], [0, -1]].map(([i, j]) => [door.x + i, door.y + j]).filter(([x, y]) => outside(x, y) && !m.solid[y * m.w + x]);
+      assert.ok(!m.solid[door.y * m.w + door.x] && steps.length, `${r.title} — 문과 문 앞은 걸을 수 있음`);
+      const [x0, y0, x1, y1] = r.box || [0, 0, 0, 0];
       for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) if (!(x === door.x && y === door.y)) assert.ok(m.solid[y * m.w + x], `${r.title} — 건물 (${x}, ${y}) 은 막힘`);
-      assert.ok(walk(m, [m.start.y * m.w + m.start.x], new Set(m.posts.flatMap(p => cellsOf(m, p))))[(door.y + 1) * m.w + door.x] >= 0, `${r.title} — 문 앞까지 걸어서`);
+      const dd = walk(m, [m.start.y * m.w + m.start.x], new Set(m.posts.filter(p => !p.blocks).flatMap(p => cellsOf(m, p))));   // 보스 너머(등대 섬)는 보스를 꺾은 뒤
+      assert.ok(steps.some(([x, y]) => dd[y * m.w + x] >= 0), `${r.title} — 문 앞까지 걸어서`);
       assert.ok(h.props.interior && h.props.title === r.title, `${r.title} — 안 지도`);
       const out = h.ports.find(p => p.name === 'out');
       assert.equal(out.to, `${spec.id}.${r.id}`, `${r.title} — 나가면 그 문 앞`);

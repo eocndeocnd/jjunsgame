@@ -1751,8 +1751,10 @@ const placeOf = rank => PLACES.find(p => p.ranks.includes(rank)) || null;
 //   A.in · A.next [x, y, 폭] — 앞 격(또는 마왕성)에서 들어오는 문 · 보스 뒤 다음 격으로 가는 문. A.start · A.merchant [x, y]
 //   A.chests   [x, y, 'big'?] — 작은 상자 둘 · 큰 상자 하나
 // 좌표는 칸 (x 오른쪽 · y 아래쪽), 네모는 [x0, y0, x1, y1) 반열린.
-// 실내 건물의 문 — 건물 네모(box)의 아래 줄 한가운데 (문 앞 칸은 빈 땅)
-const roomDoor = r => [(r.box[0] + r.box[2] - 1) >> 1, r.box[3] - 1];
+// 실내 건물의 문 — 건물 네모(box)의 face 쪽 변 한가운데 (s 아래 · n 위 · e 오른쪽 · w 왼쪽 — auto 는 handMap 이 흙길에 가까운 쪽을 골라 적어 둠). 문 앞 칸은 빈 땅
+const roomDoor = r => { const [x0, y0, x1, y1] = r.box, mx = (x0 + x1 - 1) >> 1, my = (y0 + y1 - 1) >> 1;
+  return { s: [mx, y1 - 1], n: [mx, y0], e: [x1 - 1, my], w: [x0, my] }[r.face || 's']; };
+const roomStep = r => { const [x, y] = roomDoor(r); return { s: [x, y + 1], n: [x, y - 1], e: [x + 1, y], w: [x - 1, y] }[r.face || 's']; };
 // 7격부터의 실내 방 — 지도 id → 그 지도의 rooms (allMaps 가 안 지도를 뽑음)
 const rankRooms = id => (({ library: ALEX, camelot: CAMELOT, avalon: AVALON, murim: MURIM, tianshan: TIANSHAN, sanctuary: SANCTUARY, elysium: ELYSIUM, heaven: HEAVEN, inferno: INFERNO,
   yggdrasil: YGGDRASIL, primordial: PRIMORDIAL, olympus: OLYMPUS, rlyeh: RLYEH, chaos: CHAOS })[id] || {}).rooms || [];
@@ -1771,7 +1773,18 @@ function handMap(data, rank, A, paint) {
   paint({ tiles, idx, box, ring, road, rectOf, secrets, shapes });
   // 실내 (사용자 결정 2026-11-28 — 지붕 아래가 컨셉인 곁방의 하나뿐인 존재) — 바깥엔 문 하나 난 닫힌 건물, 안은 따로 뽑은 방 (allMaps 의 storeInterior)
   const rooms = A.rooms || [], inRoom = new Set(rooms.flatMap(r => r.room.foes.map(f => f.name)));
-  for (const r of rooms) { const [x0, y0, x1, y1] = r.box; box(r.box, WALL); tiles[idx(roomDoor(r)[0], roomDoor(r)[1])] = FLOOR; if (tiles[idx(roomDoor(r)[0], y1)] === WALL) tiles[idx(roomDoor(r)[0], y1)] = FLOOR; }
+  const walkable = t => t === FLOOR || t === ROAD;
+  for (const r of rooms) {
+    box(r.box, r.tile || WALL);
+    if (r.face === 'auto' || r.auto) {                         // 문은 흙길에 가장 가까운, 앞이 빈 땅인 쪽으로
+      r.auto = true;
+      const roadDist = (x, y) => { for (let d = 0; d < 30; d++) for (let j = -d; j <= d; j++) for (let i = -d; i <= d; i++) if ((Math.abs(i) === d || Math.abs(j) === d) && tiles[idx(x + i, y + j)] === ROAD) return d; return 99; };
+      r.face = ['s', 'e', 'w', 'n'].map(f => { r.face = f; const [sx, sy] = roomStep(r); return [f, walkable(tiles[idx(sx, sy)]) ? roadDist(sx, sy) : 999]; }).sort((a, b) => a[1] - b[1])[0][0];
+    }
+    const [dx, dy] = roomDoor(r), [sx, sy] = roomStep(r);
+    tiles[idx(dx, dy)] = FLOOR;
+    if (tiles[idx(sx, sy)] !== WATER && !walkable(tiles[idx(sx, sy)])) tiles[idx(sx, sy)] = FLOOR;
+  }
 
   // 자리 — 모두 트인 땅에, 보스 말고는 흙길에서 2칸 넘게 (지나가며 닿지 않게)
   const posts = Object.entries(A.foes).map(([name, [x, y]]) => {
@@ -1947,13 +1960,19 @@ const ALEX = {
     '손자': [13, 99], '잔 다르크': [14, 44], '스파르타쿠스': [49, 41],
     '아르키메데스': [60, 106], '히파티아': [75, 100], '레오나르도 다 빈치': [59, 85], '헤로도토스': [62, 71], '칭기즈 칸': [63, 48], '알렉산드로스': [74, 38],
     '관우': [97, 106], '장비': [103, 85], '조운': [98, 70], '마초': [122, 46], '황충': [114, 37],
-    '이순신': [69, 19], '헤르메스 트리스메기스투스': [61, 5]
+    '이순신': [69, 19]
   },
   sections: [['세라페움 언덕', 'serapeum'], ['필사실', 'scriptorium'], ['화형대 광장', 'pyre'], ['원형극장', [32, 30, 57, 58]], ['무세이온', 'museion'],
     ['대도서관', 'library'], ['비밀 서고', 'vault'], ['소마 — 알렉산드로스의 무덤', 'soma'], ['촉한 진영', 'camp'], ['대항구', 'quay'], ['파로스 등대 섬', 'island']],
   zones: [['이름 없는 이야기꾼', 'market'], ['필경사', 'scriptorium']],
   merchant: [40, 124], chests: [[10, 94], [129, 90], [81, 72, 'big']],
-  in: [69, 144, 3], next: [68, 2, 4], start: [70, 140]
+  in: [69, 144, 3], next: [68, 2, 4], start: [70, 140],
+  // 실내 — 등대 섬의 파로스 등대 (히든 헤르메스 트리스메기스투스 — 보스 곁, 꺾어야 나타남). 흰 돌 탑 안: 깃발 · 문장 · 기둥 · 에메랄드 서판(책상) · 두루마리
+  rooms: [{ id: 'pharos', title: '파로스 등대', box: [59, 5, 66, 11], face: 'e', room: {
+    w: 9, h: 9, theme: 'hq', outLabel: '섬으로',
+    wall: [{ x: 0, w: 3, kind: 'gbanner' }, { x: 3, w: 3, kind: 'emblem' }, { x: 6, w: 3, kind: 'gbanner' }],
+    props: [{ kind: 'pillar', x: 1, y: 2 }, { kind: 'pillar', x: 7, y: 2 }, { kind: 'pillar', x: 1, y: 6 }, { kind: 'pillar', x: 7, y: 6 }, { kind: 'desk', x: 0, y: 0, w: 2, h: 1 }, { kind: 'books', x: 8, y: 0 }],
+    foes: [{ name: '헤르메스 트리스메기스투스', x: 4, y: 1 }] } }]
 };
 function alexandriaMap(data) {
   const A = ALEX;
@@ -1969,7 +1988,8 @@ function alexandriaMap(data) {
     box([A.gate, A.market[3], A.gate + 3, A.market[3] + 2], FLOOR);                          // 남쪽 성문
     // 서쪽 — 세라페움 언덕(바위 테, 동쪽 비탈길) · 필사실 뜰 · 항구 쪽에 화형대 광장(큰길 서쪽) · 원형극장(돌 관람석 고리, 남북으로 트임)
     box(A.serapeum, FLOOR); ring(A.serapeum, ROCK); box([A.serapeum[2] - 1, A.serapeumRamp[1], A.streets[0][0], A.serapeumRamp[3]], FLOOR);
-    box(A.scriptorium, FLOOR); box(A.pyre, FLOOR);
+    box(A.scriptorium, FLOOR); ring(A.scriptorium, WALL); box([A.scriptorium[0], 98, A.scriptorium[0] + 1, 103], FLOOR); box([40, A.scriptorium[3] - 1, 46, A.scriptorium[3]], FLOOR);   // 필사실 — 담, 큰길 쪽 · 거리 쪽 문
+    box(A.pyre, FLOOR);
     const T = A.theater;
     for (let y = T.cy - T.r; y <= T.cy + T.r; y++) for (let x = T.cx - T.r; x <= T.cx + T.r; x++) {
       const d = Math.hypot(x + 0.5 - (T.cx + 0.5), y + 0.5 - (T.cy + 0.5));
@@ -2024,7 +2044,7 @@ const CAMELOT = {
   east: [96, 28, 130, 132], eastSea: [130, 28, 136, 132], ridge: [96, 66, 130, 72], pass: [106, 118],
   in: [69, 170, 3], next: [68, 11, 4], start: [70, 160], merchant: [75, 156],
   foes: {
-    '랜슬롯': [78, 116], '가웨인': [86, 76], '갤러해드': [51, 70], '트리스탄': [84, 66], '퍼시벌': [77, 62], '베디비어': [76, 53], '모드레드': [60, 39],   // 원탁의 기사 일곱은 모두 성 쪽 (사용자 지적 2026-11-27)
+    '랜슬롯': [78, 116], '가웨인': [86, 76], '트리스탄': [84, 66], '퍼시벌': [77, 62], '베디비어': [76, 53], '모드레드': [60, 39],   // 원탁의 기사 일곱은 모두 성 쪽 (사용자 지적 2026-11-27)
     '롤랑': [119, 62], '엘 시드': [104, 48], '로빈 후드': [16, 44],
     '아서왕': [69, 30], '호수의 여인': [58, 23]
   },
@@ -2032,7 +2052,13 @@ const CAMELOT = {
     ['원탁의 홀', 'hall'], ['호숫가', [46, 11, 95, 28]], ['서쪽 숲', 'forest'], ['로빈 후드의 은신처', 'hideout'],
     ['동문 밖 들판', [96, 28, 130, 60]], ['롤랑의 고개', [96, 60, 130, 74]], ['동쪽 해안 절벽', [96, 74, 136, 132]]],
   zones: [['오러 기사', [22, 134, 62, 162]], ['성기사', [78, 134, 120, 162]], ['템플 기사', 'cathedral'], ['광전사', [8, 100, 40, 128]], ['녹색 기사', [8, 66, 40, 96]], ['용기사', [98, 104, 128, 128]]],
-  chests: [[58, 117], [126, 92], [13, 33, 'big']]
+  chests: [[58, 117], [126, 92], [13, 33, 'big']],
+  // 실내 — 성 안 성배 예배당 (갤러해드 — 성배를 찾은 기사). 흰 돌 예배당: 깃발 · 문장 · 기둥 · 신도석
+  rooms: [{ id: 'grailchapel', title: '성배 예배당', box: [46, 64, 61, 81], face: 'e', room: {
+    w: 11, h: 9, theme: 'hq', outLabel: '성 안으로',
+    wall: [{ x: 0, w: 4, kind: 'gbanner' }, { x: 4, w: 3, kind: 'emblem' }, { x: 7, w: 4, kind: 'gbanner' }],
+    props: [{ kind: 'pillar', x: 1, y: 1 }, { kind: 'pillar', x: 9, y: 1 }, { kind: 'bench', x: 0, y: 4, w: 3, h: 1 }, { kind: 'bench', x: 8, y: 4, w: 3, h: 1 }, { kind: 'bench', x: 0, y: 6, w: 3, h: 1 }, { kind: 'bench', x: 8, y: 6, w: 3, h: 1 }],
+    foes: [{ name: '갤러해드', x: 4, y: 1 }] } }]
 };
 function camelotMap(data) {
   const A = CAMELOT;
@@ -2045,7 +2071,6 @@ function camelotMap(data) {
     box(A.castle, FLOOR); ring(A.castle, WALL);
     ring(A.hall, WALL); box([67, A.hall[3] - 1, 74, A.hall[3]], FLOOR); box([69, A.castle[1], 72, A.hall[1] + 1], FLOOR);
     ellipse(A.table[0], A.table[1], A.table[2], A.table[2], (x, y, d) => { if (d < 1) tiles[idx(x, y)] = ROCK; });
-    ring(A.chapel, WALL); box([A.chapel[2] - 1, 70, A.chapel[2], 74], FLOOR);
     box([66, A.castle[3] - 1, 75, A.castle[3]], FLOOR); box([A.castle[0], 56, A.castle[0] + 1, 61], FLOOR); box([A.castle[2] - 1, 56, A.castle[2], 61], FLOOR);
     // 성 앞 — 성당 뜰 · 마상 시합장(타원 울타리, 남북으로 트임) · 나루 마을 · 바위의 검 · 남쪽 바다와 나루
     box(A.cathedral, FLOOR); box([66, A.castle[3], 75, A.cathedral[1]], FLOOR);
@@ -2103,7 +2128,7 @@ const AVALON = {
   in: [69, 170, 3], next: [68, 1, 4], start: [70, 160], merchant: [75, 156],
   foes: {
     '샐러맨더': [30, 118], '운디네': [30, 68], '실프': [14, 50], '노움': [32, 33],
-    '파우스트': [56, 80], '키르케': [119, 48], '모르간 르 페이': [58, 30], '멀린': [69, 7]
+    '키르케': [119, 48], '모르간 르 페이': [58, 30], '멀린': [69, 7]
   },
   sections: [['안개 나루 · 마탑 마을', [20, 132, 121, 174]], ['불의 제단', [10, 106, 46, 132]], ['환상열석', [10, 82, 46, 106]], ['물의 샘', [10, 62, 46, 82]],
     ['바람 절벽', [10, 42, 44, 62]], ['노움의 땅굴', 'cave'], ['노움의 보물방', 'hoard'], ['룬 언덕', [48, 106, 96, 132]], ['연금 공방 거리', [48, 90, 96, 106]],
@@ -2111,13 +2136,19 @@ const AVALON = {
     ['사과 과수원', 'orchard'], ['모르간의 궁', 'palace'], ['멀린의 수정 동굴', [54, 2, 86, 25]]],
   zones: [['대마법사', [22, 136, 62, 162]], ['원소술사', [78, 136, 120, 162]], ['소환술사', [10, 84, 44, 104]], ['룬 마법사', [50, 108, 94, 130]],
     ['연금술사', [50, 92, 94, 104]], ['드루이드', [104, 104, 132, 132]], ['흑마법사', [75, 65, 93, 81]]],
-  chests: [[35, 94], [53, 77], [15, 32, 'big']],
+  chests: [[35, 94], [67, 88], [15, 32, 'big']],
   // 실내 — 숲 속 닭다리 오두막 (바깥엔 문 하나, 안에 바바 야가). 안은 어둑한 통나무 방: 큰 화덕 · 말린 약초 · 약병 · 낡은 침대 · 책 더미 · 버섯
   rooms: [{ id: 'babayaga', title: '바바 야가의 오두막', box: [119, 80, 126, 85], room: {
     w: 9, h: 7, theme: 'witch', outLabel: '숲으로',
     wall: [{ x: 0, w: 3, kind: 'herbs' }, { x: 3, w: 3, kind: 'potions' }, { x: 6, w: 3, kind: 'herbs' }],
     props: [{ kind: 'cauldron', x: 0, y: 1, w: 2, h: 2 }, { kind: 'bed', x: 7, y: 3, w: 2, h: 3 }, { kind: 'books', x: 8, y: 0 }, { kind: 'shroom', x: 0, y: 5 }, { kind: 'shroom', x: 8, y: 6 }],
-    foes: [{ name: '바바 야가', x: 4, y: 1 }] } }]
+    foes: [{ name: '바바 야가', x: 4, y: 1 }] } },
+  // 실내 — 파우스트의 서재 (악마와 계약한 학자). 나무 바닥 서재: 책장 · 칠판 · 책상 · 연금 솥 · 책 더미
+    { id: 'faustus', title: '파우스트의 서재', box: [50, 74, 66, 90], face: 'e', room: {
+    w: 9, h: 7, theme: 'home', outLabel: '거리로',
+    wall: [{ x: 0, w: 3, kind: 'rack' }, { x: 3, w: 3, kind: 'board' }, { x: 6, w: 3, kind: 'rack' }],
+    props: [{ kind: 'desk', x: 0, y: 1, w: 2, h: 1 }, { kind: 'books', x: 8, y: 1 }, { kind: 'books', x: 8, y: 2 }, { kind: 'cauldron', x: 7, y: 4, w: 2, h: 2 }, { kind: 'books', x: 0, y: 5 }],
+    foes: [{ name: '파우스트', x: 4, y: 1 }] } }]
 };
 function avalonMap(data) {
   const A = AVALON;
@@ -2146,7 +2177,6 @@ function avalonMap(data) {
     secrets.push({ name: '숨은 샛길', x: 15, y: Hd[3] - 1, w: 2, h: 1 });
     // 가운데 금지된 지식 — 룬 언덕(룬 돌) · 연금 공방 거리 · 파우스트의 서재(담, 동문) · 금서의 탑(담, 서문)
     for (let y = 112; y < 130; y += 8) for (let x = 54; x < 94; x += 8) if (x < 64 || x > 76) tiles[idx(x, y)] = ROCK;
-    ring(A.study, WALL); box([A.study[2] - 1, 80, A.study[2], 85], FLOOR);
     ring(A.tomes, WALL); box([A.tomes[0], 70, A.tomes[0] + 1, 75], FLOOR);
     // 동쪽 마녀의 숲 — 호수와 작은 섬(여울로 건넘)
     box(A.lake, WATER); box(A.islet, FLOOR); box(A.ford, FLOOR);
@@ -2198,7 +2228,7 @@ const MURIM = {
   in: [69, 166, 3], next: [68, 1, 4], start: [70, 160], merchant: [74, 156],
   foes: {
     '남궁세가 가주': [55, 119], '사천당가 독수': [80, 104], '모용세가 공자': [56, 87], '제갈세가 군사': [81, 63], '하북팽가 도객': [56, 52],
-    '달마': [14, 44], '장삼봉': [114, 64], '천마': [69, 11]
+    '장삼봉': [114, 64], '천마': [69, 11]
   },
   sections: [['객잔 마을', [20, 134, 121, 168]], ['객잔', 'inn'], ['아미산 암자', [10, 102, 46, 134]], ['소림사', [10, 70, 46, 102]], ['달마의 면벽 동굴', 'dharma'],
     ['세가 거리', [50, 46, 94, 134]], ['남궁세가', [50, 112, 66, 128]], ['사천당가', [74, 96, 92, 112]], ['모용세가', [50, 80, 66, 96]], ['제갈세가 진법 정원', [74, 62, 92, 80]], ['하북팽가', [50, 46, 66, 62]],
@@ -2206,7 +2236,12 @@ const MURIM = {
     ['비무대 앞 관전석', 'plaza'], ['천하제일 비무대', [58, 2, 82, 28]]],
   zones: [['흑도 낭인', [22, 150, 66, 164]], ['개방 장로', [76, 136, 120, 162]], ['아미파 사태', [12, 104, 44, 132]], ['소림 나한', [12, 72, 44, 102]],
     ['무당 도사', [100, 104, 130, 132]], ['화산파 매화검수', [100, 78, 130, 102]], ['북해빙궁 무사', [100, 30, 122, 54]]],
-  chests: [[52, 140], [87, 108], [129, 41, 'big']]
+  chests: [[52, 140], [87, 108], [129, 41, 'big']],
+  // 실내 — 뒷산 바위 속 면벽 동굴 (달마 — 벽을 보고 아홉 해). 어둔 바위 굴: 안쪽 벽을 마주 앉은 달마 · 버섯
+  rooms: [{ id: 'dharmacave', title: '달마의 면벽 동굴', box: [12, 40, 32, 58], tile: ROCK, face: 'e', room: {
+    w: 7, h: 9, theme: 'gate', outLabel: '산으로',
+    wall: [], props: [{ kind: 'shroom', x: 0, y: 7 }, { kind: 'shroom', x: 6, y: 4 }],
+    foes: [{ name: '달마', x: 2, y: 0 }] } }]
 };
 function murimMap(data) {
   const A = MURIM;
@@ -2223,7 +2258,6 @@ function murimMap(data) {
     // 서쪽 불가 — 아미산 암자(작은 담) · 소림사(담, 남북 문) · 면벽 동굴(바위, 동쪽 입구)
     ring(A.hermitage, WALL); box([A.hermitage[2] - 1, 113, A.hermitage[2], 117], FLOOR);
     ring(A.shaolin, WALL); box([22, A.shaolin[3] - 1, 27, A.shaolin[3]], FLOOR); box([22, A.shaolin[1], 27, A.shaolin[1] + 1], FLOOR);
-    box(A.dharma, FLOOR); ring(A.dharma, ROCK); box([A.dharma[2] - 1, 50, A.dharma[2], 55], FLOOR);
     // 가운데 세가 거리 — 장원마다 담, 큰길 쪽 문 · 당가 독 연못 · 제갈 진법 정원(바위 미로, 맨 안쪽에 군사)
     for (const [k, m] of Object.entries(A.manors)) {
       ring(m, WALL);
@@ -2280,10 +2314,16 @@ const TIANSHAN = {
   bear: [160, 47], ice: [-140, 44],                                          // 곰 동굴 · 얼음 동굴 (바위 띠를 파고든 굴, [각도, ρ])
   lake: [75.5, 72, 12], pier: [73, 65, 78, 85],
   frog: [-25, 62, 3], tarn: [-150, 37, 3], springs: [2, 37, 2.5], nest: [48, 37],
-  at: { '청룡': [8, 61.5], '구미호': [-100, 61.5], '백호': [180, 61.5], '웅녀': [160, 47], '산군': [142, 61.5], '주작': [95, 36.5], '금시조': [48, 38.5], '현무': [-90, 36.5], '봉황': [40, 15.5] },
+  at: { '청룡': [8, 61.5], '구미호': [-100, 61.5], '백호': [180, 61.5], '산군': [142, 61.5], '주작': [95, 36.5], '금시조': [48, 38.5], '현무': [-90, 36.5], '봉황': [40, 15.5] },
   zoneAt: { '백년 영사': [68, 61, 8], '금잠고': [38, 61, 8], '세 발 금두꺼비': [-25, 61, 9], '천년 산삼 동자': [-68, 61, 9], '빙잠': [-125, 61, 8], '화린': [0, 36, 7], '금강영구': [-148, 36, 7] },
   in: [74, 146, 3], next: [73, 65, 4],
-  chestAt: [[-74, 64], [40, 27]]
+  chestAt: [[-74, 64], [40, 27]],
+  // 실내 — 바위 띠를 파고든 곰 동굴 (웅녀 — 쑥과 마늘로 백 일). 건물 자리는 tianshanMap 이 곰 동굴 자리에 맞춤
+  rooms: [{ id: 'bearcave', title: '웅녀의 곰 동굴', tile: ROCK, face: 'auto', room: {
+    w: 9, h: 7, theme: 'sand', outLabel: '산허리로',
+    wall: [{ x: 0, w: 3, kind: 'herbs' }, { x: 3, w: 3, kind: 'mats' }, { x: 6, w: 3, kind: 'herbs' }],
+    props: [{ kind: 'plant', x: 0, y: 1 }, { kind: 'plant', x: 8, y: 1 }, { kind: 'shroom', x: 0, y: 5 }, { kind: 'bed', x: 7, y: 4, w: 2, h: 2 }],
+    foes: [{ name: '웅녀', x: 4, y: 1 }] } }]
 };
 function tianshanMap(data) {
   const A = TIANSHAN, [cx, cy] = A.C, R = A.rho, rad = d => d * Math.PI / 180, W = A.W, H = A.H;
@@ -2300,6 +2340,7 @@ function tianshanMap(data) {
   const zrect = ([deg, r, h]) => { const [x, y] = cell(at(deg, r)); return [x - h, y - h, x + h, y + h]; };
   const iceC = cell(at(...A.ice)), bearC = cell(at(...A.bear));
   const iceR = [iceC[0] - 6, iceC[1] - 6, iceC[0] + 7, iceC[1] + 7], bearR = [bearC[0] - 6, bearC[1] - 6, bearC[0] + 7, bearC[1] + 7];
+  A.rooms[0].box = [bearC[0] - 3, bearC[1] - 2, bearC[0] + 4, bearC[1] + 3];
   const start = cell(at(90, 62)), merchant = cell(at(82, 62));
   const spec = { ...A, foes: spot, start, merchant, sections: [['웅녀의 곰 동굴', bearR], ['얼음 동굴', iceR]],
     zones: Object.entries(A.zoneAt).map(([n, z]) => [n, zrect(z)]),
@@ -2326,7 +2367,7 @@ function tianshanMap(data) {
     { const [x, y] = spot['금시조']; for (const [i, j] of [[-2, -1], [-2, 0], [5, 2], [5, 3], [1, -2], [2, -2]]) tiles[idx(x + i, y + j)] = ROCK; }
     // 굴 — 바위 띠를 파고든 둥근 굴 (바위 테). 곰 동굴은 바깥 길 쪽으로 입구, 얼음 동굴은 양쪽 바위 속 숨은 샛길 (바깥 서쪽 ↔ 안쪽 북서쪽)
     const cave = ([x0, y0], t0) => { for (let y = y0 - 6; y <= y0 + 6; y++) for (let x = x0 - 6; x <= x0 + 6; x++) { const h = Math.hypot(x - x0, y - y0); if (h < 4.6) tiles[idx(x, y)] = FLOOR; else if (h < 5.8) tiles[idx(x, y)] = t0; } };
-    cave(bearC, ROCK); cave(iceC, ROCK);
+    disk(bearC[0] + 0.5, bearC[1] + 0.5, 5.2, ROCK); cave(iceC, ROCK);   // 곰 동굴은 바위 언덕 (안은 따로 — rooms)
     const toward = ([x0, y0], deg, k) => [Math.round(x0 + Math.cos(rad(deg)) * k), Math.round(y0 + Math.sin(rad(deg)) * k)];
     for (let k = 4; k <= 7; k++) { const [x, y] = toward(bearC, A.bear[0], k); box([x - 1, y - 1, x + 2, y + 2], FLOOR); }
     const iceDoor = sgn => { const cells = []; for (let k = 4; k <= 7; k++) { const [x, y] = toward(iceC, A.ice[0], sgn * k); for (let j = 0; j < 2; j++) for (let i = 0; i < 2; i++) if (tiles[idx(x + i, y + j)] !== FLOOR && tiles[idx(x + i, y + j)] !== ROAD) cells.push([x + i, y + j]); } return cells; };
@@ -2471,14 +2512,21 @@ const ELYSIUM = {
   foes: {
     '테세우스': [32, 136], '페르세우스': [22, 114], '오디세우스': [16, 96], '아탈란테': [21, 78],
     '엔키두': [118, 126], '길가메시': [106, 86], '헥토르': [64, 122], '아킬레우스': [60, 84],
-    '쿠 훌린': [84, 56], '베오울프': [16, 44], '아르주나': [122, 36], '지그프리트': [58, 23], '헤라클레스': [73, 17]
+    '쿠 훌린': [84, 56], '아르주나': [122, 36], '지그프리트': [58, 23], '헤라클레스': [73, 17]
   },
   sections: [['레테 강가', [40, 150, 108, 174]], ['북쪽 먼 땅', [8, 20, 140, 64]], ['우루크 들판', [100, 68, 140, 106]],
     ['미로 어귀', [8, 126, 46, 150]], ['메두사 석상 정원', [8, 106, 46, 126]], ['오디세우스의 바닷가', [8, 90, 46, 106]], ['경주로', [8, 68, 46, 90]],
     ['삼나무 숲', [100, 106, 140, 150]], ['우루크', 'uruk'], ['트로이 성', [50, 131, 96, 150]], ['트로이 평원', [50, 98, 96, 131]], ['트로이 목마', 'horse'], ['그리스 진영', [50, 68, 96, 98]],
     ['켈트의 여울', [8, 54, 140, 68]], ['헤오로트 연회장', 'hall'], ['쿠루크셰트라 전장', [98, 30, 140, 54]], ['용의 둥지', 'lair'], ['하늘로 오르는 계단', [66, 2, 84, 20]]],
   zones: [],
-  chests: [[25, 80], [64, 24], [86, 108, 'big']]
+  chests: [[25, 80], [64, 24], [86, 108, 'big']],
+  // 실내 — 헤오로트 연회장 (베오울프 — 그렌델에게서 지킨 왕의 홀). 통나무 홀: 깃발 · 갑옷 · 긴 식탁 · 긴 의자
+  rooms: [{ id: 'heorot', title: '헤오로트 연회장', box: [10, 34, 32, 54], face: 'e', room: {
+    w: 13, h: 9, theme: 'witch', outLabel: '들판으로',
+    wall: [{ x: 0, w: 4, kind: 'gbanner' }, { x: 4, w: 5, kind: 'armor' }, { x: 9, w: 4, kind: 'gbanner' }],
+    props: [{ kind: 'counter', x: 0, y: 3, w: 4, h: 1 }, { kind: 'bench', x: 0, y: 4, w: 4, h: 1 }, { kind: 'counter', x: 9, y: 3, w: 4, h: 1 }, { kind: 'bench', x: 9, y: 4, w: 4, h: 1 },
+      { kind: 'counter', x: 0, y: 7, w: 4, h: 1 }, { kind: 'counter', x: 9, y: 7, w: 4, h: 1 }],
+    foes: [{ name: '베오울프', x: 5, y: 1 }] } }]
 };
 function elysiumMap(data) {
   const A = ELYSIUM;
@@ -2506,7 +2554,6 @@ function elysiumMap(data) {
     for (const [x, y] of A.tents) box([x, y, x + 2, y + 2], ROCK);
     ring(A.horse, ROCK); secrets.push({ name: '숨은 샛길', x: 85, y: A.horse[3] - 1, w: 2, h: 1 });
     // 북쪽 먼 땅 — 헤오로트 연회장(담, 동문) · 전차 · 용의 둥지(바위, 남쪽 어귀) · 하늘로 오르는 계단
-    ring(A.hall, WALL); box([A.hall[2] - 1, 42, A.hall[2], 47], FLOOR);
     box([A.chariot[0], A.chariot[1], A.chariot[0] + 2, A.chariot[1] + 2], ROCK);
     ring(A.lair, ROCK); box([58, A.lair[3] - 1, 63, A.lair[3]], FLOOR);
     box(A.stairs, FLOOR); box([A.next[0], A.next[1], A.next[0] + A.next[2], A.next[1] + 1], FLOOR);
@@ -2776,7 +2823,18 @@ const YGGDRASIL = {
     '스사노오': ['east', 0.14, -1], '아마테라스': ['east', 0.6, -1],                                                   // 일본 — 동쪽 가지
     '토르': ['norse', 0.35, 1], '로키': ['roots', [132, 204]],                                                          // 북유럽 — 줄기 가운데에서 갈라진 가지, 뿌리 밑 로키의 동굴
     '하데스': ['gate', [87, 216]]
-  }
+  },
+  // 실내 — 가지 끝 고양이 신전(바스테트) · 줄기 속 대장간(헤파이스토스). 건물 자리는 yggdrasilMap 이 그 신의 자리에 맞춤 (문은 흙길 쪽)
+  rooms: [{ id: 'bastet', title: '바스테트의 신전', foe: '바스테트', face: 'auto', room: {
+    w: 9, h: 7, theme: 'sand', outLabel: '가지로',
+    wall: [{ x: 0, w: 3, kind: 'gbanner' }, { x: 3, w: 3, kind: 'emblem' }, { x: 6, w: 3, kind: 'gbanner' }],
+    props: [{ kind: 'pillar', x: 1, y: 1 }, { kind: 'pillar', x: 7, y: 1 }, { kind: 'pillar', x: 1, y: 4 }, { kind: 'pillar', x: 7, y: 4 }, { kind: 'plant', x: 0, y: 6 }, { kind: 'plant', x: 8, y: 6 }],
+    foes: [{ name: '바스테트', x: 4, y: 1 }] } },
+  { id: 'forge', title: '헤파이스토스의 대장간', foe: '헤파이스토스', tile: ROCK, face: 'auto', room: {
+    w: 9, h: 7, theme: 'raid', outLabel: '줄기로',
+    wall: [{ x: 0, w: 3, kind: 'rack' }, { x: 3, w: 3, kind: 'armor' }, { x: 6, w: 3, kind: 'rack' }],
+    props: [{ kind: 'cauldron', x: 0, y: 1, w: 2, h: 2 }, { kind: 'counter', x: 7, y: 1, w: 2, h: 1 }, { kind: 'case', x: 8, y: 4 }, { kind: 'counter', x: 0, y: 5, w: 2, h: 1 }],
+    foes: [{ name: '헤파이스토스', x: 4, y: 1 }] } }]
 };
 function yggdrasilMap(data) {
   const Y = YGGDRASIL, zi = data.ZONES.findIndex(z => z.rank === 16), foes = data.ENEMIES.filter(e => e.zoneIndex === zi);
@@ -2793,10 +2851,12 @@ function yggdrasilMap(data) {
     spot[name] = [Math.round(x - n / 2), Math.round(y - n / 2)];
   }
   const sec = { canopy: [], west: [], trunk: [], east: [], norse: [], roots: [] };
+  const heph = spot['헤파이스토스'];
+  for (const r of Y.rooms) { const [x, y] = spot[r.foe]; r.box = [x - 3, y - 2, x + 4, y + 3]; delete spot[r.foe]; }   // 그 신의 자리에 건물 (신은 안에)
   const spec = {
     ...Y, foes: spot, zones: [],
     sections: [['미미르의 샘', [8, 204, 34, 226]], ['돌아온 자가 없는 문', [76, 212, 98, 244]]],
-    chests: [[spot['헤르메스'][0] + 6, spot['헤르메스'][1] + 1], [spot['헤파이스토스'][0] - 4, spot['헤파이스토스'][1] + 1], [20, 214, 'big']]
+    chests: [[spot['헤르메스'][0] + 6, spot['헤르메스'][1] + 1], [heph[0] - 7, heph[1] + 4], [20, 214, 'big']]
   };
   return handMap(data, 16, spec, c => {
     const { tiles, idx, box, ring, road, secrets, shapes } = c;
@@ -2813,10 +2873,9 @@ function yggdrasilMap(data) {
     blob(...Y.roots, 'roots');
     for (const [x0, y0, x1, y1] of [[136, 200, 154, 226], [70, 206, 58, 232], [106, 206, 118, 232]]) for (let k = 0; k <= 60; k++) { const t = k / 60; for (let j = -2; j <= 2; j++) for (let i = -2; i <= 2; i++) if (Math.hypot(i, j) <= 2.6 - t * 1.4) put(x0 + (x1 - x0) * t + i, y0 + (y1 - y0) * t + j, 'roots'); }
     box([Y.in[0], 1, Y.in[0] + Y.in[2], 10], FLOOR);
-    // 상징 — 우르드의 샘(뿌리, 북유럽의 운명의 샘) · 아마노이와토(바위 동굴, 남쪽 입구) · 대장간 모루 · 로키의 동굴(바위, 북쪽 입구)
+    // 상징 — 우르드의 샘(뿌리, 북유럽의 운명의 샘) · 아마노이와토(바위 동굴, 남쪽 입구) · 로키의 동굴(바위, 북쪽 입구) — 고양이 신전 · 대장간은 실내(rooms)
     for (let y = Y.well[1] - Y.well[2]; y <= Y.well[1] + Y.well[2]; y++) for (let x = Y.well[0] - Y.well[2]; x <= Y.well[0] + Y.well[2]; x++) if (Math.hypot(x + 0.5 - Y.well[0], y + 0.5 - Y.well[1]) < Y.well[2]) tiles[idx(x, y)] = WATER;
     const [ax, ay] = spot['아마테라스']; ring([ax - 3, ay - 3, ax + 5, ay + 5], ROCK); box([ax, ay + 4, ax + 2, ay + 5], FLOOR);
-    const [hx, hy] = spot['헤파이스토스']; box([hx + 3, hy - 3, hx + 5, hy - 1], ROCK);
     const [lx, ly] = spot['로키']; ring([lx - 3, ly - 3, lx + 5, ly + 5], ROCK); box([lx, ly - 3, lx + 2, ly - 2], FLOOR);
     // 뿌리 밑 — 돌아온 자가 없는 문(하데스가 꼭 맞게 막음)과 그 너머 · 미미르의 샘(바위 방, 숨은 샛길)
     box(Y.gate, FLOOR); box([Y.next[0], Y.next[1], Y.next[0] + Y.next[2], Y.next[1] + 2], FLOOR);   // 문 너머 한 칸 더 — 내려가는 어둠
@@ -3023,12 +3082,21 @@ const RLYEH = {
   bay: [8, 138, 21, 158], lake: [108, 70, 5], temple: [64, 84, 79, 97],
   foes: {
     '다곤': [22, 146], '하스터': [44, 118], '크투가': [16, 86], '츠아토구아': [44, 58],
-    '이그': [70, 160], '이타콰': [100, 134], '차우그나르 파우근': [70, 112], '글라아키': [96, 74],
+    '이타콰': [100, 134], '글라아키': [96, 74],
     '아틀락-나챠': [100, 43], '크툴루': [86, 26]
   },
   zones: [['쇼고스', [122, 116, 164, 170]], ['미-고', [122, 56, 164, 104]]],
   chests: [[24, 160], [152, 62], [71, 90, 'big']],
-  in: [87, 196, 3], next: [86, 7, 4], start: [88, 188], merchant: [96, 188]
+  in: [87, 196, 3], next: [86, 7, 4], start: [88, 188], merchant: [96, 188],
+  // 실내 — 바위 속 뱀 굴(이그) · 코끼리 신의 동굴(차우그나르 파우근). 기운 도시 사이 바위 덩어리, 문은 흙길 쪽
+  rooms: [{ id: 'yigpit', title: '이그의 뱀 굴', box: [67, 158, 74, 163], tile: ROCK, face: 'auto', room: {
+    w: 9, h: 7, theme: 'gate', outLabel: '거리로', wall: [],
+    props: [{ kind: 'shroom', x: 0, y: 5 }, { kind: 'shroom', x: 8, y: 2 }, { kind: 'shroom', x: 1, y: 1 }],
+    foes: [{ name: '이그', x: 4, y: 1 }] } },
+  { id: 'chaugnar', title: '차우그나르 파우근의 동굴', box: [67, 110, 74, 115], tile: ROCK, face: 'auto', room: {
+    w: 9, h: 7, theme: 'raid', outLabel: '거리로', wall: [],
+    props: [{ kind: 'pillar', x: 1, y: 1 }, { kind: 'pillar', x: 7, y: 1 }, { kind: 'pillar', x: 1, y: 5 }, { kind: 'pillar', x: 7, y: 5 }],
+    foes: [{ name: '차우그나르 파우근', x: 4, y: 1 }] } }]
 };
 function rlyehMap(data) {
   const A = RLYEH;
@@ -3046,7 +3114,7 @@ function rlyehMap(data) {
     { const [x0, y0, x1, y1] = A.shore, scx = (x0 + x1) / 2, scy = (y0 + y1) / 2, srx = (x1 - x0) / 2, sry = (y1 - y0) / 2 + 2;   // 남쪽 물가 — 들쭉날쭉한 모래톱
       for (let y = y0 - 4; y < y1 + 2; y++) for (let x = x0 - 6; x < x1 + 6; x++) if (Math.hypot((x + 0.5 - scx) / srx, (y + 0.5 - scy) / sry) < 1 + (noise(x * 0.13 + 9, y * 0.13) - 0.5) * 0.35 || y < y0 + 2 && x >= x0 && x < x1) tiles[idx(x, y)] = FLOOR; }
     box([A.in[0], A.shore[1], A.in[0] + A.in[2], A.in[1] + 1], FLOOR);
-    const nearFoeOrChest = (x, y, d) => Object.values(A.foes).some(([fx, fy]) => x >= fx - d && x < fx + 5 + d && y >= fy - d && y < fy + 5 + d) || A.chests.some(([cx, cy]) => Math.abs(x - cx) <= d && Math.abs(y - cy) <= d);
+    const nearFoeOrChest = (x, y, d) => nearFoe(A, x, y, d + 1) || A.chests.some(([cx, cy]) => Math.abs(x - cx) <= d && Math.abs(y - cy) <= d);
     for (let y = A.city[1] + 10; y < A.city[3]; y++) for (let x = A.city[0]; x < A.city[2]; x++) {
       const edge = Math.min(x - A.city[0], A.city[2] - 1 - x);   // 들쭉날쭉한 물가 — 도시 동 · 서 가장자리가 바다에 먹힘 (네모가 아니게, 남쪽 물가 쪽은 이어 둠)
       if (!nearFoeOrChest(x, y, 4) && (noise(x * 0.07, y * 0.07) > 0.82 || edge < 7 * noise(x * 0.11 + 5, y * 0.11 + 5) - 1)) tiles[idx(x, y)] = WATER;   // 군데군데 잠긴 곳
@@ -3061,12 +3129,14 @@ function rlyehMap(data) {
     const by = n => A.foes[n];
     { const [x, y] = by('하스터'); skew(x + 5, y - 5, 4, 6, 0.5, WALL); }
     { const [x, y] = by('크투가'); skew(x + 7, y - 2, 5, 5, -0.6, WALL); }
-    { const [x, y] = by('츠아토구아'); for (let k = 0; k < 360; k += 12) { if (k > 60 && k < 120) continue; tiles[idx(Math.round(x + 1 + Math.cos(k * Math.PI / 180) * 6), Math.round(y + 1 + Math.sin(k * Math.PI / 180) * 5))] = ROCK; } }
+    { const [x, y] = by('츠아토구아'); for (let k = 0; k < 360; k += 3) { if (k > 66 && k < 114) continue; for (const r of [6, 7]) tiles[idx(Math.round(x + 1 + Math.cos(k * Math.PI / 180) * r), Math.round(y + 1 + Math.sin(k * Math.PI / 180) * (r - 1)))] = ROCK; } }   // 꺼진 흙의 탑 — 두 겹 바위 테 구덩이, 남쪽만 트임
     { const [x, y] = by('다곤'); skew(x + 6, y - 6, 4, 5, 0.4, WALL); }
-    { const [x, y] = by('이그'); for (const [i, j] of [[-3, -2], [4, -3], [-3, 3], [4, 3]]) tiles[idx(x + i, y + j)] = ROCK; }
     { const [x, y] = by('이타콰'); skew(x - 7, y - 4, 3, 8, 0.7, WALL); }
-    { const [x, y] = by('차우그나르 파우근'); for (let k = 0; k < 360; k += 10) { if (k > 330 || k < 30) continue; tiles[idx(Math.round(x + 1 + Math.cos(k * Math.PI / 180) * 5), Math.round(y + 1 + Math.sin(k * Math.PI / 180) * 4))] = ROCK; } }
     disk(A.lake[0], A.lake[1], A.lake[2], WATER);
+    // 쇼고스의 잠긴 지하 수로 — 기운 담 안에 물길이 지그재그로 (한쪽 끝씩 건너는 턱), 서 · 북 · 남으로 트임
+    { const S = [124, 118, 162, 168]; box([S[0] + 2, S[1] + 1, S[2] - 1, S[3] - 1], FLOOR); ring(S, WALL);   // 안은 잠긴 웅덩이 없이 (서쪽 물길 가는 그대로)
+      box([S[0], 140, S[0] + 1, 145], FLOOR); box([140, S[1], 146, S[1] + 1], FLOOR); box([140, S[3] - 1, 146, S[3]], FLOOR);
+      [126, 136, 146, 156].forEach((y, i) => { const gap = i % 2 ? [S[0] + 1, S[0] + 6] : [S[2] - 6, S[2] - 1]; for (let x = S[0] + 1; x < S[2] - 1; x++) if (x < gap[0] || x >= gap[1]) { tiles[idx(x, y)] = WATER; tiles[idx(x, y + 1)] = WATER; } }); }
     box(A.temple, FLOOR); ring(A.temple, WALL);
     secrets.push({ name: '숨은 샛길', x: A.temple[2] - 1, y: 90, w: 1, h: 2 });
     // 흙길 — 갈래마다 굽은 큰길 · 물가 가로 길 · 광장 가로 길 · 심연 위 다리에서 무덤 속으로
@@ -3729,4 +3799,4 @@ function allMaps(data) {
   return out;
 }
 
-module.exports = { rankRooms, roomMap, roomDoor, trail, erodeShore, TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, looksPng, encodePng, generate, sewer, overworld, oldtown, city, deptInterior, dept2Interior, assocInterior, guildInterior, guild2Interior, homeInterior, home2Interior, arenaInterior, bmInterior, gateinInterior, chiefInterior, raidInterior, storeInterior, OLDTOWN, CITY, DEPT, DEPT2, ASSOC, GUILD, GUILD2, HOME, HOME2, ARENA, BM, GATEIN, CHIEF, RAID, W1, W2, W3, SKY, CITY_BIO, secretRoom, buildingInterior, allMaps, layoutFromPlan, RANK_MAPS, rankMapId, adminRoom, PLACES, placeOf, ALEX, alexandriaMap, CAMELOT, camelotMap, AVALON, avalonMap, MURIM, murimMap, TIANSHAN, tianshanMap, naturalize, wavyBand, SANCTUARY, sanctuaryMap, ELYSIUM, elysiumMap, HEAVEN, heavenMap, INFERNO, infernoMap, YGGDRASIL, yggdrasilMap, PRIMORDIAL, primordialMap, OLYMPUS, olympusMap, RLYEH, rlyehMap, CHAOS, chaosMap, handMap, solidShape, SEWER, SECRET_ROOMS, CAVES, caveMap, BUILDINGS, BUILD, DOORWAY, CARPET, RUIN, UNDERS, ABYSS, DEMON_CASTLE, abyssMap };
+module.exports = { rankRooms, roomMap, roomDoor, roomStep, trail, erodeShore, TILE, FLOOR, WALL, WATER, TREE, ROCK, ROAD, buildTmj, tilesPng, looksPng, encodePng, generate, sewer, overworld, oldtown, city, deptInterior, dept2Interior, assocInterior, guildInterior, guild2Interior, homeInterior, home2Interior, arenaInterior, bmInterior, gateinInterior, chiefInterior, raidInterior, storeInterior, OLDTOWN, CITY, DEPT, DEPT2, ASSOC, GUILD, GUILD2, HOME, HOME2, ARENA, BM, GATEIN, CHIEF, RAID, W1, W2, W3, SKY, CITY_BIO, secretRoom, buildingInterior, allMaps, layoutFromPlan, RANK_MAPS, rankMapId, adminRoom, PLACES, placeOf, ALEX, alexandriaMap, CAMELOT, camelotMap, AVALON, avalonMap, MURIM, murimMap, TIANSHAN, tianshanMap, naturalize, wavyBand, SANCTUARY, sanctuaryMap, ELYSIUM, elysiumMap, HEAVEN, heavenMap, INFERNO, infernoMap, YGGDRASIL, yggdrasilMap, PRIMORDIAL, primordialMap, OLYMPUS, olympusMap, RLYEH, rlyehMap, CHAOS, chaosMap, handMap, solidShape, SEWER, SECRET_ROOMS, CAVES, caveMap, BUILDINGS, BUILD, DOORWAY, CARPET, RUIN, UNDERS, ABYSS, DEMON_CASTLE, abyssMap };
