@@ -10,12 +10,14 @@
 jjunsgame.html 하나로 만듭니다. 그 파일은 어디서 열든 돌아갑니다 —
 폰 다운로드 폴더, 메일 첨부, USB, 뭐든.
 
-    python build.py
+    python build.py           → jjunsgame.html (전체판)
+    python build.py --demo    → jjunsgame-demo.html (체험판 — 6격 마왕까지, itch.io 등에 올리는 것)
 """
 import pathlib, re, sys
 
 ROOT = pathlib.Path(__file__).parent
-OUT = ROOT / "jjunsgame.html"
+DEMO = "--demo" in sys.argv[1:]
+OUT = ROOT / ("jjunsgame-demo.html" if DEMO else "jjunsgame.html")
 
 def read(p):
     # utf-8-sig 로 읽어야 BOM(U+FEFF)이 걷힙니다.
@@ -98,6 +100,12 @@ html, n_js = re.subn(
     r'<script[^>]*src=["\']([^"\']+)["\'][^>]*>\s*</script>',
     inline_js, html)
 
+# 체험판 — 다른 스크립트보다 먼저 표시를 심습니다 (game.js 의 isDemo). 소스(index.html)는 그대로라 전체판에는 없습니다.
+if DEMO:
+    html, n_demo = re.subn(r"<script>", "<script>window.JJ_DEMO = true;</script>\n<script>", html, count=1)
+    assert n_demo == 1, "체험판 표시를 심을 자리(<script>)를 못 찾았습니다"
+    html = html.replace("<title>", "<title>[체험판] ", 1)
+
 # 어딘가에서 또 새어 들어왔을지 모르니 마지막에 한 번 더 훑습니다
 stray = html.count("﻿")
 html = html.replace("﻿", "")
@@ -163,4 +171,4 @@ if _man.exists():
 size = OUT.stat().st_size
 warn = f"  (BOM {stray}개 제거)" if stray else ""
 kept = f" · 바깥 링크 {n_kept}개 유지" if n_kept else ""
-print(f"jjunsgame.html  —  CSS {n_css}개 · JS {n_js}개 · 그림 {n_assets}개 합침{kept}, {size/1024:.0f}KB{warn}")
+print(f"{OUT.name}  —  CSS {n_css}개 · JS {n_js}개 · 그림 {n_assets}개 합침{kept}, {size/1024:.0f}KB{warn}")

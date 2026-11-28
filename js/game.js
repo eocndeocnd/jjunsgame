@@ -436,6 +436,13 @@ function beyondWall() {
   return !!run && (run.zoneIndex > WALL_ZONE || run.downed.includes(WALL_BOSS));
 }
 
+// ---------- 체험판 ----------
+// python build.py --demo 로 만든 jjunsgame-demo.html 에서만 켜집니다 (빌드가 window.JJ_DEMO 를 심음).
+// 체험판은 마왕(6격)까지 — 벽이 무너지는 연출까지는 보여 주고, 그 너머(7격부터)로는 들어가지 못합니다.
+function isDemo() { return typeof window !== 'undefined' && window.JJ_DEMO === true; }
+function demoBlocked(zi) { return isDemo() && !!ZONES[zi] && zi > WALL_ZONE; }
+let demoEndPending = false;   // 마왕을 꺾은 결과가 닫히면 체험판 끝 창을 띄울 차례 (저장하지 않음)
+
 // 지금까지 알고 있는 지역 수. 벽 너머는 닿은 데까지만 — 그 뒤는 몇 개 남았는지도 모르게.
 function knownZoneCount() {
   return wallSeen() ? Math.min(ZONES.length, Math.max(WALL_ZONE + 1, State.meta.bestZone)) : WALL_ZONE + 1;
@@ -1413,6 +1420,7 @@ function rememberMapAt(x, y, persist) {
 function walkIntoZone(zi) {
   const run = State.run;
   if (!run || run.over || !ZONES[zi] || zi === run.zoneIndex) return;
+  if (demoBlocked(zi)) return;
   run.zoneIndex = zi;
   run.progress = 0;
   const boss = zoneBoss(zi);
@@ -2355,6 +2363,11 @@ function engage() {
     run.zoneCleared = true;
     run.lastResult.openedPath = true;
     pushLog('rank', `━ 길이 열렸다. 준비되면 다음 지역으로 ━`);
+    // 체험판 — 마왕을 꺾으면 결과를 닫은 뒤 체험판 끝 창 (ui.js 의 showDemoEnd)
+    if (enemy.id === WALL_BOSS && isDemo()) {
+      demoEndPending = true;
+      pushLog('rank', `━ 체험판은 여기까지 — 벽 너머는 정식판에서 ━`);
+    }
   } else {
     run.progress += 1;
   }
@@ -2377,6 +2390,7 @@ function moveToNextZone() {
   const run = State.run;
   if (run.over || run.encounter || !run.zoneCleared) return;
   if (run.zoneIndex + 1 >= ZONES.length) return;
+  if (demoBlocked(run.zoneIndex + 1)) return;
 
   run.zoneIndex += 1;
   run.progress = 0;
@@ -2399,7 +2413,7 @@ function warpZoneIndex() { return ZONES.findIndex(z => z.rank === WARP_RANK); }
 function canAvatarWarp() {
   const run = State.run, m = State.meta;
   if (!run || run.over || run.encounter || run.zoneIndex !== 0) return false;
-  return !!m.avatar && m.avatar !== NAMELESS_ID && m.avatars.includes(m.avatar) && warpZoneIndex() > 0;
+  return !!m.avatar && m.avatar !== NAMELESS_ID && m.avatars.includes(m.avatar) && warpZoneIndex() > 0 && !demoBlocked(warpZoneIndex());
 }
 function avatarWarp() {
   if (!canAvatarWarp()) return false;

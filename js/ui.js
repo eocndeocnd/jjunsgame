@@ -47,6 +47,7 @@ function render() {
   if (window.innerWidth > 860) maybeNamelessTalk();   // 넓은 화면에는 탭이 없습니다
   maybeCityWake();
   maybeGuideNote();
+  maybeDemoEnd();
 }
 
 // ---------- 벽 너머의 분위기 ----------
@@ -2089,6 +2090,10 @@ function onMapEvents(evs) {
       askLeave();                          // 그 공간에서 도시로 나가는 게이트 — 나가면 회차가 끝나므로 한 번 묻습니다
       changed = true;
       break;
+    } else if (e.type === 'port' && e.port.to && demoPortBlocked(e.port)) {
+      if (!isSaveModalOpen() && Date.now() - closedSaidAt > 2000) { closedSaidAt = Date.now(); showDemoEnd(); }   // 체험판 — 문의 광장(벽 너머)으로는 못 감
+      changed = true;
+      break;
     } else if (e.type === 'port' && e.port.to) {
       fadeThrough(() => goThroughPort(e.port));   // 화면이 까매졌다가 다음 지도의 문(구멍) 앞에서 밝아짐
       changed = true;
@@ -4106,6 +4111,37 @@ function renderTitle() {
   }
 }
 
+// ---------- 체험판 끝 (python build.py --demo) ----------
+// 마왕을 꺾은 결과가 닫히면 한 번, 그 뒤로는 왕좌 뒤 「문의 광장」 문에 닿을 때마다.
+// 정식판에서 「가져오기」로 그대로 이어 할 수 있게 내보내기를 바로 붙여 둡니다.
+const STEAM_URL = '';   // 스팀 상점 페이지가 생기면 주소를 넣습니다 — 비어 있으면 「출시 예정」 글만
+function demoPortBlocked(port) {
+  if (!isDemo()) return false;
+  if (String(port.to).split('.')[0] === 'hub') return true;
+  return !!port.zone && demoBlocked(ZONES.findIndex(z => z.id === port.zone));
+}
+function maybeDemoEnd() {
+  if (!demoEndPending || !State.run || State.run.lastResult || battle || fightLocked()) return;
+  if (!$('title').classList.contains('hidden') || isTalkOpen() || isAnyModalOpen()) return;
+  demoEndPending = false;
+  showDemoEnd();
+}
+function showDemoEnd() {
+  const steam = STEAM_URL
+    ? `<a class="btn primary" href="${STEAM_URL}" target="_blank" rel="noopener">스팀에서 보기</a>`
+    : `<p class="hint">정식판은 스팀에서 출시 예정입니다.</p>`;
+  openSaveModal('체험판은 여기까지', `
+    <p>마왕이 쓰러지고 벽이 무너졌다. 그 너머 — 설화 · 기사 · 무림 · 천사 · 신 … 열네 개의 격이 더 남아 있다.</p>
+    <p class="hint">지금까지의 진행은 정식판에서 「가져오기」로 그대로 이어 할 수 있습니다. 미리 내보내 두세요.</p>
+    ${steam}
+    <div class="save-actions">
+      <button class="btn" id="demoExport">세이브 내보내기</button>
+      <button class="btn" id="demoClose">계속 둘러보기</button>
+    </div>`);
+  $('demoExport').addEventListener('click', () => openExport(currentSlot));
+  $('demoClose').addEventListener('click', closeSaveModal);
+}
+
 // ---------- 세이브 내보내기 / 가져오기 ----------
 // 초기 화면의 저장 칸마다 버튼이 있습니다. 코드는 game.js 의 exportSaveCode · parseSaveCode 가 만듭니다.
 // 복사가 막힌 환경(파일로 연 html 등)도 있어서, 코드 칸을 직접 길게 눌러 복사할 수도 있게 둡니다.
@@ -4557,6 +4593,7 @@ function wireAdmin() {
 }
 
 function openAdmin() {
+  if (isDemo()) return;   // 체험판에는 관리자 창이 없습니다 (지역 건너뛰기로 벽 너머에 가지 못하게)
   renderAdmin();
   $('adminModal').classList.remove('hidden');
 }
